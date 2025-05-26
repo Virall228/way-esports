@@ -1,0 +1,55 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>WAY Esports Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        button {
+            background-color: #0088cc;
+            border: none;
+            padding: 15px 25px;
+            color: white;
+            font-size: 16px;
+            margin: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0077b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>WAY Esports</h1>
+    <p>Добро пожаловать в мини-приложение турниров!</p>
+    <button onclick="joinTournament()">Участвовать</button>
+    <button onclick="viewTournament()">Турниры</button>
+    <button onclick="payEntry()">Оплатить TON</button>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        function joinTournament() {
+            tg.sendData("join_tournament");
+        }
+
+        function viewTournament() {
+            tg.sendData("view_tournaments");
+        }
+
+        function payEntry() {
+            tg.sendData("pay_ton");
+        }
+    </script>
+</body>
+</html>
