@@ -62,6 +62,7 @@ bot.onText(/\/start/, async (msg) => {
     bot.sendMessage(chatId, 'Welcome! There was an error setting up your profile. Please try again later.');
   }
 });
+
 // Tournament Routes
 app.post('/api/tournaments', authenticateUser, async (req, res) => {
   try {
@@ -147,26 +148,43 @@ app.post('/api/tournaments/:id/start', authenticateUser, async (req, res) => {
   }
 });
 
-app.post('/api/tournaments/:id/matches/:matchId', authenticateUser, async (req, res) => {
+app.post('/api/tournaments/:id/matches/update', authenticateUser, async (req, res) => {
   try {
     const tournament = await Tournament.findById(req.params.id);
     if (!tournament) {
       return res.status(404).json({ error: 'Tournament not found' });
     }
 
-    const { roundNumber, matchIndex } = req.body;
+    const { roundNumber, matchIndex, team1Score, team2Score } = req.body;
     const match = tournament.bracket.rounds[roundNumber - 1].matches[matchIndex];
     
-    match.team1.score = req.body.team1Score;
-    match.team2.score = req.body.team2Score;
+    match.team1.score = team1Score;
+    match.team2.score = team2Score;
+    match.status = 'completed';
     
-    const winner = req.body.team1Score > req.body.team2Score ? match.team1.name : match.team2.name;
+    const winner = team1Score > team2Score ? match.team1.name : match.team2.name;
     tournament.updateBracket(roundNumber, matchIndex, winner);
     
     // Check if tournament is completed
     const finalRound = tournament.bracket.rounds[tournament.bracket.rounds.length - 1];
     if (finalRound.matches[0].status === 'completed') {
       tournament.status = 'completed';
+      
+      // Update winner's stats
+      const winningTeam = tournament.registeredTeams.find(team => team.name === winner);
+      if (winningTeam) {
+        for (const playerId of winningTeam.players) {
+          await User.findOneAndUpdate(
+            { telegramId: playerId },
+            { 
+              $inc: { 
+                'stats.wins': 1,
+                'stats.tournamentParticipation': 1
+              }
+            }
+          );
+        }
+      }
     }
 
     await tournament.save();
