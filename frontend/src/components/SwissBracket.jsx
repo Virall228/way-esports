@@ -1,1 +1,0 @@
-// SwissBracket component placeholder
