@@ -433,27 +433,45 @@
             try {
                 const response = await fetch('/api/tournaments', {
                     headers: {
-                        'X-Telegram-Init-Data': webapp.initData
+                        'X-Telegram-Init-Data': webapp.initData,
+                        'X-Telegram-User-Id': webapp.initDataUnsafe.user.id
                     }
                 });
                 const tournaments = await response.json();
                 displayTournaments(tournaments);
             } catch (error) {
                 console.error('Error fetching tournaments:', error);
+                alert('Error loading tournaments. Please try again.');
             }
         }
 
         function displayTournaments(tournaments) {
             const container = document.getElementById('tournaments-container');
+            if (tournaments.length === 0) {
+                container.innerHTML = `
+                    <div class="no-tournaments">
+                        <p>No tournaments available.</p>
+                        <button onclick="showCreateTournament()">Create New Tournament</button>
+                    </div>
+                `;
+                return;
+            }
+
             container.innerHTML = tournaments.map(tournament => `
                 <div class="tournament-card" onclick="showTournamentDetails('${tournament._id}')">
                     <div class="tournament-header">
                         <h3>${tournament.name}</h3>
-                        <span class="status">${tournament.status}</span>
+                        <span class="status ${tournament.status}">${tournament.status}</span>
                     </div>
                     <div>Game: ${tournament.game}</div>
                     <div>Teams: ${tournament.registeredTeams.length}/${tournament.maxTeams}</div>
                     <div>Start: ${new Date(tournament.startDate).toLocaleString()}</div>
+                    ${tournament.status === 'upcoming' ? `
+                        <button onclick="registerTeam(event, '${tournament._id}')">Register Team</button>
+                    ` : ''}
+                    ${tournament.status === 'upcoming' && tournament.organizer === webapp.initDataUnsafe.user.id ? `
+                        <button onclick="startTournament(event, '${tournament._id}')">Start Tournament</button>
+                    ` : ''}
                 </div>
             `).join('');
         }
@@ -519,7 +537,8 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Telegram-Init-Data': webapp.initData
+                        'X-Telegram-Init-Data': webapp.initData,
+                        'X-Telegram-User-Id': webapp.initDataUnsafe.user.id
                     },
                     body: JSON.stringify({
                         roundNumber,
@@ -528,10 +547,17 @@
                         team2Score: parseInt(team2Score)
                     })
                 });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error);
+                }
+
                 const tournament = await response.json();
                 displayBracket(tournament);
             } catch (error) {
                 console.error('Error updating match:', error);
+                alert(error.message || 'Error updating match. Please try again.');
             }
         }
 
@@ -571,6 +597,67 @@
                 console.error('Error creating tournament:', error);
             }
         });
+
+        async function registerTeam(event, tournamentId) {
+            event.stopPropagation();
+            const teamName = prompt('Enter your team name:');
+            if (!teamName) return;
+
+            try {
+                const response = await fetch(`/api/tournaments/${tournamentId}/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Telegram-Init-Data': webapp.initData,
+                        'X-Telegram-User-Id': webapp.initDataUnsafe.user.id
+                    },
+                    body: JSON.stringify({
+                        teamName,
+                        players: [webapp.initDataUnsafe.user.id]
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error);
+                }
+
+                const tournament = await response.json();
+                alert('Team registered successfully!');
+                displayTournaments([tournament]);
+            } catch (error) {
+                console.error('Error registering team:', error);
+                alert(error.message || 'Error registering team. Please try again.');
+            }
+        }
+
+        async function startTournament(event, tournamentId) {
+            event.stopPropagation();
+            if (!confirm('Are you sure you want to start the tournament? This cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/tournaments/${tournamentId}/start`, {
+                    method: 'POST',
+                    headers: {
+                        'X-Telegram-Init-Data': webapp.initData,
+                        'X-Telegram-User-Id': webapp.initDataUnsafe.user.id
+                    }
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error);
+                }
+
+                const tournament = await response.json();
+                showTournamentDetails(tournamentId);
+            } catch (error) {
+                console.error('Error starting tournament:', error);
+                alert(error.message || 'Error starting tournament. Please try again.');
+            }
+        }
 
         fetchProfile();
         fetchMatches();
