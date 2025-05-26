@@ -26,6 +26,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 // Models
 const Match = require('./models/Match');
 const User = require('./models/User');
+const Tournament = require('./models/Tournament');
 
 // Telegram Bot Setup
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
@@ -59,6 +60,119 @@ bot.onText(/\/start/, async (msg) => {
   } catch (error) {
     console.error('Error creating user profile:', error);
     bot.sendMessage(chatId, 'Welcome! There was an error setting up your profile. Please try again later.');
+  }
+});
+// Tournament Routes
+app.post('/api/tournaments', authenticateUser, async (req, res) => {
+  try {
+    const tournament = new Tournament({
+      ...req.body,
+      organizer: req.headers['x-telegram-user-id']
+    });
+    await tournament.save();
+    res.status(201).json(tournament);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.get('/api/tournaments', authenticateUser, async (req, res) => {
+  try {
+    const tournaments = await Tournament.find()
+      .sort({ startDate: -1 });
+    res.json(tournaments);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/tournaments/:id', authenticateUser, async (req, res) => {
+  try {
+    const tournament = await Tournament.findById(req.params.id);
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+    res.json(tournament);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/tournaments/:id/register', authenticateUser, async (req, res) => {
+  try {
+    const tournament = await Tournament.findById(req.params.id);
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+
+    if (tournament.registeredTeams.length >= tournament.maxTeams) {
+      return res.status(400).json({ error: 'Tournament is full' });
+    }
+
+    const newTeam = {
+      name: req.body.teamName,
+      players: req.body.players,
+      seed: tournament.registeredTeams.length + 1
+    };
+
+    tournament.registeredTeams.push(newTeam);
+    await tournament.save();
+    res.json(tournament);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.post('/api/tournaments/:id/start', authenticateUser, async (req, res) => {
+  try {
+    const tournament = await Tournament.findById(req.params.id);
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+
+    if (tournament.status !== 'upcoming') {
+      return res.status(400).json({ error: 'Tournament has already started' });
+    }
+
+    if (tournament.registeredTeams.length < 2) {
+      return res.status(400).json({ error: 'Not enough teams registered' });
+    }
+
+    tournament.status = 'in_progress';
+    tournament.generateBracket();
+    await tournament.save();
+    res.json(tournament);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.post('/api/tournaments/:id/matches/:matchId', authenticateUser, async (req, res) => {
+  try {
+    const tournament = await Tournament.findById(req.params.id);
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+
+    const { roundNumber, matchIndex } = req.body;
+    const match = tournament.bracket.rounds[roundNumber - 1].matches[matchIndex];
+    
+    match.team1.score = req.body.team1Score;
+    match.team2.score = req.body.team2Score;
+    
+    const winner = req.body.team1Score > req.body.team2Score ? match.team1.name : match.team2.name;
+    tournament.updateBracket(roundNumber, matchIndex, winner);
+    
+    // Check if tournament is completed
+    const finalRound = tournament.bracket.rounds[tournament.bracket.rounds.length - 1];
+    if (finalRound.matches[0].status === 'completed') {
+      tournament.status = 'completed';
+    }
+
+    await tournament.save();
+    res.json(tournament);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
 });
 
