@@ -23,20 +23,85 @@ mongoose.connect(process.env.MONGODB_URI, {
   console.error('MongoDB connection error:', err);
 });
 
+// Models
+const Match = require('./models/Match');
+const User = require('./models/User');
+
 // Telegram Bot Setup
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
+// Authentication Middleware
+const authenticateUser = async (req, res, next) => {
+  const initData = req.headers['x-telegram-init-data'];
+  if (!initData) {
+    return res.status(401).json({ error: 'No authentication data' });
+  }
+  // In a production environment, you should verify the initData
+  // using Telegram's guidelines for Mini Apps
+  next();
+};
+
 // Bot commands
-bot.onText(/\/start/, (msg) => {
+bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
-  bot.sendMessage(chatId, 'Welcome to WAY Esports! Click the menu button to open the Mini App.');
+  try {
+    // Create or update user profile
+    const user = await User.findOneAndUpdate(
+      { telegramId: msg.from.id.toString() },
+      {
+        telegramId: msg.from.id.toString(),
+        username: msg.from.username || 'Anonymous',
+        lastActive: new Date()
+      },
+      { upsert: true, new: true }
+    );
+    bot.sendMessage(chatId, 'Welcome to WAY Esports! Click the menu button to open the Mini App.');
+  } catch (error) {
+    console.error('Error creating user profile:', error);
+    bot.sendMessage(chatId, 'Welcome! There was an error setting up your profile. Please try again later.');
+  }
 });
 
-// API Routes
-const Match = require('./models/Match');
+// User Profile Routes
+app.get('/api/profile/:telegramId', authenticateUser, async (req, res) => {
+  try {
+    const user = await User.findOne({ telegramId: req.params.telegramId });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-// Get all matches
-app.get('/api/matches', async (req, res) => {
+app.patch('/api/profile/:telegramId', authenticateUser, async (req, res) => {
+  try {
+    const allowedUpdates = ['nickname', 'favoriteGames'];
+    const updates = Object.keys(req.body)
+      .filter(key => allowedUpdates.includes(key))
+      .reduce((obj, key) => {
+        obj[key] = req.body[key];
+        return obj;
+      }, {});
+
+    const user = await User.findOneAndUpdate(
+      { telegramId: req.params.telegramId },
+      { ...updates, lastActive: new Date() },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(user);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Match Routes
+app.get('/api/matches', authenticateUser, async (req, res) => {
   try {
     const matches = await Match.find();
     res.json(matches);
@@ -45,14 +110,26 @@ app.get('/api/matches', async (req, res) => {
   }
 });
 
-// Create a new match
-app.post('/api/matches', async (req, res) => {
+app.post('/api/matches', authenticateUser, async (req, res) => {
   try {
     const match = new Match(req.body);
     await match.save();
     res.status(201).json(match);
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+});
+
+// Stats Routes
+app.get('/api/stats/:telegramId', authenticateUser, async (req, res) => {
+  try {
+    const user = await User.findOne({ telegramId: req.params.telegramId });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(user.stats);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
