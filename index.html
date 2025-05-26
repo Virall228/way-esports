@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WAY Esports Tournament</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>WAY Esports Tournament</h1>
+            <nav>
+                <button onclick="showSection('tournaments')">Tournaments</button>
+                <button onclick="showSection('profile')">Profile</button>
+            </nav>
+        </header>
+
+        <main>
+            <!-- Tournaments Section -->
+            <section id="tournaments" class="section active">
+                <div class="section-header">
+                    <h2>Tournaments</h2>
+                    <button onclick="showCreateTournament()" class="primary-btn">Create Tournament</button>
+                </div>
+                <div id="tournaments-list" class="tournaments-grid"></div>
+            </section>
+
+            <!-- Profile Section -->
+            <section id="profile" class="section">
+                <div class="profile-container">
+                    <div class="profile-header">
+                        <img id="profile-picture" src="" alt="Profile Picture">
+                        <div class="profile-info">
+                            <h2 id="profile-name"></h2>
+                            <p id="profile-rank"></p>
+                        </div>
+                    </div>
+                    <div class="stats-container">
+                        <div class="stat-box">
+                            <h3>Wins</h3>
+                            <p id="stats-wins">0</p>
+                        </div>
+                        <div class="stat-box">
+                            <h3>Tournaments</h3>
+                            <p id="stats-tournaments">0</p>
+                        </div>
+                        <div class="stat-box">
+                            <h3>Win Rate</h3>
+                            <p id="stats-winrate">0%</p>
+                        </div>
+                    </div>
+                    <div class="achievements-container">
+                        <h3>Achievements</h3>
+                        <div id="achievements-list" class="achievements-grid"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tournament Details Modal -->
+            <div id="tournament-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <div id="tournament-details"></div>
+                    <div id="tournament-bracket"></div>
+                </div>
+            </div>
+
+            <!-- Create Tournament Modal -->
+            <div id="create-tournament-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <h2>Create Tournament</h2>
+                    <form id="create-tournament-form">
+                        <div class="form-group">
+                            <label for="tournament-name">Tournament Name</label>
+                            <input type="text" id="tournament-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="tournament-game">Game</label>
+                            <input type="text" id="tournament-game" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="tournament-max-teams">Maximum Teams</label>
+                            <input type="number" id="tournament-max-teams" min="2" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="tournament-start-date">Start Date</label>
+                            <input type="datetime-local" id="tournament-start-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="tournament-end-date">End Date</label>
+                            <input type="datetime-local" id="tournament-end-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="tournament-prize">Prize Pool (optional)</label>
+                            <input type="number" id="tournament-prize" min="0">
+                        </div>
+                        <button type="submit" class="primary-btn">Create Tournament</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html> 
