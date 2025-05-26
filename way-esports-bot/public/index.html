@@ -17,6 +17,40 @@
             max-width: 800px;
             margin: 0 auto;
         }
+        .profile-card {
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .profile-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .profile-picture {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin-right: 15px;
+            object-fit: cover;
+        }
+        .profile-info {
+            flex-grow: 1;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .stat-box {
+            background-color: #333;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
         .match-card {
             background-color: #2a2a2a;
             border-radius: 8px;
@@ -40,6 +74,18 @@
             color: #fff;
             font-size: 0.9em;
         }
+        .achievements {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .achievement {
+            background-color: #333;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
         button {
             background-color: #4CAF50;
             color: white;
@@ -52,12 +98,95 @@
         button:hover {
             background-color: #45a049;
         }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            background-color: #333;
+            border: none;
+            color: white;
+            cursor: pointer;
+        }
+        .tab.active {
+            background-color: #4CAF50;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .edit-profile {
+            margin-top: 10px;
+        }
+        .edit-field {
+            margin-bottom: 10px;
+        }
+        .edit-field input {
+            width: 100%;
+            padding: 8px;
+            background-color: #333;
+            border: 1px solid #444;
+            color: white;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>WAY Esports Tournaments</h1>
-        <div id="matches-container"></div>
+        <div class="tabs">
+            <button class="tab active" data-tab="profile">Profile</button>
+            <button class="tab" data-tab="matches">Matches</button>
+        </div>
+
+        <div id="profile" class="tab-content active">
+            <div class="profile-card">
+                <div class="profile-header">
+                    <img id="profilePicture" class="profile-picture" src="" alt="Profile Picture">
+                    <div class="profile-info">
+                        <h2 id="username"></h2>
+                        <p id="nickname"></p>
+                        <p id="rank"></p>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div>Wins</div>
+                        <div id="wins">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div>Losses</div>
+                        <div id="losses">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div>Tournaments</div>
+                        <div id="tournaments">0</div>
+                    </div>
+                </div>
+                <div class="achievements" id="achievements"></div>
+                <div class="edit-profile">
+                    <button onclick="toggleEditProfile()">Edit Profile</button>
+                    <div id="editForm" style="display: none;">
+                        <div class="edit-field">
+                            <label for="editNickname">Nickname:</label>
+                            <input type="text" id="editNickname">
+                        </div>
+                        <div class="edit-field">
+                            <label for="editGames">Favorite Games (comma-separated):</label>
+                            <input type="text" id="editGames">
+                        </div>
+                        <button onclick="saveProfile()">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="matches" class="tab-content">
+            <h2>Recent Matches</h2>
+            <div id="matches-container"></div>
+        </div>
     </div>
 
     <script>
@@ -66,10 +195,95 @@
         webapp.ready();
         webapp.expand();
 
-        // Fetch and display matches
+        let currentUser = null;
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        // Fetch user profile
+        async function fetchProfile() {
+            try {
+                const response = await fetch(`/api/profile/${webapp.initDataUnsafe.user.id}`, {
+                    headers: {
+                        'X-Telegram-Init-Data': webapp.initData
+                    }
+                });
+                currentUser = await response.json();
+                updateProfileUI(currentUser);
+            } catch (error) {
+                console.error('Error fetching profile:', error);
+            }
+        }
+
+        // Update profile UI
+        function updateProfileUI(user) {
+            document.getElementById('username').textContent = user.username;
+            document.getElementById('nickname').textContent = user.nickname || 'No nickname set';
+            document.getElementById('rank').textContent = user.rank;
+            document.getElementById('wins').textContent = user.stats.wins;
+            document.getElementById('losses').textContent = user.stats.losses;
+            document.getElementById('tournaments').textContent = user.stats.tournamentParticipation;
+            
+            // Profile picture
+            document.getElementById('profilePicture').src = user.profilePicture || 'https://via.placeholder.com/80';
+            
+            // Achievements
+            const achievementsContainer = document.getElementById('achievements');
+            achievementsContainer.innerHTML = user.achievements.map(achievement => `
+                <div class="achievement">${achievement.name}</div>
+            `).join('');
+        }
+
+        // Toggle edit profile form
+        function toggleEditProfile() {
+            const editForm = document.getElementById('editForm');
+            if (editForm.style.display === 'none') {
+                document.getElementById('editNickname').value = currentUser.nickname || '';
+                document.getElementById('editGames').value = currentUser.favoriteGames.join(', ');
+                editForm.style.display = 'block';
+            } else {
+                editForm.style.display = 'none';
+            }
+        }
+
+        // Save profile changes
+        async function saveProfile() {
+            try {
+                const response = await fetch(`/api/profile/${webapp.initDataUnsafe.user.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Telegram-Init-Data': webapp.initData
+                    },
+                    body: JSON.stringify({
+                        nickname: document.getElementById('editNickname').value,
+                        favoriteGames: document.getElementById('editGames').value.split(',').map(game => game.trim())
+                    })
+                });
+                const updatedUser = await response.json();
+                currentUser = updatedUser;
+                updateProfileUI(updatedUser);
+                toggleEditProfile();
+            } catch (error) {
+                console.error('Error saving profile:', error);
+            }
+        }
+
+        // Fetch matches
         async function fetchMatches() {
             try {
-                const response = await fetch('/api/matches');
+                const response = await fetch('/api/matches', {
+                    headers: {
+                        'X-Telegram-Init-Data': webapp.initData
+                    }
+                });
                 const matches = await response.json();
                 displayMatches(matches);
             } catch (error) {
@@ -91,6 +305,7 @@
         }
 
         // Initial load
+        fetchProfile();
         fetchMatches();
     </script>
 </body>
