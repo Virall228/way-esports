@@ -1,0 +1,1750 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WAY Esports Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --tg-theme-bg-color: #121212;
+            --tg-theme-button-color: #0088cc;
+            --tg-theme-button-text-color: #ffffff;
+            --orange-color: #FF5722;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color, #ffffff);
+            text-align: center;
+            padding: 20px;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: var(--orange-color);
+        }
+
+        .card {
+            background: linear-gradient(135deg, rgba(255, 87, 34, 0.1) 0%, rgba(255, 87, 34, 0.05) 100%);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 87, 34, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 48px rgba(255, 87, 34, 0.2);
+            border-color: rgba(255, 87, 34, 0.4);
+        }
+
+        .stats-card {
+            background-color: rgba(255, 87, 34, 0.1);
+            border: 1px solid var(--orange-color);
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+        }
+
+        button {
+            background-color: var(--orange-color);
+            border: none;
+            padding: 16px;
+            color: var(--tg-theme-button-text-color);
+            font-size: 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:active {
+            transform: scale(0.98);
+            opacity: 0.9;
+        }
+
+        .loading {
+            position: relative;
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .loading::after {
+            content: "";
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            position: absolute;
+            right: 15px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .status-message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 8px;
+            background-color: rgba(255, 255, 255, 0.1);
+            display: none;
+        }
+
+        .tournament-info {
+            text-align: left;
+            margin-bottom: 15px;
+        }
+
+        .tournament-info p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-item {
+            background-color: rgba(255, 87, 34, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--orange-color);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .match-history {
+            margin-top: 20px;
+        }
+
+        .match-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .match-result {
+            font-weight: bold;
+        }
+
+        .win {
+            color: #4CAF50;
+        }
+
+        .loss {
+            color: #f44336;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 5px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background-color 0.3s;
+        }
+
+        .tab.active {
+            background-color: var(--orange-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .achievements-section {
+            margin-top: 20px;
+        }
+
+        .achievement-card {
+            background: linear-gradient(135deg, rgba(255, 87, 34, 0.2) 0%, rgba(255, 87, 34, 0.1) 100%);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid var(--orange-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .achievement-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--orange-color) 0%, #FFB74D 100%);
+        }
+
+        .achievement-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .achievement-icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+
+        .achievement-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--orange-color);
+        }
+
+        .achievement-details {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .achievement-date {
+            font-size: 12px;
+            opacity: 0.6;
+            margin-top: 5px;
+        }
+
+        .achievement-prize {
+            display: inline-block;
+            background-color: rgba(255, 87, 34, 0.3);
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+
+        .achievement-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #FF5722 0%, #FF8A65 100%);
+            border-radius: 50%;
+            font-size: 20px;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .achievement-progress {
+            margin-top: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            height: 6px;
+            overflow: hidden;
+        }
+
+        .achievement-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--orange-color) 0%, #FFB74D 100%);
+            transition: width 0.3s ease;
+        }
+
+        .stats-summary {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: rgba(255, 87, 34, 0.1);
+            border-radius: 8px;
+        }
+
+        .summary-item {
+            text-align: center;
+        }
+
+        .summary-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--orange-color);
+        }
+
+        .summary-label {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        @keyframes unlockAnimation {
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+            60% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: -200% 0;
+            }
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+        .achievement-card.new {
+            animation: unlockAnimation 0.6s ease-out;
+            background: linear-gradient(135deg, rgba(255, 87, 34, 0.3) 0%, rgba(255, 87, 34, 0.1) 100%);
+        }
+
+        .achievement-card.new::after {
+            content: 'НОВОЕ!';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(90deg, var(--orange-color), #FFB74D, var(--orange-color));
+            background-size: 200% 100%;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            animation: shimmer 2s infinite linear;
+        }
+
+        .achievement-filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            overflow-x: auto;
+            padding: 5px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .filter-chip {
+            background-color: rgba(255, 87, 34, 0.1);
+            border: 1px solid var(--orange-color);
+            border-radius: 20px;
+            padding: 6px 12px;
+            font-size: 14px;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-chip.active {
+            background-color: var(--orange-color);
+            color: white;
+        }
+
+        .share-button {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .share-button:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .achievement-rarity {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .rarity-common { color: #B0BEC5; }
+        .rarity-rare { color: #4FC3F7; }
+        .rarity-epic { color: #E040FB; }
+        .rarity-legendary { color: #FFD700; }
+
+        .achievement-streak {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 5px;
+            font-size: 12px;
+        }
+
+        .streak-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--orange-color);
+        }
+
+        .streak-dot.empty {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .achievement-card.milestone::before {
+            background: linear-gradient(90deg, #FFD700 0%, var(--orange-color) 50%, #FFD700 100%);
+            animation: shimmer 2s infinite linear;
+            background-size: 200% 100%;
+        }
+
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background-color: var(--orange-color);
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            animation: fall 1s linear forwards;
+        }
+
+        @keyframes fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+            }
+        }
+
+        /* Enhanced Animations */
+        @keyframes floatAnimation {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes glowPulse {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.5); }
+        }
+
+        @keyframes rotateIn {
+            from {
+                transform: rotate(-180deg) scale(0);
+                opacity: 0;
+            }
+            to {
+                transform: rotate(0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .achievement-icon {
+            animation: floatAnimation 3s ease-in-out infinite;
+        }
+
+        .achievement-card.legendary .achievement-icon {
+            animation: floatAnimation 3s ease-in-out infinite, glowPulse 2s ease-in-out infinite;
+        }
+
+        .achievement-badge {
+            animation: rotateIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .achievement-card {
+            animation: slideInRight 0.5s ease-out;
+            animation-fill-mode: both;
+        }
+
+        .achievement-card:nth-child(2) { animation-delay: 0.1s; }
+        .achievement-card:nth-child(3) { animation-delay: 0.2s; }
+        .achievement-card:nth-child(4) { animation-delay: 0.3s; }
+        .achievement-card:nth-child(5) { animation-delay: 0.4s; }
+
+        /* Leaderboard Styles */
+        .leaderboard-section {
+            margin-top: 20px;
+        }
+
+        .leaderboard-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .leaderboard-tab {
+            flex: 1;
+            padding: 10px;
+            background: rgba(255, 87, 34, 0.1);
+            border: 1px solid var(--orange-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .leaderboard-tab.active {
+            background: var(--orange-color);
+            color: white;
+        }
+
+        .leaderboard-card {
+            background: rgba(255, 87, 34, 0.05);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .leaderboard-card:hover {
+            transform: translateX(10px);
+        }
+
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            animation: slideInRight 0.5s ease-out;
+            animation-fill-mode: both;
+        }
+
+        .rank {
+            font-size: 24px;
+            font-weight: bold;
+            width: 50px;
+            color: var(--orange-color);
+        }
+
+        .rank-1 { color: gold; }
+        .rank-2 { color: silver; }
+        .rank-3 { color: #cd7f32; }
+
+        .player-info {
+            flex: 1;
+            text-align: left;
+            margin-left: 15px;
+        }
+
+        .player-name {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .player-stats {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .player-score {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--orange-color);
+            margin-left: 15px;
+        }
+
+        .player-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--orange-color), #FFB74D);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .trophy-animation {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            opacity: 0;
+            animation: trophyFloat 2s ease-out forwards;
+        }
+
+        @keyframes trophyFloat {
+            0% {
+                transform: translate(-50%, 0) scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: translate(-50%, -30px) scale(1.2);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -20px) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .achievement-unlock-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .achievement-unlock-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .unlock-content {
+            text-align: center;
+            padding: 30px;
+            background: rgba(255, 87, 34, 0.1);
+            border-radius: 20px;
+            border: 2px solid var(--orange-color);
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
+        }
+
+        .unlock-content.show {
+            transform: scale(1);
+        }
+
+        .sparkle {
+            position: absolute;
+            pointer-events: none;
+            animation: sparkleAnim 1s linear forwards;
+        }
+
+        @keyframes sparkleAnim {
+            0% {
+                transform: translate(0, 0) rotate(0deg) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--tx), var(--ty)) rotate(360deg) scale(0);
+                opacity: 0;
+            }
+        }
+
+        /* Tournament Card */
+        .tournament-card {
+            position: relative;
+            overflow: hidden;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 16px;
+        }
+
+        .tournament-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .tournament-icon {
+            font-size: 32px;
+            margin-right: 15px;
+            animation: floatAnimation 3s ease-in-out infinite;
+        }
+
+        .tournament-title {
+            flex: 1;
+        }
+
+        .tournament-title h3 {
+            margin: 0;
+            font-size: 20px;
+            color: var(--orange-color);
+        }
+
+        .tournament-title p {
+            margin: 5px 0 0;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .tournament-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .tournament-stat {
+            text-align: center;
+            padding: 10px;
+            background: rgba(255, 87, 34, 0.1);
+            border-radius: 8px;
+            transition: transform 0.3s ease;
+        }
+
+        .tournament-stat:hover {
+            transform: scale(1.05);
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--orange-color);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            margin: 15px 0;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--orange-color), #FFB74D);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                rgba(255, 255, 255, 0.2) 50%,
+                transparent 100%
+            );
+            animation: shimmer 2s infinite;
+        }
+
+        /* Timer */
+        .tournament-timer {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .time-unit {
+            text-align: center;
+            min-width: 60px;
+        }
+
+        .time-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--orange-color);
+            background: rgba(255, 87, 34, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
+
+        .time-label {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        /* Team List */
+        .team-list {
+            margin: 20px 0;
+        }
+
+        .team-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: rgba(255, 87, 34, 0.05);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: transform 0.3s ease;
+        }
+
+        .team-item:hover {
+            transform: translateX(10px);
+            background: rgba(255, 87, 34, 0.1);
+        }
+
+        .team-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--orange-color), #FFB74D);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 20px;
+        }
+
+        .team-info {
+            flex: 1;
+        }
+
+        .team-name {
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+
+        .team-status {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .team-seed {
+            background: rgba(255, 87, 34, 0.2);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        /* Prize Pool */
+        .prize-pool {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(255, 87, 34, 0.2) 0%, rgba(255, 87, 34, 0.1) 100%);
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+
+        .prize-amount {
+            font-size: 36px;
+            font-weight: bold;
+            color: var(--orange-color);
+            margin: 10px 0;
+        }
+
+        .prize-distribution {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+        }
+
+        .prize-place {
+            text-align: center;
+        }
+
+        .place-amount {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--orange-color);
+        }
+
+        .place-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        /* Bracket Preview */
+        .bracket-preview {
+            margin: 20px 0;
+            overflow-x: auto;
+            padding: 15px;
+        }
+
+        .bracket-round {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+
+        .bracket-match {
+            background: rgba(255, 87, 34, 0.1);
+            border-radius: 8px;
+            padding: 10px;
+            min-width: 200px;
+            margin: 0 10px;
+        }
+
+        .bracket-team {
+            display: flex;
+            align-items: center;
+            padding: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .bracket-team:last-child {
+            border-bottom: none;
+        }
+
+        .bracket-score {
+            margin-left: auto;
+            font-weight: bold;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .action-button {
+            background: linear-gradient(135deg, var(--orange-color) 0%, #FFB74D 100%);
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 87, 34, 0.3);
+        }
+
+        .action-button:active {
+            transform: translateY(0);
+        }
+
+        .action-button.secondary {
+            background: rgba(255, 87, 34, 0.1);
+            border: 1px solid var(--orange-color);
+        }
+
+        /* Notifications */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 87, 34, 0.9);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification-icon {
+            font-size: 20px;
+        }
+
+        .notification-content {
+            flex: 1;
+        }
+
+        .notification-title {
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+
+        .notification-message {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* Loading States */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: inherit;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading .loading-overlay {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid transparent;
+            border-top-color: var(--orange-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .tournament-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .action-buttons {
+                grid-template-columns: 1fr;
+            }
+
+            .tournament-timer {
+                flex-wrap: wrap;
+            }
+
+            .bracket-preview {
+                margin: 10px -20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .tournament-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .prize-distribution {
+                flex-wrap: wrap;
+                gap: 15px;
+            }
+
+            .time-unit {
+                min-width: 45px;
+            }
+
+            .time-value {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WAY Esports</h1>
+        
+        <div class="tournament-card card">
+            <div class="tournament-header">
+                <div class="tournament-icon">🏆</div>
+                <div class="tournament-title">
+                    <h3>CS2 Pro League Season 1</h3>
+                    <p>Квалификация #2 • Bo3</p>
+                </div>
+            </div>
+
+            <div class="tournament-stats">
+                <div class="tournament-stat">
+                    <div class="stat-value">16</div>
+                    <div class="stat-label">Команд</div>
+                </div>
+                <div class="tournament-stat">
+                    <div class="stat-value">1000</div>
+                    <div class="stat-label">TON Prize</div>
+                </div>
+                <div class="tournament-stat">
+                    <div class="stat-value">8</div>
+                    <div class="stat-label">Слотов</div>
+                </div>
+            </div>
+
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 75%;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                    <span>Регистрация</span>
+                    <span>12/16 команд</span>
+                </div>
+            </div>
+
+            <div class="tournament-timer">
+                <div class="time-unit">
+                    <div class="time-value" id="days">02</div>
+                    <div class="time-label">Дней</div>
+                </div>
+                <div class="time-unit">
+                    <div class="time-value" id="hours">18</div>
+                    <div class="time-label">Часов</div>
+                </div>
+                <div class="time-unit">
+                    <div class="time-value" id="minutes">45</div>
+                    <div class="time-label">Минут</div>
+                </div>
+                <div class="time-unit">
+                    <div class="time-value" id="seconds">30</div>
+                    <div class="time-label">Секунд</div>
+                </div>
+            </div>
+
+            <div class="prize-pool">
+                <h3>Призовой фонд</h3>
+                <div class="prize-amount">1000 TON</div>
+                <div class="prize-distribution">
+                    <div class="prize-place">
+                        <div class="place-amount">500 TON</div>
+                        <div class="place-label">1 место</div>
+                    </div>
+                    <div class="prize-place">
+                        <div class="place-amount">300 TON</div>
+                        <div class="place-label">2 место</div>
+                    </div>
+                    <div class="prize-place">
+                        <div class="place-amount">200 TON</div>
+                        <div class="place-label">3 место</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="team-list">
+                <h3>Участники</h3>
+                <div class="team-item">
+                    <div class="team-avatar">⚡</div>
+                    <div class="team-info">
+                        <div class="team-name">NAVI Junior</div>
+                        <div class="team-status">Подтверждено • Сид #1</div>
+                    </div>
+                    <div class="team-seed">#1</div>
+                </div>
+                <div class="team-item">
+                    <div class="team-avatar">👻</div>
+                    <div class="team-info">
+                        <div class="team-name">Spirit Academy</div>
+                        <div class="team-status">Подтверждено • Сид #2</div>
+                    </div>
+                    <div class="team-seed">#2</div>
+                </div>
+                <!-- More teams... -->
+            </div>
+
+            <div class="bracket-preview">
+                <div class="bracket-round">
+                    <div class="bracket-match">
+                        <div class="bracket-team">
+                            <span>NAVI Junior</span>
+                            <span class="bracket-score">0</span>
+                        </div>
+                        <div class="bracket-team">
+                            <span>Spirit Academy</span>
+                            <span class="bracket-score">0</span>
+                        </div>
+                    </div>
+                    <div class="bracket-match">
+                        <div class="bracket-team">
+                            <span>Team 3</span>
+                            <span class="bracket-score">0</span>
+                        </div>
+                        <div class="bracket-team">
+                            <span>Team 4</span>
+                            <span class="bracket-score">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="action-button" onclick="joinTournament()">
+                    🎮 Участвовать
+                </button>
+                <button class="action-button secondary" onclick="viewBracket()">
+                    📊 Сетка турнира
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification">
+        <div class="notification-icon">🎉</div>
+        <div class="notification-content">
+            <div class="notification-title">Успешно!</div>
+            <div class="notification-message">Вы зарегистрированы на турнир</div>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // Set theme colors
+        document.documentElement.style.setProperty('--tg-theme-bg-color', tg.backgroundColor || '#121212');
+        document.documentElement.style.setProperty('--tg-theme-button-text-color', tg.buttonTextColor || '#ffffff');
+
+        // Initialize MainButton
+        tg.MainButton.setParams({
+            text: 'ПРИСОЕДИНИТЬСЯ К ТУРНИРУ',
+            color: '#FF5722',
+        });
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+
+            if (tabName === 'stats') {
+                loadPlayerStats();
+            }
+        }
+
+        async function loadPlayerStats() {
+            showLoading('stats-tab');
+            try {
+                // In a real app, this would be an API call
+                const stats = await fetchPlayerStats();
+                updateStatsDisplay(stats);
+            } catch (error) {
+                showStatus('Ошибка при загрузке статистики', true);
+            } finally {
+                hideLoading('stats-tab');
+            }
+        }
+
+        // Simulate fetching player stats (replace with actual API call)
+        async function fetchPlayerStats() {
+            // This would be an actual API call in production
+            return {
+                totalGames: 24,
+                wins: 16,
+                totalEarnings: 450,
+                tournamentCount: 5,
+                recentMatches: [
+                    { opponent: 'NAVI Junior', result: 'win', score: '16-14', prize: 100 },
+                    { opponent: 'Spirit Academy', result: 'loss', score: '13-16', prize: 0 },
+                    { opponent: 'VP.Prodigy', result: 'win', score: '16-12', prize: 150 }
+                ]
+            };
+        }
+
+        function updateStatsDisplay(stats) {
+            document.getElementById('totalGames').textContent = stats.totalGames;
+            document.getElementById('winRate').textContent = Math.round((stats.wins / stats.totalGames) * 100) + '%';
+            document.getElementById('totalEarnings').textContent = stats.totalEarnings;
+            document.getElementById('tournamentCount').textContent = stats.tournamentCount;
+
+            const historyContainer = document.getElementById('matchHistory');
+            historyContainer.innerHTML = '<h3>Последние матчи</h3>';
+            
+            stats.recentMatches.forEach(match => {
+                const matchElement = document.createElement('div');
+                matchElement.className = 'match-item';
+                matchElement.innerHTML = `
+                    <div>vs ${match.opponent}</div>
+                    <div>${match.score}</div>
+                    <div class="match-result ${match.result}">${match.result === 'win' ? 'Победа' : 'Поражение'}</div>
+                    <div>${match.prize} TON</div>
+                `;
+                historyContainer.appendChild(matchElement);
+            });
+        }
+
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            element.classList.add('loading');
+        }
+
+        function hideLoading(elementId) {
+            const element = document.getElementById(elementId);
+            element.classList.remove('loading');
+        }
+
+        function showStatus(message, isError = false) {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.style.display = 'block';
+            statusEl.style.backgroundColor = isError ? 'rgba(255,0,0,0.1)' : 'rgba(0,255,0,0.1)';
+            statusEl.textContent = message;
+            setTimeout(() => {
+                statusEl.style.display = 'none';
+            }, 3000);
+        }
+
+        async function joinTournament() {
+            showLoading('joinBtn');
+            try {
+                tg.sendData(JSON.stringify({
+                    action: 'join_tournament',
+                    tournamentId: 'cs2_5v5'
+                }));
+                showStatus('Заявка на участие отправлена!');
+            } catch (error) {
+                showStatus('Ошибка при подаче заявки', true);
+            } finally {
+                hideLoading('joinBtn');
+            }
+        }
+
+        async function viewTournament() {
+            showLoading('viewBtn');
+            try {
+                tg.sendData(JSON.stringify({
+                    action: 'view_tournaments'
+                }));
+            } catch (error) {
+                showStatus('Ошибка при загрузке турниров', true);
+            } finally {
+                hideLoading('viewBtn');
+            }
+        }
+
+        async function payEntry() {
+            showLoading('payBtn');
+            try {
+                tg.sendData(JSON.stringify({
+                    action: 'pay_ton',
+                    amount: 100
+                }));
+                showStatus('Запрос на оплату отправлен');
+            } catch (error) {
+                showStatus('Ошибка при обработке платежа', true);
+            } finally {
+                hideLoading('payBtn');
+            }
+        }
+
+        function switchStatsTab(tabName) {
+            const contents = document.querySelectorAll('.stats-content');
+            contents.forEach(content => content.classList.remove('active'));
+            document.getElementById(`${tabName}-content`).classList.add('active');
+
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (tabName === 'achievements') {
+                loadAchievements();
+            }
+        }
+
+        let currentAchievements = null;
+        let currentFilter = 'all';
+
+        function filterAchievements(type) {
+            if (!currentAchievements) return;
+            
+            document.querySelectorAll('.filter-chip').forEach(chip => {
+                chip.classList.toggle('active', chip.dataset.filter === type);
+            });
+
+            currentFilter = type;
+            const filtered = type === 'all' 
+                ? currentAchievements.achievements 
+                : currentAchievements.achievements.filter(a => a.type === type || a.rarity === type);
+            
+            updateAchievementsDisplay({ 
+                summary: currentAchievements.summary, 
+                achievements: filtered 
+            });
+        }
+
+        document.querySelectorAll('.filter-chip').forEach(chip => {
+            chip.addEventListener('click', () => filterAchievements(chip.dataset.filter));
+        });
+
+        async function loadAchievements() {
+            showLoading('achievements-content');
+            try {
+                currentAchievements = await fetchAchievements();
+                filterAchievements(currentFilter);
+            } catch (error) {
+                showStatus('Ошибка при загрузке достижений', true);
+            } finally {
+                hideLoading('achievements-content');
+            }
+        }
+
+        async function fetchAchievements() {
+            // This would be an actual API call in production
+            return {
+                summary: {
+                    trophies: 5,
+                    medals: 12,
+                    ranking: 156
+                },
+                achievements: [
+                    {
+                        id: 1,
+                        title: "Чемпион WAY Cup Season 1",
+                        description: "Победа в турнире WAY Cup Season 1 CS2",
+                        icon: "🏆",
+                        date: "2024-03-15",
+                        prize: 500,
+                        position: 1,
+                        progress: 100,
+                        type: "tournament",
+                        rarity: "legendary",
+                        isNew: true
+                    },
+                    {
+                        id: 2,
+                        title: "Серия побед",
+                        description: "5 побед подряд в турнирах",
+                        icon: "🔥",
+                        date: "2024-03-10",
+                        type: "streak",
+                        rarity: "epic",
+                        streakCount: 5,
+                        maxStreak: 5,
+                        progress: 100
+                    },
+                    {
+                        id: 3,
+                        title: "Снайпер турнира",
+                        description: "Лучший AWP игрок турнира",
+                        icon: "🎯",
+                        date: "2024-02-15",
+                        type: "personal",
+                        rarity: "rare",
+                        progress: 100
+                    },
+                    {
+                        id: 4,
+                        title: "Безупречная победа",
+                        description: "Победа в матче без единого поражения",
+                        icon: "⚡",
+                        date: "2024-02-10",
+                        type: "milestone",
+                        rarity: "epic",
+                        progress: 100
+                    },
+                    {
+                        id: 5,
+                        title: "Путь к вершине",
+                        description: "Участие в 5 турнирах",
+                        icon: "📈",
+                        type: "milestone",
+                        rarity: "common",
+                        date: "В процессе",
+                        progress: 60
+                    }
+                ]
+            };
+        }
+
+        function updateAchievementsDisplay(data) {
+            // Update summary
+            document.getElementById('totalTrophies').textContent = data.summary.trophies;
+            document.getElementById('totalMedals').textContent = data.summary.medals;
+            document.getElementById('ranking').textContent = '#' + data.summary.ranking;
+
+            // Update achievements list
+            const container = document.getElementById('achievementsList');
+            container.innerHTML = '';
+
+            data.achievements.forEach(achievement => {
+                const achievementElement = document.createElement('div');
+                achievementElement.className = `achievement-card ${achievement.isNew ? 'new' : ''} ${achievement.type === 'milestone' ? 'milestone' : ''}`;
+                
+                let streakHtml = '';
+                if (achievement.type === 'streak') {
+                    streakHtml = `
+                        <div class="achievement-streak">
+                            ${Array(achievement.maxStreak).fill(0).map((_, i) => 
+                                `<div class="streak-dot ${i < achievement.streakCount ? '' : 'empty'}"></div>`
+                            ).join('')}
+                        </div>
+                    `;
+                }
+
+                achievementElement.innerHTML = `
+                    <div class="achievement-rarity rarity-${achievement.rarity}">
+                        ${achievement.rarity.charAt(0).toUpperCase() + achievement.rarity.slice(1)}
+                    </div>
+                    <div class="achievement-header">
+                        <div class="achievement-icon">${achievement.icon}</div>
+                        <div>
+                            <div class="achievement-title">${achievement.title}</div>
+                            <div class="achievement-details">${achievement.description}</div>
+                        </div>
+                    </div>
+                    ${achievement.prize ? `<div class="achievement-prize">🏆 ${achievement.prize} TON</div>` : ''}
+                    ${streakHtml}
+                    <div class="achievement-date">${achievement.date}</div>
+                    <div class="achievement-progress">
+                        <div class="achievement-progress-bar" style="width: ${achievement.progress}%"></div>
+                    </div>
+                    ${achievement.position === 1 ? '<div class="achievement-badge">1st</div>' : ''}
+                    <button class="share-button" onclick="shareAchievement(${achievement.id})">📤</button>
+                `;
+                container.appendChild(achievementElement);
+
+                if (achievement.isNew) {
+                    createConfetti();
+                }
+            });
+        }
+
+        function createConfetti() {
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.animationDelay = Math.random() * 3 + 's';
+                confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 70%, 50%)`;
+                document.body.appendChild(confetti);
+                setTimeout(() => confetti.remove(), 5000);
+            }
+        }
+
+        function shareAchievement(achievementId) {
+            const achievement = currentAchievements.achievements.find(a => a.id === achievementId);
+            if (achievement) {
+                const message = `🎮 Получено достижение в WAY Esports!\n\n🏆 ${achievement.title}\n📝 ${achievement.description}\n\n🌟 Редкость: ${achievement.rarity}\n📅 Дата: ${achievement.date}`;
+                tg.sendData(JSON.stringify({
+                    action: 'share_achievement',
+                    message: message
+                }));
+            }
+        }
+
+        // Handle back button
+        tg.BackButton.onClick(() => {
+            tg.close();
+        });
+
+        // Show back button if inside tournament view
+        if (tg.initDataUnsafe.start_param === 'tournament_view') {
+            tg.BackButton.show();
+        }
+
+        // Load stats on initial load if stats tab is active
+        if (document.querySelector('.tab.active').textContent === 'Статистика') {
+            loadPlayerStats();
+        }
+
+        async function fetchLeaderboard(type) {
+            // This would be an actual API call in production
+            return {
+                achievements: [
+                    { rank: 1, name: "NAVI s1mple", avatar: "👑", score: 2500, stats: "50 достижений • 15 турниров" },
+                    { rank: 2, name: "Spirit degster", avatar: "🎯", score: 2200, stats: "45 достижений • 12 турниров" },
+                    { rank: 3, name: "VP Jame", avatar: "🛡️", score: 2000, stats: "42 достижения • 14 турниров" },
+                    { rank: 4, name: "Player 4", avatar: "🎮", score: 1800, stats: "38 достижений • 10 турниров" },
+                    { rank: 5, name: "Player 5", avatar: "🎯", score: 1600, stats: "35 достижений • 8 турниров" }
+                ],
+                tournaments: [
+                    { rank: 1, name: "NAVI Team", avatar: "⚡", score: 8, stats: "8 побед • 10 турниров" },
+                    { rank: 2, name: "Spirit", avatar: "👻", score: 6, stats: "6 побед • 8 турниров" },
+                    { rank: 3, name: "Virtus.pro", avatar: "🐻", score: 5, stats: "5 побед • 7 турниров" },
+                    { rank: 4, name: "Team 4", avatar: "🎮", score: 4, stats: "4 победы • 6 турниров" },
+                    { rank: 5, name: "Team 5", avatar: "🎯", score: 3, stats: "3 победы • 5 турниров" }
+                ],
+                winrate: [
+                    { rank: 1, name: "Player X", avatar: "🎯", score: "85%", stats: "17 побед • 20 матчей" },
+                    { rank: 2, name: "Player Y", avatar: "🎮", score: "80%", stats: "16 побед • 20 матчей" },
+                    { rank: 3, name: "Player Z", avatar: "⚡", score: "75%", stats: "15 побед • 20 матчей" },
+                    { rank: 4, name: "Player W", avatar: "🎯", score: "70%", stats: "14 побед • 20 матчей" },
+                    { rank: 5, name: "Player V", avatar: "🎮", score: "65%", stats: "13 побед • 20 матчей" }
+                ]
+            };
+        }
+
+        function updateLeaderboardDisplay(data, type) {
+            const container = document.getElementById('leaderboardList');
+            container.innerHTML = '';
+
+            data[type].forEach((item, index) => {
+                const itemElement = document.createElement('div');
+                itemElement.className = 'leaderboard-item';
+                itemElement.style.animationDelay = `${index * 0.1}s`;
+
+                itemElement.innerHTML = `
+                    <div class="rank rank-${item.rank}">#${item.rank}</div>
+                    <div class="player-avatar">${item.avatar}</div>
+                    <div class="player-info">
+                        <div class="player-name">${item.name}</div>
+                        <div class="player-stats">${item.stats}</div>
+                    </div>
+                    <div class="player-score">${item.score}</div>
+                `;
+
+                if (item.rank <= 3) {
+                    const trophy = document.createElement('div');
+                    trophy.className = 'trophy-animation';
+                    trophy.textContent = item.rank === 1 ? '🏆' : item.rank === 2 ? '🥈' : '🥉';
+                    itemElement.appendChild(trophy);
+                }
+
+                container.appendChild(itemElement);
+            });
+        }
+
+        async function switchLeaderboard(type) {
+            document.querySelectorAll('.leaderboard-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.textContent.toLowerCase().includes(type));
+            });
+
+            showLoading('leaderboardList');
+            try {
+                const data = await fetchLeaderboard(type);
+                updateLeaderboardDisplay(data, type);
+            } catch (error) {
+                showStatus('Ошибка при загрузке таблицы лидеров', true);
+            } finally {
+                hideLoading('leaderboardList');
+            }
+        }
+
+        function showAchievementUnlock(achievement) {
+            const overlay = document.getElementById('unlockOverlay');
+            const content = overlay.querySelector('.unlock-content');
+
+            content.querySelector('.achievement-icon').textContent = achievement.icon;
+            content.querySelector('.achievement-title').textContent = achievement.title;
+            content.querySelector('.achievement-description').textContent = achievement.description;
+            if (achievement.prize) {
+                content.querySelector('.achievement-prize').textContent = `🏆 ${achievement.prize} TON`;
+            }
+
+            overlay.classList.add('show');
+            content.classList.add('show');
+            createSparkles();
+
+            setTimeout(() => {
+                overlay.classList.remove('show');
+                content.classList.remove('show');
+            }, 3000);
+        }
+
+        function createSparkles() {
+            for (let i = 0; i < 20; i++) {
+                const sparkle = document.createElement('div');
+                sparkle.className = 'sparkle';
+                sparkle.textContent = '✨';
+                sparkle.style.setProperty('--tx', `${(Math.random() - 0.5) * 200}px`);
+                sparkle.style.setProperty('--ty', `${(Math.random() - 0.5) * 200}px`);
+                document.body.appendChild(sparkle);
+                setTimeout(() => sparkle.remove(), 1000);
+            }
+        }
+
+        // Initialize leaderboard on load
+        if (document.querySelector('.tab.active').textContent === 'Лидеры') {
+            switchLeaderboard('achievements');
+        }
+
+        // Tournament Timer
+        function updateTimer() {
+            const now = new Date().getTime();
+            const target = new Date(now + 2 * 24 * 60 * 60 * 1000 + 18 * 60 * 60 * 1000 + 45 * 60 * 1000 + 30 * 1000).getTime();
+            
+            function update() {
+                const current = new Date().getTime();
+                const distance = target - current;
+
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                document.getElementById('days').textContent = String(days).padStart(2, '0');
+                document.getElementById('hours').textContent = String(hours).padStart(2, '0');
+                document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
+                document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
+
+                if (distance < 0) {
+                    clearInterval(timerInterval);
+                    document.querySelector('.tournament-timer').innerHTML = '<div class="time-value">Турнир начался!</div>';
+                }
+            }
+
+            update();
+            const timerInterval = setInterval(update, 1000);
+        }
+
+        function showNotification(title, message, icon = '🎉') {
+            const notification = document.getElementById('notification');
+            notification.querySelector('.notification-icon').textContent = icon;
+            notification.querySelector('.notification-title').textContent = title;
+            notification.querySelector('.notification-message').textContent = message;
+            
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        function viewBracket() {
+            showNotification('Загрузка...', 'Открываем сетку турнира', '📊');
+            // Implementation for viewing the full bracket
+        }
+
+        // Initialize
+        updateTimer();
+    </script>
+</body>
+</html>
+
