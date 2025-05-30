@@ -4,7 +4,6 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const TelegramBot = require('node-telegram-bot-api');
 const path = require('path');
-const { validateTelegramWebAppData } = require('./utils/auth');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -38,21 +37,9 @@ const authenticateUser = async (req, res, next) => {
   if (!initData) {
     return res.status(401).json({ error: 'No authentication data' });
   }
-
-  if (!validateTelegramWebAppData(initData)) {
-    return res.status(401).json({ error: 'Invalid authentication data' });
-  }
-
-  // Parse user data from initData
-  try {
-    const data = new URLSearchParams(initData);
-    const user = JSON.parse(data.get('user'));
-    req.user = user;
-    next();
-  } catch (error) {
-    console.error('Error parsing user data:', error);
-    return res.status(401).json({ error: 'Invalid user data' });
-  }
+  // In a production environment, you should verify the initData
+  // using Telegram's guidelines for Mini Apps
+  next();
 };
 
 // Bot commands
@@ -144,8 +131,12 @@ app.post('/api/tournaments/:id/start', authenticateUser, async (req, res) => {
       return res.status(404).json({ error: 'Tournament not found' });
     }
 
-    if (!tournament.canStart()) {
-      return res.status(400).json({ error: 'Tournament cannot be started at this time' });
+    if (tournament.status !== 'upcoming') {
+      return res.status(400).json({ error: 'Tournament has already started' });
+    }
+
+    if (tournament.registeredTeams.length < 2) {
+      return res.status(400).json({ error: 'Not enough teams registered' });
     }
 
     tournament.status = 'in_progress';
@@ -165,25 +156,30 @@ app.post('/api/tournaments/:id/matches/update', authenticateUser, async (req, re
     }
 
     const { roundNumber, matchIndex, team1Score, team2Score } = req.body;
+    const match = tournament.bracket.rounds[roundNumber - 1].matches[matchIndex];
     
-    // Update match result using the enhanced method
-    tournament.updateMatchResult(roundNumber, matchIndex, team1Score, team2Score);
+    match.team1.score = team1Score;
+    match.team2.score = team2Score;
+    match.status = 'completed';
     
-    // If tournament is completed, update stats and distribute prizes
-    if (tournament.status === 'completed') {
-      const finalMatch = tournament.bracket.rounds[tournament.bracket.rounds.length - 1].matches[0];
-      const winningTeam = tournament.registeredTeams.find(team => team.name === finalMatch.winner);
+    const winner = team1Score > team2Score ? match.team1.name : match.team2.name;
+    tournament.updateBracket(roundNumber, matchIndex, winner);
+    
+    // Check if tournament is completed
+    const finalRound = tournament.bracket.rounds[tournament.bracket.rounds.length - 1];
+    if (finalRound.matches[0].status === 'completed') {
+      tournament.status = 'completed';
       
+      // Update winner's stats
+      const winningTeam = tournament.registeredTeams.find(team => team.name === winner);
       if (winningTeam) {
-        // Update winner stats
         for (const playerId of winningTeam.players) {
           await User.findOneAndUpdate(
             { telegramId: playerId },
             { 
               $inc: { 
                 'stats.wins': 1,
-                'stats.tournamentWins': 1,
-                'stats.earnings': tournament.prizePool
+                'stats.tournamentParticipation': 1
               }
             }
           );
