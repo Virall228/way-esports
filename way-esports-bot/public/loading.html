@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading...</title>
+    <link rel="stylesheet" href="loading.css">
+</head>
+<body>
+    <div class="loading-container">
+        <div class="loading-spinner">
+            <div class="knife"></div>
+            <div class="knife"></div>
+            <div class="knife"></div>
+            <div class="knife"></div>
+        </div>
+    </div>
+    <script>
+        // Auto-hide loading screen after 3 seconds
+        setTimeout(() => {
+            document.querySelector('.loading-container').style.display = 'none';
+        }, 3500); // 3.5 seconds to account for fade out animation
+    </script>
+</body>
+</html> 
