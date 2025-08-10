@@ -1,0 +1,161 @@
+/* WAY Esports - Новая цветовая схема: Серый, Черный, Белый, Розовый */
+
+:root {
+  /* Основные цвета */
+  --primary-pink: #ff69b4;
+  --primary-pink-dark: #ff1493;
+  --primary-pink-light: #ffb6c1;
+  
+  /* Серые тона */
+  --gray-dark: #2a2a2a;
+  --gray-medium: #808080;
+  --gray-light: #c0c0c0;
+  --gray-lighter: #e0e0e0;
+  
+  /* Черные тона */
+  --black-pure: #000000;
+  --black-soft: #0a0a0a;
+  --black-medium: #141414;
+  --black-light: #1a1a1a;
+  
+  /* Белые тона */
+  --white-pure: #ffffff;
+  --white-soft: #f8f8f8;
+  --white-medium: #f0f0f0;
+  
+  /* Градиенты */
+  --gradient-pink: linear-gradient(135deg, var(--primary-pink), var(--primary-pink-dark));
+  --gradient-gray: linear-gradient(135deg, var(--gray-light), var(--gray-medium));
+  --gradient-dark: linear-gradient(145deg, rgba(20, 20, 20, 0.95), rgba(40, 40, 40, 0.95));
+  
+  /* Прозрачности */
+  --pink-alpha-10: rgba(255, 105, 180, 0.1);
+  --pink-alpha-20: rgba(255, 105, 180, 0.2);
+  --pink-alpha-30: rgba(255, 105, 180, 0.3);
+  
+  --gray-alpha-10: rgba(128, 128, 128, 0.1);
+  --gray-alpha-20: rgba(128, 128, 128, 0.2);
+  --gray-alpha-30: rgba(128, 128, 128, 0.3);
+  
+  --black-alpha-30: rgba(0, 0, 0, 0.3);
+  --black-alpha-50: rgba(0, 0, 0, 0.5);
+  --black-alpha-70: rgba(0, 0, 0, 0.7);
+  
+  /* Статусные цвета (оставляем как есть) */
+  --success: #2ed573;
+  --success-light: #3ddb7f;
+  --danger: #ff4757;
+  --danger-light: #ff6b7a;
+  --warning: #ffa502;
+  --info: #3742fa;
+}
+
+/* Применение новых цветов к основным элементам */
+.tournament-container {
+  background: var(--gradient-dark);
+  border: 2px solid var(--pink-alpha-30);
+  color: var(--white-pure);
+}
+
+.tournament-title {
+  background: var(--gradient-pink);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.tournament-tab.active {
+  background: var(--gradient-pink);
+  color: var(--white-pure);
+  border-color: var(--primary-pink);
+}
+
+.tournament-tab {
+  background: var(--gray-alpha-20);
+  color: var(--gray-light);
+  border-color: var(--gray-alpha-30);
+}
+
+.match-card {
+  background: var(--gradient-dark);
+  border-color: var(--gray-alpha-20);
+}
+
+.match-card.in-progress {
+  border-color: var(--pink-alpha-30);
+}
+
+.match-card::before {
+  background: var(--gradient-pink);
+}
+
+.button-primary {
+  background: var(--gradient-pink);
+  color: var(--white-pure);
+}
+
+.button-secondary {
+  background: var(--gray-alpha-20);
+  color: var(--gray-light);
+}
+
+/* Обновленные стили для форм */
+.form-input {
+  background: var(--gray-alpha-10);
+  border: 1px solid var(--gray-alpha-30);
+  color: var(--white-pure);
+}
+
+.form-input:focus {
+  border-color: var(--primary-pink);
+  box-shadow: 0 0 0 2px var(--pink-alpha-20);
+}
+
+/* Обновленные стили для модальных окон */
+.modal-overlay {
+  background: var(--black-alpha-70);
+}
+
+.modal-content {
+  background: var(--gradient-dark);
+  border: 1px solid var(--gray-alpha-30);
+}
+
+/* Обновленные стили для таблиц */
+.table-header {
+  background: var(--gray-alpha-10);
+  color: var(--gray-light);
+}
+
+.table-row:hover {
+  background: var(--pink-alpha-10);
+}
+
+/* Анимации с новыми цветами */
+@keyframes pinkGlow {
+  0% { box-shadow: 0 0 5px var(--pink-alpha-30); }
+  50% { box-shadow: 0 0 20px var(--pink-alpha-30), 0 0 30px var(--pink-alpha-20); }
+  100% { box-shadow: 0 0 5px var(--pink-alpha-30); }
+}
+
+.glow-pink {
+  animation: pinkGlow 2s ease-in-out infinite;
+}
+
+/* Утилитарные классы */
+.text-pink { color: var(--primary-pink); }
+.text-pink-dark { color: var(--primary-pink-dark); }
+.text-gray { color: var(--gray-medium); }
+.text-gray-light { color: var(--gray-light); }
+.text-white { color: var(--white-pure); }
+.text-black { color: var(--black-pure); }
+
+.bg-pink { background: var(--primary-pink); }
+.bg-gradient-pink { background: var(--gradient-pink); }
+.bg-gradient-gray { background: var(--gradient-gray); }
+.bg-gradient-dark { background: var(--gradient-dark); }
+
+.border-pink { border-color: var(--primary-pink); }
+.border-gray { border-color: var(--gray-medium); }
+.border-pink-alpha { border-color: var(--pink-alpha-30); }
+.border-gray-alpha { border-color: var(--gray-alpha-30); }
