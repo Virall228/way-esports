@@ -1,0 +1,79 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output
+dist/
+build/
+out/
+*.log
+
+# VSCode/IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Archives
+*.zip
+*.rar
+*.7z
+
+# Env files
+.env
+.env.*
+
+# Cypress
+way-esports/frontend/cypress/videos/
+way-esports/frontend/cypress/screenshots/
+
+# Test coverage
+coverage/
+
+# Frontend static build
+way-esports/frontend/dist/
+way-esports/frontend/build/
+
+# Backend static build
+way-esports-backend/dist/
+way-esports-backend/build/
+
+# Bot static build
+way-esports-bot/dist/
+way-esports-bot/build/
+
+# Misc
+*.tgz
+*.swp
+*.swo
+
+# Mac system files
+Icon?
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Compiled TypeScript
+*.tsbuildinfo
+
+# Test snapshots
+__snapshots__/
+
+# Jest coverage
+coverage/
+
+# Local env
+local.env
+
+# Public uploads (если есть)
+public/uploads/ 

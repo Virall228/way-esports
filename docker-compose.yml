@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  tine-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: frontend-build
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./way-esports/frontend:/app/way-esports/frontend
+      - /app/way-esports/frontend/node_modules
+    command: ["npm", "run", "dev"]
+
+  tine-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: backend-build
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://mongo:27017/tineweb
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./way-esports-backend:/app/way-esports-backend
+      - /app/way-esports-backend/node_modules
+    depends_on:
+      - mongo
+      - redis
+    command: ["npm", "run", "dev"]
+
+  mongo:
+    image: mongo:6
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  mongo_data:
+  redis_data:
