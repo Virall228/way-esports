@@ -24,7 +24,7 @@ services:
       - "3001:3001"
     environment:
       - NODE_ENV=development
-      - MONGODB_URI=mongodb://mongo:27017/tineweb
+      - MONGODB_URI=mongodb+srv://vb917185:hJoJm47FxYT8kSAP@cluster1.ey2ubm6.mongodb.net/
       - REDIS_URL=redis://redis:6379
     volumes:
       - ./way-esports-backend:/app/way-esports-backend
