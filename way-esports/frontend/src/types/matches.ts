@@ -69,17 +69,7 @@ export interface Round {
 export interface CriticalOpsMatch {
   id: string;
   map: string;
-  mode: 'Defuse';
+  mode: 'Defuse' | 'TDM' | 'Custom';
   date: Date;
   duration: number;
-  status: 'live' | 'completed' | 'upcoming';
-  tournament: {
-    id: string;
-    name: string;
-    round: string;
-  };
-  team1: Team;
-  team2: Team;
-  winner: string;
-  rounds: Round[];
-} 
+  status: 'live' | 'completed' | 'upcoming' | 'in_progress';

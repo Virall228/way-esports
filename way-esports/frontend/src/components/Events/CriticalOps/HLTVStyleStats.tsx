@@ -112,7 +112,7 @@ const HLTVStyleStats: React.FC<HLTVStyleStatsProps> = ({ match }) => {
       <MatchHeader>
         <TeamSection $winner={match.winner === match.team1.id}>
           <TeamName $winner={match.winner === match.team1.id}>{match.team1.name}</TeamName>
-          <TeamNameTag>{match.team1.tag}</TeamNameTag>
+          <span>{match.team1.tag}</span>
         </TeamSection>
         <div>
           <Score>
@@ -128,7 +128,7 @@ const HLTVStyleStats: React.FC<HLTVStyleStatsProps> = ({ match }) => {
         </div>
         <TeamSection $winner={match.winner === match.team2.id}>
           <TeamName $winner={match.winner === match.team2.id}>{match.team2.name}</TeamName>
-          <TeamTag>{match.team2.tag}</TeamTag>
+          <span>{match.team2.tag}</span>
         </TeamSection>
       </MatchHeader>
 

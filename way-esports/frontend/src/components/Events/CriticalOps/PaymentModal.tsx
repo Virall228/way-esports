@@ -270,3 +270,5 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         </ModalOverlay>
     );
 };
+
+export {}
