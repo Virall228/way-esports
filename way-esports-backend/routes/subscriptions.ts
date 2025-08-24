@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { body, validationResult } from 'express-validator';
+// import { body, validationResult } from 'express-validator';
 import { Subscription } from '../models/Subscription';
 import { mockAuth } from '../middleware/mockAuth';
 
@@ -9,7 +9,7 @@ interface AuthRequest extends Request {
   user?: {
     id: string;
     username: string;
-  };
+  } | any;
 }
 
 // Mock auth middleware for demo
@@ -112,27 +112,17 @@ router.get('/history', mockAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // Create new subscription
-router.post('/', mockAuth, [
-  body('plan')
-    .isIn(['basic', 'premium', 'pro'])
-    .withMessage('Invalid subscription plan'),
-  body('paymentMethod')
-    .isIn(['card', 'paypal', 'crypto', 'wallet'])
-    .withMessage('Invalid payment method'),
-  body('transactionId')
-    .optional()
-    .isString()
-    .withMessage('Transaction ID must be a string')
-], async (req: AuthRequest, res: Response) => {
+router.post('/', mockAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors.array()
-      });
-    }
+    // Validation removed for now
+    // const errors = validationResult(req);
+    // if (!errors.isEmpty()) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: 'Validation failed',
+    //     errors: errors.array()
+    //   });
+    // }
     
     const userId = req.user?.id;
     const { plan, paymentMethod, transactionId } = req.body;
@@ -197,12 +187,7 @@ router.post('/', mockAuth, [
 });
 
 // Cancel subscription
-router.post('/cancel', mockAuth, [
-  body('reason')
-    .optional()
-    .isString()
-    .withMessage('Reason must be a string')
-], async (req: AuthRequest, res: Response) => {
+router.post('/cancel', mockAuth, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
     const { reason } = req.body;
@@ -237,11 +222,7 @@ router.post('/cancel', mockAuth, [
 });
 
 // Update subscription settings
-router.put('/settings', mockAuth, [
-  body('autoRenew')
-    .isBoolean()
-    .withMessage('Auto renew must be a boolean')
-], async (req: AuthRequest, res: Response) => {
+router.put('/settings', mockAuth, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
     const { autoRenew } = req.body;

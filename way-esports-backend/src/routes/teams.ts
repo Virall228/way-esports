@@ -64,8 +64,8 @@ router.post('/', async (req, res) => {
   try {
     const teamData: Partial<ITeam> = {
       ...req.body,
-      captain: req.user.id,
-      members: [req.user.id]
+      captain: req.user?.id || '',
+      members: [req.user?.id || '']
     };
 
     // Check if team name or tag already exists
@@ -87,9 +87,11 @@ router.post('/', async (req, res) => {
     await team.save();
 
     // Add team to user's teams
-    await User.findByIdAndUpdate(req.user.id, {
-      $push: { teams: team._id }
-    });
+    if (req.user?.id) {
+      await User.findByIdAndUpdate(req.user.id, {
+        $push: { teams: team._id }
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -116,7 +118,7 @@ router.put('/:id', async (req, res) => {
       });
     }
 
-    if (team.captain.toString() !== req.user.id) {
+    if (req.user?.id && team.captain.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
         error: 'Not authorized to update this team'
@@ -155,7 +157,7 @@ router.post('/:id/members', async (req, res) => {
       });
     }
 
-    if (team.captain.toString() !== req.user.id) {
+    if (req.user?.id && team.captain.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
         error: 'Not authorized to add members'
@@ -202,7 +204,7 @@ router.delete('/:id/members/:userId', async (req, res) => {
       });
     }
 
-    if (team.captain.toString() !== req.user.id) {
+    if (req.user?.id && team.captain.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
         error: 'Not authorized to remove members'

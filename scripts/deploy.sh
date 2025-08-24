@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# TineWeb Deployment Script
+# TimeWeb Deployment Script
 # Usage: ./deploy.sh [staging|production]
 
 set -e

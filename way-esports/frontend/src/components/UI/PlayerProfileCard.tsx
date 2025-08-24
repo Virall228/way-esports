@@ -48,7 +48,7 @@ const AvatarContainer = styled.div`
   left: ${({ theme }) => theme.spacing.md};
   width: 80px;
   height: 80px;
-  border-radius: ${({ theme }) => theme.borderRadius.round};
+  border-radius: ${({ theme }) => theme.borderRadius.full};
   border: 4px solid ${({ theme }) => theme.colors.surface};
   overflow: hidden;
   background: ${({ theme }) => theme.colors.primary};

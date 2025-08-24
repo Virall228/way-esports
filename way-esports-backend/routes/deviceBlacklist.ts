@@ -1,8 +1,8 @@
 import express from 'express';
 import { auth } from '../middleware/auth';
 import { adminAuth } from '../middleware/adminAuth';
-import { DeviceBlacklist } from '../models/DeviceBlacklist';
-import { DeviceVerification } from '../models/DeviceVerification';
+import DeviceBlacklist from '../models/DeviceBlacklist';
+import DeviceVerification from '../models/DeviceVerification';
 
 const router = express.Router();
 
@@ -71,7 +71,7 @@ router.post('/valorant-mobile/blacklist', adminAuth, async (req, res) => {
     res.status(400).json({
       status: 'error',
       message: 'Error adding device to blacklist',
-      error: error.message
+      error: (error as Error).message
     });
   }
 });
@@ -100,7 +100,7 @@ router.delete('/valorant-mobile/blacklist/:deviceId', adminAuth, async (req, res
     res.status(400).json({
       status: 'error',
       message: 'Error removing device from blacklist',
-      error: error.message
+      error: (error as Error).message
     });
   }
 });
@@ -130,7 +130,7 @@ router.get('/valorant-mobile/blacklist/status/:deviceId', auth, async (req, res)
     res.status(400).json({
       status: 'error',
       message: 'Error checking blacklist status',
-      error: error.message
+      error: (error as Error).message
     });
   }
 });
@@ -179,7 +179,7 @@ router.post('/valorant-mobile/blacklist/appeal/:deviceId', auth, async (req, res
     res.status(400).json({
       status: 'error',
       message: 'Error submitting appeal',
-      error: error.message
+      error: (error as Error).message
     });
   }
 });
@@ -229,7 +229,7 @@ router.post('/valorant-mobile/blacklist/appeal/:deviceId/review', adminAuth, asy
     res.status(400).json({
       status: 'error',
       message: 'Error reviewing appeal',
-      error: error.message
+      error: (error as Error).message
     });
   }
 });
@@ -250,7 +250,7 @@ router.get('/valorant-mobile/blacklist', adminAuth, async (req, res) => {
     res.status(400).json({
       status: 'error',
       message: 'Error fetching blacklist',
-      error: error.message
+      error: (error as Error).message
     });
   }
 });

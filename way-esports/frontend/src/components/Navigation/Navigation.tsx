@@ -39,7 +39,7 @@ const NavItem = styled(Link)<{ $active?: boolean }>`
   color: ${({ $active, theme }) => $active ? theme.colors.primary : theme.colors.text};
   text-decoration: none;
   font-size: ${({ theme }) => theme.typography.fontSizes.md};
-  transition: all ${({ theme }) => theme.transitions.default};
+  transition: all ${({ theme }) => theme.transitions.medium};
   border-left: 3px solid ${({ $active, theme }) => $active ? theme.colors.primary : 'transparent'};
 
   &:hover {

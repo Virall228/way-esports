@@ -68,15 +68,21 @@ export const cyberpunkTheme = {
     primary: "'JetBrains Mono', 'Courier New', monospace",
     secondary: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
     accent: "'Orbitron', monospace",
+    title: "'Orbitron', monospace",
+    body: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
   },
   
   fontWeights: {
     light: 300,
     regular: 400,
     medium: 500,
+    semiBold: 600,
     semibold: 600,
     bold: 700,
+    extraBold: 800,
     extrabold: 800,
+    black: 900,
+    normal: 400,
   },
   
   spacing: {
@@ -91,15 +97,23 @@ export const cyberpunkTheme = {
   borderRadius: {
     none: '0',
     sm: '2px',
+    small: '2px',
     md: '4px',
+    medium: '4px',
     lg: '8px',
+    large: '8px',
+    xl: '16px',
     full: '9999px',
+    round: '50%',
   },
   
   shadows: {
     sm: '0 1px 2px 0 rgba(255, 255, 255, 0.05)',
+    small: '0 1px 2px 0 rgba(255, 255, 255, 0.05)',
     md: '0 4px 6px -1px rgba(255, 255, 255, 0.1), 0 2px 4px -1px rgba(255, 255, 255, 0.06)',
+    medium: '0 4px 6px -1px rgba(255, 255, 255, 0.1), 0 2px 4px -1px rgba(255, 255, 255, 0.06)',
     lg: '0 10px 15px -3px rgba(255, 255, 255, 0.1), 0 4px 6px -2px rgba(255, 255, 255, 0.05)',
+    large: '0 10px 15px -3px rgba(255, 255, 255, 0.1), 0 4px 6px -2px rgba(255, 255, 255, 0.05)',
     glow: '0 0 20px rgba(255, 255, 255, 0.1)',
   },
   
@@ -107,6 +121,35 @@ export const cyberpunkTheme = {
     fast: '150ms ease',
     medium: '300ms ease',
     slow: '500ms ease',
+    default: '300ms ease',
+  },
+  
+  typography: {
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    fontSizes: {
+      xs: '12px',
+      sm: '14px',
+      md: '16px',
+      lg: '18px',
+      xl: '24px',
+      xxl: '32px'
+    },
+    fontWeights: {
+      normal: 400,
+      medium: 500,
+      semibold: 600,
+      bold: 700
+    },
+    h1: { fontSize: '32px', fontWeight: 700 },
+    h2: { fontSize: '28px', fontWeight: 700 },
+    h3: { fontSize: '24px', fontWeight: 600 },
+    h4: { fontSize: '20px', fontWeight: 600 },
+    h5: { fontSize: '18px', fontWeight: 600 },
+    h6: { fontSize: '16px', fontWeight: 600 },
+    body1: { fontSize: '16px', fontWeight: 400 },
+    body2: { fontSize: '14px', fontWeight: 400 },
+    button: { fontSize: '16px', fontWeight: 600 },
+    caption: { fontSize: '12px', fontWeight: 400 }
   },
   
   breakpoints: {

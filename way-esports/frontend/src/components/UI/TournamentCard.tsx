@@ -93,7 +93,7 @@ const StatusBadge = styled.div<{ status: TournamentCardProps['status'] }>`
   display: inline-flex;
   align-items: center;
   padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
-  border-radius: ${({ theme }) => theme.borderRadius.round};
+  border-radius: ${({ theme }) => theme.borderRadius.full};
   font-size: ${({ theme }) => theme.typography.body2.fontSize};
   margin-bottom: ${({ theme }) => theme.spacing.md};
 

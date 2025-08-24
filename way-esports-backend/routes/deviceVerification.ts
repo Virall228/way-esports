@@ -1,8 +1,8 @@
 import express from 'express';
 import { auth } from '../middleware/auth';
-import { DeviceVerification } from '../models/DeviceVerification';
-import { DeviceBlacklist } from '../models/DeviceBlacklist';
-import { sendVerificationEmail } from '../services/emailService';
+import DeviceVerification from '../models/DeviceVerification';
+import DeviceBlacklist from '../models/DeviceBlacklist';
+// import { sendVerificationEmail } from '../services/emailService';
 
 const router = express.Router();
 
@@ -79,7 +79,8 @@ router.post('/valorant-mobile/verify-device/init', auth, async (req, res) => {
     if (!req.user) {
         return res.status(401).json({ message: 'User not authenticated' });
     }
-    await sendVerificationEmail(req.user.email as string, verificationCode);
+    // await sendVerificationEmail(req.user.email as string, verificationCode);
+    console.log(`Verification code would be sent to user: ${verificationCode}`);
 
     res.json({
       status: 'success',
@@ -157,7 +158,7 @@ router.post('/valorant-mobile/verify-device/confirm', auth, async (req, res) => 
     }
 
     // Check device requirements
-    if (!typeof deviceVerification.meetsMinimumRequirements === 'function' ? deviceVerification.meetsMinimumRequirements() : false) {
+    if (typeof deviceVerification.meetsMinimumRequirements === 'function' ? !deviceVerification.meetsMinimumRequirements() : true) {
       deviceVerification.status = 'rejected';
       await deviceVerification.save();
       

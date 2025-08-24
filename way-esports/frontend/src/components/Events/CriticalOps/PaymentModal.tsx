@@ -174,16 +174,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
             if (!invoiceUrl) throw new Error('No invoice URL received');
 
             // 2. Open Telegram payment dialog
-            openTelegramInvoice(invoiceUrl, (status) => {
-                setLoading(false);
-                if (status === 'paid') {
-                    onPaymentComplete();
-                } else if (status === 'cancelled') {
-                    setError('Payment was cancelled.');
-                } else {
-                    setError('Payment failed. Please try again.');
-                }
-            });
+            await openTelegramInvoice(invoiceUrl);
+            setLoading(false);
+            onPaymentComplete();
         } catch (error: any) {
             setLoading(false);
             setError(error.message || 'Payment failed.');
@@ -271,4 +264,4 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     );
 };
 
-export {}
+export default PaymentModal;

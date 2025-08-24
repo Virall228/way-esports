@@ -1,6 +1,6 @@
 import express from 'express';
-import { Withdrawal } from '../models/Withdrawal';
-import { Reward } from '../models/Reward';
+import Withdrawal from '../models/Withdrawal';
+import Reward from '../models/Reward';
 import { auth, admin, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();

@@ -79,7 +79,7 @@ class NavigationService {
     return breadcrumbs;
   }
 
-  private handleNavigation(path: string, options: NavigationOptions = {}) {
+  handleNavigation(path: string, options: NavigationOptions = {}) {
     const { openInNewTab, preserveQuery, state, title } = options;
 
     if (openInNewTab) {

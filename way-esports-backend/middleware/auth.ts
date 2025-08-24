@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { User, IUser } from '../models/User';
+import User from '../models/User';
+import { IUser } from '../src/models/User';
 
 export interface AuthRequest extends Request {
   user?: IUser;
@@ -41,7 +42,7 @@ export const adminAuth = async (req: AuthRequest, res: Response, next: NextFunct
   try {
     await auth(req, res, () => {});
 
-    if (!req.user || !req.user.isAdmin) {
+    if (!req.user || req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
     }
 

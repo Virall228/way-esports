@@ -16,6 +16,10 @@ export interface ITeamReward extends Document {
   }[];
   createdAt: Date;
   updatedAt: Date;
+  
+  // Methods
+  isExpired(): boolean;
+  claimShare(userId: mongoose.Types.ObjectId): void;
 }
 
 const TeamRewardSchema = new Schema(
@@ -125,4 +129,4 @@ TeamRewardSchema.pre('save', function(next) {
   next();
 });
 
-export const TeamReward = mongoose.model<ITeamReward>('TeamReward', TeamRewardSchema); 
+export default mongoose.model<ITeamReward>('TeamReward', TeamRewardSchema); 

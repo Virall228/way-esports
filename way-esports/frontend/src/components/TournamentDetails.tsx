@@ -19,7 +19,7 @@ const Title = styled.h2`
     margin: 0 0 10px 0;
 `;
 
-const Status = styled.span<{ status: 'upcoming' | 'in_progress' | 'completed' }>`
+const Status = styled.span<{ status: 'upcoming' | 'in_progress' | 'completed' | 'live' }>`
     padding: 5px 10px;
     border-radius: 20px;
     font-size: 14px;
@@ -27,6 +27,7 @@ const Status = styled.span<{ status: 'upcoming' | 'in_progress' | 'completed' }>
         switch (props.status) {
             case 'upcoming': return '#2d5a27';
             case 'in_progress': return '#614a1f';
+            case 'live': return '#614a1f';
             case 'completed': return '#4a1f1f';
             default: return '#333';
         }
@@ -35,6 +36,7 @@ const Status = styled.span<{ status: 'upcoming' | 'in_progress' | 'completed' }>
         switch (props.status) {
             case 'upcoming': return '#4CAF50';
             case 'in_progress': return '#FFC107';
+            case 'live': return '#FFC107';
             case 'completed': return '#F44336';
             default: return '#fff';
         }
@@ -151,6 +153,29 @@ const LiveBadge = styled.div`
     }
 `;
 
+const ActionButton = styled.button<{ variant?: 'primary' | 'secondary' }>`
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: ${props => props.variant === 'secondary' ? '#666' : '#007bff'};
+    color: white;
+    
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+    }
+    
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+`;
+
 const PlayButton = styled(ActionButton)`
     margin-top: 20px;
     background-color: #4CAF50;
@@ -160,7 +185,7 @@ const PlayButton = styled(ActionButton)`
     }
 `;
 
-const StatusIndicator = styled.div<{ status: 'upcoming' | 'live' | 'completed' }>`
+const StatusIndicator = styled.div<{ status: 'upcoming' | 'live' | 'completed' | 'in_progress' }>`
     position: absolute;
     top: 16px;
     right: 16px;
@@ -171,7 +196,7 @@ const StatusIndicator = styled.div<{ status: 'upcoming' | 'live' | 'completed' }
     text-transform: uppercase;
     z-index: 1;
     background: ${props => 
-        props.status === 'live' ? '#FF0000' :
+        props.status === 'live' || props.status === 'in_progress' ? '#FF0000' :
         props.status === 'upcoming' ? '#FFD700' : '#666'};
     color: ${props => props.status === 'upcoming' ? '#000' : '#fff'};
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
@@ -186,7 +211,7 @@ const StatusIndicator = styled.div<{ status: 'upcoming' | 'live' | 'completed' }
             'rgba(102, 102, 102, 0.4)'};
     }
 
-    ${props => props.status === 'live' && `
+    ${(props => props.status === 'live' || props.status === 'in_progress') && `
         animation: pulse 2s infinite;
         
         @keyframes pulse {
@@ -244,7 +269,7 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({ tournament }) => 
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Telegram-Init-Data': window.Telegram.WebApp.initData
+                    'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
                 }
             });
 

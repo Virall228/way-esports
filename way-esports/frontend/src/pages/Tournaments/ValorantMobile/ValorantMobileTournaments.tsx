@@ -340,7 +340,7 @@ const ButtonGroup = styled.div<{ theme: string }>`
   justify-content: center;
   flex-wrap: wrap;
 
-  ${Button} {
+  button {
     min-width: 200px;
     height: 50px;
     font-size: ${({ theme }) => theme.typography.h6.fontSize};

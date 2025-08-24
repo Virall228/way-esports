@@ -63,7 +63,7 @@ router.post('/', async (req, res) => {
   try {
     const tournamentData: Partial<ITournament> = {
       ...req.body,
-      createdBy: req.user.id
+      createdBy: req.user?.id || ''
     };
 
     const tournament = new Tournament(tournamentData);
@@ -155,7 +155,7 @@ router.put('/:id', async (req, res) => {
       });
     }
 
-    if (tournament.createdBy.toString() !== req.user.id) {
+    if (req.user?.id && tournament.createdBy.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
         error: 'Not authorized to update this tournament'

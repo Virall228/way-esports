@@ -37,7 +37,7 @@ router.get('/users/:id/achievements', auth, async (req, res) => {
     if (!user) {
       return res.status(404).send({ error: 'User not found' });
     }
-    res.send(user.achievementHistory);
+    res.send(user.achievements || []);
   } catch (error) {
     res.status(500).send(error);
   }

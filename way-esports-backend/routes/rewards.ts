@@ -1,9 +1,9 @@
 import express from 'express';
 import { auth } from '../middleware/auth';
 import { adminAuth } from '../middleware/adminAuth';
-import { Reward } from '../models/Reward';
-import { PlayerReward } from '../models/PlayerReward';
-import { TeamReward } from '../models/TeamReward';
+import Reward from '../models/Reward';
+import PlayerReward from '../models/PlayerReward';
+import TeamReward from '../models/TeamReward';
 
 const router = express.Router();
 
@@ -28,7 +28,7 @@ router.get('/valorant-mobile/rewards/available', auth, async (req, res) => {
     res.status(400).json({
       status: 'error',
       message: 'Error fetching available rewards',
-      error: error.message
+      error: (error as Error).message
     });
   }
 });
@@ -52,7 +52,7 @@ router.get('/valorant-mobile/rewards/player', auth, async (req, res) => {
     res.status(400).json({
       status: 'error',
       message: 'Error fetching player rewards',
-      error: error.message
+      error: (error as Error).message
     });
   }
 });
@@ -77,7 +77,7 @@ router.get('/valorant-mobile/rewards/team/:teamId', auth, async (req, res) => {
     res.status(400).json({
       status: 'error',
       message: 'Error fetching team rewards',
-      error: error.message
+      error: (error as Error).message
     });
   }
 });
@@ -102,56 +102,56 @@ router.post('/valorant-mobile/rewards/player/withdraw/:rewardId', auth, async (r
       });
     }
 
-    if (typeof playerReward.rewardId === 'object' && 'type' in playerReward.rewardId && 'currencyDetails' in playerReward.rewardId) {
-      if (playerReward.rewardId.type !== 'currency' || !playerReward.rewardId.currencyDetails) {
+    // Check if reward supports withdrawals
+    const reward = playerReward.rewardId as any;
+    if (typeof reward === 'object' && reward.type === 'currency' && reward.currencyDetails) {
+      const validation = reward.validateWithdrawal(amount);
+      if (!validation.valid) {
         return res.status(400).json({
           status: 'error',
-          message: 'This reward does not support withdrawals'
+          message: validation.message
         });
       }
-    }
 
-    const validation = playerReward.rewardId.validateWithdrawal(amount);
-    if (!validation.valid) {
+      const withdrawalFee = reward.calculateWithdrawalFee(amount);
+      const netAmount = amount - withdrawalFee;
+
+      // Update reward balance
+      reward.currencyDetails.amount -= amount;
+      await reward.save();
+
+      // If balance is 0, mark as claimed
+      if (reward.currencyDetails.amount === 0) {
+        playerReward.status = 'claimed';
+        playerReward.claimedAt = new Date();
+        await playerReward.save();
+      }
+
+      // TODO: Integrate with payment processing service
+      // This is where you would integrate with your payment processing service
+      // to actually send the money to the user's account
+
+      res.json({
+        status: 'success',
+        message: 'Withdrawal processed successfully',
+        withdrawal: {
+          amount,
+          fee: withdrawalFee,
+          netAmount,
+          timestamp: new Date(),
+        }
+      });
+    } else {
       return res.status(400).json({
         status: 'error',
-        message: validation.message
+        message: 'This reward does not support withdrawals'
       });
     }
-
-    const withdrawalFee = playerReward.rewardId.calculateWithdrawalFee(amount);
-    const netAmount = amount - withdrawalFee;
-
-    // Update reward balance
-    playerReward.rewardId.currencyDetails.amount -= amount;
-    await playerReward.rewardId.save();
-
-    // If balance is 0, mark as claimed
-    if (playerReward.rewardId.currencyDetails.amount === 0) {
-      playerReward.status = 'claimed';
-      playerReward.claimedAt = new Date();
-      await playerReward.save();
-    }
-
-    // TODO: Integrate with payment processing service
-    // This is where you would integrate with your payment processing service
-    // to actually send the money to the user's account
-
-    res.json({
-      status: 'success',
-      message: 'Withdrawal processed successfully',
-      withdrawal: {
-        amount,
-        fee: withdrawalFee,
-        netAmount,
-        timestamp: new Date(),
-      }
-    });
   } catch (error) {
     res.status(400).json({
       status: 'error',
       message: 'Error processing withdrawal',
-      error: error.message
+      error: (error as Error).message
     });
   }
 });
@@ -186,7 +186,7 @@ router.post('/valorant-mobile/rewards/player/claim/:rewardId', auth, async (req,
     res.status(400).json({
       status: 'error',
       message: 'Error claiming reward',
-      error: error.message
+      error: (error as Error).message
     });
   }
 });
@@ -221,7 +221,7 @@ router.post('/valorant-mobile/rewards/team/claim/:rewardId', auth, async (req, r
     res.status(400).json({
       status: 'error',
       message: 'Error claiming team reward share',
-      error: error.message
+      error: (error as Error).message
     });
   }
 });
@@ -247,7 +247,7 @@ router.post('/valorant-mobile/rewards', adminAuth, async (req, res) => {
     res.status(400).json({
       status: 'error',
       message: 'Error creating reward',
-      error: error.message
+      error: (error as Error).message
     });
   }
 });
@@ -277,7 +277,7 @@ router.put('/valorant-mobile/rewards/:rewardId', adminAuth, async (req, res) => 
     res.status(400).json({
       status: 'error',
       message: 'Error updating reward',
-      error: error.message
+      error: (error as Error).message
     });
   }
 });
@@ -305,7 +305,7 @@ router.post('/valorant-mobile/rewards/grant/player', adminAuth, async (req, res)
     res.status(400).json({
       status: 'error',
       message: 'Error granting reward to player',
-      error: error.message
+      error: (error as Error).message
     });
   }
 });
@@ -334,7 +334,7 @@ router.post('/valorant-mobile/rewards/grant/team', adminAuth, async (req, res) =
     res.status(400).json({
       status: 'error',
       message: 'Error granting reward to team',
-      error: error.message
+      error: (error as Error).message
     });
   }
 });

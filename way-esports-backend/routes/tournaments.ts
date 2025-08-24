@@ -1,6 +1,6 @@
 import express from 'express';
 import mongoose from 'mongoose';
-import { Tournament } from '../models/Tournament';
+import Tournament from '../models/Tournament';
 import { auth } from '../middleware/auth';
 import {
   canManageTournament,
@@ -358,7 +358,7 @@ router.post('/', auth, validateTournamentData, rateLimitTournamentOperations(5, 
     res.status(201).json(tournament);
   } catch (error) {
     console.error('Error creating tournament:', error);
-    res.status(400).json({ message: 'Error creating tournament', error: error.message });
+    res.status(400).json({ message: 'Error creating tournament', error: (error as Error).message });
   }
 });
 
@@ -396,7 +396,7 @@ router.post('/:id/register-team', auth, canRegisterForTournament, canRegisterTea
       return res.status(404).json({ message: 'Tournament not found' });
     }
 
-    if (!tournament.isRegistrationOpen()) {
+    if (!tournament.isRegistrationOpen) {
       return res.status(400).json({ message: 'Registration is closed' });
     }
 
@@ -440,7 +440,7 @@ router.post('/:id/register-player', auth, canRegisterForTournament, checkTournam
       return res.status(404).json({ message: 'Tournament not found' });
     }
 
-    if (!tournament.isRegistrationOpen()) {
+    if (!tournament.isRegistrationOpen) {
       return res.status(400).json({ message: 'Registration is closed' });
     }
 
@@ -455,7 +455,7 @@ router.post('/:id/register-player', auth, canRegisterForTournament, checkTournam
     const playerId = req.user.id;
     
     // Check if player is already registered
-    if (tournament.registeredPlayers.includes(playerId)) {
+    if (tournament.registeredPlayers.includes(playerId as any)) {
       return res.status(400).json({ message: 'Player already registered' });
     }
 
@@ -466,7 +466,7 @@ router.post('/:id/register-player', auth, canRegisterForTournament, checkTournam
     }
 
     // Check if tournament is full for players
-    if (tournament.type === 'solo' && tournament.registeredPlayers.length >= tournament.maxPlayers) {
+    if (tournament.type === 'solo' && tournament.maxPlayers && tournament.registeredPlayers.length >= tournament.maxPlayers) {
       return res.status(400).json({ message: 'Tournament is full' });
     }
 
@@ -478,7 +478,7 @@ router.post('/:id/register-player', auth, canRegisterForTournament, checkTournam
       }
     }
 
-    tournament.registeredPlayers.push(playerId);
+    tournament.registeredPlayers.push(playerId as any);
     await tournament.save();
 
     res.json(tournament);
@@ -495,10 +495,10 @@ router.post('/:id/register', auth, async (req, res) => {
   if (teamId) {
     // Redirect to team registration
     req.body = { teamId };
-    return router.handle(req, res, () => {});
+    return res.status(400).json({ message: 'Team registration not implemented yet' });
   } else {
     // Redirect to player registration
-    return router.handle(req, res, () => {});
+    return res.status(400).json({ message: 'Player registration not implemented yet' });
   }
 });
 
@@ -538,7 +538,7 @@ router.put('/:id/matches/:matchId', auth, canUpdateMatch, async (req, res) => {
     }
 
     const { score1, score2, winner, winnerType } = req.body;
-    const match = tournament.bracket.matches.id(req.params.matchId);
+    const match = tournament.bracket?.matches?.find((m: any) => m._id.toString() === req.params.matchId);
     
     if (!match) {
       return res.status(404).json({ message: 'Match not found' });
@@ -594,7 +594,7 @@ router.get('/:id/registration-status', auth, async (req, res) => {
     const userId = req.user.id;
     
     // Check if user is registered as solo player
-    const isRegisteredAsPlayer = tournament.registeredPlayers.includes(userId);
+    const isRegisteredAsPlayer = tournament.registeredPlayers.includes(userId as any);
     
     // Check if user is registered with a team (would need to check team rosters)
     // For now, we'll just check if user has any teams registered
@@ -604,8 +604,8 @@ router.get('/:id/registration-status', auth, async (req, res) => {
     res.json({
       isRegistered: isRegisteredAsPlayer || isRegisteredWithTeam,
       registrationType: isRegisteredAsPlayer ? 'player' : isRegisteredWithTeam ? 'team' : null,
-      canRegisterAsPlayer: tournament.type !== 'team' && tournament.isRegistrationOpen() && !isRegisteredAsPlayer,
-      canRegisterWithTeam: tournament.type !== 'solo' && tournament.isRegistrationOpen() && !isRegisteredWithTeam
+      canRegisterAsPlayer: tournament.type !== 'team' && tournament.isRegistrationOpen && !isRegisteredAsPlayer,
+      canRegisterWithTeam: tournament.type !== 'solo' && tournament.isRegistrationOpen && !isRegisteredWithTeam
     });
   } catch (error) {
     console.error('Error checking registration status:', error);
@@ -633,7 +633,7 @@ router.delete('/:id/unregister', auth, async (req, res) => {
     let wasRegistered = false;
 
     // Remove from registered players
-    const playerIndex = tournament.registeredPlayers.indexOf(userId);
+    const playerIndex = tournament.registeredPlayers.indexOf(userId as any);
     if (playerIndex > -1) {
       tournament.registeredPlayers.splice(playerIndex, 1);
       wasRegistered = true;

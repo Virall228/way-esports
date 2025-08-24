@@ -31,8 +31,19 @@ export const api = {
   },
   
   delete: async (endpoint: string) => {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`);
+    return response.json();
+  },
+
+  // Generic request method that determines HTTP method based on data parameter
+  request: async (endpoint: string, data?: any, method?: string) => {
+    const httpMethod = method || (data ? 'POST' : 'GET');
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: 'DELETE',
+      method: httpMethod,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: data ? JSON.stringify(data) : undefined,
     });
     return response.json();
   },

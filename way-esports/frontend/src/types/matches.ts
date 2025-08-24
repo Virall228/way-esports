@@ -73,3 +73,13 @@ export interface CriticalOpsMatch {
   date: Date;
   duration: number;
   status: 'live' | 'completed' | 'upcoming' | 'in_progress';
+  tournament?: {
+    id: string;
+    name: string;
+    round: string;
+  };
+  team1: Team;
+  team2: Team;
+  winner?: string;
+  rounds: Round[];
+}

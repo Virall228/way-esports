@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
-import { useApi } from '../hooks/useApi';
+import { api } from '../services/api';
 
 const RewardsContainer = styled.div`
   max-width: 1000px;
@@ -150,7 +150,6 @@ interface UserRewards {
 
 export const RewardsSystem: React.FC = () => {
   const { user } = useAuth();
-  const api = useApi();
   const [userRewards, setUserRewards] = useState<UserRewards | null>(null);
   const [rewards, setRewards] = useState<Reward[]>([]);
 
@@ -163,7 +162,7 @@ export const RewardsSystem: React.FC = () => {
 
   const fetchUserRewards = async () => {
     try {
-      const response = await api.request(`/api/users/${user?.id}/rewards`);
+      const response = await api.get(`/api/users/${user?.id}/rewards`);
       setUserRewards(response.data);
     } catch (error) {
       console.error('Failed to fetch user rewards:', error);
@@ -172,7 +171,7 @@ export const RewardsSystem: React.FC = () => {
 
   const fetchRewards = async () => {
     try {
-      const response = await api.request('/api/rewards');
+      const response = await api.get('/api/rewards');
       setRewards(response.data);
     } catch (error) {
       console.error('Failed to fetch rewards:', error);
@@ -181,10 +180,7 @@ export const RewardsSystem: React.FC = () => {
 
   const redeemReward = async (rewardId: string) => {
     try {
-      await api.request('/api/rewards/redeem', {
-        method: 'POST',
-        data: { rewardId }
-      });
+      await api.post('/api/rewards/redeem', { rewardId });
       fetchUserRewards();
     } catch (error) {
       console.error('Failed to redeem reward:', error);

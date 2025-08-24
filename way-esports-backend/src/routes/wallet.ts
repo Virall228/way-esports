@@ -7,7 +7,7 @@ const router = express.Router();
 // Get wallet details
 router.get('/', async (req, res) => {
   try {
-    const user = await User.findOne({ telegramId: req.user.id });
+    const user = await User.findOne({ telegramId: req.user?.id });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -36,7 +36,7 @@ router.get('/', async (req, res) => {
 // Get transaction history
 router.get('/transactions', async (req, res) => {
   try {
-    const user = await User.findOne({ telegramId: req.user.id });
+    const user = await User.findOne({ telegramId: req.user?.id });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -71,7 +71,7 @@ router.get('/transactions', async (req, res) => {
 // Add payment method
 router.post('/payment-methods', async (req, res) => {
   try {
-    const user = await User.findOne({ telegramId: req.user.id });
+    const user = await User.findOne({ telegramId: req.user?.id });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -106,7 +106,7 @@ router.post('/payment-methods', async (req, res) => {
 // Update payment method
 router.put('/payment-methods/:id', async (req, res) => {
   try {
-    const user = await User.findOne({ telegramId: req.user.id });
+    const user = await User.findOne({ telegramId: req.user?.id });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -150,7 +150,7 @@ router.put('/payment-methods/:id', async (req, res) => {
 // Delete payment method
 router.delete('/payment-methods/:id', async (req, res) => {
   try {
-    const user = await User.findOne({ telegramId: req.user.id });
+    const user = await User.findOne({ telegramId: req.user?.id });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -193,7 +193,7 @@ router.post('/withdraw', async (req, res) => {
   try {
     const { amount, paymentMethodId } = req.body;
 
-    const user = await User.findOne({ telegramId: req.user.id });
+    const user = await User.findOne({ telegramId: req.user?.id });
     if (!user) {
       return res.status(404).json({
         success: false,

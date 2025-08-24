@@ -1,10 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 
 interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    username: string;
-  };
+  user?: any;
 }
 
 // Mock authentication middleware for testing

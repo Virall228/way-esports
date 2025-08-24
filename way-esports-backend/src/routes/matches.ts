@@ -80,8 +80,10 @@ router.post('/', async (req, res) => {
     await match.save();
 
     // Add match to tournament
-    tournament.matches.push(match._id);
-    await tournament.save();
+    if (match._id) {
+      tournament.matches.push(match._id as any);
+      await tournament.save();
+    }
 
     res.status(201).json({
       success: true,

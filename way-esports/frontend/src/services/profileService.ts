@@ -13,4 +13,8 @@ export const profileService = {
   getStats: async (): Promise<any> => {
     return api.get('/profile/stats');
   },
+  
+  addAchievement: async (achievementName: string): Promise<void> => {
+    return api.post('/profile/achievements', { name: achievementName });
+  },
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { useApi } from '../hooks/useApi';
+import { api } from '../services/api';
 
 const CalendarContainer = styled.div`
   max-width: 1000px;
@@ -102,7 +102,6 @@ export const EventCalendar: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<TournamentEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<TournamentEvent | null>(null);
-  const api = useApi();
 
   useEffect(() => {
     fetchEvents();
@@ -110,7 +109,7 @@ export const EventCalendar: React.FC = () => {
 
   const fetchEvents = async () => {
     try {
-      const response = await api.request('/api/tournaments/upcoming');
+      const response = await api.get('/api/tournaments/upcoming');
       setEvents(response.data);
     } catch (error) {
       console.error('Failed to fetch events:', error);

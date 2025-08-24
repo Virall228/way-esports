@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
-import { useApi } from '../hooks/useApi';
+import { api } from '../services/api';
 
 const ProfileContainer = styled.div`
   max-width: 800px;
@@ -104,7 +104,6 @@ interface UserProfile {
 
 export const EnhancedProfile: React.FC = () => {
   const { user } = useAuth();
-  const api = useApi();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -116,7 +115,7 @@ export const EnhancedProfile: React.FC = () => {
 
   const fetchProfile = async () => {
     try {
-      const response = await api.request(`/api/users/${user?.id}/profile`);
+      const response = await api.get(`/api/users/${user?.id}/profile`);
       setProfile(response.data);
     } catch (error) {
       console.error('Failed to fetch profile:', error);
@@ -125,10 +124,7 @@ export const EnhancedProfile: React.FC = () => {
 
   const handleSave = async (updatedProfile: Partial<UserProfile>) => {
     try {
-      await api.request(`/api/users/${user?.id}/profile`, {
-        method: 'PUT',
-        data: updatedProfile
-      });
+      await api.put(`/api/users/${user?.id}/profile`, updatedProfile);
       setProfile(prev => prev ? { ...prev, ...updatedProfile } : null);
       setIsEditing(false);
     } catch (error) {

@@ -23,6 +23,14 @@
     }
   },
   "include": ["src"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/__tests__/**/*"],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx", 
+    "src/**/__tests__/**/*",
+    "src/**/tests/**/*",
+    "src/setupTests.ts",
+    "**/*.test.*",
+    "**/__tests__/**/*"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

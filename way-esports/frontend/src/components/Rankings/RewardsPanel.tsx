@@ -1,35 +1,238 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Box,
-  Heading,
-  Text,
-  VStack,
-  HStack,
-  Image,
-  Button,
-  Badge,
-  useToast,
-  Spinner,
-  Divider,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalCloseButton,
-  FormControl,
-  FormLabel,
-  Input,
-  FormHelperText,
-  useDisclosure,
-  NumberInput,
-  NumberInputField,
-  NumberInputStepper,
-  NumberIncrementStepper,
-  NumberDecrementStepper,
-} from '@chakra-ui/react';
+import styled from 'styled-components';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
+
+// Styled components
+const Container = styled.div`
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+`;
+
+const Heading = styled.h1`
+  font-size: 2rem;
+  font-weight: bold;
+  color: #ffffff;
+  margin-bottom: 1rem;
+`;
+
+const Text = styled.p`
+  color: #cccccc;
+  margin-bottom: 1rem;
+`;
+
+const VStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+const HStack = styled.div`
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+`;
+
+const Box = styled.div`
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1rem;
+`;
+
+const Button = styled.button`
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  
+  &:hover {
+    background: #0056b3;
+  }
+  
+  &:disabled {
+    background: #666;
+    cursor: not-allowed;
+  }
+`;
+
+const Badge = styled.span`
+  background: #28a745;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+`;
+
+const Spinner = styled.div`
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #007bff;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`;
+
+const Divider = styled.hr`
+  border: none;
+  border-top: 1px solid #333;
+  margin: 1rem 0;
+`;
+
+const Modal = styled.div<{ isOpen: boolean }>`
+  display: ${props => props.isOpen ? 'block' : 'none'};
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+`;
+
+const ModalContent = styled.div`
+  background-color: #1a1a1a;
+  margin: 15% auto;
+  padding: 2rem;
+  border: 1px solid #333;
+  border-radius: 8px;
+  width: 80%;
+  max-width: 500px;
+`;
+
+const ModalHeader = styled.h2`
+  color: #ffffff;
+  margin-bottom: 1rem;
+`;
+
+const ModalBody = styled.div`
+  margin-bottom: 1rem;
+`;
+
+const ModalCloseButton = styled.button`
+  background: none;
+  border: none;
+  color: #cccccc;
+  font-size: 1.5rem;
+  cursor: pointer;
+  float: right;
+  
+  &:hover {
+    color: #ffffff;
+  }
+`;
+
+const FormControl = styled.div`
+  margin-bottom: 1rem;
+`;
+
+const FormLabel = styled.label`
+  display: block;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background: #262626;
+  color: #ffffff;
+  
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+  }
+`;
+
+const FormHelperText = styled.p`
+  color: #666;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+`;
+
+const NumberInput = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const NumberInputField = styled.input`
+  width: 100px;
+  padding: 0.5rem;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background: #262626;
+  color: #ffffff;
+  text-align: center;
+  
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+  }
+`;
+
+const NumberInputStepper = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const NumberIncrementStepper = styled.button`
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 0.25rem;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  
+  &:hover {
+    background: #0056b3;
+  }
+`;
+
+const NumberDecrementStepper = styled.button`
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.25rem;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  
+  &:hover {
+    background: #c82333;
+  }
+`;
+
+// Custom hooks for modal and toast
+const useDisclosure = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const onOpen = () => setIsOpen(true);
+  const onClose = () => setIsOpen(false);
+  return { isOpen, onOpen, onClose };
+};
+
+const useToast = () => {
+  return {
+    toast: (options: any) => {
+      // Simple toast implementation
+      console.log('Toast:', options);
+    }
+  };
+};
 
 interface CurrencyDetails {
   amount: number;
@@ -106,14 +309,14 @@ const RewardsPanel: React.FC = () => {
       const [availableRes, playerRes, teamRes] = await Promise.all([
         api.get('/valorant-mobile/rewards/available'),
         api.get('/valorant-mobile/rewards/player'),
-        api.get(`/valorant-mobile/rewards/team/${user.teamId}`),
+        api.get(`/valorant-mobile/rewards/team/${user.teamId || 'default'}`),
       ]);
 
       setAvailableRewards(availableRes.data.rewards);
       setPlayerRewards(playerRes.data.rewards);
       setTeamRewards(teamRes.data.rewards);
-    } catch (error) {
-      toast({
+    } catch (error: any) {
+      toast.toast({
         title: 'Error fetching rewards',
         description: error.message,
         status: 'error',
@@ -125,52 +328,18 @@ const RewardsPanel: React.FC = () => {
     }
   };
 
-  const handleWithdrawal = async () => {
-    if (!selectedReward) return;
-
+  const handleClaimReward = async (reward: PlayerReward) => {
     try {
-      await api.post(`/valorant-mobile/rewards/player/withdraw/${selectedReward.rewardId._id}`, {
-        amount: withdrawalAmount,
-      });
-      
-      fetchRewards();
-      onClose();
-      toast({
-        title: 'Withdrawal initiated successfully',
-        description: `$${withdrawalAmount} will be sent to your account minus $${withdrawalFee} fee`,
-        status: 'success',
-        duration: 5000,
-        isClosable: true,
-      });
-    } catch (error) {
-      toast({
-        title: 'Error processing withdrawal',
-        description: error.message,
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    }
-  };
-
-  const openWithdrawalModal = (reward: PlayerReward) => {
-    setSelectedReward(reward);
-    setWithdrawalAmount(reward.rewardId.currencyDetails?.minWithdrawal || 0);
-    onOpen();
-  };
-
-  const claimPlayerReward = async (rewardId: string) => {
-    try {
-      await api.post(`/valorant-mobile/rewards/player/claim/${rewardId}`);
-      fetchRewards();
-      toast({
-        title: 'Reward claimed successfully',
+      await api.post(`/valorant-mobile/rewards/claim/${reward._id}`, {});
+      toast.toast({
+        title: 'Reward claimed successfully!',
         status: 'success',
         duration: 3000,
         isClosable: true,
       });
-    } catch (error) {
-      toast({
+      fetchRewards();
+    } catch (error: any) {
+      toast.toast({
         title: 'Error claiming reward',
         description: error.message,
         status: 'error',
@@ -180,19 +349,26 @@ const RewardsPanel: React.FC = () => {
     }
   };
 
-  const claimTeamReward = async (rewardId: string) => {
+  const handleWithdraw = async () => {
+    if (!selectedReward) return;
+    
     try {
-      await api.post(`/valorant-mobile/rewards/team/claim/${rewardId}`);
-      fetchRewards();
-      toast({
-        title: 'Team reward share claimed successfully',
+      await api.post(`/valorant-mobile/rewards/withdraw/${selectedReward._id}`, {
+        amount: withdrawalAmount
+      });
+      
+      toast.toast({
+        title: 'Withdrawal successful!',
         status: 'success',
         duration: 3000,
         isClosable: true,
       });
-    } catch (error) {
-      toast({
-        title: 'Error claiming team reward',
+      
+      onClose();
+      fetchRewards();
+    } catch (error: any) {
+      toast.toast({
+        title: 'Error processing withdrawal',
         description: error.message,
         status: 'error',
         duration: 5000,
@@ -201,123 +377,37 @@ const RewardsPanel: React.FC = () => {
     }
   };
 
-  const renderRewardValue = (reward: Reward) => {
-    if (reward.type === 'currency' && reward.currencyDetails) {
-      return (
-        <Text fontSize="sm" fontWeight="bold" color="green.500">
-          ${reward.currencyDetails.amount.toFixed(2)}
-        </Text>
-      );
-    }
-    return null;
-  };
-
   if (loading) {
     return (
-      <Box p={4} display="flex" justifyContent="center">
-        <Spinner />
-      </Box>
+      <Container>
+        <VStack>
+          <Spinner />
+          <Text>Loading rewards...</Text>
+        </VStack>
+      </Container>
     );
   }
 
   return (
-    <Box p={4}>
-      <VStack spacing={6} align="stretch">
-        {/* Available Rewards */}
+    <Container>
+      <Heading>Rewards & Achievements</Heading>
+      
+      <VStack>
         <Box>
-          <Heading size="md" mb={4}>Available Rewards</Heading>
-          <HStack spacing={4} overflowX="auto" pb={2}>
+          <Heading style={{ fontSize: '1.5rem' }}>Available Rewards</Heading>
+          <VStack>
             {availableRewards.map((reward) => (
-              <Box
-                key={reward._id}
-                p={4}
-                borderWidth={1}
-                borderRadius="lg"
-                minW="200px"
-              >
-                {reward.imageUrl && (
-                  <Image
-                    src={reward.imageUrl}
-                    alt={reward.name}
-                    boxSize="100px"
-                    objectFit="cover"
-                    mb={2}
-                  />
-                )}
-                <Heading size="sm">{reward.name}</Heading>
-                <Text fontSize="sm" color="gray.600" mb={2}>
-                  {reward.description}
-                </Text>
-                {renderRewardValue(reward)}
-                <Badge colorScheme={getRewardTypeColor(reward.type)} mb={2}>
-                  {reward.type}
-                </Badge>
-                {reward.requirements && (
-                  <VStack align="start" spacing={1} fontSize="sm">
-                    {reward.requirements.minRank && (
-                      <Text>Min Rank: {reward.requirements.minRank}</Text>
-                    )}
-                    {reward.requirements.minLevel && (
-                      <Text>Min Level: {reward.requirements.minLevel}</Text>
-                    )}
-                    {reward.requirements.minWins && (
-                      <Text>Min Wins: {reward.requirements.minWins}</Text>
-                    )}
+              <Box key={reward._id}>
+                <HStack>
+                  <VStack style={{ flex: 1 }}>
+                    <Text style={{ fontWeight: 'bold', color: '#ffffff' }}>{reward.name}</Text>
+                    <Text>{reward.description}</Text>
+                    <Badge>{reward.type}</Badge>
                   </VStack>
-                )}
-              </Box>
-            ))}
-          </HStack>
-        </Box>
-
-        <Divider />
-
-        {/* Player Rewards */}
-        <Box>
-          <Heading size="md" mb={4}>Your Rewards</Heading>
-          <VStack spacing={4} align="stretch">
-            {playerRewards.map((reward) => (
-              <Box
-                key={reward._id}
-                p={4}
-                borderWidth={1}
-                borderRadius="lg"
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-              >
-                <Box>
-                  <Heading size="sm">{reward.rewardId.name}</Heading>
-                  <Text fontSize="sm" color="gray.600">
-                    {reward.rewardId.description}
-                  </Text>
-                  {renderRewardValue(reward.rewardId)}
-                  <Badge
-                    colorScheme={getStatusColor(reward.status)}
-                    mt={2}
-                  >
-                    {reward.status}
-                  </Badge>
-                </Box>
-                {reward.status === 'earned' && (
-                  reward.rewardId.type === 'currency' ? (
-                    <Button
-                      colorScheme="green"
-                      size="sm"
-                      onClick={() => openWithdrawalModal(reward)}
-                    >
-                      Withdraw
-                    </Button>
-                  ) : (
-                    <Button
-                      colorScheme="blue"
-                      size="sm"
-                      onClick={() => claimPlayerReward(reward.rewardId._id)}
-                    >
-                      Claim
-                    </Button>
-                  )
-                )}
+                  <Button onClick={() => handleClaimReward(reward as any)}>
+                    Claim
+                  </Button>
+                </HStack>
               </Box>
             ))}
           </VStack>
@@ -325,164 +415,64 @@ const RewardsPanel: React.FC = () => {
 
         <Divider />
 
-        {/* Team Rewards */}
-        {user.teamId && (
-          <Box>
-            <Heading size="md" mb={4}>Team Rewards</Heading>
-            <VStack spacing={4} align="stretch">
-              {teamRewards.map((reward) => (
-                <Box
-                  key={reward._id}
-                  p={4}
-                  borderWidth={1}
-                  borderRadius="lg"
-                >
-                  <HStack justify="space-between" mb={2}>
-                    <Box>
-                      <Heading size="sm">{reward.rewardId.name}</Heading>
-                      <Text fontSize="sm" color="gray.600">
-                        {reward.rewardId.description}
-                      </Text>
-                      {renderRewardValue(reward.rewardId)}
-                    </Box>
-                    <Badge colorScheme={getStatusColor(reward.status)}>
-                      {reward.status}
-                    </Badge>
-                  </HStack>
-                  <Box>
-                    <Text fontSize="sm" fontWeight="bold" mb={1}>
-                      Distribution
-                    </Text>
-                    {reward.distribution.map((share) => (
-                      <HStack key={share.userId} justify="space-between">
-                        <Text fontSize="sm">
-                          {share.userId === user._id ? 'You' : 'Teammate'}
-                        </Text>
-                        <HStack>
-                          <Text fontSize="sm">
-                            {reward.rewardId.type === 'currency' && reward.rewardId.currencyDetails
-                              ? `$${((reward.rewardId.currencyDetails.amount * share.share) / 100).toFixed(2)} (${share.share}%)`
-                              : `${share.share}%`}
-                          </Text>
-                          {share.userId === user._id && !share.claimedAt && reward.status === 'earned' && (
-                            <Button
-                              size="xs"
-                              colorScheme="blue"
-                              onClick={() => claimTeamReward(reward.rewardId._id)}
-                            >
-                              Claim Share
-                            </Button>
-                          )}
-                          {share.claimedAt && (
-                            <Badge colorScheme="green">Claimed</Badge>
-                          )}
-                        </HStack>
-                      </HStack>
-                    ))}
-                  </Box>
-                </Box>
-              ))}
-            </VStack>
-          </Box>
-        )}
+        <Box>
+          <Heading style={{ fontSize: '1.5rem' }}>Your Rewards</Heading>
+          <VStack>
+            {playerRewards.map((reward) => (
+              <Box key={reward._id}>
+                <HStack>
+                  <VStack style={{ flex: 1 }}>
+                    <Text style={{ fontWeight: 'bold', color: '#ffffff' }}>{reward.rewardId.name}</Text>
+                    <Text>{reward.rewardId.description}</Text>
+                    <Badge>{reward.status}</Badge>
+                  </VStack>
+                  {reward.status === 'earned' && reward.rewardId.type === 'currency' && (
+                    <Button onClick={() => {
+                      setSelectedReward(reward);
+                      onOpen();
+                    }}>
+                      Withdraw
+                    </Button>
+                  )}
+                </HStack>
+              </Box>
+            ))}
+          </VStack>
+        </Box>
       </VStack>
 
-      {/* Withdrawal Modal */}
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalOverlay />
+      <Modal isOpen={isOpen}>
         <ModalContent>
           <ModalHeader>Withdraw Funds</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody pb={6}>
-            {selectedReward && (
-              <VStack spacing={4}>
-                <FormControl>
-                  <FormLabel>Available Balance</FormLabel>
-                  <Text fontSize="xl" fontWeight="bold" color="green.500">
-                    ${selectedReward.rewardId.currencyDetails?.amount.toFixed(2)}
-                  </Text>
-                </FormControl>
-
-                <FormControl>
-                  <FormLabel>Withdrawal Amount</FormLabel>
-                  <NumberInput
-                    min={selectedReward.rewardId.currencyDetails?.minWithdrawal || 0}
-                    max={selectedReward.rewardId.currencyDetails?.maxWithdrawal || selectedReward.rewardId.currencyDetails?.amount || 0}
-                    value={withdrawalAmount}
-                    onChange={(_, value) => setWithdrawalAmount(value)}
-                    precision={2}
-                  >
-                    <NumberInputField />
-                    <NumberInputStepper>
-                      <NumberIncrementStepper />
-                      <NumberDecrementStepper />
-                    </NumberInputStepper>
-                  </NumberInput>
-                  <FormHelperText>
-                    Min: ${selectedReward.rewardId.currencyDetails?.minWithdrawal}
-                    {selectedReward.rewardId.currencyDetails?.maxWithdrawal && 
-                      ` | Max: $${selectedReward.rewardId.currencyDetails.maxWithdrawal}`}
-                  </FormHelperText>
-                </FormControl>
-
-                <FormControl>
-                  <FormLabel>Withdrawal Fee ({selectedReward.rewardId.currencyDetails?.withdrawalFee}%)</FormLabel>
-                  <Text>${withdrawalFee}</Text>
-                </FormControl>
-
-                <FormControl>
-                  <FormLabel>You Will Receive</FormLabel>
-                  <Text fontSize="lg" fontWeight="bold" color="green.500">
-                    ${(withdrawalAmount - withdrawalFee).toFixed(2)}
-                  </Text>
-                </FormControl>
-
-                <Button
-                  colorScheme="green"
-                  width="full"
-                  mt={4}
-                  onClick={handleWithdrawal}
-                  isDisabled={withdrawalAmount <= 0}
-                >
-                  Confirm Withdrawal
-                </Button>
-              </VStack>
-            )}
+          <ModalCloseButton onClick={onClose}>&times;</ModalCloseButton>
+          <ModalBody>
+            <FormControl>
+              <FormLabel>Amount</FormLabel>
+              <NumberInput>
+                <NumberInputField
+                  type="number"
+                  value={withdrawalAmount}
+                  onChange={(e) => setWithdrawalAmount(Number(e.target.value))}
+                  min={0}
+                  max={selectedReward?.rewardId.currencyDetails?.amount || 0}
+                />
+                <NumberInputStepper>
+                  <NumberIncrementStepper onClick={() => setWithdrawalAmount(prev => prev + 1)}>+</NumberIncrementStepper>
+                  <NumberDecrementStepper onClick={() => setWithdrawalAmount(prev => Math.max(0, prev - 1))}>-</NumberDecrementStepper>
+                </NumberInputStepper>
+              </NumberInput>
+              <FormHelperText>
+                Fee: ${withdrawalFee.toFixed(2)}
+              </FormHelperText>
+            </FormControl>
+            <Button onClick={handleWithdraw} style={{ width: '100%' }}>
+              Confirm Withdrawal
+            </Button>
           </ModalBody>
         </ModalContent>
       </Modal>
-    </Box>
+    </Container>
   );
-};
-
-const getRewardTypeColor = (type: string) => {
-  switch (type) {
-    case 'currency':
-      return 'green';
-    case 'item':
-      return 'purple';
-    case 'badge':
-      return 'blue';
-    case 'title':
-      return 'yellow';
-    case 'skin':
-      return 'pink';
-    default:
-      return 'gray';
-  }
-};
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'earned':
-      return 'yellow';
-    case 'claimed':
-      return 'green';
-    case 'expired':
-      return 'red';
-    default:
-      return 'gray';
-  }
 };
 
 export default RewardsPanel; 

@@ -4,7 +4,7 @@ import styled, { css } from 'styled-components';
 type InputVariant = 'default' | 'filled' | 'outlined';
 type InputSize = 'small' | 'medium' | 'large';
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
   variant?: InputVariant;
   size?: InputSize;
   label?: string;

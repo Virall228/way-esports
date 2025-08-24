@@ -32,7 +32,7 @@ const TournamentTitle = styled.h3`
     color: #FF6B00;
 `;
 
-const Status = styled.span<{ status: 'upcoming' | 'in_progress' | 'completed' }>`
+const Status = styled.span<{ status: 'upcoming' | 'in_progress' | 'completed' | 'live' }>`
     padding: 5px 10px;
     border-radius: 20px;
     font-size: 14px;
@@ -40,6 +40,7 @@ const Status = styled.span<{ status: 'upcoming' | 'in_progress' | 'completed' }>
         switch (props.status) {
             case 'upcoming': return '#2d5a27';
             case 'in_progress': return '#614a1f';
+            case 'live': return '#614a1f';
             case 'completed': return '#4a1f1f';
             default: return '#333';
         }
@@ -48,6 +49,7 @@ const Status = styled.span<{ status: 'upcoming' | 'in_progress' | 'completed' }>
         switch (props.status) {
             case 'upcoming': return '#4CAF50';
             case 'in_progress': return '#FFC107';
+            case 'live': return '#FFC107';
             case 'completed': return '#F44336';
             default: return '#fff';
         }
@@ -103,7 +105,7 @@ const ActionButton = styled.button<{ variant?: 'primary' | 'secondary' }>`
     }
 `;
 
-const StatusIndicator = styled.div<{ status: 'upcoming' | 'live' | 'completed' }>`
+const StatusIndicator = styled.div<{ status: 'upcoming' | 'live' | 'completed' | 'in_progress' }>`
     position: absolute;
     top: 16px;
     right: 16px;
@@ -114,7 +116,7 @@ const StatusIndicator = styled.div<{ status: 'upcoming' | 'live' | 'completed' }
     text-transform: uppercase;
     z-index: 1;
     background: ${props => 
-        props.status === 'live' ? '#FF0000' :
+        props.status === 'live' || props.status === 'in_progress' ? '#FF0000' :
         props.status === 'upcoming' ? '#FFD700' : '#666'};
     color: ${props => props.status === 'upcoming' ? '#000' : '#fff'};
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
@@ -124,7 +126,7 @@ const StatusIndicator = styled.div<{ status: 'upcoming' | 'live' | 'completed' }
     &:hover {
         transform: translateY(-2px) scale(1.05);
         box-shadow: 0 4px 12px ${props => 
-            props.status === 'live' ? 'rgba(255, 0, 0, 0.4)' :
+            props.status === 'live' || props.status === 'in_progress' ? 'rgba(255, 0, 0, 0.4)' :
             props.status === 'upcoming' ? 'rgba(255, 215, 0, 0.4)' : 
             'rgba(102, 102, 102, 0.4)'};
     }

@@ -3,9 +3,7 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import { config } from './config';
 import tournamentRoutes from './routes/tournaments';
-import deviceVerificationRoutes from './routes/deviceVerification';
-import deviceBlacklistRoutes from './routes/deviceBlacklist';
-import rewardsRoutes from './routes/rewards';
+// Routes will be added later
 import subscriptionRoutes from '../routes/subscriptions';
 // ... other imports
 
@@ -29,11 +27,7 @@ app.use('/api', (req, res, next) => {
 
 // Routes
 app.use('/api/tournaments', tournamentRoutes);
-app.use('/api/device', deviceVerificationRoutes);
-app.use('/api/device', deviceBlacklistRoutes);
-app.use('/api', rewardsRoutes);
-app.use('/api/subscriptions', subscriptionRoutes);
-// ... other routes
+// Other routes will be added later
 
 // Connect to MongoDB
 mongoose.connect(config.mongoUri)
@@ -41,7 +35,7 @@ mongoose.connect(config.mongoUri)
   .catch(err => console.error('MongoDB connection error:', err));
 
 // Error handling middleware
-app.use((err, req, res, next) => {
+app.use((err: any, req: any, res: any, next: any) => {
   console.error(err.stack);
   res.status(500).json({
     status: 'error',

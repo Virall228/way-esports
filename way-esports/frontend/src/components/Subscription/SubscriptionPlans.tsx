@@ -157,6 +157,19 @@ const SaveBadge = styled.div`
     box-shadow: 0 4px 15px rgba(255, 107, 0, 0.4);
 `;
 
+const FeaturedTag = styled.div`
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #FFD700, #FF6B00);
+    padding: 6px 16px;
+    border-radius: 16px;
+    color: #000;
+    font-weight: bold;
+    font-size: 14px;
+    box-shadow: 0 2px 10px rgba(255, 215, 0, 0.4);
+`;
+
 const FastPayment = styled.div`
     display: flex;
     align-items: center;

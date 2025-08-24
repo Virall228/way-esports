@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { Tournament } from '../models/Tournament';
+import Tournament from '../models/Tournament';
 import { Team } from '../models/Team';
 
 // Extend Request interface to include user
@@ -56,7 +56,7 @@ export const canRegisterForTournament = async (req: Request, res: Response, next
     }
 
     // Check if registration is open
-    if (!tournament.isRegistrationOpen()) {
+    if (!tournament.isRegistrationOpen) {
       return res.status(400).json({ message: 'Registration is closed' });
     }
 
@@ -93,7 +93,7 @@ export const canRegisterTeam = async (req: Request, res: Response, next: NextFun
     if (team.captain.toString() !== req.user.id) {
       // Check if user is a member of the team
       const isMember = team.players.some(player => 
-        player.userId.toString() === req.user.id && player.isActive
+        req.user && player.userId.toString() === req.user.id && player.isActive
       );
 
       if (!isMember) {
@@ -250,7 +250,7 @@ export const checkTournamentCapacity = async (req: Request, res: Response, next:
         return res.status(400).json({ message: 'Tournament is full' });
       }
     } else if (tournament.type === 'solo') {
-      if (tournament.registeredPlayers.length >= tournament.maxPlayers) {
+      if (tournament.maxPlayers && tournament.registeredPlayers.length >= tournament.maxPlayers) {
         return res.status(400).json({ message: 'Tournament is full' });
       }
     } else if (tournament.type === 'mixed') {
@@ -282,7 +282,7 @@ export const preventDuplicateRegistration = async (req: Request, res: Response, 
     const userId = req.user.id;
 
     // Check if user is already registered as solo player
-    if (tournament.registeredPlayers.includes(userId)) {
+    if (tournament.registeredPlayers.includes(userId as any)) {
       return res.status(400).json({ message: 'Already registered as solo player' });
     }
 

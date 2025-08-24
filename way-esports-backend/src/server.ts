@@ -1,9 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
-import config from './config/config';
+import { config } from './config';
 import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimiter';
 
@@ -16,27 +14,27 @@ import walletRouter from './routes/wallet';
 const app = express();
 
 // Connect to MongoDB
-mongoose.connect(config.MONGODB_URI)
+mongoose.connect(config.mongoUri)
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
 // Security middleware
-app.use(helmet());
+
 app.use(cors({
-  origin: config.CORS_ORIGIN,
+  origin: '*',
   credentials: true
 }));
 app.use(apiLimiter);
 
 // Body parser
-app.use(express.json({ limit: config.MAX_FILE_SIZE }));
-app.use(express.urlencoded({ extended: true, limit: config.MAX_FILE_SIZE }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Logging
-if (config.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
+if (process.env.NODE_ENV === 'development') {
+  console.log('Development mode');
 } else {
-  app.use(morgan('combined'));
+  console.log('Production mode');
 }
 
 // Routes
@@ -66,7 +64,7 @@ app.use('*', (req, res) => {
 });
 
 // Start server
-const PORT = config.PORT;
+const PORT = config.port;
 app.listen(PORT, () => {
-  console.log(`Server running in ${config.NODE_ENV} mode on port ${PORT}`);
+  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 }); 

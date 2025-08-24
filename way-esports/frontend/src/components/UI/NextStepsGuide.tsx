@@ -133,7 +133,7 @@ const RewardBadge = styled.span`
   padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
   background: ${({ theme }) => `${theme.colors.accent}22`};
   color: ${({ theme }) => theme.colors.accent};
-  border-radius: ${({ theme }) => theme.borderRadius.round};
+  border-radius: ${({ theme }) => theme.borderRadius.full};
   font-size: ${({ theme }) => theme.typography.body2.fontSize};
 `;
 

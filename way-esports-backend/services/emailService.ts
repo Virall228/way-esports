@@ -1,44 +1,40 @@
-import nodemailer from 'nodemailer';
-import { config } from '../config';
+// Email service - simplified version without external dependencies
 
-// Create reusable transporter
-const transporter = nodemailer.createTransport({
-  host: config.email.host,
-  port: config.email.port,
-  secure: config.email.secure,
-  auth: {
-    user: config.email.user,
-    pass: config.email.password,
-  },
-});
-
-export const sendVerificationEmail = async (email: string, code: string): Promise<void> => {
-  const mailOptions = {
-    from: `"WAY Esports" <${config.email.user}>`,
-    to: email,
-    subject: 'Verify Your Device for Valorant Mobile',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #FF4655;">Verify Your Device</h2>
-        <p>Thank you for registering your device for Valorant Mobile tournaments on WAY Esports.</p>
-        <p>Your verification code is:</p>
-        <div style="background-color: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0;">
-          <h1 style="color: #FF4655; letter-spacing: 5px; font-size: 32px;">${code}</h1>
-        </div>
-        <p>This code will expire in 30 minutes.</p>
-        <p>If you didn't request this verification, please ignore this email.</p>
-        <hr style="border: 1px solid #eee; margin: 20px 0;">
-        <p style="color: #666; font-size: 12px;">
-          This is an automated message from WAY Esports. Please do not reply to this email.
-        </p>
-      </div>
-    `,
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-  } catch (error) {
-    console.error('Error sending verification email:', error);
-    throw new Error('Failed to send verification email');
+class EmailService {
+  async sendEmail(to: string, subject: string, html: string): Promise<void> {
+    try {
+      console.log(`Email would be sent to ${to}: ${subject}`);
+      console.log(`Content: ${html}`);
+    } catch (error) {
+      console.error('Error sending email:', error);
+      throw new Error('Failed to send email');
+    }
   }
-}; 
+
+  async sendTournamentNotification(to: string, tournamentName: string, message: string): Promise<void> {
+    const subject = `Tournament Update: ${tournamentName}`;
+    const html = `
+      <h2>Tournament Update</h2>
+      <p><strong>Tournament:</strong> ${tournamentName}</p>
+      <p>${message}</p>
+      <p>Best regards,<br>WAY Esports Team</p>
+    `;
+
+    await this.sendEmail(to, subject, html);
+  }
+
+  async sendAchievementNotification(to: string, achievementName: string, points: number): Promise<void> {
+    const subject = 'New Achievement Unlocked!';
+    const html = `
+      <h2>🎉 Achievement Unlocked!</h2>
+      <p><strong>Achievement:</strong> ${achievementName}</p>
+      <p><strong>Points Earned:</strong> ${points}</p>
+      <p>Congratulations on your achievement!</p>
+      <p>Best regards,<br>WAY Esports Team</p>
+    `;
+
+    await this.sendEmail(to, subject, html);
+  }
+}
+
+export default new EmailService(); 

@@ -239,7 +239,7 @@ interface Tournament {
   id: string;
   title: string;
   game: string;
-  status: 'live' | 'upcoming' | 'completed';
+  status: 'live' | 'upcoming' | 'completed' | 'in_progress';
   prizePool: string;
   participants: number;
   maxParticipants: number;

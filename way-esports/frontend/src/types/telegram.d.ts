@@ -16,6 +16,9 @@ interface TelegramWebApp {
         auth_date?: number;
         hash?: string;
     };
+    showAlert: (message: string) => void;
+    showConfirm: (message: string, callback: (confirmed: boolean) => void) => void;
+    showPopup: (params: any) => void;
     MainButton: {
         text: string;
         color: string;

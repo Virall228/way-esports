@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
-import { useApi } from '../hooks/useApi';
+import { api } from '../services/api';
 
 const DashboardContainer = styled.div`
   max-width: 1200px;
@@ -129,7 +129,6 @@ interface AnalyticsData {
 
 export const AnalyticsDashboard: React.FC = () => {
   const { user } = useAuth();
-  const api = useApi();
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
 
   useEffect(() => {
@@ -140,7 +139,7 @@ export const AnalyticsDashboard: React.FC = () => {
 
   const fetchAnalytics = async () => {
     try {
-      const response = await api.request(`/api/users/${user?.id}/analytics`);
+      const response = await api.get(`/api/users/${user?.id}/analytics`);
       setAnalytics(response.data);
     } catch (error) {
       console.error('Failed to fetch analytics:', error);

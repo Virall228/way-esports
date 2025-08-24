@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { User } from '../models/User';
-import { Achievement } from '../models/Achievement';
+import Achievement from '../models/Achievement';
 
 (async () => {
   await mongoose.connect(process.env.MONGODB_URI || '');

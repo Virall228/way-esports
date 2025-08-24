@@ -287,13 +287,13 @@ router.get('/achievements', async (req, res) => {
 
     res.json({
       success: true,
-      data: user.achievements
+      data: user.achievements || []
     });
   } catch (error) {
     console.error('Error fetching achievements:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch achievements'
+        error: 'Failed to fetch achievements'
     });
   }
 });
@@ -328,7 +328,7 @@ router.post('/achievements', async (req, res) => {
 
     res.json({
       success: true,
-      data: user.achievements
+      data: user.achievements || []
     });
   } catch (error) {
     console.error('Error adding achievement:', error);

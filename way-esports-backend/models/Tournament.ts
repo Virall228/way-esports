@@ -37,9 +37,17 @@ export interface ITournament extends Document {
   status: 'registration' | 'in_progress' | 'completed' | 'cancelled';
   registeredTeams: mongoose.Types.ObjectId[];
   registeredPlayers: mongoose.Types.ObjectId[]; // For solo players
+  createdBy: mongoose.Types.ObjectId;
+  isRegistrationOpen: boolean;
+  matches: mongoose.Types.ObjectId[];
   bracket: IBracket;
+  winner?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  
+  // Methods
+  canStart(): boolean;
+  generateBracket(): void;
 }
 
 const MatchSchema = new Schema({
@@ -53,7 +61,7 @@ const MatchSchema = new Schema({
   winnerType: { 
     type: String, 
     enum: ['team', 'player'],
-    required: function() { return this.winner != null; }
+    required: function(this: any) { return this.winner != null; }
   },
   status: {
     type: String,
@@ -104,8 +112,11 @@ const TournamentSchema = new Schema(
     },
     registeredTeams: [{ type: Schema.Types.ObjectId, ref: 'Team' }],
     registeredPlayers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-    bracket: BracketSchema,
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    isRegistrationOpen: { type: Boolean, default: true },
+    matches: [{ type: Schema.Types.ObjectId, ref: 'Match' }],
+    bracket: BracketSchema,
+    winner: { type: Schema.Types.ObjectId, ref: 'User' },
     isActive: { type: Boolean, default: true, index: true },
     participantCount: { type: Number, default: 0 },
   },
@@ -184,12 +195,12 @@ TournamentSchema.methods.generateBracket = function (): void {
   
   // Add teams
   if (this.registeredTeams) {
-    participants.push(...this.registeredTeams.map(teamId => ({ type: 'team', id: teamId })));
+    participants.push(...this.registeredTeams.map((teamId: any) => ({ type: 'team', id: teamId })));
   }
   
   // Add solo players
   if (this.registeredPlayers) {
-    participants.push(...this.registeredPlayers.map(playerId => ({ type: 'player', id: playerId })));
+    participants.push(...this.registeredPlayers.map((playerId: any) => ({ type: 'player', id: playerId })));
   }
   
   const participantCount = participants.length;
@@ -269,4 +280,4 @@ TournamentSchema.methods.generateBracket = function (): void {
   };
 };
 
-export const Tournament = mongoose.model<ITournament>('Tournament', TournamentSchema); 
+export default mongoose.model<ITournament>('Tournament', TournamentSchema); 

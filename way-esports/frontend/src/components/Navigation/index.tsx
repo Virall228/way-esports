@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Trophy, User, Newspaper } from 'react-feather';
+import { Home, Award, User, FileText } from 'react-feather';
 
 const NavContainer = styled.nav`
   background: ${({ theme }) => theme.colors.surface};
@@ -59,9 +59,9 @@ const Navigation: React.FC = () => {
 
   const navItems = [
     { path: '/', icon: Home, label: 'Home' },
-    { path: '/tournaments', icon: Trophy, label: 'Tournaments' },
+    { path: '/tournaments', icon: Award, label: 'Tournaments' },
     { path: '/profile', icon: User, label: 'Profile' },
-    { path: '/news', icon: Newspaper, label: 'News' },
+    { path: '/news', icon: FileText, label: 'News' },
   ];
 
   return (

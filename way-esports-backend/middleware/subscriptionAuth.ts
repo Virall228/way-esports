@@ -2,10 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { Subscription } from '../models/Subscription';
 
 interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    username: string;
-  };
+  user?: any;
 }
 
 export const requireActiveSubscription = async (req: AuthRequest, res: Response, next: NextFunction) => {

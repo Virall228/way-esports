@@ -4,6 +4,7 @@ export interface User {
   telegramId: number;
   email?: string;
   avatar?: string;
+  teamId?: string;
   createdAt: Date;
 }
 
@@ -37,4 +38,12 @@ export interface News {
   author: string;
   publishedAt: Date;
   imageUrl?: string;
+}
+
+export type Language = 'en' | 'ru';
+
+export interface Translation {
+  [key: string]: {
+    [key: string]: string;
+  };
 }

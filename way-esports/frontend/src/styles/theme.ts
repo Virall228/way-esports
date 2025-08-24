@@ -52,6 +52,7 @@ export const theme = {
     large: '16px',
     xl: '16px',
     full: '50%',
+    round: '50%',
   },
   shadows: {
     sm: '0 2px 4px rgba(0, 0, 0, 0.1)',
