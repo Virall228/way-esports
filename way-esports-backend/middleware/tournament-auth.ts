@@ -22,7 +22,7 @@ export const canManageTournament = async (req: Request, res: Response, next: Nex
     }
 
     // Admins can manage any tournament
-    if (req.user.role === 'admin') {
+    if (req.user && req.user.role === 'admin') {
       return next();
     }
 
@@ -32,7 +32,7 @@ export const canManageTournament = async (req: Request, res: Response, next: Nex
     }
 
     // Tournament creator can manage their tournament
-    if (tournament.createdBy.toString() === req.user.id) {
+    if (tournament.createdBy && req.user && tournament.createdBy.toString() === req.user.id) {
       return next();
     }
 
@@ -56,7 +56,7 @@ export const canRegisterForTournament = async (req: Request, res: Response, next
     }
 
     // Check if registration is open
-    if (!tournament.isRegistrationOpen) {
+    if (tournament.isRegistrationOpen === false) {
       return res.status(400).json({ message: 'Registration is closed' });
     }
 
@@ -80,7 +80,7 @@ export const canRegisterTeam = async (req: Request, res: Response, next: NextFun
     }
 
     // Admins can register any team
-    if (req.user.role === 'admin') {
+    if (req.user && req.user.role === 'admin') {
       return next();
     }
 
@@ -90,10 +90,10 @@ export const canRegisterTeam = async (req: Request, res: Response, next: NextFun
     }
 
     // Check if user is the team captain
-    if (team.captain.toString() !== req.user.id) {
+    if (req.user?.id && team.captain.toString() !== req.user.id) {
       // Check if user is a member of the team
-      const isMember = team.players.some(player => 
-        req.user && player.userId.toString() === req.user.id && player.isActive
+      const isMember = team.players && team.players.some(player => 
+        req.user && player.userId && player.userId.toString() === req.user.id && player.isActive
       );
 
       if (!isMember) {
@@ -116,7 +116,7 @@ export const canUpdateMatch = async (req: Request, res: Response, next: NextFunc
     }
 
     // Only admins and tournament creators can update match results
-    if (req.user.role === 'admin') {
+    if (req.user && req.user.role === 'admin') {
       return next();
     }
 
@@ -125,7 +125,7 @@ export const canUpdateMatch = async (req: Request, res: Response, next: NextFunc
       return res.status(404).json({ message: 'Tournament not found' });
     }
 
-    if (tournament.createdBy.toString() === req.user.id) {
+    if (tournament.createdBy && req.user && tournament.createdBy.toString() === req.user.id) {
       return next();
     }
 
@@ -210,7 +210,7 @@ export const rateLimitTournamentOperations = (maxOperations: number = 10, window
       return res.status(401).json({ message: 'User not authenticated' });
     }
 
-    const userId = req.user.id;
+    const userId = req.user?.id || '';
     const now = Date.now();
     const userOperations = operationCounts.get(userId);
 
@@ -246,13 +246,13 @@ export const checkTournamentCapacity = async (req: Request, res: Response, next:
     const totalParticipants = (tournament.registeredTeams?.length || 0) + (tournament.registeredPlayers?.length || 0);
     
     if (tournament.type === 'team') {
-      if (tournament.registeredTeams.length >= tournament.maxTeams) {
+      if (tournament.maxTeams && tournament.registeredTeams && tournament.registeredTeams.length >= tournament.maxTeams) {
         return res.status(400).json({ message: 'Tournament is full' });
       }
     } else if (tournament.type === 'solo') {
-      if (tournament.maxPlayers && tournament.registeredPlayers.length >= tournament.maxPlayers) {
-        return res.status(400).json({ message: 'Tournament is full' });
-      }
+          if (tournament.maxPlayers && tournament.registeredPlayers && tournament.registeredPlayers.length >= tournament.maxPlayers) {
+      return res.status(400).json({ message: 'Tournament is full' });
+    }
     } else if (tournament.type === 'mixed') {
       const maxTotal = (tournament.maxTeams || 0) + (tournament.maxPlayers || 0);
       if (totalParticipants >= maxTotal) {
@@ -279,15 +279,15 @@ export const preventDuplicateRegistration = async (req: Request, res: Response, 
       return res.status(404).json({ message: 'Tournament not found' });
     }
 
-    const userId = req.user.id;
+    const userId = req.user?.id || '';
 
     // Check if user is already registered as solo player
-    if (tournament.registeredPlayers.includes(userId as any)) {
+    if (tournament.registeredPlayers && tournament.registeredPlayers.includes(userId as any)) {
       return res.status(400).json({ message: 'Already registered as solo player' });
     }
 
     // For team registration, check if team is already registered
-    if (req.body.teamId && tournament.registeredTeams.includes(req.body.teamId)) {
+    if (req.body.teamId && tournament.registeredTeams && tournament.registeredTeams.includes(req.body.teamId)) {
       return res.status(400).json({ message: 'Team already registered' });
     }
 

@@ -17,6 +17,8 @@ const router = express.Router();
 
 // Helper function to update tournament progress
 function updateTournamentProgress(tournament: any): void {
+  if (!tournament.bracket?.matches) return;
+  
   const matches = tournament.bracket.matches;
   
   // Check if all matches in current round are completed
@@ -37,19 +39,19 @@ function updateTournamentProgress(tournament: any): void {
         if (nextMatch) {
           if (index % 2 === 0) {
             // Set winner in first position
-            if (match.winnerType === 'team') {
+            if (match.winnerType === 'team' && match.winner) {
               nextMatch.team1 = match.winner;
               nextMatch.player1 = null;
-            } else {
+            } else if (match.winner) {
               nextMatch.player1 = match.winner;
               nextMatch.team1 = null;
             }
           } else {
             // Set winner in second position
-            if (match.winnerType === 'team') {
+            if (match.winnerType === 'team' && match.winner) {
               nextMatch.team2 = match.winner;
               nextMatch.player2 = null;
-            } else {
+            } else if (match.winner) {
               nextMatch.player2 = match.winner;
               nextMatch.team2 = null;
             }
@@ -351,7 +353,7 @@ router.post('/', auth, validateTournamentData, rateLimitTournamentOperations(5, 
         rounds: 0,
         matches: [],
       },
-      createdBy: req.user.id,
+      createdBy: req.user?.id || '',
     });
 
     await tournament.save();
@@ -378,7 +380,7 @@ router.put('/:id', auth, canManageTournament, validateTournamentData, async (req
     if (!req.user) {
         return res.status(401).json({ message: 'User not authenticated' });
     }
-    if (tournament.createdBy.toString() !== req.user.id) {
+    if (tournament.createdBy && req.user?.id && tournament.createdBy.toString() !== req.user.id) {
       return res.status(403).json({ message: 'You do not have permission to update this tournament' });
     }
 
@@ -396,7 +398,7 @@ router.post('/:id/register-team', auth, canRegisterForTournament, canRegisterTea
       return res.status(404).json({ message: 'Tournament not found' });
     }
 
-    if (!tournament.isRegistrationOpen) {
+    if (tournament.isRegistrationOpen === false) {
       return res.status(400).json({ message: 'Registration is closed' });
     }
 
@@ -405,24 +407,26 @@ router.post('/:id/register-team', auth, canRegisterForTournament, canRegisterTea
     }
 
     const { teamId } = req.body;
-    if (tournament.registeredTeams.includes(teamId)) {
+    if (tournament.registeredTeams && tournament.registeredTeams.includes(teamId)) {
       return res.status(400).json({ message: 'Team already registered' });
     }
 
     // Check if tournament is full for teams
-    if (tournament.type === 'team' && tournament.registeredTeams.length >= tournament.maxTeams) {
+    if (tournament.type === 'team' && tournament.maxTeams && tournament.registeredTeams && tournament.registeredTeams.length >= tournament.maxTeams) {
       return res.status(400).json({ message: 'Tournament is full' });
     }
 
     if (tournament.type === 'mixed') {
-      const totalParticipants = tournament.registeredTeams.length + tournament.registeredPlayers.length;
+      const totalParticipants = (tournament.registeredTeams?.length || 0) + (tournament.registeredPlayers?.length || 0);
       const maxTotal = (tournament.maxTeams || 0) + (tournament.maxPlayers || 0);
       if (totalParticipants >= maxTotal) {
         return res.status(400).json({ message: 'Tournament is full' });
       }
     }
 
-    tournament.registeredTeams.push(teamId);
+    if (tournament.registeredTeams) {
+      tournament.registeredTeams.push(teamId);
+    }
     await tournament.save();
 
     res.json(tournament);
@@ -440,7 +444,7 @@ router.post('/:id/register-player', auth, canRegisterForTournament, checkTournam
       return res.status(404).json({ message: 'Tournament not found' });
     }
 
-    if (!tournament.isRegistrationOpen) {
+    if (tournament.isRegistrationOpen === false) {
       return res.status(400).json({ message: 'Registration is closed' });
     }
 
@@ -452,33 +456,35 @@ router.post('/:id/register-player', auth, canRegisterForTournament, checkTournam
       return res.status(401).json({ message: 'User not authenticated' });
     }
 
-    const playerId = req.user.id;
+    const playerId = req.user?.id || '';
     
     // Check if player is already registered
-    if (tournament.registeredPlayers.includes(playerId as any)) {
+    if (tournament.registeredPlayers && tournament.registeredPlayers.includes(playerId as any)) {
       return res.status(400).json({ message: 'Player already registered' });
     }
 
     // Check if player is registered with a team in this tournament
-    if (tournament.registeredTeams.length > 0) {
+    if (tournament.registeredTeams && tournament.registeredTeams.length > 0) {
       // This would require checking team rosters, for now we'll allow it
       // TODO: Add proper team membership check
     }
 
     // Check if tournament is full for players
-    if (tournament.type === 'solo' && tournament.maxPlayers && tournament.registeredPlayers.length >= tournament.maxPlayers) {
+    if (tournament.type === 'solo' && tournament.maxPlayers && tournament.registeredPlayers && tournament.registeredPlayers.length >= tournament.maxPlayers) {
       return res.status(400).json({ message: 'Tournament is full' });
     }
 
     if (tournament.type === 'mixed') {
-      const totalParticipants = tournament.registeredTeams.length + tournament.registeredPlayers.length;
+      const totalParticipants = (tournament.registeredTeams?.length || 0) + (tournament.registeredPlayers?.length || 0);
       const maxTotal = (tournament.maxTeams || 0) + (tournament.maxPlayers || 0);
       if (totalParticipants >= maxTotal) {
         return res.status(400).json({ message: 'Tournament is full' });
       }
     }
 
-    tournament.registeredPlayers.push(playerId as any);
+    if (tournament.registeredPlayers) {
+      tournament.registeredPlayers.push(playerId as any);
+    }
     await tournament.save();
 
     res.json(tournament);
@@ -514,13 +520,15 @@ router.post('/:id/start', auth, canManageTournament, async (req, res) => {
       return res.status(400).json({ message: 'Tournament cannot be started' });
     }
 
-    if (!tournament.canStart()) {
+    if (typeof tournament.canStart === 'function' && !tournament.canStart()) {
       return res.status(400).json({ message: 'Not enough participants registered' });
     }
 
     // Generate tournament bracket
     tournament.status = 'in_progress';
-    tournament.generateBracket();
+    if (typeof tournament.generateBracket === 'function') {
+      tournament.generateBracket();
+    }
     await tournament.save();
 
     res.json(tournament);
@@ -538,7 +546,7 @@ router.put('/:id/matches/:matchId', auth, canUpdateMatch, async (req, res) => {
     }
 
     const { score1, score2, winner, winnerType } = req.body;
-    const match = tournament.bracket?.matches?.find((m: any) => m._id.toString() === req.params.matchId);
+    const match = tournament.bracket?.matches?.find((m: any) => m._id && m._id.toString() === req.params.matchId);
     
     if (!match) {
       return res.status(404).json({ message: 'Match not found' });
@@ -546,10 +554,10 @@ router.put('/:id/matches/:matchId', auth, canUpdateMatch, async (req, res) => {
 
     // Validate winner - check both teams and players
     const validWinners = [
-      match.team1?.toString(),
-      match.team2?.toString(),
-      match.player1?.toString(),
-      match.player2?.toString()
+      match.team1 && match.team1.toString(),
+      match.team2 && match.team2.toString(),
+      match.player1 && match.player1.toString(),
+      match.player2 && match.player2.toString()
     ].filter(Boolean);
 
     if (!validWinners.includes(winner)) {
@@ -591,10 +599,10 @@ router.get('/:id/registration-status', auth, async (req, res) => {
       return res.status(404).json({ message: 'Tournament not found' });
     }
 
-    const userId = req.user.id;
+    const userId = req.user?.id || '';
     
     // Check if user is registered as solo player
-    const isRegisteredAsPlayer = tournament.registeredPlayers.includes(userId as any);
+    const isRegisteredAsPlayer = tournament.registeredPlayers && tournament.registeredPlayers.includes(userId as any);
     
     // Check if user is registered with a team (would need to check team rosters)
     // For now, we'll just check if user has any teams registered
@@ -604,8 +612,8 @@ router.get('/:id/registration-status', auth, async (req, res) => {
     res.json({
       isRegistered: isRegisteredAsPlayer || isRegisteredWithTeam,
       registrationType: isRegisteredAsPlayer ? 'player' : isRegisteredWithTeam ? 'team' : null,
-      canRegisterAsPlayer: tournament.type !== 'team' && tournament.isRegistrationOpen && !isRegisteredAsPlayer,
-      canRegisterWithTeam: tournament.type !== 'solo' && tournament.isRegistrationOpen && !isRegisteredWithTeam
+      canRegisterAsPlayer: tournament.type !== 'team' && tournament.isRegistrationOpen !== false && !isRegisteredAsPlayer,
+      canRegisterWithTeam: tournament.type !== 'solo' && tournament.isRegistrationOpen !== false && !isRegisteredWithTeam
     });
   } catch (error) {
     console.error('Error checking registration status:', error);
@@ -629,14 +637,16 @@ router.delete('/:id/unregister', auth, async (req, res) => {
       return res.status(400).json({ message: 'Cannot unregister after registration closes' });
     }
 
-    const userId = req.user.id;
+    const userId = req.user?.id || '';
     let wasRegistered = false;
 
     // Remove from registered players
-    const playerIndex = tournament.registeredPlayers.indexOf(userId as any);
-    if (playerIndex > -1) {
-      tournament.registeredPlayers.splice(playerIndex, 1);
-      wasRegistered = true;
+    if (tournament.registeredPlayers) {
+      const playerIndex = tournament.registeredPlayers.indexOf(userId as any);
+      if (playerIndex > -1) {
+        tournament.registeredPlayers.splice(playerIndex, 1);
+        wasRegistered = true;
+      }
     }
 
     // TODO: Remove from team registrations if applicable
