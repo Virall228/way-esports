@@ -22,7 +22,7 @@ router.post('/valorant-mobile/verify-device/init', auth, async (req, res) => {
     }
 
     // Check if device is blacklisted
-    const isBlacklisted = await DeviceBlacklist.isBlacklisted(deviceId, 'valorant-mobile');
+    const isBlacklisted = await (DeviceBlacklist as any).isBlacklisted(deviceId, 'valorant-mobile');
     if (isBlacklisted) {
       const blacklist = await DeviceBlacklist.findOne({
         deviceId,
@@ -33,10 +33,10 @@ router.post('/valorant-mobile/verify-device/init', auth, async (req, res) => {
         status: 'error',
         message: 'Device is blacklisted',
         blacklist: {
-          reason: blacklist.reason,
-          expiresAt: blacklist.expiresAt,
-          appealStatus: blacklist.appealStatus,
-          canAppeal: typeof blacklist.canAppeal === 'function' ? blacklist.canAppeal() : false
+          reason: blacklist?.reason || 'Unknown',
+          expiresAt: blacklist?.expiresAt,
+          appealStatus: blacklist?.appealStatus || 'pending',
+          canAppeal: blacklist && typeof blacklist.canAppeal === 'function' ? blacklist.canAppeal() : false
         }
       });
     }
@@ -94,7 +94,7 @@ router.post('/valorant-mobile/verify-device/init', auth, async (req, res) => {
     res.status(400).json({
       status: 'error',
       message: 'Error initializing device verification',
-      error: error.message
+      error: (error as Error).message
     });
   }
 });
@@ -109,7 +109,7 @@ router.post('/valorant-mobile/verify-device/confirm', auth, async (req, res) => 
     }
 
     // Check if device is blacklisted
-    const isBlacklisted = await DeviceBlacklist.isBlacklisted(deviceId, 'valorant-mobile');
+    const isBlacklisted = await (DeviceBlacklist as any).isBlacklisted(deviceId, 'valorant-mobile');
     if (isBlacklisted) {
       const blacklist = await DeviceBlacklist.findOne({
         deviceId,
@@ -120,10 +120,10 @@ router.post('/valorant-mobile/verify-device/confirm', auth, async (req, res) => 
         status: 'error',
         message: 'Device is blacklisted',
         blacklist: {
-          reason: blacklist.reason,
-          expiresAt: blacklist.expiresAt,
-          appealStatus: blacklist.appealStatus,
-          canAppeal: typeof blacklist.canAppeal === 'function' ? blacklist.canAppeal() : false
+          reason: blacklist?.reason || 'Unknown',
+          expiresAt: blacklist?.expiresAt,
+          appealStatus: blacklist?.appealStatus || 'pending',
+          canAppeal: blacklist && typeof blacklist.canAppeal === 'function' ? blacklist.canAppeal() : false
         }
       });
     }
@@ -192,7 +192,7 @@ router.post('/valorant-mobile/verify-device/confirm', auth, async (req, res) => 
     res.status(400).json({
       status: 'error',
       message: 'Error verifying device',
-      error: error.message
+      error: (error as Error).message
     });
   }
 });
@@ -205,7 +205,7 @@ router.get('/valorant-mobile/verify-device/status/:deviceId', auth, async (req, 
     }
 
     // Check if device is blacklisted
-    const isBlacklisted = await DeviceBlacklist.isBlacklisted(req.params.deviceId, 'valorant-mobile');
+    const isBlacklisted = await (DeviceBlacklist as any).isBlacklisted(req.params.deviceId, 'valorant-mobile');
     if (isBlacklisted) {
       const blacklist = await DeviceBlacklist.findOne({
         deviceId: req.params.deviceId,
@@ -216,10 +216,10 @@ router.get('/valorant-mobile/verify-device/status/:deviceId', auth, async (req, 
         status: 'error',
         message: 'Device is blacklisted',
         blacklist: {
-          reason: blacklist.reason,
-          expiresAt: blacklist.expiresAt,
-          appealStatus: blacklist.appealStatus,
-          canAppeal: typeof blacklist.canAppeal === 'function' ? blacklist.canAppeal() : false
+          reason: blacklist?.reason || 'Unknown',
+          expiresAt: blacklist?.expiresAt,
+          appealStatus: blacklist?.appealStatus || 'pending',
+          canAppeal: blacklist && typeof blacklist.canAppeal === 'function' ? blacklist.canAppeal() : false
         }
       });
     }
@@ -245,7 +245,7 @@ router.get('/valorant-mobile/verify-device/status/:deviceId', auth, async (req, 
     res.status(400).json({
       status: 'error',
       message: 'Error getting device verification status',
-      error: error.message
+      error: (error as Error).message
     });
   }
 });
@@ -285,7 +285,7 @@ router.post('/valorant-mobile/verify-device/revoke', auth, async (req, res) => {
     res.status(400).json({
       status: 'error',
       message: 'Error revoking device verification',
-      error: error.message
+      error: (error as Error).message
     });
   }
 });

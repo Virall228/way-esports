@@ -269,7 +269,7 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({ tournament }) => 
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+                    'X-Telegram-Init-Data': (window.Telegram?.WebApp as any)?.initData || ''
                 }
             });
 

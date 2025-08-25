@@ -36,7 +36,11 @@ declare module 'styled-components' {
       error: string;
       success: string;
       info: string;
-      border: string;
+      border: {
+        light: string;
+        medium: string;
+        strong: string;
+      };
     };
     spacing: {
       xs: string;

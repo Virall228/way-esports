@@ -194,7 +194,7 @@ const RankingsPage: React.FC = () => {
             const endpoint = activeTab === 'teams' ? 'teams/rankings' : 'players/rankings';
             const response = await fetch(`/api/${endpoint}?timeFrame=${timeFrame}&game=${game}`, {
                 headers: {
-                    'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+                    'X-Telegram-Init-Data': (window.Telegram?.WebApp as any)?.initData || ''
                 }
             });
             const data = await response.json();

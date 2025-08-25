@@ -11,8 +11,16 @@ export interface IDeviceBlacklist extends Document {
     manufacturer?: string;
     osVersion?: string;
   };
+  // Additional fields used by routes
+  appealStatus?: 'pending' | 'approved' | 'rejected';
+  appealNotes?: string;
+  expiresAt?: Date;
   createdAt: Date;
   updatedAt: Date;
+
+  // Methods referenced in routes
+  isExpired?(): boolean;
+  canAppeal?(): boolean;
 }
 
 const deviceBlacklistSchema = new Schema<IDeviceBlacklist>({
@@ -44,6 +52,17 @@ const deviceBlacklistSchema = new Schema<IDeviceBlacklist>({
     manufacturer: String,
     osVersion: String,
   },
+  appealStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending',
+  },
+  appealNotes: {
+    type: String,
+  },
+  expiresAt: {
+    type: Date,
+  },
 }, {
   timestamps: true,
 });
@@ -53,5 +72,27 @@ deviceBlacklistSchema.index({ deviceId: 1 }, { unique: true });
 deviceBlacklistSchema.index({ gameId: 1 });
 deviceBlacklistSchema.index({ bannedAt: 1 });
 
+// Methods
+deviceBlacklistSchema.methods.isExpired = function(): boolean {
+  if (!this.expiresAt) return false;
+  return this.expiresAt < new Date();
+};
+
+deviceBlacklistSchema.methods.canAppeal = function(): boolean {
+  if (this.appealStatus !== 'rejected') return true;
+  const lastUpdate = this.updatedAt instanceof Date ? this.updatedAt : new Date();
+  const nextAppealDate = new Date(lastUpdate.getTime() + 30 * 24 * 60 * 60 * 1000);
+  return new Date() >= nextAppealDate;
+};
+
 export default mongoose.model<IDeviceBlacklist>('DeviceBlacklist', deviceBlacklistSchema);
+// Static helper used in routes
+(deviceBlacklistSchema.statics as any).isBlacklisted = async function(deviceId: string, gameId: string): Promise<boolean> {
+  const found = await this.findOne({ deviceId, gameId });
+  if (!found) return false;
+  if (typeof found.isExpired === 'function') {
+    return !found.isExpired();
+  }
+  return true;
+};
 

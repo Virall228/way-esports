@@ -18,7 +18,10 @@ export const eslTheme = {
     
     // ESL Gaming style colors
     primary: '#ffffff',
+    primaryDark: '#000000',
     secondary: '#8b8b8b',
+    background: '#000000',
+    surface: '#0a0a0a',
     accent: '#404040',
     
     // Functional colors
@@ -42,6 +45,7 @@ export const eslTheme = {
       tertiary: '#737373',
       disabled: '#525252',
     },
+    textSecondary: '#a3a3a3',
     
     // Borders
     border: {
@@ -96,8 +100,11 @@ export const eslTheme = {
   
   shadows: {
     sm: '0 1px 2px 0 rgba(255, 255, 255, 0.05)',
+    small: '0 1px 2px 0 rgba(255, 255, 255, 0.05)',
     md: '0 4px 6px -1px rgba(255, 255, 255, 0.1), 0 2px 4px -1px rgba(255, 255, 255, 0.06)',
+    medium: '0 4px 6px -1px rgba(255, 255, 255, 0.1), 0 2px 4px -1px rgba(255, 255, 255, 0.06)',
     lg: '0 10px 15px -3px rgba(255, 255, 255, 0.1), 0 4px 6px -2px rgba(255, 255, 255, 0.05)',
+    large: '0 10px 15px -3px rgba(255, 255, 255, 0.1), 0 4px 6px -2px rgba(255, 255, 255, 0.05)',
     glow: '0 0 20px rgba(255, 255, 255, 0.1)',
   },
   

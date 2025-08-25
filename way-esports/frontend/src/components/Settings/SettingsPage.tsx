@@ -210,7 +210,7 @@ const SettingsPage: React.FC = () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || ''
+                    'X-Telegram-Init-Data': (window.Telegram?.WebApp as any)?.initData || ''
                 },
                 body: JSON.stringify(contactForm)
             });

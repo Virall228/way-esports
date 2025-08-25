@@ -1,12 +1,12 @@
 import express from 'express';
-import { News } from '../models/News';
+import News from '../src/models/News';
 import { auth, admin, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
 
-interface NewsWithIndexSignature extends INews {
+type NewsWithIndexSignature = import('../src/models/News').INews & {
   [key: string]: any;
-}
+};
 
 // Create news article (Admin)
 router.post('/news', auth, admin, async (req: AuthRequest, res) => {

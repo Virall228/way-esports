@@ -23,6 +23,8 @@ export interface IDeviceVerification extends Document {
   
   // Methods
   meetsMinimumRequirements(): boolean;
+  generateVerificationCode(): string;
+  verify(): void;
 }
 
 const deviceVerificationSchema = new Schema<IDeviceVerification>({
@@ -94,6 +96,23 @@ deviceVerificationSchema.methods.meetsMinimumRequirements = function(): boolean 
   
   // Simple check - in real implementation this would be more sophisticated
   return true;
+};
+
+// Generate a verification code and expiry (simple implementation)
+deviceVerificationSchema.methods.generateVerificationCode = function(): string {
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  this.verificationCode = code;
+  const expiry = new Date();
+  expiry.setMinutes(expiry.getMinutes() + 10);
+  this.verificationExpiry = expiry;
+  return code;
+};
+
+// Mark device as verified
+deviceVerificationSchema.methods.verify = function(): void {
+  this.isVerified = true;
+  this.status = 'verified';
+  this.lastVerifiedAt = new Date();
 };
 
 // Index for faster queries

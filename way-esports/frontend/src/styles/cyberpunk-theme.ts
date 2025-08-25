@@ -31,7 +31,10 @@ export const cyberpunkTheme = {
     
     // Functional colors
     primary: '#ffffff',
+    primaryDark: '#000000',
     secondary: '#8b8b8b',
+    background: '#000000',
+    surface: '#0a0a0a',
     accent: '#404040',
     
     // States
@@ -55,6 +58,7 @@ export const cyberpunkTheme = {
       tertiary: '#737373',
       disabled: '#525252',
     },
+    textSecondary: '#a3a3a3',
     
     // Borders
     border: {
