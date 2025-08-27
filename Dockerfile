@@ -24,6 +24,7 @@ WORKDIR /app/way-esports-backend
 COPY way-esports-backend/ .
 RUN npm ci --no-audit --no-fund
 RUN npm run build
+RUN npm prune --omit=dev
 
 # Production stage
 FROM node:18-slim AS production
