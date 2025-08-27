@@ -48,8 +48,8 @@ COPY --from=backend-build /app/way-esports-backend/dist ./backend/dist
 COPY --from=backend-build /app/way-esports-backend/package.json ./backend/
 COPY --from=backend-build /app/way-esports-backend/node_modules ./backend/node_modules
 
-# Copy environment configuration
-COPY way-esports-backend/.env.example ./backend/.env
+# Ensure backend env file exists (runtime env vars should override)
+RUN touch ./backend/.env
 
 # Set ownership
 RUN chown -R tine:nodejs /app
