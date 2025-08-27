@@ -1,11 +1,8 @@
 # Multi-stage build for WAY Esports
-FROM node:18-alpine AS base
+FROM node:18-slim AS base
 
-# Update Alpine and install dependencies
-RUN apk update && \
-    apk add --no-cache libc6-compat && \
-    apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/main libc6-compat || \
-    apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/community libc6-compat
+# Install dependencies for native modules
+RUN apt-get update && apt-get install -y libc6 && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -29,14 +26,14 @@ RUN npm ci --no-audit --no-fund
 RUN npm run build
 
 # Production stage
-FROM node:18-alpine AS production
+FROM node:18-slim AS production
 
 # Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+RUN apt-get update && apt-get install -y dumb-init && rm -rf /var/lib/apt/lists/*
 
 # Create app user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 tine
+RUN groupadd --system --gid 1001 nodejs
+RUN useradd --system --uid 1001 tine
 
 WORKDIR /app
 
