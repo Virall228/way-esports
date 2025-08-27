@@ -6,23 +6,22 @@ RUN apt-get update && apt-get install -y libc6 && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy package files
-COPY way-esports/package*.json ./way-esports/
-COPY way-esports-backend/package*.json ./way-esports-backend/
-COPY way-esports/frontend/package*.json ./way-esports/frontend/
-
 # Build frontend
 FROM base AS frontend-build
 WORKDIR /app/way-esports/frontend
 COPY way-esports/frontend/ .
-RUN npm ci --no-audit --no-fund
+# Remove lockfile and install fresh
+RUN rm -f package-lock.json
+RUN npm install --no-audit --no-fund
 RUN npm run build
 
 # Build backend
 FROM base AS backend-build
 WORKDIR /app/way-esports-backend
 COPY way-esports-backend/ .
-RUN npm ci --no-audit --no-fund
+# Remove lockfile and install fresh
+RUN rm -f package-lock.json
+RUN npm install --no-audit --no-fund
 RUN npm run build
 RUN npm prune --omit=dev
 
