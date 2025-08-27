@@ -11,21 +11,22 @@ COPY way-esports/package*.json ./way-esports/
 COPY way-esports-backend/package*.json ./way-esports-backend/
 COPY way-esports/frontend/package*.json ./way-esports/frontend/
 
-# Install dependencies
-RUN cd way-esports/frontend && npm ci --only=production
-RUN cd way-esports-backend && npm ci --only=production
+# (Install dependencies moved to respective build stages to include devDependencies when needed)
 
 # Build frontend
 FROM base AS frontend-build
 WORKDIR /app/way-esports/frontend
 COPY way-esports/frontend/ .
+RUN npm ci --no-audit --no-fund
 RUN npm run build
 
 # Build backend
 FROM base AS backend-build
 WORKDIR /app/way-esports-backend
 COPY way-esports-backend/ .
+RUN npm ci --no-audit --no-fund
 RUN npm run build
+RUN npm prune --omit=dev
 
 # Production stage
 FROM node:18-alpine AS production
