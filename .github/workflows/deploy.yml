@@ -117,3 +117,38 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy-on-server:
+    needs: docker-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            cd ${{ secrets.REPO_PATH }}
+            git pull --rebase --autostash || true
+            docker compose pull || true
+            docker compose up -d --build
+            docker system prune -f
+
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd ${{ secrets.REPO_PATH }}
+            echo "Latest commit on server:"
+            git rev-parse --short HEAD
+            git log -1 --pretty=format:"%h %ad %s" --date=iso
+            echo "--- Docker containers status ---"
+            docker compose ps
+            echo "--- Frontend dist presence ---"
+            test -d way-esports/frontend/dist && ls -lah way-esports/frontend/dist | head -n 5 || echo "Frontend dist not found"
