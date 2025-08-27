@@ -1,8 +1,8 @@
-# Multi-stage build for TineWeb
-FROM node:18-alpine AS base
+# Multi-stage build for WAY Esports
+FROM node:18-slim AS base
 
 # Install dependencies for native modules
-RUN apk add --no-cache libc6-compat
+RUN apt-get update && apt-get install -y libc6 && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -11,33 +11,30 @@ COPY way-esports/package*.json ./way-esports/
 COPY way-esports-backend/package*.json ./way-esports-backend/
 COPY way-esports/frontend/package*.json ./way-esports/frontend/
 
-# Install dependencies
-RUN cd way-esports/frontend && npm ci --only=production
-RUN cd way-esports-backend && npm ci --only=production
-
 # Build frontend
 FROM base AS frontend-build
 WORKDIR /app/way-esports/frontend
 COPY way-esports/frontend/ .
 RUN npm ci --no-audit --no-fund
-RUN npm install -g typescript
 RUN npm run build
 
 # Build backend
 FROM base AS backend-build
 WORKDIR /app/way-esports-backend
 COPY way-esports-backend/ .
+RUN npm ci --no-audit --no-fund
 RUN npm run build
+RUN npm prune --omit=dev
 
 # Production stage
-FROM node:18-alpine AS production
+FROM node:18-slim AS production
 
 # Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+RUN apt-get update && apt-get install -y dumb-init && rm -rf /var/lib/apt/lists/*
 
 # Create app user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 tine
+RUN groupadd --system --gid 1001 nodejs
+RUN useradd --system --uid 1001 tine
 
 WORKDIR /app
 
@@ -50,8 +47,8 @@ COPY --from=backend-build /app/way-esports-backend/dist ./backend/dist
 COPY --from=backend-build /app/way-esports-backend/package.json ./backend/
 COPY --from=backend-build /app/way-esports-backend/node_modules ./backend/node_modules
 
-# Copy environment configuration
-COPY way-esports-backend/.env.example ./backend/.env
+# Create empty .env file
+RUN touch ./backend/.env
 
 # Set ownership
 RUN chown -R tine:nodejs /app
