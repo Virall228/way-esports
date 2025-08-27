@@ -6,9 +6,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "clean": "rimraf dist dist-zip",
-    "build:prod": "vite build",
-    "build:zip": "node scripts/create-zip.js",
+    "build:zip": "npm run build && zip -r way-esports-frontend.zip dist",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
@@ -23,8 +21,6 @@
     "@types/react": "^18.0.27",
     "@types/react-dom": "^18.0.10",
     "@vitejs/plugin-react": "^3.1.0",
-    "archiver": "^6.0.2",
-    "rimraf": "^6.0.1",
     "typescript": "^4.9.3",
     "vite": "^4.1.0"
   }
