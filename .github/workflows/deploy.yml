@@ -123,12 +123,26 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
+      - name: Test SSH connection
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          debug: true
+          script: |
+            echo "SSH connection successful!"
+            whoami
+            pwd
+            echo "Testing basic commands..."
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
+          debug: true
           script: |
             set -e
             cd ${{ secrets.REPO_PATH }}
@@ -143,6 +157,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
+          debug: true
           script: |
             cd ${{ secrets.REPO_PATH }}
             echo "Latest commit on server:"
