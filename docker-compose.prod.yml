@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  app:
+    image: ghcr.io/Virall228/WAY-Esports:latest
+    container_name: way-esports-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"  # Frontend
+      - "3001:3001"  # Backend
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongo:27017/way-esports
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - way-esports-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  mongo:
+    image: mongo:6
+    container_name: way-esports-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    networks:
+      - way-esports-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: way-esports-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - way-esports-network
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: way-esports-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_LABEL_ENABLE=true
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_INCLUDE_STOPPED=true
+      - WATCHTOWER_REVIVE_STOPPED=true
+    command: --interval 60 --cleanup --label-enable --include-stopped --revive-stopped
+    networks:
+      - way-esports-network
+
+volumes:
+  mongo_data:
+  redis_data:
+
+networks:
+  way-esports-network:
+    driver: bridge
