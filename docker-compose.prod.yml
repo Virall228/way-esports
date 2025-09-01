@@ -67,3 +67,4 @@ volumes:
 networks:
   way-esports-network:
     driver: bridge
+
