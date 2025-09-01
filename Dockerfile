@@ -24,6 +24,7 @@ FROM base AS backend-build
 WORKDIR /app/way-esports-backend
 COPY way-esports-backend/ .
 RUN npm ci --no-audit --no-fund
+RUN npm install typescript
 RUN npm run build
 RUN npm prune --omit=dev
 
