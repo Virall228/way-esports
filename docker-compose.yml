@@ -1,14 +1,26 @@
 version: "3.9"
 
 services:
-  app:
+  backend:
     build:
-      context: .
+      context: ./way-esports-backend
       dockerfile: Dockerfile
-    container_name: way-esports-app
+    container_name: way-backend
     env_file:
       - ./way-esports-backend/.env
+    volumes:
+      - ./way-esports-backend/.env:/app/.env:ro
     ports:
       - "3000:3000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./way-esports-frontend
+      dockerfile: Dockerfile
+    container_name: way-frontend
+    ports:
       - "80:80"
+    depends_on:
+      - backend
     restart: unless-stopped
