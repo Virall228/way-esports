@@ -1,60 +1,24 @@
-version: '3.8'
+version: "3.9"
 
 services:
-  tine-frontend:
-    restart: unless-stopped
+  backend:
     build:
-      context: .
+      context: ./way-esports-backend
       dockerfile: Dockerfile
-      target: frontend-build
+    container_name: way-backend
+    env_file:
+      - ./way-esports-backend/.env
     ports:
       - "3000:3000"
-    environment:
-      - NODE_ENV=development
-    volumes:
-      - ./way-esports/frontend:/app/way-esports/frontend
-      - /app/way-esports/frontend/node_modules
-    command: ["npm", "run", "dev"]
-
-  tine-backend:
     restart: unless-stopped
+
+  frontend:
     build:
-      context: .
+      context: ./way-esports-frontend
       dockerfile: Dockerfile
-      target: backend-build
+    container_name: way-frontend
     ports:
-      - "3001:3001"
-    environment:
-      - NODE_ENV=development
-      - MONGODB_URI=mongodb+srv://vb917185:hJoJm47FxYT8kSAP@cluster1.ey2ubm6.mongodb.net/
-      - REDIS_URL=redis://redis:6379
-    volumes:
-      - ./way-esports-backend:/app/way-esports-backend
-      - /app/way-esports-backend/node_modules
+      - "80:80"
     depends_on:
-      - mongo
-      - redis
-    command: ["npm", "run", "dev"]
-
-  mongo:
+      - backend
     restart: unless-stopped
-    image: mongo:6
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=password
-
-  redis:
-    restart: unless-stopped
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-
-volumes:
-  mongo_data:
-  redis_data:
