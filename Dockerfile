@@ -16,7 +16,7 @@ FROM base AS frontend-build
 WORKDIR /app/way-esports/frontend
 COPY way-esports/frontend/ .
 RUN npm ci --no-audit --no-fund
-RUN npm install -g vite
+RUN npm install vite
 RUN npm run build
 
 # Build backend
