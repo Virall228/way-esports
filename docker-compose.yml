@@ -7,7 +7,7 @@ services:
     env_file:
       - ./way-esports-backend/.env
     volumes:
-      - ./way-esports-backend/.env:/app/.env:ro
+      - ./way-esports-backend/.env:/opt/WAY-Esports/WAY-Esports/way-esports-backend/.env:ro
     ports:
       - "3000:3000"
     restart: unless-stopped
