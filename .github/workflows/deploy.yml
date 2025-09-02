@@ -126,6 +126,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Создать директорию и файл known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+
       - name: Add server to known_hosts
         run: |
           ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
