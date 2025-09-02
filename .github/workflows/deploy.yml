@@ -126,14 +126,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup SSH environment
-        run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          echo "${{ secrets.SSH_HOST }}" > ~/.ssh/host
-          echo "${{ secrets.SSH_USER }}" > ~/.ssh/user
-          echo "${{ secrets.SSH_PORT }}" > ~/.ssh/port
-
       - name: Add server to known_hosts
         run: |
           ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
@@ -146,11 +138,12 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          timeout: 30s
-          command_timeout: 10m
+          timeout: 60s
+          command_timeout: 15m
           debug: true
           script_stop: true
           script: |
+            set -e
             echo "🚀 SSH connection successful!"
             echo "👤 User: $(whoami)"
             echo "📁 Current directory: $(pwd)"
@@ -185,7 +178,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          timeout: 30s
+          timeout: 60s
           command_timeout: 5m
           debug: true
           script: |
