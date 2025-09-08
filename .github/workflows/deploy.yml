@@ -1,4 +1,4 @@
-name: Deploy TimeWeb
+name: Deploy to GHCR (Simple)
 
 on:
   push:
@@ -75,7 +75,7 @@ jobs:
             way-esports-backend/package-lock.json
           retention-days: 7
 
-  docker-build:
+  build-and-push:
     needs: [build-frontend, build-backend]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
@@ -85,6 +85,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: way-esports/frontend/dist/
+
+      - name: Download backend artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-build
+          path: way-esports-backend/
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -118,120 +130,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  deploy-on-server:
-    needs: docker-build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup SSH
+      - name: Notify deployment ready
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-          # Verify SSH key format
-          echo "🔍 Verifying SSH key format..."
-          if ! ssh-keygen -l -f ~/.ssh/id_rsa > /dev/null 2>&1; then
-            echo "❌ Invalid SSH private key format"
-            exit 1
-          fi
-          echo "✅ SSH key format is valid"
-
-          # Add host to known_hosts
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-
-          # Test SSH connection
-          echo "🔗 Testing SSH connection..."
-          if ! ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -p ${{ secrets.SSH_PORT }} "echo 'SSH connection test successful'" 2>/dev/null; then
-            echo "❌ SSH connection test failed"
-            echo "🔧 Troubleshooting tips:"
-            echo "  - Ensure SSH_PRIVATE_KEY secret contains the full private key (including BEGIN and END lines)"
-            echo "  - Verify the public key is added to ~/.ssh/authorized_keys on the server"
-            echo "  - Check that SSH_USER has correct permissions on the server"
-            echo "  - Ensure SSH_PORT is correct and SSH service is running"
-            exit 1
-          fi
-          echo "✅ SSH connection test successful"
-
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          port: ${{ secrets.SSH_PORT }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          timeout: 60s
-          command_timeout: 15m
-          debug: true
-          script_stop: true
-          script: |
-            set -e
-            echo "🚀 SSH connection successful!"
-            echo "👤 User: $(whoami)"
-            echo "📁 Current directory: $(pwd)"
-            echo "🖥️  Server: $(hostname)"
-            echo "📅 Date: $(date)"
-            echo ""
-            echo "🔄 Starting deployment..."
-
-            # ---- МЕСТО ДЛЯ КОМАНД ДЕПЛОЯ ----
-            cd ${{ secrets.REPO_PATH }}
-            echo "📂 Changed to: $(pwd)"
-
-            echo "📥 Pulling latest code..."
-            git pull --rebase --autostash || true
-
-            echo "🐳 Updating Docker containers..."
-            docker compose pull || true
-            docker compose up -d --build --remove-orphans
-
-            echo "🧹 Cleaning up Docker..."
-            docker system prune -f
-
-            echo "✅ Deployment completed successfully!"
-            echo ""
-            echo "📊 Current status:"
-            docker compose ps
-
-      - name: Verify deployment
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          port: ${{ secrets.SSH_PORT }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          timeout: 60s
-          command_timeout: 5m
-          debug: true
-          script: |
-            echo "🔍 Verifying deployment..."
-            cd ${{ secrets.REPO_PATH }}
-            
-            echo "📝 Latest commit on server:"
-            git rev-parse --short HEAD
-            git log -1 --pretty=format:"%h %ad %s" --date=iso
-            
-            echo ""
-            echo "🐳 Docker containers status:"
-            docker compose ps
-            
-            echo ""
-            echo "📁 Frontend build presence:"
-            if [ -d "way-esports/frontend/dist" ]; then
-              echo "✅ Frontend dist found:"
-              ls -lah way-esports/frontend/dist | head -n 5
-            else
-              echo "❌ Frontend dist not found"
-            fi
-            
-            echo ""
-            echo "🔗 Backend build presence:"
-            if [ -d "way-esports-backend/dist" ]; then
-              echo "✅ Backend dist found:"
-              ls -lah way-esports-backend/dist | head -n 5
-            else
-              echo "❌ Backend dist not found"
-            fi
+          echo "🎉 Docker image pushed to GHCR successfully!"
+          echo "📦 Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          echo "⏰ Watchtower will automatically update containers on server within 60 seconds"
+          echo ""
+          echo "📊 To check deployment status on server:"
+          echo "   docker compose -f docker-compose.prod.yml ps"
+          echo "   docker logs way-esports-app"
+          echo "   docker logs way-esports-watchtower"

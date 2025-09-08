@@ -1,45 +1,76 @@
-# TODO: Fix SSH Authentication in GitHub Actions Deployment
+# TODO: Simplified Deployment with GHCR + Watchtower
 
 ## ✅ Completed Tasks
-- [x] Analyzed deployment logs and identified SSH authentication failure
-- [x] Updated `.github/workflows/deploy.yml` with improved SSH setup:
-  - Added SSH key format verification ✅
-  - Added SSH connection test before deployment ✅
-  - Added detailed troubleshooting tips for common issues ✅
+- [x] **Removed SSH complexity** - eliminated all SSH-related configuration and troubleshooting
+- [x] **Switched to GHCR approach** - now uses GitHub Container Registry for image storage
+- [x] **Added Watchtower integration** - automatic container updates every 60 seconds
+- [x] **Simplified workflow** - single job that builds and pushes Docker images
 
-## 🔍 Current Status
-- [x] Workflow updated and tested - SSH connection test fails as expected
-- [x] Clear error messages and troubleshooting tips are now displayed
-- [x] SSH key format validation ✅ working
-- [x] SSH connection diagnostics ✅ working
+## 🎯 New Deployment Flow
 
-## 🔧 Next Steps to Fix SSH Authentication
-- [ ] **Verify GitHub Secrets:**
-  - Check `SSH_PRIVATE_KEY` contains the full private key (including `-----BEGIN OPENSSH PRIVATE KEY-----` and `-----END OPENSSH PRIVATE KEY-----`)
-  - Verify `SSH_USER`, `SSH_HOST`, `SSH_PORT` are correct
-  - Ensure `REPO_PATH` points to the correct directory on server
+### GitHub Actions (Automatic):
+1. **Build frontend** - compiles React app
+2. **Build backend** - compiles Node.js API
+3. **Build & Push Docker image** - creates and pushes to GHCR
+4. **Notify** - deployment ready message
 
-- [ ] **Server-side Configuration:**
-  - Add the corresponding public key to `~/.ssh/authorized_keys` on the server
-  - Ensure the SSH user has permissions to access the repository directory
-  - Verify SSH service is running and accepting connections
+### Server (Automatic via Watchtower):
+1. **Watchtower monitors** - checks for new images every 60 seconds
+2. **Auto-update containers** - pulls latest image and restarts containers
+3. **Zero-downtime deployment** - seamless updates
 
-- [ ] **Test SSH Connection Manually:**
-  - Generate SSH key pair locally if needed
-  - Test connection: `ssh -i private_key user@host -p port`
-  - Add public key to server's authorized_keys
+## 🔧 Server Setup (One-time)
 
-## 📋 Troubleshooting Checklist
-- [ ] SSH_PRIVATE_KEY secret contains full private key with BEGIN/END lines
-- [ ] Public key added to server's ~/.ssh/authorized_keys
-- [ ] SSH_USER has correct permissions on server
-- [ ] SSH_PORT and SSH_HOST are correct
-- [ ] SSH service is running on server
-- [ ] Repository directory exists and is accessible
+### 1. Add GitHub Secrets:
+```
+GHCR_USERNAME = your_github_username
+GHCR_TOKEN = personal_access_token_with_packages_permissions
+```
 
-## 🎯 Expected Outcome
-Once SSH keys are properly configured, the deployment should succeed with:
-1. ✅ SSH key format validation
-2. ✅ SSH connection test
-3. ✅ Successful deployment via SSH
-4. ✅ Docker containers updated and running
+### 2. On Server:
+```bash
+# Create directory
+mkdir -p /opt/way-esports
+cd /opt/way-esports
+
+# Copy docker-compose.prod.yml to server
+# Login to GHCR
+docker login ghcr.io -u YOUR_USERNAME -p YOUR_TOKEN
+
+# Start services
+docker compose -f docker-compose.prod.yml up -d
+```
+
+## 📊 Monitoring Commands
+
+```bash
+# Check container status
+docker compose -f docker-compose.prod.yml ps
+
+# View app logs
+docker logs way-esports-app
+
+# View Watchtower logs
+docker logs way-esports-watchtower
+
+# Check API health
+curl -I http://localhost:3001/health
+curl -I http://localhost:3000
+```
+
+## 🎉 Benefits of New Approach
+
+- ❌ **No SSH keys** to manage
+- ❌ **No server access** required for deployment
+- ❌ **No manual updates** needed
+- ✅ **Automatic updates** every 60 seconds
+- ✅ **Zero configuration** after initial setup
+- ✅ **Reliable and fast** deployment
+
+## 🚀 Expected Outcome
+
+After pushing to main branch:
+1. ✅ GitHub Actions builds and pushes new image to GHCR
+2. ✅ Watchtower detects new image within 60 seconds
+3. ✅ Containers automatically update with zero downtime
+4. ✅ New version is live immediately
