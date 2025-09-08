@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   app:
-    image: ghcr.io/Virall228/WAY-Esports:latest
+    image: ghcr.io/virall228/way-esports:latest
     container_name: way-esports-app
     restart: unless-stopped
     ports:
