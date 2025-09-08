@@ -131,7 +131,30 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+
+          # Verify SSH key format
+          echo "🔍 Verifying SSH key format..."
+          if ! ssh-keygen -l -f ~/.ssh/id_rsa > /dev/null 2>&1; then
+            echo "❌ Invalid SSH private key format"
+            exit 1
+          fi
+          echo "✅ SSH key format is valid"
+
+          # Add host to known_hosts
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+          # Test SSH connection
+          echo "🔗 Testing SSH connection..."
+          if ! ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} -p ${{ secrets.SSH_PORT }} "echo 'SSH connection test successful'" 2>/dev/null; then
+            echo "❌ SSH connection test failed"
+            echo "🔧 Troubleshooting tips:"
+            echo "  - Ensure SSH_PRIVATE_KEY secret contains the full private key (including BEGIN and END lines)"
+            echo "  - Verify the public key is added to ~/.ssh/authorized_keys on the server"
+            echo "  - Check that SSH_USER has correct permissions on the server"
+            echo "  - Ensure SSH_PORT is correct and SSH service is running"
+            exit 1
+          fi
+          echo "✅ SSH connection test successful"
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -153,21 +176,21 @@ jobs:
             echo "📅 Date: $(date)"
             echo ""
             echo "🔄 Starting deployment..."
-            
+
             # ---- МЕСТО ДЛЯ КОМАНД ДЕПЛОЯ ----
             cd ${{ secrets.REPO_PATH }}
             echo "📂 Changed to: $(pwd)"
-            
+
             echo "📥 Pulling latest code..."
             git pull --rebase --autostash || true
-            
+
             echo "🐳 Updating Docker containers..."
             docker compose pull || true
             docker compose up -d --build --remove-orphans
-            
+
             echo "🧹 Cleaning up Docker..."
             docker system prune -f
-            
+
             echo "✅ Deployment completed successfully!"
             echo ""
             echo "📊 Current status:"
