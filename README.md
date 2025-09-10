@@ -12,6 +12,16 @@ sudo nano /opt/way-esports/secrets/backend.env
 sudo chmod 600 /opt/way-esports/secrets/backend.env
 ```
 
+## Environment Variables
+
+Make sure your `backend.env` file contains the following variables:
+- `NODE_ENV=production`
+- `PORT=3001`
+- `MONGODB_URI=your_mongodb_connection_string`
+- `JWT_SECRET=your_jwt_secret_key`
+- `GHCR_USERNAME=your_github_username`
+- `GHCR_TOKEN=your_github_token`
+
 ## Clone the repository
 
 ```bash
