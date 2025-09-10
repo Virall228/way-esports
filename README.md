@@ -11,7 +11,6 @@ sudo nano /opt/way-esports/secrets/backend.env
 # Paste your environment variables here
 sudo chmod 600 /opt/way-esports/secrets/backend.env
 ```
-
 ## Environment Variables
 
 Make sure your `backend.env` file contains the following variables:
