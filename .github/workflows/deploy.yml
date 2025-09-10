@@ -1,93 +1,48 @@
-name: Build & Push to GHCR
+name: Deploy to Production
 
 on:
   push:
-    branches: [ "main" ]
-    tags: [ "v*", "release-*" ]
+    branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  packages: write
-
-env:
-  REGISTRY: ghcr.io
-
 jobs:
-  build-and-push-backend:
+  deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - id: names
+      - name: Setup SSH
         run: |
-          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          REPO_LC=$(basename "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          echo "owner_lc=$OWNER_LC" >> $GITHUB_OUTPUT
-          echo "repo_lc=$REPO_LC" >> $GITHUB_OUTPUT
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/login-action@v3
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          timeout: 60s
+          command_timeout: 15m
+          script: |
+            set -e
+            echo "🚀 Starting deployment..."
+            cd ${{ secrets.REPO_PATH }}
 
-      - id: meta-backend
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ steps.names.outputs.owner_lc }}/way-esports-backend
-          tags: |
-            type=raw,value=latest
-            type=sha,format=short,prefix=sha-
+            echo "📥 Pulling latest code..."
+            git pull origin main --rebase --autostash
 
-      - uses: docker/build-push-action@v6
-        with:
-          context: ./way-esports-backend
-          file: ./way-esports-backend/Dockerfile
-          push: true
-          tags: ${{ steps.meta-backend.outputs.tags }}
-          labels: ${{ steps.meta-backend.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            echo "🐳 Building and starting containers..."
+            docker compose down
+            docker compose up -d --build --remove-orphans
 
-  build-and-push-frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+            echo "🧹 Cleaning up..."
+            docker system prune -f
 
-      - id: names
-        run: |
-          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          REPO_LC=$(basename "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          echo "owner_lc=$OWNER_LC" >> $GITHUB_OUTPUT
-          echo "repo_lc=$REPO_LC" >> $GITHUB_OUTPUT
-
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - id: meta-frontend
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ steps.names.outputs.owner_lc }}/way-esports-frontend
-          tags: |
-            type=raw,value=latest
-            type=sha,format=short,prefix=sha-
-
-      - uses: docker/build-push-action@v6
-        with:
-          context: ./way-esports/frontend
-          file: ./way-esports-frontend/Dockerfile
-          push: true
-          tags: ${{ steps.meta-frontend.outputs.tags }}
-          labels: ${{ steps.meta-frontend.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            echo "✅ Deployment completed!"
+            echo "📊 Status:"
+            docker compose ps
