@@ -9,7 +9,7 @@ services:
       - "3000:3000"  # Frontend
       - "3001:3001"  # Backend
     env_file:
-      - /opt/WAY-Esports/secrets/backend.env
+      - /opt/way-esports/secrets/backend.env
     depends_on:
       - mongo
       - redis
