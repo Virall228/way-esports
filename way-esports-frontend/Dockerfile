@@ -6,7 +6,9 @@ WORKDIR /app
 COPY package*.json ./
 
 RUN npm i -g npm@10
-RUN npm ci --no-audit --no-fund
+
+# Fix potential npm ci failure by adding missing dependencies and updating apk
+RUN apk add --no-cache python3 make g++ && npm ci --no-audit --no-fund
 
 COPY . .
 
