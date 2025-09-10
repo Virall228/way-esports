@@ -31,11 +31,6 @@ RUN npm prune --omit=dev
 # Production stage
 FROM node:18-slim AS production
 
-# Install dumb-init for proper signal handling
-RUN apt-get update && apt-get install -y --no-install-recommends dumb-init || \
-    (curl -L -o /usr/local/bin/dumb-init https://github.com/Yelp/dumb-init/releases/download/v1.2.5/dumb-init_1.2.5_amd64 && chmod +x /usr/local/bin/dumb-init) && \
-    rm -rf /var/lib/apt/lists/*
-
 # Create app user
 RUN groupadd --system --gid 1001 nodejs
 RUN useradd --system --uid 1001 tine
@@ -66,38 +61,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
 # Start application
-ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "backend/dist/server.js"]
-
-
-
-
-
-# Health check
-
-
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-
-
-  CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
-
-
-
-# Start application
-
-
-CMD ["dumb-init", "node", "backend/dist/server.js"]
-
-
-
-
-
-
-
-
-# Start application
-
-CMD ["dumb-init", "node", "backend/dist/server.js"]
 
 
 
