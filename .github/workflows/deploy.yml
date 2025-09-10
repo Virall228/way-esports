@@ -84,7 +84,7 @@ jobs:
 
       - uses: docker/build-push-action@v6
         with:
-          context: ./way-esports-frontend
+          context: ./way-esports/frontend
           file: ./way-esports-frontend/Dockerfile
           push: true
           tags: ${{ steps.meta-frontend.outputs.tags }}

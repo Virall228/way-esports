@@ -1,8 +1,8 @@
-.git
-.github
 node_modules
-.env
-.env.*
-Dockerfile*
-docker-compose*.yml
+dist
+.vscode
+.git
+.gitignore
+Dockerfile
 README.md
+*.log
