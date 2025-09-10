@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   app:
     image: ghcr.io/virall228/way-esports:latest
@@ -65,4 +67,3 @@ volumes:
 networks:
   way-esports-network:
     driver: bridge
-
