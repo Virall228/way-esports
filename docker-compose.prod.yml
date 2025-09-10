@@ -8,10 +8,8 @@ services:
     ports:
       - "3000:3000"  # Frontend
       - "3001:3001"  # Backend
-    environment:
-      - NODE_ENV=production
-      - MONGODB_URI=mongodb://mongo:27017/way-esports
-      - REDIS_URL=redis://redis:6379
+    env_file:
+      - /opt/WAY-Esports/secrets/backend.env
     depends_on:
       - mongo
       - redis

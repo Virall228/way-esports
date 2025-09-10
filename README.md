@@ -31,7 +31,7 @@ npm run dev
 
 The frontend will be available at `http://localhost:3000`
 
-### Backend Setup
+## Backend Setup
 
 1. Navigate to the backend directory:
 ```bash
@@ -43,14 +43,16 @@ cd way-esports-backend
 npm install
 ```
 
-3. Create a `.env` file with the following variables:
+3. Create a `.env` file with the following variables or use the external env file:
 ```env
 PORT=4000
 MONGODB_URI=your_mongodb_uri
 JWT_SECRET=your_jwt_secret
 ```
 
-4. Start the server:
+4. For deployment, place the env file at `/opt/WAY-Esports/secrets/backend.env` on the server.
+
+5. Start the server:
 ```bash
 npm run dev
 ```
@@ -87,6 +89,32 @@ npm run dev
 - News section
 - Wallet integration
 - Live tournament updates
+
+## Deployment Instructions
+
+1. On the deployment server, create the secrets directory:
+```bash
+mkdir -p /opt/WAY-Esports/secrets
+```
+
+2. Create the backend environment file `/opt/WAY-Esports/secrets/backend.env` with the following content:
+```env
+PORT=4000
+MONGODB_URI=your_mongodb_uri
+JWT_SECRET=your_jwt_secret
+```
+
+3. Pull the latest Docker images and start the containers:
+```bash
+cd /opt/WAY-Esports/WAY-Esports
+docker compose pull
+docker compose up -d --build
+docker compose ps
+```
+
+4. Verify the containers are running and the application is accessible.
+
+Note: The `docker-compose.prod.yml` is configured to use the external env file for the backend service.
 
 ### Backend
 - RESTful API for all frontend features
