@@ -1,48 +1,100 @@
-name: Deploy to Production
+name: Build & Deploy (prod)
 
 on:
   push:
-    branches: [main]
+    branches: ["main"]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BACKEND: ghcr.io/virall228/way-esports-backend:latest
+  IMAGE_FRONTEND: ghcr.io/virall228/way-esports-frontend:latest
+
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # BACKEND
+      - name: Build & Push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./way-esports-backend
+          file: ./way-esports-backend/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_BACKEND }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # FRONTEND
+      - name: Build & Push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./way-esports-frontend
+          file: ./way-esports-frontend/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_FRONTEND }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
-          port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          timeout: 60s
-          command_timeout: 15m
+          port: ${{ secrets.SSH_PORT || 22 }}
           script: |
-            set -e
-            echo "🚀 Starting deployment..."
-            cd ${{ secrets.REPO_PATH }}
+            set -euo pipefail
+            sudo mkdir -p /opt/way-esports/secrets
+            sudo mkdir -p /opt/way-esports
+            cd /opt/way-esports
 
-            echo "📥 Pulling latest code..."
-            git pull origin main --rebase --autostash
+            # Клонируем или обновляем репозиторий (нижний регистр)
+            if [ ! -d "way-esports/.git" ]; then
+              git clone https://github.com/virall228/way-esports.git
+            fi
+            cd way-esports
+            git fetch --all --prune
+            git checkout main
+            git pull --rebase
 
-            echo "🐳 Building and starting containers..."
-            docker compose down
-            docker compose up -d --build --remove-orphans
+            # Проверяем, что env существует
+            if [ ! -f /opt/way-esports/secrets/backend.env ]; then
+              echo "ERROR: /opt/way-esports/secrets/backend.env not found" >&2
+              exit 1
+            fi
 
-            echo "🧹 Cleaning up..."
-            docker system prune -f
+            # Поднимаем сервисы
+            COMPOSE_FILE=docker-compose.prod.yml
+            if [ ! -f "$COMPOSE_FILE" ]; then
+              COMPOSE_FILE=docker-compose.yml
+            fi
 
-            echo "✅ Deployment completed!"
-            echo "📊 Status:"
-            docker compose ps
+            docker login ghcr.io -u ${{ secrets.GHCR_USER || github.actor }} -p ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
+            docker compose -f "$COMPOSE_FILE" pull || true
+            docker compose -f "$COMPOSE_FILE" up -d --build
+            docker compose -f "$COMPOSE_FILE" ps
