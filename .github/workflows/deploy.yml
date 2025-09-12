@@ -1,4 +1,4 @@
-name: Build & Deploy (prod)
+name: Build & Auto-Deploy (Watchtower)
 
 on:
   push:
@@ -56,45 +56,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          script: |
-            set -euo pipefail
-            sudo mkdir -p /opt/way-esports/secrets
-            sudo mkdir -p /opt/way-esports
-            cd /opt/way-esports
-
-            # Клонируем или обновляем репозиторий (нижний регистр)
-            if [ ! -d "way-esports/.git" ]; then
-              git clone https://github.com/virall228/way-esports.git
-            fi
-            cd way-esports
-            git fetch --all --prune
-            git checkout main
-            git pull --rebase
-
-            # Проверяем, что env существует
-            if [ ! -f /opt/way-esports/secrets/backend.env ]; then
-              echo "ERROR: /opt/way-esports/secrets/backend.env not found" >&2
-              exit 1
-            fi
-
-            # Поднимаем сервисы
-            COMPOSE_FILE=docker-compose.prod.yml
-            if [ ! -f "$COMPOSE_FILE" ]; then
-              COMPOSE_FILE=docker-compose.yml
-            fi
-
-            docker login ghcr.io -u ${{ secrets.GHCR_USER || github.actor }} -p ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
-            docker compose -f "$COMPOSE_FILE" pull || true
-            docker compose -f "$COMPOSE_FILE" up -d --build
-            docker compose -f "$COMPOSE_FILE" ps
+      - name: Notify deployment
+        run: |
+          echo "✅ Images built and pushed successfully!"
+          echo "🚀 Watchtower will automatically update containers within 60 seconds"
+          echo ""
+          echo "📊 Build Summary:"
+          echo "  Backend: ${{ env.IMAGE_BACKEND }}"
+          echo "  Frontend: ${{ env.IMAGE_FRONTEND }}"
+          echo ""
+          echo "⏰ Next update: Watchtower checks every 60 seconds"
