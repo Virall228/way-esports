@@ -6,10 +6,10 @@ RUN apt-get update && apt-get install -y libc6 && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy package files
-COPY way-esports/package*.json ./way-esports/
-COPY way-esports-backend/package*.json ./way-esports-backend/
-COPY way-esports/frontend/package*.json ./way-esports/frontend/
+# Copy package files including package-lock.json
+COPY way-esports/package*.json way-esports/package-lock.json ./way-esports/
+COPY way-esports-backend/package*.json way-esports-backend/package-lock.json ./way-esports-backend/
+COPY way-esports/frontend/package*.json way-esports/frontend/package-lock.json ./way-esports/frontend/
 
 # Build frontend
 FROM base AS frontend-build
