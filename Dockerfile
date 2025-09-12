@@ -14,16 +14,18 @@ COPY way-esports/frontend/package*.json way-esports/frontend/package-lock.json .
 # Build frontend
 FROM base AS frontend-build
 WORKDIR /app/way-esports/frontend
-COPY way-esports/frontend/ .
+COPY way-esports/frontend/package*.json way-esports/frontend/package-lock.json ./
 RUN npm ci --no-audit --no-fund
+COPY way-esports/frontend/ .
 RUN npm install vite
 RUN npm run build
 
 # Build backend
 FROM base AS backend-build
 WORKDIR /app/way-esports-backend
-COPY way-esports-backend/ .
+COPY way-esports-backend/package*.json way-esports-backend/package-lock.json ./
 RUN npm ci --no-audit --no-fund
+COPY way-esports-backend/ .
 RUN npm install typescript
 RUN npm run build
 RUN npm prune --omit=dev
