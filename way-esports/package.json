@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
+    "../way-esports-backend",
+    "../way-esports-frontend",
     "frontend",
     "backend",
     "shared"
