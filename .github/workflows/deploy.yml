@@ -49,8 +49,8 @@ jobs:
       - name: Build & Push frontend
         uses: docker/build-push-action@v6
         with:
-          context: ./way-esports-frontend
-          file: ./way-esports-frontend/Dockerfile
+          context: ./way-esports/frontend
+          file: ./way-esports/frontend/Dockerfile
           push: true
           tags: ${{ env.IMAGE_FRONTEND }}
           cache-from: type=gha
