@@ -25,7 +25,7 @@ services:
 
   frontend:
     build:
-      context: ./way-esports-frontend
+      context: ./way-esports/frontend
       dockerfile: Dockerfile
     image: ghcr.io/virall228/way-esports-frontend:latest
     ports:
