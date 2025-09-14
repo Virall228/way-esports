@@ -1,78 +1,77 @@
-# 🚀 Инструкция по деплою WAY Esports (без SSH)
+# WAY-Esports Deployment Instructions
 
-## 📋 Что нужно сделать
+## Prerequisites on Server
 
-### 1. В GitHub Secrets добавить:
-- `GHCR_USERNAME` - ваш GitHub username
-- `GHCR_TOKEN` - Personal Access Token
+1. Install Docker and Docker Compose:
+   ```bash
+   sudo apt update
+   sudo apt install -y docker.io docker-compose
+   sudo systemctl enable --now docker
+   ```
 
-### 2. На сервере:
-```bash
-# Создать директорию
-mkdir -p /opt/way-esports
-cd /opt/way-esports
+2. Add your user to the docker group (optional, for running docker without sudo):
+   ```bash
+   sudo usermod -aG docker $USER
+   newgrp docker
+   ```
 
-# Скопировать docker-compose.prod.yml
-# Войти в GHCR
-docker login ghcr.io -u YOUR_USERNAME -p YOUR_TOKEN
+3. Create a `.env.prod` file in the deployment directory with all required environment variables for backend, frontend, and bot.
 
-# Запустить
-docker compose -f docker-compose.prod.yml up -d
-```
+## Docker Compose Production Setup
 
-## 🔑 Откуда взять переменные
+- Use the provided `docker-compose.prod.yml` file to run the services:
+  ```bash
+  docker-compose -f docker-compose.prod.yml up -d
+  ```
 
-### GHCR_USERNAME
-Это ваш **GitHub username** (например: `Virall228`)
+- This will start backend, frontend, bot (if available), MongoDB, Redis, and Watchtower.
 
-### GHCR_TOKEN (Personal Access Token)
-1. **GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)**
-2. **Generate new token (classic)**
-3. **Выбрать права:**
-   - ✅ `write:packages` - пушить образы
-   - ✅ `read:packages` - читать образы
-   - ✅ `delete:packages` - удалять образы (опционально)
-4. **Скопировать токен** (он показывается только один раз!)
+- Ports exposed:
+  - Frontend: 80
+  - Backend: 4000
+  - Bot: no external ports
 
-## 🐳 Как работает
+- Watchtower automatically checks for new image versions every 60 seconds and updates containers with `--cleanup`.
 
-1. **GitHub Actions** собирает Docker образ при push в main
-2. **Пушит в GHCR** с тегом `:latest`
-3. **Watchtower** каждые 60 сек проверяет обновления
-4. **Автоматически** обновляет контейнер приложения
+## GitHub Secrets Setup
 
-## ✅ Проверка работы
+- Create a GitHub Personal Access Token (PAT) with `write:packages` and `read:packages` scopes.
+- Add the following secrets in your repository settings under **Settings > Secrets > Actions**:
+  - `GHCR_USERNAME`: your GitHub username
+  - `GHCR_TOKEN`: your PAT token
 
-```bash
-# Статус контейнеров
-docker compose -f docker-compose.prod.yml ps
+## GitHub Actions Workflow
 
-# Логи приложения
-docker logs way-esports-app
+- The workflow `.github/workflows/deploy.yml` triggers on push to `main`.
+- It builds and pushes Docker images for backend, frontend, and bot to GitHub Container Registry (GHCR).
+- Images are tagged with `latest` and the commit SHA.
 
-# Логи Watchtower
-docker logs way-esports-watchtower
+## Deployment and Rollback
 
-# Проверка API
-curl -I http://localhost:3001/health
-curl -I http://localhost:3000
-```
+- To deploy the latest images:
+  ```bash
+  docker-compose -f docker-compose.prod.yml pull
+  docker-compose -f docker-compose.prod.yml up -d
+  ```
 
-## 🔄 Откат
+- To rollback to a previous image tag (replace `<tag>` with commit SHA or tag):
+  ```bash
+  docker-compose -f docker-compose.prod.yml up -d --no-deps --build backend=ghcr.io/virall228/way-esports-backend:<tag> frontend=ghcr.io/virall228/way-esports-frontend:<tag> bot=ghcr.io/virall228/way-esports-bot:<tag>
+  ```
 
-```bash
-# На предыдущую версию
-docker compose -f docker-compose.prod.yml down
-docker pull ghcr.io/Virall228/WAY-Esports:prev
-docker compose -f docker-compose.prod.yml up -d
-```
+## Updating Environment Variables
 
-## 🧹 Очистка
+- Update `.env.prod` file on the server.
+- Restart services:
+  ```bash
+  docker-compose -f docker-compose.prod.yml down
+  docker-compose -f docker-compose.prod.yml up -d
+  ```
 
-```bash
-# Очистить неиспользуемые образы
-docker system prune -f
+## Notes
 
-# Очистить volumes (осторожно!)
-docker volume prune -f
-```
+- Watchtower handles automatic container updates when new images are pushed.
+- Ensure `.env.prod` contains all necessary environment variables for all services.
+- For any manual intervention, use `docker-compose` commands as above.
+
+This setup provides a fully automated, reliable deployment pipeline with zero manual SSH steps for builds and updates.
