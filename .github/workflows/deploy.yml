@@ -14,24 +14,17 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Set up SSH
-      run: |
-        mkdir -p ~/.ssh
-        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H 5.129.234.223 >> ~/.ssh/known_hosts
+      uses: webfactory/ssh-agent@v0.5.4
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-    - name: Debug SSH directory on server
-      run: |
-        ssh root@5.129.234.223 'ls -la ~/.ssh'
-
-    - name: Debug SSH authentication
-      run: |
-        ssh -v root@5.129.234.223 exit
+    - name: Add server to known_hosts
+      run: ssh-keyscan 5.129.234.223 >> ~/.ssh/known_hosts
 
     - name: Sync files to server
       run: |
-        rsync -avz --delete -e 'ssh -o StrictHostKeyChecking=no' ./ root@5.129.234.223:/path/to/your/project
+        rsync -avz --delete -e 'ssh -o StrictHostKeyChecking=no' ./ root@5.129.234.223:/opt/way-esports/
 
     - name: Run deploy script on server
       run: |
-        ssh root@5.129.234.223 'bash /path/to/your/project/scripts/deploy.sh'
+        ssh root@5.129.234.223 'bash /opt/way-esports/scripts/deploy.sh'
