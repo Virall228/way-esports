@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     image: ghcr.io/virall228/way-esports-backend:latest
     env_file:
-      - /opt/way-esports/secrets/backend.env
+      - ./env
     ports:
       - "4000:4000"
     restart: always
