@@ -1,4 +1,4 @@
-name: way-esports
+version: "3.8"
 
 services:
   backend:
@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     image: ghcr.io/virall228/way-esports-backend:latest
     env_file:
-      - ./backend.env
+      - ./way-esports-backend/.env
     ports:
       - "4000:4000"
     restart: always
