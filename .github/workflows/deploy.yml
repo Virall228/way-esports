@@ -23,7 +23,7 @@ jobs:
 
     - name: Sync files to server
       run: |
-        rsync -avz --delete ./ root@5.129.234.223:/path/to/your/project
+        rsync -avz --delete -e 'ssh -o StrictHostKeyChecking=no' ./ root@5.129.234.223:/path/to/your/project
 
     - name: Run deploy script on server
       run: |
