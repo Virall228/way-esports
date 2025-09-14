@@ -20,8 +20,8 @@ jobs:
 
     - name: Sync files to server
       run: |
-        rsync -avz --delete ./ user@your-server-ip:/path/to/your/project
+        rsync -avz --delete ./ user@YOUR_SERVER_IP:/path/to/your/project
 
     - name: Run deploy script on server
       run: |
-        ssh user@your-server-ip 'bash /path/to/your/project/scripts/deploy.sh'
+        ssh user@YOUR_SERVER_IP 'bash /path/to/your/project/scripts/deploy.sh'
