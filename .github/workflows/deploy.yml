@@ -25,6 +25,10 @@ jobs:
       run: |
         ssh root@5.129.234.223 'ls -la ~/.ssh'
 
+    - name: Debug SSH authentication
+      run: |
+        ssh -v root@5.129.234.223 exit
+
     - name: Sync files to server
       run: |
         rsync -avz --delete -e 'ssh -o StrictHostKeyChecking=no' ./ root@5.129.234.223:/path/to/your/project
