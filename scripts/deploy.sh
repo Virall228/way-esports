@@ -1,39 +1,16 @@
 #!/bin/bash
 
-# TimeWeb Deployment Script
-# Usage: ./deploy.sh [staging|production]
-
 set -e
 
-ENVIRONMENT=${1:-staging}
-IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY:-tineweb/tineweb}"
+echo "Pulling latest code..."
+cd /path/to/your/project || exit 1
+git pull origin main
 
-echo "🚀 Starting deployment to $ENVIRONMENT..."
+echo "Building and restarting containers..."
+docker-compose -f docker-compose.prod.yml down
+docker-compose -f docker-compose.prod.yml up --build -d
 
-# Build and push Docker image
-echo "📦 Building Docker image..."
-docker build -t $IMAGE_NAME:latest .
+echo "Checking container status..."
+docker-compose -f docker-compose.prod.yml ps
 
-echo "🔐 Logging into GitHub Container Registry..."
-echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
-
-echo "📤 Pushing image..."
-docker push $IMAGE_NAME:latest
-
-# Deploy based on environment
-case $ENVIRONMENT in
-  staging)
-    echo "🧪 Deploying to staging..."
-    # Add staging deployment commands
-    ;;
-  production)
-    echo "🎯 Deploying to production..."
-    # Add production deployment commands
-    ;;
-  *)
-    echo "❌ Invalid environment. Use 'staging' or 'production'"
-    exit 1
-    ;;
-esac
-
-echo "✅ Deployment to $ENVIRONMENT completed successfully!"
+echo "Deployment completed successfully."
