@@ -21,6 +21,10 @@ jobs:
     - name: Add server to known_hosts
       run: ssh-keyscan 5.129.234.223 >> ~/.ssh/known_hosts
 
+    - name: Debug SSH directory on server
+      run: |
+        ssh root@5.129.234.223 'ls -la ~/.ssh'
+
     - name: Sync files to server
       run: |
         rsync -avz --delete -e 'ssh -o StrictHostKeyChecking=no' ./ root@5.129.234.223:/path/to/your/project
