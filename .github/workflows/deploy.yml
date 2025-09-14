@@ -18,6 +18,9 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+    - name: Add server to known_hosts
+      run: ssh-keyscan 5.129.234.223 >> ~/.ssh/known_hosts
+
     - name: Sync files to server
       run: |
         rsync -avz --delete ./ root@5.129.234.223:/path/to/your/project
