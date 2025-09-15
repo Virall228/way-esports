@@ -4,6 +4,7 @@ FROM node:18-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
+COPY .npmrc ./
 
 RUN npm config set registry https://registry.npmjs.org/ \
     && npm config set fetch-retries 5 \
