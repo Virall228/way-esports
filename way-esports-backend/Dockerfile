@@ -8,9 +8,9 @@ RUN apk add --no-cache python3 make g++
 
 COPY package*.json ./
 
-ENV HUSKY=0
+ENV HUSKY=0 NPM_CONFIG_IGNORE_SCRIPTS=true NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false
 RUN npm i -g npm@10
-RUN npm ci --no-audit --no-fund --ignore-scripts
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # Clean up build dependencies
 RUN apk del python3 make g++
@@ -28,8 +28,8 @@ ENV NODE_ENV=production
 
 COPY package*.json ./
 
-ENV HUSKY=0
-RUN npm ci --omit=dev --no-audit --no-fund --ignore-scripts
+ENV HUSKY=0 NPM_CONFIG_IGNORE_SCRIPTS=true NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false
+RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi
 
 COPY --from=build /app/dist ./dist
 

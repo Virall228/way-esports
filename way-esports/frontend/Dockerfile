@@ -9,10 +9,10 @@ RUN npm config set registry https://registry.npmjs.org/ \
     && npm config set fetch-retries 5 \
     && npm config set fetch-retry-maxtimeout 60000
 
-ENV HUSKY=0
+ENV HUSKY=0 NPM_CONFIG_IGNORE_SCRIPTS=true NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false
 
 RUN npm i -g npm@10
-RUN npm ci --no-audit --no-fund --ignore-scripts
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 COPY . .
 
