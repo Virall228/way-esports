@@ -2,9 +2,7 @@ version: "3.8"
 
 services:
   backend:
-    build:
-      context: ./way-esports-backend
-      dockerfile: Dockerfile
+    image: ghcr.io/virall228/way-esports/backend:latest
     env_file:
       - ./.env.prod
     ports:

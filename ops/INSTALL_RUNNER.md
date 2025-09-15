@@ -1,56 +1,33 @@
-# Установка self-hosted GitHub Actions Runner на Ubuntu
+# Установка и регистрация self-hosted runner с лейблами self-hosted и prod
 
-## 1. Создание пользователя deploy (если не существует)
-```bash
-sudo adduser --disabled-password --gecos "" deploy
-sudo usermod -aG sudo,docker deploy
-```
+1. Перейдите в настройки вашего репозитория на GitHub:
+   - Откройте вкладку **Settings**.
+   - В меню слева выберите **Actions** → **Runners**.
 
-## 2. Установка Docker и Docker Compose v2
-```bash
-sudo apt update
-sudo apt install -y docker.io docker-compose
-sudo systemctl enable docker
-sudo systemctl start docker
+2. Нажмите **New self-hosted runner**.
 
-# Добавить пользователя deploy в группу docker
-sudo usermod -aG docker deploy
-```
+3. Выберите операционную систему вашего сервера (например, Linux).
 
-## 3. Установка GitHub self-hosted runner
-```bash
-# Переключиться на пользователя deploy
-sudo su - deploy
+4. Скопируйте команды для скачивания и установки runner на сервер.
 
-# Создать директорию для runner
-mkdir actions-runner && cd actions-runner
+5. Запустите команды на сервере по очереди:
+   - Скачайте архив с runner.
+   - Распакуйте архив.
+   - Запустите скрипт конфигурации:
+     ```
+     ./config.sh --url https://github.com/your-username/your-repo --token YOUR_TOKEN --labels self-hosted,prod
+     ```
+     Замените `your-username/your-repo` на ваш репозиторий, а `YOUR_TOKEN` на токен из GitHub.
 
-# Скачать последнюю версию runner (пример для Linux x64)
-curl -O -L https://github.com/actions/runner/releases/latest/download/actions-runner-linux-x64.tar.gz
-tar xzf ./actions-runner-linux-x64.tar.gz
+6. Запустите runner:
+   ```
+   ./run.sh
+   ```
 
-# Получить URL и токен для регистрации runner из настроек репозитория GitHub (Settings -> Actions -> Runners)
+7. Убедитесь, что runner отображается в GitHub как **online** с лейблами `self-hosted` и `prod`.
 
-# Зарегистрировать runner (замените URL и TOKEN на свои)
-./config.sh --url https://github.com/your-org/your-repo --token YOUR_TOKEN --labels prod --unattended
-
-# Запустить runner как сервис
-sudo ./svc.sh install
-sudo ./svc.sh start
-```
-
-## 4. Проверка
-```bash
-# Проверить статус runner
-sudo ./svc.sh status
-
-# Проверить, что docker доступен без sudo
-docker ps
-```
-
-## 5. Опционально: настройка systemd для docker-compose (если нужно)
-Создайте сервис `docker-compose@way-esports.service` для управления проектом.
+8. Теперь workflow с `runs-on: [self-hosted, prod]` сможет запуститься на этом runner.
 
 ---
 
-После установки runner с лейблом `prod`, GitHub Actions workflow с `runs-on: [self-hosted, prod]` будет запускаться на вашем сервере.
+Если хотите, могу помочь с написанием скрипта автоматической установки и запуска runner на вашем сервере.
