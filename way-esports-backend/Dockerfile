@@ -1,66 +1,19 @@
-# Backend Dockerfile
-FROM node:18-alpine AS build
-
+FROM node:20-alpine AS deps
 WORKDIR /app
-
-RUN apk add --no-cache git python3 make g++
-
 COPY package*.json ./
-COPY .npmrc ./
+RUN npm config set registry https://registry.npmjs.org/ \
+    && npm config set fetch-retries 5 \
+    && npm config set fetch-retry-maxtimeout 60000
+RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 
-ENV HUSKY=0 \
-    NPM_CONFIG_IGNORE_SCRIPTS=true \
-    NPM_CONFIG_AUDIT=false \
-    NPM_CONFIG_FUND=false
-
-RUN npm pkg set scripts.prepare="" || true \
- && npm pkg set scripts.preinstall="" || true \
- && npm pkg set scripts.postinstall="" || true
-
-RUN npm i -g npm@11.6.0
-RUN if [ -f package-lock.json ]; then \
-      npm ci --ignore-scripts --no-audit --no-fund; \
-    else \
-      npm install --ignore-scripts --no-audit --no-fund; \
-    fi
-
-# Clean up build dependencies
-RUN apk del python3 make g++
-
-COPY . .
-
-RUN npm i -g npm@11.6.0
-RUN npx tsc
-
-FROM node:18-alpine AS runtime
-
+FROM node:20-alpine
 WORKDIR /app
-
 ENV NODE_ENV=production
-
-COPY package*.json ./
-COPY .npmrc ./
-
-ENV HUSKY=0 \
-    NPM_CONFIG_IGNORE_SCRIPTS=true \
-    NPM_CONFIG_AUDIT=false \
-    NPM_CONFIG_FUND=false
-
-RUN npm pkg set scripts.prepare="" || true \
- && npm pkg set scripts.preinstall="" || true \
- && npm pkg set scripts.postinstall="" || true
-
-RUN if [ -f package-lock.json ]; then \
-      npm ci --omit=dev --ignore-scripts --no-audit --no-fund; \
-    else \
-      npm install --omit=dev --ignore-scripts --no-audit --no-fund; \
-    fi
-
-COPY --from=build /app/dist ./dist
-
+COPY --from=deps /app/node_modules ./node_modules
+COPY . ./
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=5 \
   CMD curl -fsS http://localhost:3000/health || exit 1
 
-CMD ["node", "dist/index.js"]
+CMD ["npm","start"]
