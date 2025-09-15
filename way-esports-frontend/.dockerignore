@@ -1,8 +1,8 @@
 node_modules
 dist
-.vscode
 .git
 .gitignore
 Dockerfile
-README.md
-*.log
+npm-debug.log
+yarn-error.log
+.vscode

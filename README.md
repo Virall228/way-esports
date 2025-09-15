@@ -1,57 +1,75 @@
-# WAY Esports Deployment Instructions
+# WAY Esports
 
-## Prerequisites
+A comprehensive esports platform built with React, Node.js, Express, and MongoDB.
 
-- Ensure Docker and Docker Compose are installed on your server.
-- Create the secrets directory and environment file:
+## Quick Start
 
+### Prerequisites
+
+- Docker and Docker Compose installed on your server
+- Git
+
+### First Time Setup
+
+1. Clone the repository:
 ```bash
-sudo mkdir -p /opt/way-esports/secrets
-sudo nano /opt/way-esports/secrets/backend.env
-# Paste your environment variables here
-sudo chmod 600 /opt/way-esports/secrets/backend.env
-```
-## Environment Variables
-
-Make sure your `backend.env` file contains the following variables:
-- `NODE_ENV=production`
-- `PORT=3001`
-- `MONGODB_URI=your_mongodb_connection_string`
-- `JWT_SECRET=your_jwt_secret_key`
-- `GHCR_USERNAME=your_github_username`
-- `GHCR_TOKEN=your_github_token`
-
-## Clone the repository
-
-```bash
-sudo mkdir -p /opt/way-esports
-cd /opt/way-esports
-if [ ! -d way-esports ]; then
-  git clone https://github.com/virall228/way-esports.git
-fi
+git clone https://github.com/virall228/way-esports.git
 cd way-esports
 ```
 
-## Build and run containers
-
+2. Copy the environment file and configure it:
 ```bash
-docker compose -f docker-compose.prod.yml pull || true
-docker compose -f docker-compose.prod.yml build --no-cache
-docker compose -f docker-compose.prod.yml up -d
-docker compose -f docker-compose.prod.yml ps
+cp .env.example .env
+# Edit .env with your actual values (MongoDB URI, JWT secret, etc.)
 ```
 
-## Cleaning old images
-
-To remove old images with uppercase names:
-
+3. Build and run the application:
 ```bash
-docker rmi $(docker images | grep -E 'Virall228|WAY-Esports' | awk '{print $3}') 2>/dev/null || true
+docker compose up -d --build
 ```
 
-## Notes
+The application will be available at:
+- Frontend: http://localhost (port 80)
+- Backend: http://localhost:3000
 
-- All paths and image names use lowercase for consistency.
-- Backend and frontend images are separate: `ghcr.io/virall228/way-esports-backend` and `ghcr.io/virall228/way-esports-frontend`.
-- Healthchecks are configured in `docker-compose.prod.yml` for service reliability.
-- Use the GitHub Actions workflow `.github/workflows/deploy.yml` for automated builds and pushes to GHCR.
+### Updating the Application
+
+To update to the latest version:
+
+```bash
+git pull origin main
+docker compose up -d --build
+```
+
+### Stopping the Application
+
+```bash
+docker compose down
+```
+
+### Viewing Logs
+
+```bash
+docker compose logs -f
+```
+
+## Environment Variables
+
+Copy `.env.example` to `.env` and fill in the required values:
+
+- `NODE_ENV`: Set to `production` for production deployment
+- `PORT`: Backend port (default: 3000)
+- `MONGODB_URI`: Your MongoDB connection string
+- `JWT_SECRET`: Secret key for JWT tokens
+- `TELEGRAM_BOT_TOKEN`: Telegram bot token (if using Telegram integration)
+- Other variables as needed
+
+## Architecture
+
+- **Frontend**: React application served by Nginx
+- **Backend**: Node.js/Express API server
+- **Database**: MongoDB
+
+## Development
+
+For development setup, see individual service READMEs in `way-esports-frontend/` and `way-esports-backend/`.

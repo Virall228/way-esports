@@ -22,10 +22,8 @@ services:
       context: ./way-esports-frontend
       dockerfile: Dockerfile
     ports:
-      - "8080:80"
+      - "80:80"
     restart: unless-stopped
-    env_file:
-      - ./.env
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost/health"]
       interval: 30s
