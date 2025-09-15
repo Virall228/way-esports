@@ -1,35 +1,38 @@
-# Инструкции по развертыванию
+# WAY Esports Docker Compose Deployment
 
-## Первоначальная сборка и запуск
+## Prerequisites
 
-Для сборки и запуска проекта в первый раз на сервере выполните:
+- Ensure Docker and Docker Compose are installed on your server.
+
+## Setup and Run
+
+1. Clone the repository:
 
 ```bash
-docker compose build --no-cache --pull
-docker compose up -d
+git clone <your-repo-url>
+cd <your-repo-directory>
 ```
 
-## Обновление проекта
+2. Build and start the services:
 
-Для обновления проекта с последними изменениями выполните:
+```bash
+docker compose up -d --build
+```
+
+3. To update the services after pulling new changes:
 
 ```bash
 git pull origin main
 docker compose up -d --build
 ```
 
-## Примечания
+## Notes
 
-- Проект использует многостадийные сборки Docker для фронтенда и бэкенда.
-- Dockerfile фронтенда использует `npm ci` с настройками повторных попыток для избежания ошибок разрешения DNS.
-- Dockerfile бэкенда устанавливает зависимости отдельно и использует `npm ci --omit=dev` для продакшена.
-- Docker Compose включает healthchecks и политики перезапуска для надежности.
-- Убедитесь, что Docker и Docker Compose установлены на сервере.
-- Сервис бэкенда слушает порт 3000 (отображается на 4000 внешне).
-- Сервис фронтенда слушает порт 8080.
+- The project uses multi-stage Dockerfiles for frontend and backend.
+- Husky and prepare scripts are disabled in Docker builds to avoid errors.
+- `.dockerignore` files exclude unnecessary files like `node_modules`, `dist`, `.git`, and logs.
+- Frontend is served via Nginx on port 8080.
+- Backend runs on port 3000.
+- Healthchecks are configured for both services in `docker-compose.yml`.
 
-При возникновении проблем проверьте логи контейнеров командой:
-
-```bash
-docker compose logs -f
-```
+This setup allows easy deployment and updates on any server with Docker Compose, without relying on GitHub Actions or manual workarounds.
