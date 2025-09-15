@@ -13,10 +13,11 @@ git clone <your-repo-url>
 cd <your-repo-directory>
 ```
 
-2. Build and start the services:
+2. Build and start the services (first time or after major changes):
 
 ```bash
-docker compose up -d --build
+docker compose build --no-cache --pull
+docker compose up -d
 ```
 
 3. To update the services after pulling new changes:
@@ -24,6 +25,17 @@ docker compose up -d --build
 ```bash
 git pull origin main
 docker compose up -d --build
+```
+
+## Troubleshooting
+
+If you encounter husky or npm script errors during build:
+
+```bash
+# Clean Docker cache and rebuild
+docker builder prune -af
+docker compose build --no-cache --pull
+docker compose up -d
 ```
 
 ## Notes

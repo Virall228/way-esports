@@ -6,11 +6,18 @@ WORKDIR /app
 COPY package*.json ./
 COPY .npmrc ./
 
+ENV HUSKY=0 \
+    NPM_CONFIG_IGNORE_SCRIPTS=true \
+    NPM_CONFIG_AUDIT=false \
+    NPM_CONFIG_FUND=false
+
+RUN npm pkg set scripts.prepare="" || true \
+ && npm pkg set scripts.preinstall="" || true \
+ && npm pkg set scripts.postinstall="" || true
+
 RUN npm config set registry https://registry.npmjs.org/ \
     && npm config set fetch-retries 5 \
     && npm config set fetch-retry-maxtimeout 60000
-
-ENV HUSKY=0 NPM_CONFIG_IGNORE_SCRIPTS=true NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false
 
 RUN npm i -g npm@10
 RUN if [ -f package-lock.json ]; then \
@@ -20,8 +27,6 @@ RUN if [ -f package-lock.json ]; then \
     fi
 
 COPY . .
-
-# Removed the line: RUN npm install vite
 
 RUN npm run build
 

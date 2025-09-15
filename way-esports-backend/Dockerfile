@@ -6,8 +6,17 @@ WORKDIR /app
 RUN apk add --no-cache git python3 make g++
 
 COPY package*.json ./
+COPY .npmrc ./
 
-ENV HUSKY=0 NPM_CONFIG_IGNORE_SCRIPTS=true NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false
+ENV HUSKY=0 \
+    NPM_CONFIG_IGNORE_SCRIPTS=true \
+    NPM_CONFIG_AUDIT=false \
+    NPM_CONFIG_FUND=false
+
+RUN npm pkg set scripts.prepare="" || true \
+ && npm pkg set scripts.preinstall="" || true \
+ && npm pkg set scripts.postinstall="" || true
+
 RUN npm i -g npm@10
 RUN if [ -f package-lock.json ]; then \
       npm ci --ignore-scripts --no-audit --no-fund; \
@@ -30,8 +39,17 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 COPY package*.json ./
+COPY .npmrc ./
 
-ENV HUSKY=0 NPM_CONFIG_IGNORE_SCRIPTS=true NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false
+ENV HUSKY=0 \
+    NPM_CONFIG_IGNORE_SCRIPTS=true \
+    NPM_CONFIG_AUDIT=false \
+    NPM_CONFIG_FUND=false
+
+RUN npm pkg set scripts.prepare="" || true \
+ && npm pkg set scripts.preinstall="" || true \
+ && npm pkg set scripts.postinstall="" || true
+
 RUN if [ -f package-lock.json ]; then \
       npm ci --omit=dev --ignore-scripts --no-audit --no-fund; \
     else \
