@@ -10,7 +10,11 @@ COPY package*.json ./
 
 ENV HUSKY=0 NPM_CONFIG_IGNORE_SCRIPTS=true NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false
 RUN npm i -g npm@10
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+RUN if [ -f package-lock.json ]; then \
+      npm ci --ignore-scripts --no-audit --no-fund; \
+    else \
+      npm install --ignore-scripts --no-audit --no-fund; \
+    fi
 
 # Clean up build dependencies
 RUN apk del python3 make g++
@@ -29,7 +33,11 @@ ENV NODE_ENV=production
 COPY package*.json ./
 
 ENV HUSKY=0 NPM_CONFIG_IGNORE_SCRIPTS=true NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false
-RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi
+RUN if [ -f package-lock.json ]; then \
+      npm ci --omit=dev --ignore-scripts --no-audit --no-fund; \
+    else \
+      npm install --omit=dev --ignore-scripts --no-audit --no-fund; \
+    fi
 
 COPY --from=build /app/dist ./dist
 

@@ -12,7 +12,11 @@ RUN npm config set registry https://registry.npmjs.org/ \
 ENV HUSKY=0 NPM_CONFIG_IGNORE_SCRIPTS=true NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false
 
 RUN npm i -g npm@10
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+RUN if [ -f package-lock.json ]; then \
+      npm ci --ignore-scripts --no-audit --no-fund; \
+    else \
+      npm install --ignore-scripts --no-audit --no-fund; \
+    fi
 
 COPY . .
 
