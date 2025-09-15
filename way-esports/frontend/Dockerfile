@@ -20,6 +20,8 @@ RUN if [ -f package-lock.json ]; then \
 
 COPY . .
 
+# Removed the line: RUN npm install vite
+
 RUN npm run build
 
 FROM nginx:alpine
