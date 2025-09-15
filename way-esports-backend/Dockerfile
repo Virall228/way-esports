@@ -8,8 +8,9 @@ RUN apk add --no-cache python3 make g++
 
 COPY package*.json ./
 
+ENV HUSKY=0
 RUN npm i -g npm@10
-RUN npm ci --no-audit --no-fund
+RUN npm ci --no-audit --no-fund --ignore-scripts
 
 # Clean up build dependencies
 RUN apk del python3 make g++
@@ -27,7 +28,8 @@ ENV NODE_ENV=production
 
 COPY package*.json ./
 
-RUN npm ci --omit=dev --no-audit --no-fund
+ENV HUSKY=0
+RUN npm ci --omit=dev --no-audit --no-fund --ignore-scripts
 
 COPY --from=build /app/dist ./dist
 

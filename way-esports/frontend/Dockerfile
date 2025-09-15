@@ -12,7 +12,7 @@ RUN npm config set registry https://registry.npmjs.org/ \
 ENV HUSKY=0
 
 RUN npm i -g npm@10
-RUN npm ci --no-audit --no-fund
+RUN npm ci --no-audit --no-fund --ignore-scripts
 
 COPY . .
 
