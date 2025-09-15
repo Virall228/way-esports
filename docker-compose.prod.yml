@@ -1,22 +1,21 @@
-version: "3"
+version: "3.8"
 
 services:
   backend:
     build:
       context: ./way-esports-backend
       dockerfile: Dockerfile
-    image: ghcr.io/virall228/way-esports-backend:latest
     env_file:
-      - ./way-esports-backend/.env
+      - ./.env.prod
     ports:
-      - "4000:4000"
-    restart: always
+      - "4000:3000"
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:4000/health"]
-      interval: 20s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
     depends_on:
       - mongo
       - redis
@@ -27,16 +26,15 @@ services:
     build:
       context: ./way-esports/frontend
       dockerfile: Dockerfile
-    image: ghcr.io/virall228/way-esports-frontend:latest
     ports:
-      - "3000:3000"
-    restart: always
+      - "80:80"
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:3000"]
-      interval: 20s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
+      test: ["CMD", "curl", "-fsS", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
     networks:
       - way-esports-network
 
