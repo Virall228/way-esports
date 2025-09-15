@@ -1,34 +1,34 @@
-# Deployment Instructions
+# Инструкции по развертыванию
 
-## Initial Build and Run
+## Первоначальная сборка и запуск
 
-To build and start the project for the first time on your server, run:
+Для сборки и запуска проекта в первый раз на сервере выполните:
 
 ```bash
 docker compose build --no-cache --pull
 docker compose up -d
 ```
 
-## Updating the Project
+## Обновление проекта
 
-To update the project with the latest changes, run:
+Для обновления проекта с последними изменениями выполните:
 
 ```bash
 git pull origin main
 docker compose up -d --build
 ```
 
-## Notes
+## Примечания
 
-- The project uses multi-stage Docker builds for both frontend and backend.
-- The frontend Dockerfile uses `npm ci` with retry settings to avoid DNS resolution errors.
-- The backend Dockerfile installs dependencies separately and uses `npm ci --omit=dev` for production.
-- Docker Compose includes healthchecks and restart policies for reliability.
-- Make sure Docker and Docker Compose are installed on your server.
-- The backend service listens on port 3000 (mapped to 4000 externally).
-- The frontend service listens on port 80.
+- Проект использует многостадийные сборки Docker для фронтенда и бэкенда.
+- Dockerfile фронтенда использует `npm ci` с настройками повторных попыток для избежания ошибок разрешения DNS.
+- Dockerfile бэкенда устанавливает зависимости отдельно и использует `npm ci --omit=dev` для продакшена.
+- Docker Compose включает healthchecks и политики перезапуска для надежности.
+- Убедитесь, что Docker и Docker Compose установлены на сервере.
+- Сервис бэкенда слушает порт 3000 (отображается на 4000 внешне).
+- Сервис фронтенда слушает порт 8080.
 
-For any issues, check container logs with:
+При возникновении проблем проверьте логи контейнеров командой:
 
 ```bash
 docker compose logs -f

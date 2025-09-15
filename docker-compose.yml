@@ -22,7 +22,7 @@ services:
       context: ./way-esports-frontend
       dockerfile: Dockerfile
     ports:
-      - "80:80"
+      - "8080:80"
     restart: unless-stopped
     env_file:
       - ./.env
