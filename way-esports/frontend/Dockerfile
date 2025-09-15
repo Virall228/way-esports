@@ -5,6 +5,12 @@ WORKDIR /app
 
 COPY package*.json ./
 
+RUN npm config set registry https://registry.npmjs.org/ \
+    && npm config set fetch-retries 5 \
+    && npm config set fetch-retry-maxtimeout 60000
+
+ENV HUSKY=0
+
 RUN npm i -g npm@10
 RUN npm ci --no-audit --no-fund
 
