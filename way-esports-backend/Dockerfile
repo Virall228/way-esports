@@ -3,8 +3,7 @@ FROM node:18-alpine AS build
 
 WORKDIR /app
 
-# Install build dependencies for native modules (bcryptjs, etc.)
-RUN apk add --no-cache python3 make g++
+RUN apk add --no-cache git python3 make g++
 
 COPY package*.json ./
 
