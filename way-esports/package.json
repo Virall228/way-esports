@@ -16,8 +16,7 @@
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "prepare": "husky install"
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^6.7.3",
