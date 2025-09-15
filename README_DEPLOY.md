@@ -1,46 +1,35 @@
-# Развертывание проекта WAY-Esports с помощью Docker Compose
+# Deployment Instructions
 
-## Быстрый старт
+## Initial Build and Run
 
-1. Клонируйте репозиторий на сервер:
+To build and start the project for the first time on your server, run:
+
 ```bash
-git clone <URL_репозитория>
-cd WAY-Esports
+docker compose build --no-cache --pull
+docker compose up -d
 ```
 
-2. Запустите проект одной командой:
-```bash
-docker compose up -d --build
-```
+## Updating the Project
 
-3. Приложение будет доступно по адресу:
-- Фронтенд: http://your-server-ip/ (порт 80)
-- Бэкенд: http://your-server-ip:3000/ (порт 3000)
+To update the project with the latest changes, run:
 
-## Обновление проекта
-
-Для обновления кода и перезапуска контейнеров выполните:
 ```bash
 git pull origin main
 docker compose up -d --build
 ```
 
-## Требования
+## Notes
 
-- Установлен Docker и Docker Compose
-- Файл `.env` с необходимыми переменными окружения в корне проекта
+- The project uses multi-stage Docker builds for both frontend and backend.
+- The frontend Dockerfile uses `npm ci` with retry settings to avoid DNS resolution errors.
+- The backend Dockerfile installs dependencies separately and uses `npm ci --omit=dev` for production.
+- Docker Compose includes healthchecks and restart policies for reliability.
+- Make sure Docker and Docker Compose are installed on your server.
+- The backend service listens on port 3000 (mapped to 4000 externally).
+- The frontend service listens on port 80.
 
-## Переменные окружения
+For any issues, check container logs with:
 
-Создайте файл `.env` на основе `.env.example` и заполните необходимые значения.
-
-## Особенности
-
-- Контейнеры настроены с политикой перезапуска `unless-stopped`
-- Включены healthcheck для мониторинга состояния сервисов
-- Фронтенд собирается и раздаётся через Nginx
-- Бэкенд запускается на Node.js с компиляцией TypeScript
-
----
-
-Если возникнут вопросы или проблемы, обратитесь к документации или разработчикам проекта.
+```bash
+docker compose logs -f
+```
