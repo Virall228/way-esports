@@ -17,7 +17,7 @@ RUN npm pkg set scripts.prepare="" || true \
  && npm pkg set scripts.preinstall="" || true \
  && npm pkg set scripts.postinstall="" || true
 
-RUN npm i -g npm@10
+RUN npm i -g npm@11.6.0
 RUN if [ -f package-lock.json ]; then \
       npm ci --ignore-scripts --no-audit --no-fund; \
     else \
@@ -29,7 +29,7 @@ RUN apk del python3 make g++
 
 COPY . .
 
-RUN npm i -g npm@10
+RUN npm i -g npm@11.6.0
 RUN npx tsc
 
 FROM node:18-alpine AS runtime

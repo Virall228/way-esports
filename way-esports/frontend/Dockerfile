@@ -19,7 +19,7 @@ RUN npm config set registry https://registry.npmjs.org/ \
     && npm config set fetch-retries 5 \
     && npm config set fetch-retry-maxtimeout 60000
 
-RUN npm i -g npm@10
+RUN npm i -g npm@11.6.0
 RUN if [ -f package-lock.json ]; then \
       npm ci --ignore-scripts --no-audit --no-fund; \
     else \
