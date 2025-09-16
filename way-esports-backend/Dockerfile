@@ -6,10 +6,10 @@ ENV HUSKY=0 \
     NPM_CONFIG_AUDIT=false \
     NPM_CONFIG_FUND=false
 
-COPY package*.json ./
-RUN npm pkg set scripts.prepare="" || true \
- && npm pkg set scripts.preinstall="" || true \
- && npm pkg set scripts.postinstall="" || true
+COPY way-esports-backend/package*.json ./
+RUN npm pkg delete scripts.prepare || true \
+ && npm pkg delete scripts.preinstall || true \
+ && npm pkg delete scripts.postinstall || true
 
 RUN npm config set registry https://registry.npmjs.org/ \
     && npm config set fetch-retries 5 \
@@ -21,12 +21,12 @@ RUN if [ -f package-lock.json ]; then \
       npm install --ignore-scripts --no-audit --no-fund; \
     fi
 
-COPY . ./
+COPY way-esports-backend ./
 RUN npx tsc
 
 FROM node:20-alpine AS deps
 WORKDIR /app
-COPY package*.json ./
+COPY way-esports-backend/package*.json ./
 RUN if [ -f package-lock.json ]; then \
       npm ci --omit=dev --ignore-scripts --no-audit --no-fund; \
     else \
