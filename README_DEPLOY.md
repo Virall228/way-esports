@@ -1,50 +1,50 @@
-# WAY Esports Docker Compose Deployment
+# WAY Esports Deployment
 
-## Prerequisites
+## Manual Deployment Instructions
 
-- Ensure Docker and Docker Compose are installed on your server.
+This project uses Docker Compose for deployment. The deployment is manual and consists of building and running containers with a single command.
 
-## Setup and Run
+### Prerequisites
+
+- Docker and Docker Compose installed on the server.
+- Clone the repository to the server.
+
+### Setup
 
 1. Clone the repository:
 
 ```bash
-git clone <your-repo-url>
-cd <your-repo-directory>
+git clone <REPO_URL>
+cd <REPO_NAME>
 ```
 
-2. Build and start the services (first time or after major changes):
+2. Copy the example environment file:
 
 ```bash
-docker compose build --no-cache --pull
-docker compose up -d
+cp .env.example .env
 ```
 
-3. To update the services after pulling new changes:
+3. Make the run script executable:
 
 ```bash
-git pull origin main
-docker compose up -d --build
+chmod +x run.sh
 ```
 
-## Troubleshooting
-
-If you encounter husky or npm script errors during build:
+4. Run the deployment script:
 
 ```bash
-# Clean Docker cache and rebuild
-docker builder prune -af
-docker compose build --no-cache --pull
-docker compose up -d
+./run.sh
 ```
 
-## Notes
+### Access
 
-- The project uses multi-stage Dockerfiles for frontend and backend.
-- Husky and prepare scripts are disabled in Docker builds to avoid errors.
-- `.dockerignore` files exclude unnecessary files like `node_modules`, `dist`, `.git`, and logs.
-- Frontend is served via Nginx on port 8080.
-- Backend runs on port 3000.
-- Healthchecks are configured for both services in `docker-compose.yml`.
+- Frontend: http://<SERVER_IP>:8080
+- Backend: http://<SERVER_IP>:3000
 
-This setup allows easy deployment and updates on any server with Docker Compose, without relying on GitHub Actions or manual workarounds.
+---
+
+### Project Structure Notes
+
+- The project is a monorepo with `frontend` and `backend` directories.
+- Dockerfiles and `.npmrc` files are configured to disable husky and install scripts during Docker builds.
+- The deployment uses multi-stage Docker builds for production readiness.
