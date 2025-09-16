@@ -1,17 +1,37 @@
 FROM node:20-alpine AS build
 WORKDIR /app
+
+ENV HUSKY=0 \
+    NPM_CONFIG_IGNORE_SCRIPTS=true \
+    NPM_CONFIG_AUDIT=false \
+    NPM_CONFIG_FUND=false
+
 COPY package*.json ./
+RUN npm pkg set scripts.prepare="" || true \
+ && npm pkg set scripts.preinstall="" || true \
+ && npm pkg set scripts.postinstall="" || true
+
 RUN npm config set registry https://registry.npmjs.org/ \
     && npm config set fetch-retries 5 \
     && npm config set fetch-retry-maxtimeout 60000
-RUN npm ci --ignore-scripts --no-audit --no-fund
+
+RUN if [ -f package-lock.json ]; then \
+      npm ci --ignore-scripts --no-audit --no-fund; \
+    else \
+      npm install --ignore-scripts --no-audit --no-fund; \
+    fi
+
 COPY . ./
 RUN npx tsc
 
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+RUN if [ -f package-lock.json ]; then \
+      npm ci --omit=dev --ignore-scripts --no-audit --no-fund; \
+    else \
+      npm install --omit=dev --ignore-scripts --no-audit --no-fund; \
+    fi
 
 FROM node:20-alpine
 WORKDIR /app
