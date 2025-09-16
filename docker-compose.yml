@@ -1,32 +1,28 @@
-version: "3.8"
+version: '3.8'
 
 services:
   backend:
-    build:
-      context: ./way-esports-backend
-      dockerfile: Dockerfile
+    build: ./way-esports-backend
     ports:
-      - "3000:3000"
-    restart: unless-stopped
+      - "3001:3000"
     env_file:
-      - ./.env
+      - .env
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:3000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
-      retries: 5
-      start_period: 40s
+      retries: 3
 
   frontend:
-    build:
-      context: ./way-esports-frontend
-      dockerfile: Dockerfile
+    build: ./way-esports-frontend
     ports:
-      - "80:80"
+      - "3000:80"
+    depends_on:
+      - backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost/health"]
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 30s
       timeout: 10s
-      retries: 5
-      start_period: 40s
+      retries: 3
