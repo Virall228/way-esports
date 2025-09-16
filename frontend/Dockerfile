@@ -1,19 +1,11 @@
-# Frontend Dockerfile
-FROM node:18-alpine AS build
-
+FROM node:20-alpine AS builder
 WORKDIR /app
-
+ENV HUSKY=0 NPM_CONFIG_IGNORE_SCRIPTS=true NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false
 COPY package*.json ./
-
-RUN npm i -g npm@10
-RUN npm ci --no-audit --no-fund
-
+RUN if [ -f package-lock.json ]; then npm ci --ignore-scripts --no-audit --no-fund; else npm install --ignore-scripts --no-audit --no-fund; fi
 COPY . .
-
 RUN npm run build
 
-FROM nginx:alpine
-
-COPY --from=build /app/dist /usr/share/nginx/html
-
+FROM nginx:stable-alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80
