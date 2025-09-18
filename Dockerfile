@@ -17,7 +17,6 @@ WORKDIR /app/way-esports/frontend
 COPY way-esports/frontend/package*.json way-esports/frontend/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY way-esports/frontend/ .
-RUN npm install vite
 RUN npm run build
 
 # Build backend

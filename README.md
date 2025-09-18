@@ -15,14 +15,14 @@ This project is configured for manual deployment using Docker and Docker Compose
    cp .env.example .env
    ```
 
-3. Make the run script executable:
+3. Make the deploy script executable:
    ```
-   chmod +x run.sh
+   chmod +x deploy.sh
    ```
 
 4. Run the deployment script:
    ```
-   ./run.sh
+   ./deploy.sh
    ```
 
 ## Access
