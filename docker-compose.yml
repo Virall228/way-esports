@@ -1,6 +1,6 @@
 services:
   backend:
-    build: ./way-esports-backend
+    build: ./backend
     container_name: app-backend
     env_file: .env
     ports:
@@ -8,7 +8,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    build: ./way-esports/frontend
+    build: ./frontend
     container_name: app-frontend
     env_file: .env
     ports:
