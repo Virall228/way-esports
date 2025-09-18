@@ -7,23 +7,23 @@ RUN apt-get update && apt-get install -y libc6 && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 # Copy package files including package-lock.json
-COPY way-esports/package*.json way-esports/package-lock.json ./way-esports/
+COPY way-esports-front/package*.json way-esports-front/package-lock.json ./way-esports-front/
 COPY way-esports-backend/package*.json way-esports-backend/package-lock.json ./way-esports-backend/
-COPY way-esports/frontend/package*.json way-esports/frontend/package-lock.json ./way-esports/frontend/
+COPY way-esports-front/frontend/package*.json way-esports-front/frontend/package-lock.json ./way-esports-front/frontend/
 
 # Build frontend
 FROM base AS frontend-build
-WORKDIR /app/way-esports/frontend
-COPY way-esports/frontend/package*.json way-esports/frontend/package-lock.json ./
-RUN npm ci --no-audit --no-fund
-COPY way-esports/frontend/ .
+WORKDIR /app/way-esports-front/frontend
+COPY way-esports-front/frontend/package*.json way-esports-front/frontend/package-lock.json ./
+RUN npm ci --ignore-scripts --no-audit --no-fund
+COPY way-esports-front/frontend/ .
 RUN npm run build
 
 # Build backend
 FROM base AS backend-build
 WORKDIR /app/way-esports-backend
 COPY way-esports-backend/package*.json way-esports-backend/package-lock.json ./
-RUN npm ci --no-audit --no-fund
+RUN npm ci --ignore-scripts --no-audit --no-fund
 COPY way-esports-backend/ .
 RUN npm install typescript
 RUN npm run build
@@ -39,8 +39,8 @@ RUN useradd --system --uid 1001 tine
 WORKDIR /app
 
 # Copy built frontend
-COPY --from=frontend-build /app/way-esports/frontend/dist ./frontend/dist
-COPY --from=frontend-build /app/way-esports/frontend/package.json ./frontend/
+COPY --from=frontend-build /app/way-esports-front/frontend/dist ./frontend/dist
+COPY --from=frontend-build /app/way-esports-front/frontend/package.json ./frontend/
 
 # Copy built backend
 COPY --from=backend-build /app/way-esports-backend/dist ./backend/dist

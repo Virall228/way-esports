@@ -22,7 +22,7 @@ services:
 
   frontend:
     build:
-      context: ./way-esports/frontend
+      context: ./way-esports-front/frontend
       dockerfile: Dockerfile
     ports:
       - "80:80"
