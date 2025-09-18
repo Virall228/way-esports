@@ -3,7 +3,7 @@ version: '3.8'
 services:
   frontend:
     build:
-      context: ./frontend
+      context: ./way-esports-front/frontend
       dockerfile: Dockerfile
     container_name: app-frontend
     env_file:
