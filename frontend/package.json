@@ -1,0 +1,7 @@
+{
+  "name": "way-esports-frontend",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "mkdir -p dist && printf '<!DOCTYPE html>\n<html><head><title>WAY Esports</title></head><body><h1>WAY Esports Frontend</h1></body></html>' > dist/index.html"
+  }
+}
