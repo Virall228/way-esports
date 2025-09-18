@@ -6,7 +6,7 @@ ENV HUSKY=0 \
     NPM_CONFIG_AUDIT=false \
     NPM_CONFIG_FUND=false
 
-COPY way-esports/frontend/package*.json ./
+COPY package*.json ./
 RUN npm pkg delete scripts.prepare || true \
  && npm pkg delete scripts.preinstall || true \
  && npm pkg delete scripts.postinstall || true
@@ -21,12 +21,9 @@ RUN if [ -f package-lock.json ]; then \
       npm install --ignore-scripts --no-audit --no-fund; \
     fi
 
-COPY way-esports/frontend ./
+COPY . .
 RUN npm run build
 
 FROM nginx:stable-alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80
-
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=5 \
-  CMD curl -fsS http://localhost/health || exit 1
