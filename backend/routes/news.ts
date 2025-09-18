@@ -1,10 +1,10 @@
 import express from 'express';
-import News from '../src/models/News';
+import News from '../models/News';
 import { auth, admin, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
 
-type NewsWithIndexSignature = import('../src/models/News').INews & {
+type NewsWithIndexSignature = import('../models/News').INews & {
   [key: string]: any;
 };
 
