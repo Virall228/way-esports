@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
-set -e
-docker compose build --pull
+#!/bin/sh
+
+# Запуск контейнеров
 docker compose up -d
