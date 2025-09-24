@@ -1,26 +1,24 @@
 version: '3.8'
 
 services:
-  frontend:
-    build:
-      context: ./way-esports-front/frontend
-      dockerfile: Dockerfile
-    container_name: app-frontend
-    env_file:
-      - .env
-    ports:
-      - "8080:80"
-    depends_on:
-      - backend
-    restart: unless-stopped
-
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: app-backend
+    container_name: way-esports-backend
     env_file:
       - .env
     ports:
       - "3000:3000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./way-esports-front/frontend
+      dockerfile: Dockerfile
+    container_name: way-esports-frontend
+    env_file:
+      - .env
+    ports:
+      - "8080:80"
     restart: unless-stopped
