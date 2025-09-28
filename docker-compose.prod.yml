@@ -43,7 +43,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ../db/postgres:/var/lib/postgresql/data
+      - ./db/postgres:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB=wayesports
       - POSTGRES_USER=wayuser

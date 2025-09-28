@@ -1,23 +1,35 @@
-# Docker Build Issue Resolution TODO
+# TODO: Fix All Errors in WAY-Esports Backend
 
-## Completed
-- [x] Analyzed the user task and identified the issue with Docker using old Dockerfile or directories
-- [x] Searched for relevant Docker-related files
-- [x] Read docker-compose.yml, docker-compose.prod.yml, backend/Dockerfile, and way-esports-front/frontend/Dockerfile
-- [x] Confirmed build contexts in docker-compose files are correct
-- [x] Created docker_cleanup_and_build.sh script to automate the resolution steps
-- [x] Made the script executable
-- [x] Created TODO.md to track progress
-- [x] Verified that old directories (way-esports/, way-esports-backend/, frontend/) do not exist in the repository
-- [x] Confirmed News model is already in backend/models/News.ts with correct import in routes
-- [x] Updated backend/tsconfig.json to remove baseUrl for correct path resolution
+This file tracks progress on fixing TypeScript compilation errors, import/export issues, path inconsistencies, and Docker build failures as per the approved plan.
 
-## Pending
-- [ ] Run the script on the server to update repo, clean old files, and rebuild Docker images
-- [ ] Verify that the build uses the new Dockerfile and directories
-- [ ] Test the application to ensure it works correctly with the updated setup
+## Steps:
 
-## Steps to Run on Server
-1. Copy docker_cleanup_and_build.sh to the server
-2. Run `./docker_cleanup_and_build.sh` in the project directory
-3. Check logs and verify containers are running correctly
+1. [ ] Add default export to `backend/src/config/index.ts` to match import expectations.
+
+2. [ ] Update `backend/src/app.ts`: Fix import paths (after migrations), remove unused imports, use environment variable for TELEGRAM_SDK_AUTH_TOKEN, remove mongoose.connect, improve error handler types.
+
+3. [ ] Update `backend/src/index.ts`: Remove duplicate app setup, import and use app from './app', import config, add mongoose.connect, keep server listen and health check.
+
+4. [ ] Migrate `backend/routes/tournaments.ts` to `backend/src/routes/tournaments.ts`: Ensure default export for router, fix any internal imports.
+
+5. [ ] Migrate `backend/middleware/adminAuth.ts` to `backend/src/middleware/adminAuth.ts`: Ensure default export for middleware function.
+
+6. [ ] Migrate other middleware files (auth.ts, mockAuth.ts, subscriptionAuth.ts, tournament-auth.ts) to `backend/src/middleware/`: Add default exports.
+
+7. [ ] Migrate other route files (news.ts, users.ts, withdrawals.ts, auth.js -> auth.ts, etc.) to `backend/src/routes/`: Convert JS to TS where needed, add default exports, fix types.
+
+8. [ ] Migrate model files (Tournament.ts, User.ts, etc.) from root to `backend/src/models/`: Ensure proper exports.
+
+9. [ ] Update all internal imports in app.ts, index.ts, and migrated files to use relative paths within src/ (e.g., './routes/tournaments').
+
+10. [ ] Update `backend/tsconfig.json`: Add "allowJs": true if needed, exclude root routes/middleware/models to avoid duplication.
+
+11. [ ] Run `cd backend && npm run build` to verify no TypeScript errors.
+
+12. [ ] Run `docker-compose up --build` to test Docker build and deployment.
+
+13. [ ] Run `cd backend && npm run dev` to test locally.
+
+14. [ ] Run `cd backend && npm test` if applicable to verify tests pass.
+
+After completing all steps, remove or archive this file.
