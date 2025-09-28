@@ -65,6 +65,4 @@ app.use('*', (req, res) => {
 
 // Start server
 const PORT = config.port;
-app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-}); 
+app.listen(PORT, '0.0.0.0', () => {
