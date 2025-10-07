@@ -1,4 +1,13 @@
 node_modules
+npm-debug.log
+Dockerfile*
+.git
+.gitignore
+dist
+.env*
+coverage
+*.zip
+node_modules
 .git
 Dockerfile
 docker-compose.yml

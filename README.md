@@ -2,78 +2,52 @@
 
 ## Ручной деплой одной командой
 
-1. Клонируйте репозиторий:
+Требования: Ubuntu 22.04+, Docker, Docker Compose v2.
+
+1. Клонировать репозиторий:
    ```bash
    git clone <REPO_URL>
    cd <REPO_NAME>
    ```
 
-2. Скопируйте пример файла окружения:
+2. Запустить одной командой:
    ```bash
-   cp .env.example .env
+   bash scripts/bootstrap.sh
    ```
 
-3. Сделайте скрипт запуска исполняемым:
-   ```bash
-   chmod +x run.sh
-   ```
+Скрипт проверит Docker/Compose, создаст `.env` с дефолтами (если нет) и поднимет контейнеры.
 
-4. Запустите деплой:
-   ```bash
-   ./run.sh
-   ```
+Доступ по умолчанию после старта:
+- Web: `http://<SERVER_IP>/`
+- API: `http://<SERVER_IP>/api`
 
-5. После успешного запуска:
-   - Фронтенд будет доступен по адресу: `http://<IP>:8080`
-   - Бэкенд будет доступен по адресу: `http://<IP>:3000`
+## Описание сервисов
 
-## Отключение husky и CI/CD
+- reverse-proxy: Nginx на порту 80, проксирует `/` → web, `/api` → api
+- web: статический фронтенд (Vite build) на nginx
+- api: Node.js backend (Express), `NODE_ENV=production`
+- mongo: MongoDB 7 с volume `mongo_data`
 
-- Удалены все хуки husky и скрипты, связанные с ним.
-- Удалены файлы CI/CD из `.github/workflows/`.
-- Добавлены `.npmrc` в `frontend` и `backend` для игнорирования скриптов и аудита при установке пакетов.
+## Переменные окружения (минимум)
 
-## Структура Docker
+- `MONGODB_URI` (по умолчанию `mongodb://mongo:27017/way-esports`)
+- `JWT_SECRET` (будет сгенерирован, если отсутствует)
+- `VITE_API_URL` (по умолчанию `http://localhost/api` для сборки web)
 
-- Dockerfile для `frontend` и `backend` находятся внутри соответствующих папок.
-- Используются образы `node:20-alpine` и `nginx:stable-alpine` для фронтенда.
-- Используется multi-stage сборка для оптимизации образов.
+## Команды Makefile
 
-## Запуск через Docker Compose
+- `make up` — сборка и запуск в фоне
+- `make down` — остановка и удаление контейнеров
+- `make logs` — просмотр логов
+- `make restart` — пересборка и рестарт
 
-- Используется корневой `docker-compose.yml` для запуска сервисов.
+## Обновление
 
-This project is configured for manual deployment using Docker and Docker Compose.
+```bash
+git pull
+make restart
+```
 
-## Deployment Instructions
+## Резервное копирование
 
-1. Clone the repository:
-   ```
-   git clone <REPO_URL>
-   cd <REPO_NAME>
-   ```
-
-2. Copy the example environment variables file:
-   ```
-   cp .env.example .env
-   ```
-
-3. Make the deploy script executable:
-   ```
-   chmod +x deploy.sh
-   ```
-
-4. Run the deployment script:
-   ```
-   ./deploy.sh
-   ```
-
-## Access
-
-- Frontend will be available at: `http://<IP>:8080`
-- Backend will be available at: `http://<IP>:3000`
-
-## Notes
-
-- This setup removes automatic deployment and husky hooks.
-- All builds are done inside Docker containers with scripts ignored to avoid husky install errors.
+Том БД: `mongo_data`. Для бэкапа можно использовать `docker cp`/`mongodump`.
