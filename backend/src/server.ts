@@ -64,7 +64,7 @@ app.use('*', (req, res) => {
 });
 
 // Start server
-const PORT = config.port;
+const PORT: number = typeof config.port === 'string' ? parseInt(config.port, 10) : Number(config.port) || 3000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
 });
