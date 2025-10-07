@@ -28,5 +28,10 @@ EOF
   fi
 fi
 
-make up
+if command -v make >/dev/null 2>&1; then
+  make up
+else
+  echo "[INFO] make is not installed, using 'docker compose up -d --build'"
+  docker compose up -d --build
+fi
 
