@@ -21,14 +21,14 @@ connection.once('open', () => {
 });
 
 // Routes
-const tournamentsRouter = require('./routes/tournaments');
-const usersRouter = require('./routes/users');
-const paymentsRouter = require('./routes/payments');
-const teamRoutes = require('./routes/teams');
-const walletRoutes = require('./routes/wallet');
-const rankingsRoutes = require('./routes/rankings');
-const contactRoutes = require('./routes/contact');
-const matchesRouter = require('./routes/matches');
+const tournamentsRouter = require('./dist/routes/tournaments');
+const usersRouter = require('./dist/routes/users');
+const paymentsRouter = require('./dist/routes/payments');
+const teamRoutes = require('./dist/routes/teams');
+const walletRoutes = require('./dist/routes/wallet');
+const rankingsRoutes = require('./dist/routes/rankings');
+const contactRoutes = require('./dist/routes/contact');
+const matchesRouter = require('./dist/routes/matches');
 
 app.use('/api/tournaments', tournamentsRouter);
 app.use('/api/users', usersRouter);
