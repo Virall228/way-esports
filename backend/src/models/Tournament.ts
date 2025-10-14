@@ -118,4 +118,4 @@ tournamentSchema.methods.generateBracket = function(): void {
 tournamentSchema.index({ game: 1, status: 1 });
 tournamentSchema.index({ startDate: 1 });
 
-export default mongoose.model<ITournament>('Tournament', tournamentSchema); 
+export default mongoose.model<ITournament>('Tournament', tournamentSchema);
