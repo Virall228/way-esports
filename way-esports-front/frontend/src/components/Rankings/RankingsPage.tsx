@@ -14,7 +14,7 @@ const Header = styled.div`
 `;
 
 const Title = styled.h1`
-    color: #FF6B00;
+  color: ${({ theme }) => theme.colors.text.primary};
     font-size: 36px;
     margin: 0;
     text-transform: uppercase;
@@ -35,9 +35,9 @@ const TabContainer = styled.div`
 `;
 
 const Tab = styled.button<{ active: boolean }>`
-    background: ${props => props.active ? 'linear-gradient(135deg, #FF6B00 0%, #FFD700 100%)' : 'transparent'};
-    color: ${props => props.active ? '#000' : '#FF6B00'};
-    border: 2px solid #FF6B00;
+  background: ${props => props.active ? 'linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%)' : 'transparent'};
+  color: ${props => props.active ? '#fff' : '#a3a3a3'};
+  border: 1px solid #3a3a3a;
     padding: 12px 24px;
     border-radius: 30px;
     font-size: 16px;
@@ -46,7 +46,7 @@ const Tab = styled.button<{ active: boolean }>`
     transition: all 0.3s ease;
 
     &:hover {
-        background: ${props => !props.active && 'rgba(255, 107, 0, 0.1)'};
+        background: ${props => !props.active && 'rgba(255,255,255,0.06)'};
     }
 `;
 
@@ -99,7 +99,7 @@ const Avatar = styled.div<{ imageUrl?: string }>`
     background: ${props => props.imageUrl ? `url(${props.imageUrl})` : '#333'};
     background-size: cover;
     background-position: center;
-    border: 2px solid #FF6B00;
+    border: 1px solid ${({ theme }) => theme.colors.border.medium};
 `;
 
 const Info = styled.div`
@@ -116,7 +116,7 @@ const Name = styled.div`
 `;
 
 const Tag = styled.span`
-    color: #FF6B00;
+    color: ${({ theme }) => theme.colors.text.primary};
     font-size: 14px;
 `;
 
@@ -130,20 +130,20 @@ const Stat = styled.div`
     font-size: 14px;
     
     span {
-        color: #FF6B00;
+    color: ${({ theme }) => theme.colors.text.secondary};
         font-weight: bold;
     }
 `;
 
 const WeeklyStats = styled.div`
-    background: rgba(255, 107, 0, 0.1);
+  background: rgba(255,255,255,0.06);
     border-radius: 8px;
     padding: 12px;
     margin-top: 12px;
 `;
 
 const WeeklyTitle = styled.div`
-    color: #FFD700;
+  color: #e5e5e5;
     font-size: 14px;
     font-weight: bold;
     margin-bottom: 8px;
@@ -165,7 +165,7 @@ const FilterContainer = styled.div`
 const Select = styled.select`
     background: #333;
     color: #fff;
-    border: 1px solid #FF6B00;
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
     padding: 8px 16px;
     border-radius: 8px;
     cursor: pointer;

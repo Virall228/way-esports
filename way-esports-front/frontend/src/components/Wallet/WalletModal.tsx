@@ -16,7 +16,7 @@ const ModalOverlay = styled.div`
 
 const ModalContent = styled.div`
   background: #1a1a1a;
-  border: 2px solid #ffd700;
+  border: 1px solid ${({ theme }) => theme.colors.border.medium};
   border-radius: 16px;
   padding: 0;
   width: 90%;
@@ -37,7 +37,7 @@ const CloseButton = styled.button`
   z-index: 10;
   
   &:hover {
-    color: #ff6b00;
+  color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
@@ -70,7 +70,7 @@ const BalanceCard = styled.div`
 const CurrentBalance = styled.div`
   font-size: 2.5rem;
   font-weight: bold;
-  color: #ffd700;
+  color: #e5e5e5;
   margin-bottom: 5px;
 `;
 
@@ -141,7 +141,7 @@ const ActionButton = styled.button<{ $variant: 'primary' | 'secondary' }>`
   border: none;
   
   ${({ $variant }) => $variant === 'primary' ? `
-    background: #ffd700;
+    background: #3a3a3a;
     color: #000000;
     border-radius: 0 0 0 14px;
     

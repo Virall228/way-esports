@@ -15,7 +15,7 @@ const Header = styled.div`
 `;
 
 const Title = styled.h2`
-    color: #FF6B00;
+  color: ${({ theme }) => theme.colors.text.primary};
     margin: 0 0 10px 0;
 `;
 
@@ -89,7 +89,7 @@ const Round = styled.div`
 `;
 
 const RoundTitle = styled.h3`
-    color: #FF6B00;
+  color: ${({ theme }) => theme.colors.text.secondary};
     margin: 0 0 15px 0;
     text-align: center;
 `;
@@ -197,7 +197,7 @@ const StatusIndicator = styled.div<{ status: 'upcoming' | 'live' | 'completed' |
     z-index: 1;
     background: ${props => 
         props.status === 'live' || props.status === 'in_progress' ? '#FF0000' :
-        props.status === 'upcoming' ? '#FFD700' : '#666'};
+        props.status === 'upcoming' ? '#e5e5e5' : '#666'};
     color: ${props => props.status === 'upcoming' ? '#000' : '#fff'};
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     transition: all 0.3s ease;
@@ -225,9 +225,9 @@ const StatusIndicator = styled.div<{ status: 'upcoming' | 'live' | 'completed' |
         animation: shimmer 3s infinite;
         
         @keyframes shimmer {
-            0% { background: #FFD700; }
+            0% { background: #e5e5e5; }
             50% { background: #FFC500; }
-            100% { background: #FFD700; }
+            100% { background: #e5e5e5; }
         }
     `}
 `;

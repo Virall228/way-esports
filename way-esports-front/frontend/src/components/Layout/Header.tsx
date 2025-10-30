@@ -8,8 +8,8 @@ const HeaderContainer = styled.header`
   left: 0;
   right: 0;
   height: 80px;
-  background: #2a2a2a;
-  border-bottom: 2px solid #ff6b00;
+  background: ${({ theme }) => theme.colors.bg.secondary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.medium};
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -20,13 +20,11 @@ const HeaderContainer = styled.header`
 const Logo = styled(Link)`
   font-size: 1.8rem;
   font-weight: bold;
-  color: #ff6b00;
+  color: ${({ theme }) => theme.colors.text.primary};
   text-decoration: none;
   letter-spacing: 2px;
   
-  &:hover {
-    color: #ff4757;
-  }
+  &:hover { color: ${({ theme }) => theme.colors.text.primary}; opacity: 0.9; }
 `;
 
 const Navigation = styled.nav`
@@ -36,16 +34,14 @@ const Navigation = styled.nav`
 `;
 
 const NavLink = styled(Link)<{ $active?: boolean }>`
-  color: ${({ $active }) => $active ? '#ff6b00' : '#cccccc'};
+  color: ${({ $active, theme }) => $active ? theme.colors.text.primary : theme.colors.text.secondary};
   text-decoration: none;
   font-weight: 500;
   font-size: 1rem;
   transition: color 0.3s ease;
   position: relative;
   
-  &:hover {
-    color: #ff6b00;
-  }
+  &:hover { color: ${({ theme }) => theme.colors.text.primary}; }
   
   ${({ $active }) => $active && `
     &::after {
@@ -55,7 +51,7 @@ const NavLink = styled(Link)<{ $active?: boolean }>`
       left: 0;
       right: 0;
       height: 2px;
-      background: #ff6b00;
+      background: ${({ theme }) => theme.colors.border.strong};
     }
   `}
 `;

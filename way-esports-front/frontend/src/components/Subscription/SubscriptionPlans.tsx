@@ -51,18 +51,18 @@ const PlansContainer = styled.div`
 
 const PlanCard = styled.div<{ featured?: boolean }>`
     background: ${props => props.featured ? 
-        'linear-gradient(135deg, rgba(255, 107, 0, 0.15), rgba(255, 215, 0, 0.15))' : 
+        'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03))' : 
         'rgba(26, 26, 26, 0.95)'};
     border-radius: 16px;
     padding: 32px;
-    border: ${props => props.featured ? '2px solid #FFD700' : '1px solid rgba(255, 107, 0, 0.3)'};
+    border: ${props => props.featured ? '1px solid #3a3a3a' : '1px solid rgba(255,255,255,0.12)'};
     position: relative;
     transform-origin: center;
     animation: ${props => props.featured ? 
         `${floatAnimation} 3s ease-in-out infinite, ${glowAnimation} 3s infinite, ${pulseAnimation} 2s infinite` : 
         'none'};
     ${props => props.featured && `
-        box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+        box-shadow: 0 0 30px rgba(0,0,0,0.4);
     `}
 `;
 
@@ -72,7 +72,7 @@ const PlanHeader = styled.div`
 `;
 
 const PlanName = styled.h3<{ featured?: boolean }>`
-    color: ${props => props.featured ? '#FFD700' : '#fff'};
+    color: ${props => props.featured ? '#ffffff' : '#fff'};
     font-size: 24px;
     margin: 0 0 8px;
 `;
@@ -109,7 +109,7 @@ const FeatureItem = styled.li<{ featured?: boolean }>`
 
     &:before {
         content: '✓';
-        color: ${props => props.featured ? '#FFD700' : '#FF6B00'};
+        color: ${props => props.featured ? '#e5e5e5' : '#a3a3a3'};
         margin-right: 12px;
         font-weight: bold;
     }
@@ -148,10 +148,10 @@ const SaveBadge = styled.div`
     top: -15px;
     left: 50%;
     transform: translateX(-50%);
-    background: linear-gradient(135deg, #FF6B00, #FFD700);
+    background: linear-gradient(135deg, #3a3a3a, #2a2a2a);
     padding: 8px 20px;
     border-radius: 20px;
-    color: #000;
+    color: #fff;
     font-weight: bold;
     font-size: 16px;
     box-shadow: 0 4px 15px rgba(255, 107, 0, 0.4);
@@ -161,10 +161,10 @@ const FeaturedTag = styled.div`
     position: absolute;
     top: 20px;
     right: 20px;
-    background: linear-gradient(135deg, #FFD700, #FF6B00);
+    background: linear-gradient(135deg, #3a3a3a, #2a2a2a);
     padding: 6px 16px;
     border-radius: 16px;
-    color: #000;
+    color: #fff;
     font-weight: bold;
     font-size: 14px;
     box-shadow: 0 2px 10px rgba(255, 215, 0, 0.4);
@@ -174,7 +174,7 @@ const FastPayment = styled.div`
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #FFD700;
+    color: #e5e5e5;
     font-size: 14px;
     margin-top: 8px;
     justify-content: center;

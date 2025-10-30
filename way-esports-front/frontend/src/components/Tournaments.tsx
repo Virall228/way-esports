@@ -29,7 +29,7 @@ const TournamentHeader = styled.div`
 
 const TournamentTitle = styled.h3`
     margin: 0;
-    color: #FF6B00;
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const Status = styled.span<{ status: 'upcoming' | 'in_progress' | 'completed' | 'live' }>`
@@ -86,7 +86,7 @@ const Team = styled.div`
 `;
 
 const ActionButton = styled.button<{ variant?: 'primary' | 'secondary' }>`
-    background-color: ${props => props.variant === 'secondary' ? '#333' : '#FF6B00'};
+  background-color: ${props => props.variant === 'secondary' ? '#333' : '#3a3a3a'};
     color: white;
     border: none;
     padding: 10px 20px;
@@ -117,7 +117,7 @@ const StatusIndicator = styled.div<{ status: 'upcoming' | 'live' | 'completed' |
     z-index: 1;
     background: ${props => 
         props.status === 'live' || props.status === 'in_progress' ? '#FF0000' :
-        props.status === 'upcoming' ? '#FFD700' : '#666'};
+        props.status === 'upcoming' ? '#e5e5e5' : '#666'};
     color: ${props => props.status === 'upcoming' ? '#000' : '#fff'};
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     transition: all 0.3s ease;
@@ -145,9 +145,9 @@ const StatusIndicator = styled.div<{ status: 'upcoming' | 'live' | 'completed' |
         animation: shimmer 3s infinite;
         
         @keyframes shimmer {
-            0% { background: #FFD700; }
+            0% { background: #e5e5e5; }
             50% { background: #FFC500; }
-            100% { background: #FFD700; }
+            100% { background: #e5e5e5; }
         }
     `}
 `;

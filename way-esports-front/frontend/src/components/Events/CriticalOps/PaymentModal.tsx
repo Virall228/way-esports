@@ -16,13 +16,13 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-    background: #1a1a1a;
+    background: ${({ theme }) => theme.colors.bg.secondary};
     border-radius: 16px;
     padding: 24px;
     width: 100%;
     max-width: 480px;
-    border: 1px solid rgba(255, 107, 0, 0.3);
-    box-shadow: 0 0 20px rgba(255, 107, 0, 0.2);
+    border: 1px solid ${({ theme }) => theme.colors.border.light};
+    box-shadow: 0 0 20px rgba(0,0,0,0.3);
 `;
 
 const Title = styled.h3`
@@ -33,7 +33,7 @@ const Title = styled.h3`
 `;
 
 const PaymentInfo = styled.div`
-    background: rgba(255, 107, 0, 0.1);
+    background: rgba(255,255,255,0.06);
     border-radius: 12px;
     padding: 20px;
     margin-bottom: 24px;
@@ -63,8 +63,8 @@ const PaymentMethods = styled.div`
 `;
 
 const PaymentMethod = styled.button<{ selected?: boolean }>`
-    background: ${props => props.selected ? 'rgba(255, 107, 0, 0.2)' : 'rgba(255, 255, 255, 0.05)'};
-    border: 1px solid ${props => props.selected ? '#FF6B00' : 'transparent'};
+    background: ${props => props.selected ? 'rgba(255,255,255,0.12)' : 'rgba(255, 255, 255, 0.05)'};
+    border: 1px solid ${props => props.selected ? '#555' : 'transparent'};
     border-radius: 8px;
     padding: 12px;
     color: #fff;
@@ -75,9 +75,7 @@ const PaymentMethod = styled.button<{ selected?: boolean }>`
     justify-content: center;
     gap: 8px;
 
-    &:hover {
-        background: rgba(255, 107, 0, 0.1);
-    }
+    &:hover { background: rgba(255,255,255,0.1); }
 `;
 
 const Input = styled.input`
@@ -89,19 +87,16 @@ const Input = styled.input`
     color: #fff;
     margin-bottom: 16px;
 
-    &:focus {
-        outline: none;
-        border-color: #FF6B00;
-    }
+    &:focus { outline: none; border-color: #555; }
 `;
 
 const PayButton = styled.button`
     width: 100%;
-    background: linear-gradient(135deg, #FF6B00 0%, #FFD700 100%);
+    background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
     border: none;
     padding: 14px;
     border-radius: 8px;
-    color: #000;
+    color: #fff;
     font-weight: bold;
     font-size: 16px;
     cursor: pointer;
@@ -109,7 +104,7 @@ const PayButton = styled.button`
 
     &:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(255, 107, 0, 0.4);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.4);
     }
 
     &:disabled {

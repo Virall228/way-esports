@@ -10,7 +10,7 @@ const Container = styled.div`
 `;
 
 const Header = styled.div`
-  background: #2a2a2a;
+  background: ${({ theme }) => theme.colors.bg.secondary};
   border-radius: 16px;
   padding: 40px;
   margin-bottom: 40px;
@@ -24,7 +24,7 @@ const HeaderContent = styled.div`
 const Title = styled.h1`
   font-size: 3rem;
   font-weight: 700;
-  color: #ff6b00;
+  color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 15px;
 `;
 
@@ -36,8 +36,8 @@ const Subtitle = styled.p`
 `;
 
 const CreateTeamButton = styled.button`
-  background: #ff6b00;
-  color: white;
+  background: ${({ theme }) => theme.colors.gray[800]};
+  color: ${({ theme }) => theme.colors.white};
   border: none;
   padding: 15px 30px;
   border-radius: 8px;
@@ -48,9 +48,9 @@ const CreateTeamButton = styled.button`
   font-size: 1rem;
 
   &:hover {
-    background: #E55A00;
+    background: ${({ theme }) => theme.colors.gray[700]};
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(255, 107, 0, 0.4);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
   }
 `;
 
@@ -67,10 +67,9 @@ const FilterTabs = styled.div`
 `;
 
 const FilterTab = styled.button<{ $active: boolean }>`
-  background: ${({ $active }) => 
-    $active ? '#ff6b00' : 'transparent'};
-  color: ${({ $active }) => $active ? '#ffffff' : '#cccccc'};
-  border: 1px solid ${({ $active }) => $active ? '#ff6b00' : 'rgba(255, 255, 255, 0.2)'};
+  background: ${({ $active, theme }) => $active ? theme.colors.gray[800] : 'transparent'};
+  color: ${({ $active, theme }) => $active ? theme.colors.white : theme.colors.text.secondary};
+  border: 1px solid ${({ $active, theme }) => $active ? theme.colors.border.strong : 'rgba(255, 255, 255, 0.2)'};
   padding: 12px 24px;
   border-radius: 8px;
   font-weight: 600;
@@ -78,26 +77,22 @@ const FilterTab = styled.button<{ $active: boolean }>`
   transition: all 0.3s ease;
 
   &:hover {
-    background: ${({ $active }) => 
-      $active ? '#ff6b00' : 'rgba(255, 255, 255, 0.1)'};
+    background: ${({ $active, theme }) => $active ? theme.colors.gray[700] : 'rgba(255, 255, 255, 0.1)'};
     transform: translateY(-2px);
   }
 `;
 
 const FilterDropdown = styled.select`
-  background: #2a2a2a;
+  background: ${({ theme }) => theme.colors.bg.secondary};
   color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
   padding: 10px 15px;
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
   min-width: 150px;
 
-  &:focus {
-    outline: none;
-    border-color: #ff6b00;
-  }
+  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.border.strong}; }
 
   option {
     background: #2a2a2a;
@@ -113,18 +108,18 @@ const TeamsGrid = styled.div`
 `;
 
 const TeamCard = styled.div`
-  background: #2a2a2a;
+  background: ${({ theme }) => theme.colors.bg.secondary};
   border-radius: 16px;
   padding: 25px;
-  border: 1px solid rgba(255, 107, 0, 0.2);
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
 
   &:hover {
     transform: translateY(-5px);
-    box-shadow: 0 15px 40px rgba(255, 107, 0, 0.2);
-    border-color: rgba(255, 107, 0, 0.4);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+    border-color: ${({ theme }) => theme.colors.border.medium};
   }
 
   &::before {
@@ -134,7 +129,7 @@ const TeamCard = styled.div`
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, #ff6b00, #ff4757);
+    background: linear-gradient(90deg, ${({ theme }) => theme.colors.gray[700]}, ${({ theme }) => theme.colors.gray[900]});
   }
 `;
 
@@ -149,7 +144,7 @@ const TeamAvatar = styled.div`
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #ff6b00, #ff4757);
+  background: linear-gradient(135deg, ${({ theme }) => theme.colors.gray[700]}, ${({ theme }) => theme.colors.gray[900]});
   display: flex;
   align-items: center;
   justify-content: center;
@@ -169,7 +164,7 @@ const TeamName = styled.h3`
 `;
 
 const TeamTag = styled.div`
-  color: #ff6b00;
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-weight: 600;
   font-size: 0.9rem;
 `;
@@ -194,7 +189,7 @@ const StatItem = styled.div`
 const StatValue = styled.div`
   font-size: 1.2rem;
   font-weight: 700;
-  color: #ff6b00;
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const StatLabel = styled.div`
@@ -221,8 +216,8 @@ const Members = styled.div`
 `;
 
 const MemberTag = styled.span<{ $role: 'captain' | 'player' }>`
-  background: ${({ $role }) => $role === 'captain' ? 'rgba(255, 107, 0, 0.2)' : 'rgba(255, 255, 255, 0.1)'};
-  color: ${({ $role }) => $role === 'captain' ? '#ff6b00' : '#cccccc'};
+  background: ${({ $role, theme }) => $role === 'captain' ? 'rgba(255,255,255,0.12)' : 'rgba(255, 255, 255, 0.06)'};
+  color: ${({ theme }) => theme.colors.text.secondary};
   padding: 4px 8px;
   border-radius: 12px;
   font-size: 0.8rem;
@@ -247,13 +242,13 @@ const ActionButton = styled.button<{ $variant: 'primary' | 'secondary' | 'danger
     switch ($variant) {
       case 'primary':
         return `
-          background: linear-gradient(135deg, #ff6b00, #ff4757);
+          background: linear-gradient(135deg, ${'${({ theme }) => theme.colors.gray[700]}'}, ${'${({ theme }) => theme.colors.gray[900]}'});
           color: white;
           border: none;
           
           &:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(255, 107, 0, 0.4);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
           }
         `;
       case 'secondary':
@@ -269,12 +264,12 @@ const ActionButton = styled.button<{ $variant: 'primary' | 'secondary' | 'danger
         `;
       case 'danger':
         return `
-          background: rgba(244, 67, 54, 0.1);
+          background: rgba(244, 67, 54, 0.08);
           color: #F44336;
-          border: 1px solid rgba(244, 67, 54, 0.3);
+          border: 1px solid rgba(244, 67, 54, 0.25);
           
           &:hover {
-            background: rgba(244, 67, 54, 0.2);
+            background: rgba(244, 67, 54, 0.15);
           }
         `;
     }

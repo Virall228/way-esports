@@ -34,7 +34,7 @@ const CloseButton = styled.button`
   cursor: pointer;
   
   &:hover {
-    color: #ff6b00;
+  color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
@@ -45,18 +45,18 @@ const Title = styled.h2`
 `;
 
 const UploadArea = styled.div<{ $isDragOver: boolean }>`
-  border: 2px dashed ${({ $isDragOver }) => $isDragOver ? '#ff6b00' : '#666666'};
+  border: 2px dashed ${({ $isDragOver, theme }) => $isDragOver ? theme.colors.border.strong : '#666666'};
   border-radius: 12px;
   padding: 40px;
   text-align: center;
   margin-bottom: 20px;
   transition: all 0.3s ease;
   cursor: pointer;
-  background: ${({ $isDragOver }) => $isDragOver ? 'rgba(255, 107, 0, 0.1)' : 'transparent'};
+  background: ${({ $isDragOver }) => $isDragOver ? 'rgba(255,255,255,0.06)' : 'transparent'};
 
   &:hover {
-    border-color: #ff6b00;
-    background: rgba(255, 107, 0, 0.05);
+    border-color: ${({ theme }) => theme.colors.border.medium};
+    background: rgba(255,255,255,0.04);
   }
 `;
 
@@ -89,7 +89,7 @@ const PreviewImage = styled.img`
   height: 200px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid #ff6b00;
+  border: 3px solid ${({ theme }) => theme.colors.border.medium};
   display: block;
   margin: 0 auto 20px;
 `;
@@ -108,13 +108,13 @@ const Button = styled.button<{ $variant: 'primary' | 'secondary' }>`
   transition: all 0.3s ease;
   
   ${({ $variant }) => $variant === 'primary' ? `
-    background: linear-gradient(135deg, #ff6b00, #ff4757);
+    background: linear-gradient(135deg, #3a3a3a, #2a2a2a);
     color: white;
     border: none;
     
     &:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(255, 107, 0, 0.4);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.4);
     }
   ` : `
     background: transparent;
@@ -123,7 +123,7 @@ const Button = styled.button<{ $variant: 'primary' | 'secondary' }>`
     
     &:hover {
       background: rgba(255, 255, 255, 0.1);
-      border-color: #ff6b00;
+      border-color: ${({ theme }) => theme.colors.border.medium};
     }
   `}
 

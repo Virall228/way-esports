@@ -10,8 +10,8 @@ const Container = styled.div`
 `;
 
 const HeroSection = styled.section`
-  background: linear-gradient(135deg, rgba(255, 107, 0, 0.1), rgba(255, 71, 87, 0.1));
-  border: 2px solid rgba(255, 107, 0, 0.3);
+  background: ${({ theme }) => theme.colors.bg.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.medium};
   border-radius: 20px;
   padding: 80px 40px;
   text-align: center;
@@ -40,7 +40,7 @@ const HeroSection = styled.section`
 const Logo = styled.div`
   width: 120px;
   height: 120px;
-  background: #ff6b00;
+  background: ${({ theme }) => theme.colors.gray[800]};
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -57,7 +57,7 @@ const HeroTitle = styled.h1`
   color: #ffffff;
   margin-bottom: 20px;
   letter-spacing: 4px;
-  text-shadow: 0 0 30px rgba(255, 107, 0, 0.5);
+  text-shadow: 0 0 30px rgba(0, 0, 0, 0.35);
 `;
 
 const HeroSubtitle = styled.p`
@@ -83,10 +83,7 @@ const CTAButton = styled.button`
   text-transform: uppercase;
   letter-spacing: 1px;
 
-  &:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 30px rgba(255, 255, 255, 0.3);
-  }
+  &:hover { transform: translateY(-3px); box-shadow: ${({ theme }) => theme.shadows.lg}; }
 `;
 
 const SectionTitle = styled.h2`
@@ -113,17 +110,13 @@ const FeatureCard = styled.div`
   text-align: center;
   transition: all 0.3s ease;
 
-  &:hover {
-    transform: translateY(-10px);
-    border-color: rgba(255, 107, 0, 0.5);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-  }
+  &:hover { transform: translateY(-10px); border-color: ${({ theme }) => theme.colors.border.strong}; box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
 `;
 
 const FeatureIcon = styled.div`
   width: 80px;
   height: 80px;
-  background: linear-gradient(135deg, #ff6b00, #ff4757);
+  background: linear-gradient(135deg, ${({ theme }) => theme.colors.gray[700]}, ${({ theme }) => theme.colors.gray[900]});
   border-radius: 16px;
   display: flex;
   align-items: center;
@@ -147,7 +140,7 @@ const FeatureDescription = styled.p`
 `;
 
 const StatsSection = styled.section`
-  background: #2a2a2a;
+  background: ${({ theme }) => theme.colors.bg.elevated};
   border-radius: 20px;
   padding: 60px 40px;
   margin-bottom: 80px;
@@ -171,15 +164,15 @@ const StatsGrid = styled.div`
 const StatCard = styled.div`
   text-align: center;
   padding: 30px;
-  background: rgba(255, 107, 0, 0.1);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 107, 0, 0.3);
+  background: ${({ theme }) => theme.colors.bg.secondary};
+  border-radius: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border.medium};
 `;
 
 const StatNumber = styled.div`
   font-size: 3rem;
   font-weight: 900;
-  color: #ff6b00;
+  color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 10px;
 `;
 
@@ -229,7 +222,7 @@ const HomePage: React.FC = () => {
         }}>
           {/* silent loader without text */}
           <div style={{
-            width: 48, height: 48, border: '3px solid #444', borderTopColor: '#ff6b00',
+            width: 48, height: 48, border: '3px solid #444', borderTopColor: '#a3a3a3',
             borderRadius: '50%', animation: 'spin 1s linear infinite'
           }} />
           <style>

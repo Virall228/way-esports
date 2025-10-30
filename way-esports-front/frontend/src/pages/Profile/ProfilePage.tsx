@@ -16,7 +16,7 @@ const ProfileHeader = styled.div`
   border-radius: 16px;
   padding: 30px;
   margin-bottom: 30px;
-  border: 1px solid rgba(255, 107, 0, 0.2);
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
   display: flex;
   align-items: flex-start;
   gap: 30px;
@@ -28,7 +28,7 @@ const Avatar = styled.div<{ $hasImage?: boolean }>`
   height: 120px;
   border-radius: 50%;
   background: ${({ theme, $hasImage }) => $hasImage ? 'transparent' : theme.colors.surface};
-  border: 3px solid #ff6b00;
+  border: 3px solid ${({ theme }) => theme.colors.border.medium};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -40,10 +40,7 @@ const Avatar = styled.div<{ $hasImage?: boolean }>`
   transition: all 0.3s ease;
   overflow: hidden;
 
-  &:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 20px rgba(255, 107, 0, 0.3);
-  }
+  &:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(0,0,0,0.35); }
 
   &:hover::after {
     content: '📷';
@@ -85,13 +82,13 @@ const Username = styled.h1`
 `;
 
 const UserOrg = styled.div`
-  color: #ff6b00;
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 1.1rem;
   margin-bottom: 15px;
 `;
 
 const SubscriptionButton = styled.button`
-  background: #ff6b00;
+  background: ${({ theme }) => theme.colors.gray[800]};
   color: white;
   border: none;
   padding: 12px 24px;
@@ -102,15 +99,15 @@ const SubscriptionButton = styled.button`
   text-transform: uppercase;
 
   &:hover {
-    background: #E55A00;
+    background: ${({ theme }) => theme.colors.gray[700]};
     transform: translateY(-2px);
   }
 `;
 
 const WalletButton = styled.button`
-  background: rgba(255, 107, 0, 0.1);
-  color: #ff6b00;
-  border: 1px solid #ff6b00;
+  background: rgba(255, 255, 255, 0.06);
+  color: ${({ theme }) => theme.colors.text.primary};
+  border: 1px solid ${({ theme }) => theme.colors.border.medium};
   padding: 8px 16px;
   border-radius: 8px;
   font-weight: 600;
@@ -121,9 +118,7 @@ const WalletButton = styled.button`
   align-items: center;
   gap: 8px;
 
-  &:hover {
-    background: rgba(255, 107, 0, 0.2);
-  }
+  &:hover { background: rgba(255,255,255,0.12); }
 `;
 
 const UserStats = styled.div`
@@ -139,7 +134,7 @@ const StatItem = styled.div`
 const StatValue = styled.div`
   font-size: 1.8rem;
   font-weight: 700;
-  color: #ff6b00;
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const StatLabel = styled.div`
@@ -159,7 +154,7 @@ const StatsCard = styled.div`
   background: ${({ theme }) => theme.colors.surface};
   border-radius: 16px;
   padding: 25px;
-  border: 1px solid rgba(255, 107, 0, 0.2);
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
 `;
 
 const CardTitle = styled.h3`
@@ -173,7 +168,7 @@ const GameStats = styled.div`
   justify-content: space-between;
   margin-bottom: 15px;
   padding-bottom: 15px;
-  border-bottom: 1px solid rgba(255, 107, 0, 0.1);
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.light};
 
   &:last-child {
     border-bottom: none;
@@ -188,7 +183,7 @@ const GameName = styled.div`
 `;
 
 const GameRank = styled.div`
-  color: #ff6b00;
+  color: ${({ theme }) => theme.colors.text.primary};
   font-weight: 600;
 `;
 

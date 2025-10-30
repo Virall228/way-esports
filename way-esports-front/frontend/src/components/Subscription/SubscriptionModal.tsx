@@ -36,7 +36,7 @@ const CloseButton = styled.button`
   cursor: pointer;
   
   &:hover {
-    color: #ff6b00;
+  color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
@@ -65,7 +65,7 @@ const PlansContainer = styled.div`
 
 const PlanCard = styled.div<{ $popular?: boolean }>`
   background: ${({ theme }) => theme.colors.background};
-  border: 2px solid ${({ $popular }) => $popular ? '#ffd700' : 'rgba(255, 107, 0, 0.3)'};
+  border: 1px solid ${({ $popular }) => $popular ? '#3a3a3a' : 'rgba(255,255,255,0.12)'};
   border-radius: 16px;
   padding: 30px;
   position: relative;
@@ -73,7 +73,7 @@ const PlanCard = styled.div<{ $popular?: boolean }>`
 
   &:hover {
     transform: translateY(-5px);
-    box-shadow: 0 15px 40px rgba(255, 107, 0, 0.2);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.3);
   }
 `;
 
@@ -82,7 +82,7 @@ const PopularBadge = styled.div`
   top: -12px;
   left: 50%;
   transform: translateX(-50%);
-  background: #ffd700;
+  background: #3a3a3a;
   color: #000000;
   padding: 6px 20px;
   border-radius: 20px;
@@ -149,7 +149,7 @@ const PaymentSection = styled.div`
 `;
 
 const PaymentTitle = styled.h4`
-  color: #ffd700;
+  color: #e5e5e5;
   margin-bottom: 15px;
   display: flex;
   align-items: center;
@@ -158,7 +158,7 @@ const PaymentTitle = styled.h4`
 
 const CryptoAddress = styled.div`
   background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid rgba(255, 107, 0, 0.3);
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 8px;
   padding: 15px;
   font-family: monospace;

@@ -36,7 +36,7 @@ const CloseButton = styled.button`
   cursor: pointer;
   
   &:hover {
-    color: #ff6b00;
+  color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
@@ -67,7 +67,7 @@ const Label = styled.label`
 
 const Input = styled.input`
   background: ${({ theme }) => theme.colors.background};
-  border: 1px solid rgba(255, 107, 0, 0.3);
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
   border-radius: 8px;
   padding: 12px 15px;
   color: #ffffff;
@@ -75,8 +75,8 @@ const Input = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #ff6b00;
-    box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.2);
+    border-color: ${({ theme }) => theme.colors.border.medium};
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.08);
   }
 
   &::placeholder {
@@ -86,7 +86,7 @@ const Input = styled.input`
 
 const Select = styled.select`
   background: ${({ theme }) => theme.colors.background};
-  border: 1px solid rgba(255, 107, 0, 0.3);
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
   border-radius: 8px;
   padding: 12px 15px;
   color: #ffffff;
@@ -94,8 +94,8 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #ff6b00;
-    box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.2);
+    border-color: ${({ theme }) => theme.colors.border.medium};
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.08);
   }
 
   option {
@@ -106,7 +106,7 @@ const Select = styled.select`
 
 const TextArea = styled.textarea`
   background: ${({ theme }) => theme.colors.background};
-  border: 1px solid rgba(255, 107, 0, 0.3);
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
   border-radius: 8px;
   padding: 12px 15px;
   color: #ffffff;
@@ -116,8 +116,8 @@ const TextArea = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: #ff6b00;
-    box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.2);
+    border-color: ${({ theme }) => theme.colors.border.medium};
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.08);
   }
 
   &::placeholder {
@@ -134,7 +134,7 @@ const CheckboxGroup = styled.div`
 const Checkbox = styled.input`
   width: 18px;
   height: 18px;
-  accent-color: #ff6b00;
+  accent-color: #a3a3a3;
 `;
 
 const CheckboxLabel = styled.label`
@@ -158,13 +158,13 @@ const Button = styled.button<{ $variant: 'primary' | 'secondary' }>`
   transition: all 0.3s ease;
   
   ${({ $variant }) => $variant === 'primary' ? `
-    background: linear-gradient(135deg, #ff6b00, #ff4757);
+          background: linear-gradient(135deg, #3a3a3a, #2a2a2a);
     color: white;
     border: none;
     
     &:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(255, 107, 0, 0.4);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
     }
   ` : `
     background: transparent;
@@ -173,7 +173,7 @@ const Button = styled.button<{ $variant: 'primary' | 'secondary' }>`
     
     &:hover {
       background: rgba(255, 255, 255, 0.1);
-      border-color: #ff6b00;
+      border-color: ${({ theme }) => theme.colors.border.medium};
     }
   `}
 
@@ -189,7 +189,7 @@ const Button = styled.button<{ $variant: 'primary' | 'secondary' }>`
 `;
 
 const ErrorMessage = styled.div`
-  color: #ff4757;
+  color: #e57373;
   font-size: 0.9rem;
   margin-top: 5px;
 `;

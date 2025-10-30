@@ -11,7 +11,7 @@ const Container = styled.div`
 
 const Header = styled.div`
   background: #2a2a2a;
-  border: 2px solid #ff4757;
+  border: 1px solid ${({ theme }) => theme.colors.border.medium};
   border-radius: 16px;
   padding: 40px;
   margin-bottom: 40px;
@@ -28,7 +28,7 @@ const HeaderContent = styled.div`
 const Title = styled.h1`
   font-size: 3rem;
   font-weight: 700;
-  color: #ff4757;
+  color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 15px;
 `;
 
@@ -75,7 +75,7 @@ const FilterTab = styled.button<{ $active: boolean }>`
   background: ${({ $active }) => 
     $active ? '#ff4757' : 'transparent'};
   color: ${({ $active }) => $active ? '#ffffff' : '#cccccc'};
-  border: 1px solid ${({ $active }) => $active ? '#ff4757' : 'rgba(255, 255, 255, 0.2)'};
+  border: 1px solid ${({ $active, theme }) => $active ? theme.colors.border.strong : 'rgba(255, 255, 255, 0.2)'};
   padding: 12px 24px;
   border-radius: 8px;
   font-weight: 600;
@@ -84,7 +84,7 @@ const FilterTab = styled.button<{ $active: boolean }>`
 
   &:hover {
     background: ${({ $active }) => 
-      $active ? '#ff4757' : 'rgba(255, 255, 255, 0.1)'};
+    $active ? 'rgba(255,255,255,0.12)' : 'rgba(255, 255, 255, 0.06)'};
     transform: translateY(-2px);
   }
 `;
@@ -108,7 +108,7 @@ const FilterSelect = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #ff6b00;
+    border-color: ${({ theme }) => theme.colors.border.strong};
   }
 
   option {
@@ -128,15 +128,15 @@ const TournamentCard = styled.div`
   background: #2a2a2a;
   border-radius: 16px;
   padding: 25px;
-  border: 1px solid rgba(255, 107, 0, 0.2);
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
 
   &:hover {
     transform: translateY(-5px);
-    box-shadow: 0 15px 40px rgba(255, 107, 0, 0.2);
-    border-color: rgba(255, 107, 0, 0.4);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+    border-color: ${({ theme }) => theme.colors.border.medium};
   }
 
   &::before {
@@ -146,14 +146,14 @@ const TournamentCard = styled.div`
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, #ff6b00, #ff4757);
+  background: linear-gradient(90deg, ${({ theme }) => theme.colors.gray[700]}, ${({ theme }) => theme.colors.gray[900]});
   }
 `;
 
 const GameBadge = styled.div`
   display: inline-block;
-  background: rgba(255, 107, 0, 0.2);
-  color: #ff6b00;
+  background: ${({ theme }) => theme.colors.bg.elevated};
+  color: ${({ theme }) => theme.colors.text.primary};
   padding: 6px 12px;
   border-radius: 20px;
   font-size: 0.8rem;
@@ -190,7 +190,7 @@ const InfoValue = styled.span`
 const PrizePool = styled.div`
   font-size: 1.4rem;
   font-weight: 700;
-  color: #ff6b00;
+  color: ${({ theme }) => theme.colors.text.primary};
   text-align: center;
   margin: 15px 0;
 `;
@@ -214,7 +214,7 @@ const StatusBadge = styled.div<{ $status: string }>`
 
 const JoinButton = styled.button`
   width: 100%;
-  background: linear-gradient(135deg, #ff6b00, #ff4757);
+  background: linear-gradient(135deg, ${({ theme }) => theme.colors.gray[700]}, ${({ theme }) => theme.colors.gray[900]});
   color: white;
   border: none;
   padding: 12px;

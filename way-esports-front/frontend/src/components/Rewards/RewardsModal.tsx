@@ -36,7 +36,7 @@ const CloseButton = styled.button`
   z-index: 10;
   
   &:hover {
-    color: #ff6b00;
+  color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
@@ -176,7 +176,7 @@ const RewardStats = styled.div`
 
 const RewardRarity = styled.div<{ $rarity: string }>`
   color: ${({ $rarity }) => 
-    $rarity === 'LEGENDARY' ? '#ffd700' :
+    $rarity === 'LEGENDARY' ? '#e5e5e5' :
     $rarity === 'EPIC' ? '#9370db' :
     $rarity === 'RARE' ? '#00bfff' :
     '#cccccc'};
@@ -210,14 +210,14 @@ const ProgressBar = styled.div`
 
 const ProgressFill = styled.div<{ $percentage: number }>`
   height: 100%;
-  background: linear-gradient(90deg, #ff6b00, #ff8533);
+  background: linear-gradient(90deg, #3a3a3a, #2a2a2a);
   width: ${({ $percentage }) => Math.min($percentage, 100)}%;
   transition: width 0.3s ease;
 `;
 
 const RewardButton = styled.button<{ $locked?: boolean }>`
   width: 100%;
-  background: ${({ $locked }) => $locked ? 'rgba(255, 255, 255, 0.1)' : 'linear-gradient(135deg, #ff6b00, #ff8533)'};
+  background: ${({ $locked }) => $locked ? 'rgba(255, 255, 255, 0.08)' : 'linear-gradient(135deg, #3a3a3a, #2a2a2a)'};
   color: ${({ $locked }) => $locked ? '#cccccc' : '#ffffff'};
   border: none;
   padding: 10px;
@@ -229,7 +229,7 @@ const RewardButton = styled.button<{ $locked?: boolean }>`
   &:hover {
     ${({ $locked }) => !$locked && `
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     `}
   }
 `;
