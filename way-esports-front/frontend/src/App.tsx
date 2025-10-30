@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import styled, { ThemeProvider } from 'styled-components';
 import { eslTheme } from './styles/esl-theme';
@@ -89,65 +89,7 @@ const Footer = styled.footer`
   font-size: 0.875rem;
 `;
 
-const LoadingScreen = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  background: ${eslTheme.colors.bg.primary};
-  color: ${eslTheme.colors.text.primary};
-`;
-
-const LoadingText = styled.div`
-  font-family: ${eslTheme.fonts.accent};
-  font-size: 1.5rem;
-  margin-bottom: 2rem;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-`;
-
 const App: React.FC = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadingStatus, setLoadingStatus] = useState('Initializing...');
-
-  useEffect(() => {
-    const initializeApp = async () => {
-      const stages = [
-        'Connecting to Telegram WebApp...',
-        'Loading user authentication...',
-        'Fetching platform data...',
-        'Preparing interface...',
-        'System ready...'
-      ];
-
-      for (let i = 0; i < stages.length; i++) {
-        setLoadingStatus(stages[i]);
-        await new Promise(resolve => setTimeout(resolve, 800));
-      }
-
-      // Initialize Telegram WebApp
-      if (window.Telegram?.WebApp) {
-        window.Telegram.WebApp.ready();
-        window.Telegram.WebApp.expand();
-      }
-
-      setIsLoading(false);
-    };
-
-    initializeApp();
-  }, []);
-
-  if (isLoading) {
-    return (
-      <AppContainer>
-        <LoadingScreen>
-          <LoadingText>{loadingStatus}</LoadingText>
-        </LoadingScreen>
-      </AppContainer>
-    );
-  }
-
   return (
     <AppProvider>
       <AuthProvider>

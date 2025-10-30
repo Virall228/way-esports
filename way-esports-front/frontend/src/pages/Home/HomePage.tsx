@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 
@@ -191,6 +191,47 @@ const StatLabel = styled.div`
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
+  const [isBooting, setIsBooting] = useState(true);
+  const [status, setStatus] = useState('Initializing...');
+
+  useEffect(() => {
+    let isMounted = true;
+    const stages = [
+      'Connecting to Telegram WebApp...',
+      'Loading user authentication...',
+      'Fetching platform data...',
+      'Preparing interface...',
+      'System ready...'
+    ];
+
+    const run = async () => {
+      for (const s of stages) {
+        if (!isMounted) return;
+        setStatus(s);
+        await new Promise(r => setTimeout(r, 800));
+      }
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.ready();
+        window.Telegram.WebApp.expand();
+      }
+      if (isMounted) setIsBooting(false);
+    };
+    run();
+    return () => { isMounted = false; };
+  }, []);
+
+  if (isBooting) {
+    return (
+      <Container>
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          minHeight: '60vh'
+        }}>
+          <h2 style={{ marginBottom: 16 }}>{status}</h2>
+        </div>
+      </Container>
+    );
+  }
 
   return (
     <Container>
