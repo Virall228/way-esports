@@ -21,8 +21,8 @@ export const GlobalStyles = createGlobalStyle`
     font-family: ${theme.fonts.body};
     font-weight: ${theme.fontWeights.regular};
     line-height: 1.6;
-    color: ${theme.colors.text};
-    /* background: ${theme.colors.background}; */
+    color: ${theme.colors.text.primary};
+    background: ${theme.colors.background};
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -233,49 +233,32 @@ export const GlobalStyles = createGlobalStyle`
     transition: color 0.3s ease;
   }
 
-  a:hover {
-    color: ${theme.colors.primary};
-  }
+  a:hover { color: ${theme.colors.text.primary}; }
 
   /* Focus styles */
-  *:focus {
-    outline: 2px solid ${theme.colors.primary};
-    outline-offset: 2px;
-  }
+  *:focus { outline: 2px solid #444; outline-offset: 2px; }
 
   /* Selection styles */
-  ::selection {
-    background: ${theme.colors.primary};
-    color: ${theme.colors.text};
-  }
+  ::selection { background: #404040; color: #ffffff; }
 
   /* Scrollbar styles */
   ::-webkit-scrollbar {
     width: 12px;
   }
 
-  ::-webkit-scrollbar-track {
-    background: #000000;
-    border-radius: 6px;
-  }
+  ::-webkit-scrollbar-track { background: #0f0f0f; border-radius: 6px; }
 
   ::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #ff69b4, #ff1493, #ff69b4);
+    background: linear-gradient(180deg, #404040, #2a2a2a);
     border-radius: 6px;
-    border: 2px solid #000000;
-    box-shadow: 0 0 10px rgba(255, 105, 180, 0.5);
+    border: 2px solid #0f0f0f;
+    box-shadow: none;
   }
 
-  ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #ff1493, #ff69b4, #ff1493);
-    box-shadow: 0 0 15px rgba(255, 105, 180, 0.8);
-  }
+  ::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #4a4a4a, #333333); }
 
   /* Firefox scrollbar */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: #ff69b4 #000000;
-  }
+  * { scrollbar-width: thin; scrollbar-color: #3a3a3a #0f0f0f; }
 
   /* Responsive typography */
   @media (max-width: 768px) {
