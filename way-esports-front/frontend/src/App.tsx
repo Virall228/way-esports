@@ -21,16 +21,16 @@ const AppContainer = styled.div`
 `;
 
 const Header = styled.header`
-  background: ${eslTheme.colors.bg.secondary};
+  background: linear-gradient(180deg, ${eslTheme.colors.bg.secondary} 0%, ${eslTheme.colors.bg.tertiary} 100%);
   border-bottom: 1px solid ${eslTheme.colors.border.medium};
-  padding: 1rem 2rem;
+  padding: 0.75rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
   position: sticky;
   top: 0;
   z-index: 100;
-  backdrop-filter: blur(10px);
+  backdrop-filter: saturate(140%) blur(8px);
 `;
 
 const Logo = styled.h1`
@@ -50,22 +50,22 @@ const Navigation = styled.nav`
 
 const NavButton = styled.button`
   font-family: ${eslTheme.fonts.accent};
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   font-weight: ${eslTheme.fontWeights.medium};
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  border-radius: ${eslTheme.borderRadius.sm};
+  border-radius: ${eslTheme.borderRadius.md};
   transition: all ${eslTheme.transitions.fast};
   cursor: pointer;
-  padding: 0.5rem 1rem;
-  background: transparent;
+  padding: 0.45rem 0.9rem;
+  background: linear-gradient(180deg, ${eslTheme.colors.gray[800]} 0%, ${eslTheme.colors.gray[900]} 100%);
   color: ${eslTheme.colors.text.secondary};
   border: 1px solid ${eslTheme.colors.border.medium};
   
   &:hover {
     background: ${eslTheme.colors.bg.elevated};
     color: ${eslTheme.colors.text.primary};
-    border-color: ${eslTheme.colors.white};
+    border-color: ${eslTheme.colors.border.strong};
   }
   
   &:active {

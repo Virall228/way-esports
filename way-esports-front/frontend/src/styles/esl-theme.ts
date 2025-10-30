@@ -16,13 +16,15 @@ export const eslTheme = {
       900: '#171717',
     },
     
-    // ESL Gaming style colors
+    // Polished monochrome + subtle accent (inspired by polished-clone-studio)
     primary: '#ffffff',
-    primaryDark: '#000000',
-    secondary: '#8b8b8b',
-    background: '#000000',
-    surface: '#0a0a0a',
-    accent: '#404040',
+    primaryDark: '#e5e5e5',
+    secondary: '#a3a3a3',
+    background: '#0a0a0a',
+    surface: '#111111',
+    accent: '#f1f1f1',
+    ring: '#2a2a2a',
+    highlight: '#d4d4d4',
     
     // Functional colors
     success: '#22c55e',
@@ -32,10 +34,10 @@ export const eslTheme = {
     
     // Backgrounds
     bg: {
-      primary: '#000000',
-      secondary: '#0a0a0a',
-      tertiary: '#1a1a1a',
-      elevated: '#262626',
+      primary: '#0a0a0a',
+      secondary: '#111111',
+      tertiary: '#161616',
+      elevated: '#1f1f1f',
     },
     
     // Text
@@ -49,9 +51,9 @@ export const eslTheme = {
     
     // Borders
     border: {
-      light: '#262626',
-      medium: '#404040',
-      strong: '#525252',
+      light: '#222222',
+      medium: '#2f2f2f',
+      strong: '#3a3a3a',
     },
   },
   
@@ -99,13 +101,13 @@ export const eslTheme = {
   },
   
   shadows: {
-    sm: '0 1px 2px 0 rgba(255, 255, 255, 0.05)',
-    small: '0 1px 2px 0 rgba(255, 255, 255, 0.05)',
-    md: '0 4px 6px -1px rgba(255, 255, 255, 0.1), 0 2px 4px -1px rgba(255, 255, 255, 0.06)',
-    medium: '0 4px 6px -1px rgba(255, 255, 255, 0.1), 0 2px 4px -1px rgba(255, 255, 255, 0.06)',
-    lg: '0 10px 15px -3px rgba(255, 255, 255, 0.1), 0 4px 6px -2px rgba(255, 255, 255, 0.05)',
-    large: '0 10px 15px -3px rgba(255, 255, 255, 0.1), 0 4px 6px -2px rgba(255, 255, 255, 0.05)',
-    glow: '0 0 20px rgba(255, 255, 255, 0.1)',
+    sm: '0 1px 2px 0 rgba(0, 0, 0, 0.3)',
+    small: '0 1px 2px 0 rgba(0, 0, 0, 0.3)',
+    md: '0 4px 6px -1px rgba(0,0,0,0.45), 0 2px 4px -1px rgba(0,0,0,0.35)',
+    medium: '0 4px 6px -1px rgba(0,0,0,0.45), 0 2px 4px -1px rgba(0,0,0,0.35)',
+    lg: '0 10px 15px -3px rgba(0,0,0,0.5), 0 4px 6px -2px rgba(0,0,0,0.4)',
+    large: '0 10px 15px -3px rgba(0,0,0,0.5), 0 4px 6px -2px rgba(0,0,0,0.4)',
+    glow: '0 0 0 1px rgba(255,255,255,0.05), 0 0 24px rgba(255,255,255,0.06)',
   },
   
   transitions: {

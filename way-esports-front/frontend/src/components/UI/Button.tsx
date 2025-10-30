@@ -16,11 +16,16 @@ const getButtonStyles = (variant: ButtonVariant = 'primary') => {
   switch (variant) {
     case 'primary':
       return css`
-        background: ${({ theme }) => theme.colors.primary};
+        background: linear-gradient(180deg, ${({ theme }) => theme.colors.gray[800]} 0%, ${({ theme }) => theme.colors.gray[900]} 100%);
         color: ${({ theme }) => theme.colors.white};
+        border: 1px solid ${({ theme }) => theme.colors.border.medium};
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), ${({ theme }) => theme.shadows.sm};
         &:hover:not(:disabled) {
-          background: ${({ theme }) => theme.colors.primaryDark};
-          box-shadow: ${({ theme }) => theme.shadows.glow};
+          background: linear-gradient(180deg, ${({ theme }) => theme.colors.gray[700]} 0%, ${({ theme }) => theme.colors.gray[800]} 100%);
+          border-color: ${({ theme }) => theme.colors.border.strong};
+        }
+        &:active {
+          transform: translateY(1px);
         }
       `;
     case 'secondary':
@@ -34,10 +39,10 @@ const getButtonStyles = (variant: ButtonVariant = 'primary') => {
     case 'outline':
       return css`
         background: transparent;
-        color: ${({ theme }) => theme.colors.accent};
-        border: 2px solid ${({ theme }) => theme.colors.accent};
+        color: ${({ theme }) => theme.colors.text.primary};
+        border: 1px solid ${({ theme }) => theme.colors.border.medium};
         &:hover:not(:disabled) {
-          background: ${({ theme }) => `${theme.colors.accent}10`};
+          background: ${({ theme }) => theme.colors.bg.elevated};
         }
       `;
     case 'text':
