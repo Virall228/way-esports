@@ -93,9 +93,9 @@ export const eslTheme = {
     small: '2px',
     md: '4px',
     medium: '4px',
-    lg: '8px',
-    large: '8px',
-    xl: '16px',
+    lg: '6px',
+    large: '6px',
+    xl: '10px',
     full: '9999px',
     round: '50%',
   },
@@ -141,7 +141,7 @@ export const eslTheme = {
     h6: { fontSize: '16px', fontWeight: 600 },
     body1: { fontSize: '16px', fontWeight: 400 },
     body2: { fontSize: '14px', fontWeight: 400 },
-    button: { fontSize: '16px', fontWeight: 600 },
+    button: { fontSize: '14px', fontWeight: 700 },
     caption: { fontSize: '12px', fontWeight: 400 }
   },
   

@@ -54,7 +54,7 @@ const NavButton = styled.button`
   font-weight: ${eslTheme.fontWeights.medium};
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  border-radius: ${eslTheme.borderRadius.md};
+  border-radius: ${eslTheme.borderRadius.sm};
   transition: all ${eslTheme.transitions.fast};
   cursor: pointer;
   padding: 0.45rem 0.9rem;

@@ -82,8 +82,10 @@ const StyledButton = styled.button<ButtonProps>`
   justify-content: center;
   gap: ${({ theme }) => theme.spacing.xs};
   border: none;
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
   font-weight: ${({ theme }) => theme.typography.button.fontWeight};
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   cursor: pointer;
   transition: all ${({ theme }) => theme.transitions.fast};
   width: ${({ fullWidth }) => fullWidth ? '100%' : 'auto'};
@@ -94,6 +96,11 @@ const StyledButton = styled.button<ButtonProps>`
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.highlight};
+    outline-offset: 2px;
   }
 
   ${({ isLoading }) => isLoading && css`
