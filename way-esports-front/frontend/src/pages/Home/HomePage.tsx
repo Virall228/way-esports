@@ -224,10 +224,17 @@ const HomePage: React.FC = () => {
     return (
       <Container>
         <div style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
           minHeight: '60vh'
         }}>
-          <h2 style={{ marginBottom: 16 }}>{status}</h2>
+          {/* silent loader without text */}
+          <div style={{
+            width: 48, height: 48, border: '3px solid #444', borderTopColor: '#ff6b00',
+            borderRadius: '50%', animation: 'spin 1s linear infinite'
+          }} />
+          <style>
+            {`@keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }`}
+          </style>
         </div>
       </Container>
     );

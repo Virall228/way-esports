@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import styled, { ThemeProvider } from 'styled-components';
 import { eslTheme } from './styles/esl-theme';
 
@@ -99,11 +99,11 @@ const App: React.FC = () => {
               <Header>
                 <Logo>WAY ESPORTS</Logo>
                 <Navigation>
-                  <NavButton onClick={() => window.location.href = '/'}>Home</NavButton>
-                  <NavButton onClick={() => window.location.href = '/tournaments'}>Tournaments</NavButton>
-                  <NavButton onClick={() => window.location.href = '/teams'}>Teams</NavButton>
-                  <NavButton onClick={() => window.location.href = '/news'}>News</NavButton>
-                  <NavButton onClick={() => window.location.href = '/profile'}>Profile</NavButton>
+                  <Link to="/"><NavButton as="span">Home</NavButton></Link>
+                  <Link to="/tournaments"><NavButton as="span">Tournaments</NavButton></Link>
+                  <Link to="/teams"><NavButton as="span">Teams</NavButton></Link>
+                  <Link to="/news"><NavButton as="span">News</NavButton></Link>
+                  <Link to="/profile"><NavButton as="span">Profile</NavButton></Link>
                 </Navigation>
               </Header>
               
