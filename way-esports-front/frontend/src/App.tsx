@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
-import styled, { ThemeProvider } from 'styled-components';
-import { eslTheme } from './styles/esl-theme';
+import styled, { ThemeProvider, createGlobalStyle } from 'styled-components';
+import { eslTheme, GlobalStyles } from './styles/esl-theme';
 
 // Import pages
 import Home from './pages/Home';
@@ -89,11 +89,14 @@ const Footer = styled.footer`
   font-size: 0.875rem;
 `;
 
+const GlobalStyle = createGlobalStyle`${GlobalStyles}`;
+
 const App: React.FC = () => {
   return (
     <AppProvider>
       <AuthProvider>
         <ThemeProvider theme={eslTheme}>
+          <GlobalStyle />
           <BrowserRouter>
             <AppContainer>
               <Header>
