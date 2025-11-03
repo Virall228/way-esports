@@ -12,7 +12,6 @@ ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/package.json ./package.json
 COPY --from=deps /app/dist ./dist
-COPY --from=deps /app/server.js ./
 RUN npm prune --omit=dev
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["node", "dist/server.js"]
