@@ -1,6 +1,7 @@
 export const config = {
   port: process.env.PORT || 3000,
-  mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/way-esports',
+  // Support both MONGO_URI and MONGODB_URI env names
+  mongoUri: process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/way-esports',
   jwtSecret: process.env.JWT_SECRET || 'your-secret-key',
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || '',
   
