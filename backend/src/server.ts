@@ -13,10 +13,10 @@ import walletRouter from './routes/wallet';
 
 const app = express();
 
-// Connect to MongoDB
-mongoose.connect(config.mongoUri)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
+// Mongo client options can be tuned via URI (e.g., maxPoolSize)
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err);
+});
 
 // Security middleware
 
@@ -52,6 +52,17 @@ app.get('/health', (req, res) => {
   });
 });
 
+// DB health endpoint
+app.get('/health/db', (_req, res) => {
+  const states: Record<number, string> = {
+    0: 'disconnected',
+    1: 'connected',
+    2: 'connecting',
+    3: 'disconnecting'
+  };
+  res.json({ ok: mongoose.connection.readyState === 1, state: states[mongoose.connection.readyState] });
+});
+
 // Error handling
 app.use(errorHandler);
 
@@ -63,8 +74,38 @@ app.use('*', (req, res) => {
   });
 });
 
-// Start server
+// Start server ONLY after successful DB connect
 const PORT: number = typeof config.port === 'string' ? parseInt(config.port, 10) : Number(config.port) || 3000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+
+async function start() {
+  try {
+    await mongoose.connect(config.mongoUri);
+    console.log('✅ MongoDB connected');
+
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 API on http://0.0.0.0:${PORT}`);
+    });
+
+    // Graceful shutdown
+    const shutdown = async (signal: string) => {
+      try {
+        console.log(`\n${signal} received. Shutting down...`);
+        await mongoose.connection.close();
+        server.close(() => {
+          console.log('HTTP server closed');
+          process.exit(0);
+        });
+      } catch (e) {
+        console.error('Error during shutdown', e);
+        process.exit(1);
+      }
+    };
+    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+  } catch (err) {
+    console.error('❌ Failed to connect to MongoDB:', err);
+    process.exit(1);
+  }
+}
+
+start();
