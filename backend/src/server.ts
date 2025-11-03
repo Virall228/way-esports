@@ -66,8 +66,8 @@ app.get('/health/db', (_req, res) => {
 // Error handling
 app.use(errorHandler);
 
-// Handle unhandled routes
-app.use('*', (req, res) => {
+// Handle unhandled routes (catch-all without path pattern - Express 5.x compatible)
+app.use((req, res) => {
   res.status(404).json({
     success: false,
     error: 'Route not found'
