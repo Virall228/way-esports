@@ -17,7 +17,7 @@ if [ ! -f .env ]; then
     cat > .env <<'EOF'
 NODE_ENV=production
 PORT=3000
-MONGODB_URI=mongodb://atlas-sql-68e7f95f3474450999e8d2cb-ojq4lg.a.query.mongodb.net/way?ssl=true&authSource=admin
+MONGODB_URI=mongodb+srv://vb917185_db_user:<db_password>@cluster0.45hef5t.mongodb.net/?appName=Cluster0
 MONGO_INITDB_DATABASE=way-esports
 JWT_SECRET=$(openssl rand -hex 32 2>/dev/null || echo change-me)
 VITE_API_URL=http://localhost/api
