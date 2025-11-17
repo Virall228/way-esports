@@ -4,6 +4,7 @@ import cors from 'cors';
 import { config } from './config';
 import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimiter';
+import { connectDB } from './config/db';
 
 // Import routes
 import matchesRouter from './routes/matches';
@@ -79,7 +80,7 @@ const PORT: number = typeof config.port === 'string' ? parseInt(config.port, 10)
 
 async function start() {
   try {
-    await mongoose.connect(config.mongoUri);
+    await connectDB();
     console.log('✅ MongoDB connected');
 
     const server = app.listen(PORT, '0.0.0.0', () => {

@@ -1,7 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import mongoose from 'mongoose';
-import { config } from './config';
 import tournamentRoutes from './routes/tournaments';
 // Routes will be added later
 import subscriptionRoutes from '../routes/subscriptions';
@@ -29,10 +27,13 @@ app.use('/api', (req, res, next) => {
 app.use('/api/tournaments', tournamentRoutes);
 // Other routes will be added later
 
-// Connect to MongoDB
-mongoose.connect(config.mongoUri)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
+// Swagger UI
+import swaggerUi from 'swagger-ui-express';
+import fs from 'fs';
+import path from 'path';
+const openapiPath = path.join(__dirname, 'docs', 'openapi.json');
+const openapi = fs.existsSync(openapiPath) ? JSON.parse(fs.readFileSync(openapiPath, 'utf-8')) : { openapi: '3.0.3', info: { title: 'WAY-Esports API', version: '1.0.0' } };
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapi));
 
 // Error handling middleware
 app.use((err: any, req: any, res: any, next: any) => {

@@ -1,0 +1,44 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "WAY-Esports API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "/" }
+  ],
+  "paths": {
+    "/api/tournaments": {
+      "get": {
+        "summary": "Список турниров",
+        "responses": {
+          "200": {"description": "OK"}
+        }
+      },
+      "post": {
+        "summary": "Создать турнир",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"type": "object"}
+            }
+          }
+        },
+        "responses": {
+          "201": {"description": "Создано"},
+          "400": {"description": "Ошибка валидации"}
+        }
+      }
+    },
+    "/api/teams": {
+      "get": {"summary": "Список команд", "responses": {"200": {"description": "OK"}}}
+    },
+    "/api/matches": {
+      "post": {"summary": "Создать матч", "responses": {"201": {"description": "Создано"}, "400": {"description": "Ошибка валидации"}}}
+    },
+    "/api/wallet": {
+      "get": {"summary": "Получить кошелёк", "responses": {"200": {"description": "OK"}}}
+    }
+  }
+}
