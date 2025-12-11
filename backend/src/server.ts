@@ -8,6 +8,8 @@ import { config } from './config';
 import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimiter';
 import { connectDB } from './config/db';
+import { startSchedulers } from './services/scheduler';
+import { startWorkers, addTask } from './services/queue';
 
 // Import routes
 import matchesRouter from './routes/matches';
@@ -66,6 +68,20 @@ app.use('/api/matches', matchesRouter);
 app.use('/api/teams', teamsRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/wallet', walletRouter);
+// Queue control (minimal): enqueue bulk registration
+app.post('/api/tasks/bulk-register', async (req, res) => {
+  try {
+    const { tournamentId, teamIds } = req.body || {};
+    if (!tournamentId || !Array.isArray(teamIds) || !teamIds.length) {
+      return res.status(400).json({ success: false, error: 'tournamentId and teamIds[] required' });
+    }
+    await addTask('bulkRegisterTeams', { tournamentId, teamIds });
+    res.status(202).json({ success: true, queued: teamIds.length });
+  } catch (err) {
+    console.error('Error enqueue bulk register', err);
+    res.status(500).json({ success: false, error: 'Failed to enqueue task' });
+  }
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -109,6 +125,13 @@ async function start() {
     const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 API on http://0.0.0.0:${PORT}`);
     });
+
+    // Start background schedulers (registration close, tournament completion, stale matches)
+    startSchedulers();
+    // Start in-process workers (queues). For prod, move to separate worker pod/process.
+    if (process.env.ENABLE_WORKERS !== 'false') {
+      startWorkers();
+    }
 
     // Graceful shutdown
     const shutdown = async (signal: string) => {

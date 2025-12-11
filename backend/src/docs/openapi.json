@@ -27,6 +27,13 @@
         "responses": { "201": { "description": "Создано", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Tournament" } } } } }
       }
     },
+    "/api/tournaments/batch": {
+      "post": {
+        "summary": "Массовое создание турниров",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/TournamentCreate" } } } } },
+        "responses": { "201": { "description": "Создано" }, "400": { "description": "Ошибка валидации/дубликаты" } }
+      }
+    },
     "/api/tournaments/{id}": {
       "get": {
         "summary": "Турнир по ID",
@@ -64,6 +71,34 @@
         "responses": { "201": { "description": "Создано" }, "404": { "description": "Tournament not found" } }
       }
     },
+    "/api/matches/batch": {
+      "post": {
+        "summary": "Массовое создание матчей",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/MatchCreate" } } } } },
+        "responses": { "201": { "description": "Создано" }, "404": { "description": "Tournament not found" }, "400": { "description": "Ошибка валидации" } }
+      }
+    },
+    "/api/tasks/bulk-register": {
+      "post": {
+        "summary": "Очередь: массовая регистрация команд в турнир",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tournamentId": { "type": "string" },
+                  "teamIds": { "type": "array", "items": { "type": "string" } }
+                },
+                "required": ["tournamentId", "teamIds"]
+              }
+            }
+          }
+        },
+        "responses": { "202": { "description": "Queued" }, "400": { "description": "Bad request" }, "404": { "description": "Not found" } }
+      }
+    },
     "/api/matches/{id}": {
       "get": {
         "summary": "Матч по ID",
@@ -99,6 +134,13 @@
       "post": {
         "summary": "Создать команду",
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TeamCreate" } } } },
+        "responses": { "201": { "description": "Создано" }, "400": { "description": "Имя/тег заняты" } }
+      }
+    },
+    "/api/teams/batch": {
+      "post": {
+        "summary": "Массовое создание команд",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/TeamCreate" } } } } },
         "responses": { "201": { "description": "Создано" }, "400": { "description": "Имя/тег заняты" } }
       }
     },

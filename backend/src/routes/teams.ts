@@ -112,6 +112,43 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Bulk create teams (admin/import use)
+router.post('/batch', async (req, res) => {
+  try {
+    const items = Array.isArray(req.body) ? req.body : [];
+    if (!items.length) {
+      return res.status(400).json({ success: false, error: 'Request body must be a non-empty array' });
+    }
+
+    // Optional attach captains if caller is authenticated
+    const payload = items.map((item) => {
+      const doc: any = { ...item };
+      if (req.user?.id && !doc.captain) {
+        doc.captain = req.user.id;
+        doc.members = doc.members && Array.isArray(doc.members) ? doc.members : [req.user.id];
+      }
+      return doc;
+    });
+
+    const result = await Team.insertMany(payload, { ordered: false });
+
+    res.status(201).json({
+      success: true,
+      inserted: result.length,
+      data: result
+    });
+  } catch (error: any) {
+    console.error('Error bulk creating teams:', error);
+    if (error.code === 11000) {
+      return res.status(400).json({ success: false, error: 'Duplicate team name or tag in batch' });
+    }
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+    res.status(500).json({ success: false, error: 'Failed to create teams' });
+  }
+});
+
 // Update team
 router.put('/:id', async (req, res) => {
   try {

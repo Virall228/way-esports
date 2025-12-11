@@ -98,6 +98,54 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Bulk create matches
+router.post('/batch', async (req, res) => {
+  try {
+    const items = Array.isArray(req.body) ? req.body : [];
+    if (!items.length) {
+      return res.status(400).json({ success: false, error: 'Request body must be a non-empty array' });
+    }
+
+    // Validate tournaments exist
+    const tournamentIds = Array.from(new Set(items.map((i) => i.tournament).filter(Boolean)));
+    if (tournamentIds.length) {
+      const existing = await Tournament.find({ _id: { $in: tournamentIds } }).select('_id');
+      const existingSet = new Set(existing.map((t) => t._id.toString()));
+      const missing = tournamentIds.filter((id) => !existingSet.has(id.toString()));
+      if (missing.length) {
+        return res.status(404).json({ success: false, error: `Tournaments not found: ${missing.join(',')}` });
+      }
+    }
+
+    const matches = await Match.insertMany(items, { ordered: false });
+
+    // Link matches to tournaments
+    const bulk = matches
+      .filter((m) => m.tournament)
+      .map((m) => ({
+        updateOne: {
+          filter: { _id: m.tournament },
+          update: { $push: { matches: m._id } }
+        }
+      }));
+    if (bulk.length) {
+      await Tournament.bulkWrite(bulk, { ordered: false });
+    }
+
+    res.status(201).json({
+      success: true,
+      inserted: matches.length,
+      data: matches
+    });
+  } catch (error: any) {
+    console.error('Error bulk creating matches:', error);
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+    res.status(500).json({ success: false, error: 'Failed to create matches' });
+  }
+});
+
 // Update match score and stats
 router.put('/:id/score', async (req, res) => {
   try {

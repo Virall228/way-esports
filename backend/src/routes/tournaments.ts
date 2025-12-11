@@ -87,6 +87,41 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Bulk create tournaments (admin/import use)
+router.post('/batch', async (req, res) => {
+  try {
+    const items = Array.isArray(req.body) ? req.body : [];
+    if (!items.length) {
+      return res.status(400).json({ success: false, error: 'Request body must be a non-empty array' });
+    }
+
+    const payload = items.map((item) => {
+      const doc: any = { ...item };
+      if (req.user?.id && !doc.createdBy) {
+        doc.createdBy = req.user.id;
+      }
+      return doc;
+    });
+
+    const result = await Tournament.insertMany(payload, { ordered: false });
+
+    res.status(201).json({
+      success: true,
+      inserted: result.length,
+      data: result
+    });
+  } catch (error: any) {
+    console.error('Error bulk creating tournaments:', error);
+    if (error.code === 11000) {
+      return res.status(400).json({ success: false, error: 'Duplicate tournament in batch' });
+    }
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+    res.status(500).json({ success: false, error: 'Failed to create tournaments' });
+  }
+});
+
 // Register for tournament
 router.post('/:id/register', mockAuth, checkSubscriptionStatus, async (req: any, res) => {
   try {
