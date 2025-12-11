@@ -1,6 +1,9 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
+import swaggerUi from 'swagger-ui-express';
 import { config } from './config';
 import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimiter';
@@ -30,6 +33,26 @@ app.use(apiLimiter);
 // Body parser
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Swagger UI (serves /api-docs)
+const openapiCandidates = [
+  path.join(__dirname, 'docs', 'openapi.json'),
+  path.join(process.cwd(), 'dist', 'src', 'docs', 'openapi.json'),
+  path.join(process.cwd(), 'src', 'docs', 'openapi.json'),
+  path.join(process.cwd(), 'docs', 'openapi.json')
+];
+let openapiSpec: any = { openapi: '3.0.3', info: { title: 'WAY-Esports API', version: '1.0.0' } };
+for (const candidate of openapiCandidates) {
+  if (fs.existsSync(candidate)) {
+    try {
+      openapiSpec = JSON.parse(fs.readFileSync(candidate, 'utf-8'));
+      break;
+    } catch (err) {
+      console.error('Failed to read OpenAPI spec:', err);
+    }
+  }
+}
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapiSpec));
 
 // Logging
 if (process.env.NODE_ENV === 'development') {
