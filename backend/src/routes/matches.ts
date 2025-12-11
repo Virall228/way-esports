@@ -110,7 +110,7 @@ router.post('/batch', async (req, res) => {
     const tournamentIds = Array.from(new Set(items.map((i) => i.tournament).filter(Boolean)));
     if (tournamentIds.length) {
       const existing = await Tournament.find({ _id: { $in: tournamentIds } }).select('_id');
-      const existingSet = new Set(existing.map((t) => t._id.toString()));
+      const existingSet = new Set(existing.map((t: any) => t._id.toString()));
       const missing = tournamentIds.filter((id) => !existingSet.has(id.toString()));
       if (missing.length) {
         return res.status(404).json({ success: false, error: `Tournaments not found: ${missing.join(',')}` });
