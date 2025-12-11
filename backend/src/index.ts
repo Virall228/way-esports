@@ -2,6 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import swaggerUi from 'swagger-ui-express';
 import newsRouter from '../routes/news';
 import usersRouter from '../routes/users';
 import withdrawalsRouter from '../routes/withdrawals';
@@ -16,6 +19,25 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Swagger/OpenAPI docs (serves /api-docs)
+const openapiCandidates = [
+  path.join(__dirname, 'docs', 'openapi.json'),
+  path.join(process.cwd(), 'dist', 'docs', 'openapi.json'),
+  path.join(process.cwd(), 'src', 'docs', 'openapi.json')
+];
+let openapiSpec: any = { openapi: '3.0.3', info: { title: 'WAY-Esports API', version: '1.0.0' } };
+for (const candidate of openapiCandidates) {
+  if (fs.existsSync(candidate)) {
+    try {
+      openapiSpec = JSON.parse(fs.readFileSync(candidate, 'utf-8'));
+      break;
+    } catch (err) {
+      console.error('Failed to read OpenAPI spec:', err);
+    }
+  }
+}
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapiSpec));
 
 // MongoDB connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/way-esports', {
