@@ -63,10 +63,13 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const teamData: Partial<ITeam> = {
-      ...req.body,
-      captain: req.user?.id || '',
-      members: [req.user?.id || '']
+      ...req.body
     };
+    // If authenticated user exists, attach as captain/member; otherwise allow anonymous create
+    if (req.user?.id) {
+      teamData.captain = req.user.id as any;
+      teamData.members = [req.user.id as any];
+    }
 
     // Check if team name or tag already exists
     const existingTeam = await Team.findOne({
@@ -97,12 +100,15 @@ router.post('/', async (req, res) => {
       success: true,
       data: team
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating team:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to create team'
-    });
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+    if (error.code === 11000) {
+      return res.status(400).json({ success: false, error: 'Team name or tag already exists' });
+    }
+    res.status(500).json({ success: false, error: 'Failed to create team' });
   }
 });
 

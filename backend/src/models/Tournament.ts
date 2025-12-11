@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ITournament extends Document {
   name: string;
-  game: 'Critical Ops' | 'CS2' | 'PUBG Mobile';
+  game: string;
   startDate: Date;
   endDate: Date;
   prizePool: number;
@@ -35,7 +35,7 @@ const tournamentSchema = new Schema<ITournament>({
   game: { 
     type: String, 
     required: true,
-    enum: ['Critical Ops', 'CS2', 'PUBG Mobile']
+    trim: true
   },
   startDate: { type: Date, required: true },
   endDate: { type: Date, required: true },
@@ -72,7 +72,7 @@ const tournamentSchema = new Schema<ITournament>({
   createdBy: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: false
   },
   isRegistrationOpen: {
     type: Boolean,

@@ -62,9 +62,11 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const tournamentData: Partial<ITournament> = {
-      ...req.body,
-      createdBy: req.user?.id || ''
+      ...req.body
     };
+    if (req.user?.id) {
+      tournamentData.createdBy = req.user.id as any;
+    }
 
     const tournament = new Tournament(tournamentData);
     await tournament.save();
@@ -73,12 +75,15 @@ router.post('/', async (req, res) => {
       success: true,
       data: tournament
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating tournament:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to create tournament'
-    });
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+    if (error.code === 11000) {
+      return res.status(400).json({ success: false, error: 'Duplicate tournament' });
+    }
+    res.status(500).json({ success: false, error: 'Failed to create tournament' });
   }
 });
 

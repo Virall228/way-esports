@@ -4,8 +4,8 @@ export interface ITeam extends Document {
   name: string;
   tag: string;
   logo?: string;
-  game: 'Critical Ops' | 'CS2' | 'PUBG Mobile';
-  captain: mongoose.Types.ObjectId;
+  game: string;
+  captain?: mongoose.Types.ObjectId;
   members: mongoose.Types.ObjectId[];
   achievements: {
     tournamentId: mongoose.Types.ObjectId;
@@ -42,13 +42,13 @@ const teamSchema = new Schema<ITeam>({
   },
   game: {
     type: String,
-    enum: ['Critical Ops', 'CS2', 'PUBG Mobile'],
-    required: true
+    required: true,
+    trim: true
   },
   captain: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: false
   },
   members: [{
     type: Schema.Types.ObjectId,
