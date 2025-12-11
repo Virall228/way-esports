@@ -4,41 +4,270 @@
     "title": "WAY-Esports API",
     "version": "1.0.0"
   },
-  "servers": [
-    { "url": "/" }
-  ],
+  "servers": [{ "url": "/" }],
   "paths": {
+    "/health": {
+      "get": { "summary": "API health", "responses": { "200": { "description": "OK" } } }
+    },
+    "/health/db": {
+      "get": { "summary": "MongoDB health", "responses": { "200": { "description": "OK" } } }
+    },
     "/api/tournaments": {
       "get": {
         "summary": "Список турниров",
-        "responses": {
-          "200": {"description": "OK"}
-        }
+        "parameters": [
+          { "name": "game", "in": "query", "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TournamentList" } } } } }
       },
       "post": {
         "summary": "Создать турнир",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TournamentCreate" } } } },
+        "responses": { "201": { "description": "Создано", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Tournament" } } } } }
+      }
+    },
+    "/api/tournaments/{id}": {
+      "get": {
+        "summary": "Турнир по ID",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Tournament" } } } }, "404": { "description": "Not found" } }
+      },
+      "put": {
+        "summary": "Обновить турнир",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TournamentUpdate" } } } },
+        "responses": { "200": { "description": "OK" }, "404": { "description": "Not found" }, "403": { "description": "Forbidden" } }
+      }
+    },
+    "/api/tournaments/{id}/register": {
+      "post": {
+        "summary": "Регистрация команды в турнире",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "teamId": { "type": "string" } }, "required": ["teamId"] } } } },
+        "responses": { "200": { "description": "OK" }, "400": { "description": "Bad request" }, "403": { "description": "Subscription required" }, "404": { "description": "Not found" } }
+      }
+    },
+    "/api/matches": {
+      "get": {
+        "summary": "Список матчей",
+        "parameters": [
+          { "name": "game", "in": "query", "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "name": "tournament", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MatchList" } } } } }
+      },
+      "post": {
+        "summary": "Создать матч",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MatchCreate" } } } },
+        "responses": { "201": { "description": "Создано" }, "404": { "description": "Tournament not found" } }
+      }
+    },
+    "/api/matches/{id}": {
+      "get": {
+        "summary": "Матч по ID",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Match" } } } }, "404": { "description": "Not found" } }
+      }
+    },
+    "/api/matches/{id}/score": {
+      "put": {
+        "summary": "Обновить счёт и статистику матча",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MatchScoreUpdate" } } } },
+        "responses": { "200": { "description": "OK" }, "404": { "description": "Not found" } }
+      }
+    },
+    "/api/matches/{id}/status": {
+      "put": {
+        "summary": "Обновить статус матча",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "status": { "type": "string" } }, "required": ["status"] } } } },
+        "responses": { "200": { "description": "OK" }, "404": { "description": "Not found" } }
+      }
+    },
+    "/api/teams": {
+      "get": {
+        "summary": "Список команд",
+        "parameters": [
+          { "name": "game", "in": "query", "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TeamList" } } } } }
+      },
+      "post": {
+        "summary": "Создать команду",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TeamCreate" } } } },
+        "responses": { "201": { "description": "Создано" }, "400": { "description": "Имя/тег заняты" } }
+      }
+    },
+    "/api/teams/{id}": {
+      "get": {
+        "summary": "Команда по ID",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Team" } } } }, "404": { "description": "Not found" } }
+      },
+      "put": {
+        "summary": "Обновить команду",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TeamUpdate" } } } },
+        "responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" }, "404": { "description": "Not found" } }
+      }
+    },
+    "/api/teams/{id}/members": {
+      "post": {
+        "summary": "Добавить участника",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "userId": { "type": "string" } }, "required": ["userId"] } } } },
+        "responses": { "200": { "description": "OK" }, "400": { "description": "Already member" }, "403": { "description": "Forbidden" }, "404": { "description": "Not found" } }
+      }
+    },
+    "/api/teams/{id}/members/{userId}": {
+      "delete": {
+        "summary": "Удалить участника",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" }, "404": { "description": "Not found" } }
+      }
+    },
+    "/api/profile": {
+      "get": { "summary": "Профиль пользователя", "responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } } },
+      "put": {
+        "summary": "Обновить профиль",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProfileUpdate" } } } },
+        "responses": { "200": { "description": "OK" }, "400": { "description": "Invalid updates" }, "401": { "description": "Unauthorized" } }
+      }
+    },
+    "/api/profile/upload-logo": {
+      "post": {
+        "summary": "Загрузить логотип профиля",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "logoUrl": { "type": "string" } }, "required": ["logoUrl"] } } } },
+        "responses": { "200": { "description": "OK" }, "400": { "description": "Bad request" }, "401": { "description": "Unauthorized" } }
+      }
+    },
+    "/api/profile/notifications": {
+      "get": { "summary": "Уведомления", "responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } } }
+    },
+    "/api/profile/notifications/{id}": {
+      "put": {
+        "summary": "Отметить уведомление прочитанным",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "OK" }, "404": { "description": "Not found" }, "401": { "description": "Unauthorized" } }
+      }
+    },
+    "/api/profile/game-profiles": {
+      "get": { "summary": "Игровые профили", "responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } } }
+    },
+    "/api/profile/game-profiles/{game}": {
+      "put": {
+        "summary": "Обновить игровой профиль",
+        "parameters": [{ "name": "game", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+      }
+    },
+    "/api/profile/achievements": {
+      "get": { "summary": "Достижения пользователя", "responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } } },
+      "post": {
+        "summary": "Добавить достижение",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "achievement": { "type": "string" } }, "required": ["achievement"] } } } },
+        "responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+      }
+    },
+    "/api/wallet": {
+      "get": { "summary": "Получить кошелёк", "responses": { "200": { "description": "OK" }, "404": { "description": "User not found" } } }
+    },
+    "/api/wallet/transactions": {
+      "get": { "summary": "История транзакций", "responses": { "200": { "description": "OK" }, "404": { "description": "Wallet not found" } } }
+    },
+    "/api/wallet/payment-methods": {
+      "post": {
+        "summary": "Добавить способ оплаты",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": { "201": { "description": "Created" }, "404": { "description": "User/wallet not found" } }
+      }
+    },
+    "/api/wallet/payment-methods/{id}": {
+      "put": {
+        "summary": "Обновить способ оплаты",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object" } } } },
+        "responses": { "200": { "description": "OK" }, "404": { "description": "Not found" } }
+      },
+      "delete": {
+        "summary": "Удалить способ оплаты",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "OK" }, "404": { "description": "Not found" } }
+      }
+    },
+    "/api/wallet/withdraw": {
+      "post": {
+        "summary": "Запросить вывод",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {"type": "object"}
+              "schema": {
+                "type": "object",
+                "properties": { "amount": { "type": "number" }, "paymentMethodId": { "type": "string" } },
+                "required": ["amount", "paymentMethodId"]
+              }
             }
           }
         },
-        "responses": {
-          "201": {"description": "Создано"},
-          "400": {"description": "Ошибка валидации"}
-        }
+        "responses": { "200": { "description": "OK" }, "400": { "description": "Limit/Balance error" }, "404": { "description": "Not found" } }
       }
-    },
-    "/api/teams": {
-      "get": {"summary": "Список команд", "responses": {"200": {"description": "OK"}}}
-    },
-    "/api/matches": {
-      "post": {"summary": "Создать матч", "responses": {"201": {"description": "Создано"}, "400": {"description": "Ошибка валидации"}}}
-    },
-    "/api/wallet": {
-      "get": {"summary": "Получить кошелёк", "responses": {"200": {"description": "OK"}}}
+    }
+  },
+  "components": {
+    "schemas": {
+      "Tournament": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "name": { "type": "string" },
+          "game": { "type": "string" },
+          "status": { "type": "string" },
+          "startDate": { "type": "string", "format": "date-time" },
+          "registeredTeams": { "type": "array", "items": { "type": "string" } },
+          "matches": { "type": "array", "items": { "type": "string" } },
+          "maxTeams": { "type": "integer" }
+        }
+      },
+      "TournamentList": {
+        "type": "object",
+        "properties": { "success": { "type": "boolean" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/Tournament" } } }
+      },
+      "TournamentCreate": {
+        "type": "object",
+        "properties": { "name": { "type": "string" }, "game": { "type": "string" }, "startDate": { "type": "string", "format": "date-time" }, "maxTeams": { "type": "integer" } },
+        "required": ["name", "game", "startDate", "maxTeams"]
+      },
+      "TournamentUpdate": { "type": "object" },
+      "Match": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "game": { "type": "string" },
+          "status": { "type": "string" },
+          "team1": { "type": "string" },
+          "team2": { "type": "string" },
+          "tournament": { "type": "string" },
+          "startTime": { "type": "string", "format": "date-time" },
+          "score": { "type": "object" }
+        }
+      },
+      "MatchList": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/Match" } } } },
+      "MatchCreate": { "type": "object", "properties": { "game": { "type": "string" }, "team1": { "type": "string" }, "team2": { "type": "string" }, "tournament": { "type": "string" }, "startTime": { "type": "string", "format": "date-time" } }, "required": ["game", "team1", "team2", "tournament"] },
+      "MatchScoreUpdate": { "type": "object", "properties": { "score": { "type": "object" }, "stats": { "type": "object" }, "winner": { "type": "string" } } },
+      "Team": { "type": "object", "properties": { "_id": { "type": "string" }, "name": { "type": "string" }, "tag": { "type": "string" }, "game": { "type": "string" }, "members": { "type": "array", "items": { "type": "string" } } } },
+      "TeamList": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/Team" } } } },
+      "TeamCreate": { "type": "object", "properties": { "name": { "type": "string" }, "tag": { "type": "string" }, "game": { "type": "string" } }, "required": ["name", "tag", "game"] },
+      "TeamUpdate": { "type": "object" },
+      "ProfileUpdate": { "type": "object", "properties": { "gameProfiles": { "type": "array", "items": { "type": "object" } }, "profileLogo": { "type": "string" } } }
     }
   }
 }
