@@ -124,7 +124,7 @@ router.put('/:id', async (req, res) => {
       });
     }
 
-    if (req.user?.id && team.captain.toString() !== req.user.id) {
+    if (req.user?.id && team.captain && team.captain.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
         error: 'Not authorized to update this team'
@@ -163,7 +163,7 @@ router.post('/:id/members', async (req, res) => {
       });
     }
 
-    if (req.user?.id && team.captain.toString() !== req.user.id) {
+    if (req.user?.id && team.captain && team.captain.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
         error: 'Not authorized to add members'
@@ -210,14 +210,14 @@ router.delete('/:id/members/:userId', async (req, res) => {
       });
     }
 
-    if (req.user?.id && team.captain.toString() !== req.user.id) {
+    if (req.user?.id && team.captain && team.captain.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
         error: 'Not authorized to remove members'
       });
     }
 
-    if (req.params.userId === team.captain.toString()) {
+    if (team.captain && req.params.userId === team.captain.toString()) {
       return res.status(400).json({
         success: false,
         error: 'Cannot remove team captain'
