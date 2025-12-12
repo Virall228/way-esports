@@ -14,13 +14,56 @@ router.get('/', async (req, res) => {
     if (status) query.status = status;
 
     const teams = await Team.find(query)
-      .populate('captain', 'username firstName lastName')
-      .populate('members', 'username firstName lastName')
-      .sort({ 'stats.winRate': -1 });
+      .populate('captain', 'username firstName lastName profileLogo')
+      .populate('members', 'username firstName lastName profileLogo')
+      .populate('achievements.tournamentId', 'name prizePool')
+      .sort({ 'stats.winRate': -1 })
+      .lean();
+
+    // Transform for frontend compatibility
+    const transformed = teams.map((team: any) => ({
+      id: team._id.toString(),
+      name: team.name,
+      tag: team.tag || '',
+      logo: team.logo || '',
+      game: team.game,
+      status: team.status || 'active',
+      captain: team.captain ? {
+        id: team.captain._id?.toString() || '',
+        username: team.captain.username || '',
+        firstName: team.captain.firstName || '',
+        lastName: team.captain.lastName || '',
+        profileLogo: team.captain.profileLogo || ''
+      } : null,
+      members: (team.members || []).map((member: any) => ({
+        id: member._id?.toString() || member.toString(),
+        username: member.username || '',
+        firstName: member.firstName || '',
+        lastName: member.lastName || '',
+        profileLogo: member.profileLogo || ''
+      })),
+      stats: {
+        totalMatches: team.stats?.totalMatches || 0,
+        wins: team.stats?.wins || 0,
+        losses: team.stats?.losses || 0,
+        winRate: team.stats?.winRate || 0,
+        totalPrizeMoney: team.stats?.totalPrizeMoney || 0
+      },
+      achievements: (team.achievements || []).map((ach: any) => ({
+        tournamentId: ach.tournamentId?._id?.toString() || ach.tournamentId?.toString() || '',
+        tournamentName: ach.tournamentId?.name || '',
+        position: ach.position || 0,
+        prize: ach.prize || 0,
+        date: ach.date?.toISOString() || new Date().toISOString()
+      })),
+      tournaments: team.achievements?.length || 0,
+      createdAt: team.createdAt?.toISOString(),
+      updatedAt: team.updatedAt?.toISOString()
+    }));
 
     res.json({
       success: true,
-      data: teams
+      data: transformed
     });
   } catch (error) {
     console.error('Error fetching teams:', error);
@@ -35,9 +78,10 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const team = await Team.findById(req.params.id)
-      .populate('captain')
-      .populate('members')
-      .populate('achievements.tournamentId');
+      .populate('captain', 'username firstName lastName profileLogo telegramId')
+      .populate('members', 'username firstName lastName profileLogo telegramId')
+      .populate('achievements.tournamentId', 'name prizePool startDate endDate')
+      .lean();
 
     if (!team) {
       return res.status(404).json({
@@ -46,9 +90,52 @@ router.get('/:id', async (req, res) => {
       });
     }
 
+    // Transform for frontend compatibility
+    const transformed: any = {
+      id: team._id.toString(),
+      name: team.name,
+      tag: team.tag || '',
+      logo: team.logo || '',
+      game: team.game,
+      status: team.status || 'active',
+      captain: team.captain ? {
+        id: team.captain._id?.toString() || '',
+        username: team.captain.username || '',
+        firstName: team.captain.firstName || '',
+        lastName: team.captain.lastName || '',
+        profileLogo: team.captain.profileLogo || '',
+        telegramId: team.captain.telegramId || ''
+      } : null,
+      members: (team.members || []).map((member: any) => ({
+        id: member._id?.toString() || member.toString(),
+        username: member.username || '',
+        firstName: member.firstName || '',
+        lastName: member.lastName || '',
+        profileLogo: member.profileLogo || '',
+        telegramId: member.telegramId || ''
+      })),
+      stats: {
+        totalMatches: team.stats?.totalMatches || 0,
+        wins: team.stats?.wins || 0,
+        losses: team.stats?.losses || 0,
+        winRate: team.stats?.winRate || 0,
+        totalPrizeMoney: team.stats?.totalPrizeMoney || 0
+      },
+      achievements: (team.achievements || []).map((ach: any) => ({
+        tournamentId: ach.tournamentId?._id?.toString() || ach.tournamentId?.toString() || '',
+        tournamentName: ach.tournamentId?.name || '',
+        position: ach.position || 0,
+        prize: ach.prize || 0,
+        date: ach.date?.toISOString() || new Date().toISOString()
+      })),
+      tournaments: team.achievements?.length || 0,
+      createdAt: team.createdAt?.toISOString(),
+      updatedAt: team.updatedAt?.toISOString()
+    };
+
     res.json({
       success: true,
-      data: team
+      data: transformed
     });
   } catch (error) {
     console.error('Error fetching team:', error);
@@ -96,9 +183,41 @@ router.post('/', async (req, res) => {
       });
     }
 
+    // Transform response for frontend
+    const transformed: any = {
+      id: team._id.toString(),
+      name: team.name,
+      tag: team.tag || '',
+      logo: team.logo || '',
+      game: team.game,
+      status: team.status || 'active',
+      captain: team.captain ? {
+        id: team.captain.toString(),
+        username: '',
+        firstName: '',
+        lastName: ''
+      } : null,
+      members: (team.members || []).map((m: any) => ({
+        id: m.toString(),
+        username: '',
+        firstName: '',
+        lastName: ''
+      })),
+      stats: {
+        totalMatches: team.stats?.totalMatches || 0,
+        wins: team.stats?.wins || 0,
+        losses: team.stats?.losses || 0,
+        winRate: team.stats?.winRate || 0,
+        totalPrizeMoney: team.stats?.totalPrizeMoney || 0
+      },
+      tournaments: 0,
+      createdAt: team.createdAt?.toISOString(),
+      updatedAt: team.updatedAt?.toISOString()
+    };
+
     res.status(201).json({
       success: true,
-      data: team
+      data: transformed
     });
   } catch (error: any) {
     console.error('Error creating team:', error);
@@ -172,11 +291,43 @@ router.put('/:id', async (req, res) => {
       req.params.id,
       req.body,
       { new: true }
-    );
+    ).populate('captain', 'username firstName lastName')
+     .populate('members', 'username firstName lastName')
+     .lean();
+
+    if (!updatedTeam) {
+      return res.status(404).json({
+        success: false,
+        error: 'Team not found'
+      });
+    }
+
+    // Transform response
+    const transformed: any = {
+      id: updatedTeam._id.toString(),
+      name: updatedTeam.name,
+      tag: updatedTeam.tag || '',
+      logo: updatedTeam.logo || '',
+      game: updatedTeam.game,
+      status: updatedTeam.status || 'active',
+      captain: updatedTeam.captain ? {
+        id: updatedTeam.captain._id?.toString() || '',
+        username: updatedTeam.captain.username || '',
+        firstName: updatedTeam.captain.firstName || '',
+        lastName: updatedTeam.captain.lastName || ''
+      } : null,
+      members: (updatedTeam.members || []).map((m: any) => ({
+        id: m._id?.toString() || m.toString(),
+        username: m.username || '',
+        firstName: m.firstName || '',
+        lastName: m.lastName || ''
+      })),
+      stats: updatedTeam.stats || {}
+    };
 
     res.json({
       success: true,
-      data: updatedTeam
+      data: transformed
     });
   } catch (error) {
     console.error('Error updating team:', error);
@@ -271,15 +422,60 @@ router.delete('/:id/members/:userId', async (req, res) => {
       $pull: { teams: team._id }
     });
 
+    // Transform response
+    const transformed: any = {
+      id: team._id.toString(),
+      name: team.name,
+      tag: team.tag || '',
+      logo: team.logo || '',
+      game: team.game,
+      status: team.status || 'active',
+      members: team.members.map((m: any) => m.toString())
+    };
+
     res.json({
       success: true,
-      data: team
+      data: transformed
     });
   } catch (error) {
     console.error('Error removing team member:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to remove team member'
+    });
+  }
+});
+
+// Delete team
+router.delete('/:id', async (req, res) => {
+  try {
+    const team = await Team.findById(req.params.id);
+
+    if (!team) {
+      return res.status(404).json({
+        success: false,
+        error: 'Team not found'
+      });
+    }
+
+    if (req.user?.id && team.captain && team.captain.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to delete this team'
+      });
+    }
+
+    await Team.findByIdAndDelete(req.params.id);
+
+    res.json({
+      success: true,
+      message: 'Team deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting team:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete team'
     });
   }
 });

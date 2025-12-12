@@ -16,6 +16,9 @@ import matchesRouter from './routes/matches';
 import teamsRouter from './routes/teams';
 import profileRouter from './routes/profile';
 import walletRouter from './routes/wallet';
+import tournamentsRouter from './routes/tournaments';
+import rankingsRouter from './routes/rankings';
+import rewardsRouter from './routes/rewards';
 
 const app = express();
 
@@ -68,6 +71,9 @@ app.use('/api/matches', matchesRouter);
 app.use('/api/teams', teamsRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/wallet', walletRouter);
+app.use('/api/tournaments', tournamentsRouter);
+app.use('/api', rankingsRouter);
+app.use('/api/rewards', rewardsRouter);
 // Queue control (minimal): enqueue bulk registration
 app.post('/api/tasks/bulk-register', async (req, res) => {
   try {

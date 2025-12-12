@@ -15,14 +15,48 @@ router.get('/', async (req, res) => {
     if (tournament) query.tournament = tournament;
 
     const matches = await Match.find(query)
-      .populate('team1', 'name tag')
-      .populate('team2', 'name tag')
-      .populate('tournament', 'name')
-      .sort({ startTime: 1 });
+      .populate('team1', 'name tag logo')
+      .populate('team2', 'name tag logo')
+      .populate('tournament', 'name game prizePool')
+      .populate('winner', 'name tag')
+      .sort({ startTime: 1 })
+      .lean();
+
+    // Transform for frontend compatibility
+    const transformed = matches.map((match: any) => ({
+      id: match._id.toString(),
+      tournamentId: match.tournament?._id?.toString() || match.tournament?.toString() || '',
+      tournamentName: match.tournament?.name || '',
+      game: match.game || match.tournament?.game || '',
+      team1: match.team1 ? {
+        id: match.team1._id?.toString() || match.team1.toString(),
+        name: match.team1.name || '',
+        tag: match.team1.tag || '',
+        logo: match.team1.logo || ''
+      } : match.team1,
+      team2: match.team2 ? {
+        id: match.team2._id?.toString() || match.team2.toString(),
+        name: match.team2.name || '',
+        tag: match.team2.tag || '',
+        logo: match.team2.logo || ''
+      } : match.team2,
+      status: match.status || 'upcoming',
+      startTime: match.startTime?.toISOString() || new Date().toISOString(),
+      endTime: match.endTime?.toISOString(),
+      score: match.score || {},
+      stats: match.stats || {},
+      winner: match.winner ? {
+        id: match.winner._id?.toString() || match.winner.toString(),
+        name: match.winner.name || '',
+        tag: match.winner.tag || ''
+      } : match.winner,
+      createdAt: match.createdAt?.toISOString(),
+      updatedAt: match.updatedAt?.toISOString()
+    }));
 
     res.json({
       success: true,
-      data: matches
+      data: transformed
     });
   } catch (error) {
     console.error('Error fetching matches:', error);
@@ -37,10 +71,11 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const match = await Match.findById(req.params.id)
-      .populate('team1')
-      .populate('team2')
-      .populate('tournament')
-      .populate('winner');
+      .populate('team1', 'name tag logo members')
+      .populate('team2', 'name tag logo members')
+      .populate('tournament', 'name game prizePool startDate endDate')
+      .populate('winner', 'name tag logo')
+      .lean();
 
     if (!match) {
       return res.status(404).json({
@@ -49,9 +84,44 @@ router.get('/:id', async (req, res) => {
       });
     }
 
+    // Transform for frontend compatibility
+    const transformed: any = {
+      id: match._id.toString(),
+      tournamentId: match.tournament?._id?.toString() || match.tournament?.toString() || '',
+      tournamentName: match.tournament?.name || '',
+      game: match.game || match.tournament?.game || '',
+      team1: match.team1 ? {
+        id: match.team1._id?.toString() || match.team1.toString(),
+        name: match.team1.name || '',
+        tag: match.team1.tag || '',
+        logo: match.team1.logo || '',
+        members: match.team1.members?.map((m: any) => m.toString()) || []
+      } : match.team1,
+      team2: match.team2 ? {
+        id: match.team2._id?.toString() || match.team2.toString(),
+        name: match.team2.name || '',
+        tag: match.team2.tag || '',
+        logo: match.team2.logo || '',
+        members: match.team2.members?.map((m: any) => m.toString()) || []
+      } : match.team2,
+      status: match.status || 'upcoming',
+      startTime: match.startTime?.toISOString() || new Date().toISOString(),
+      endTime: match.endTime?.toISOString(),
+      score: match.score || {},
+      stats: match.stats || {},
+      winner: match.winner ? {
+        id: match.winner._id?.toString() || match.winner.toString(),
+        name: match.winner.name || '',
+        tag: match.winner.tag || '',
+        logo: match.winner.logo || ''
+      } : match.winner,
+      createdAt: match.createdAt?.toISOString(),
+      updatedAt: match.updatedAt?.toISOString()
+    };
+
     res.json({
       success: true,
-      data: match
+      data: transformed
     });
   } catch (error) {
     console.error('Error fetching match:', error);
@@ -85,9 +155,24 @@ router.post('/', async (req, res) => {
       await tournament.save();
     }
 
+    // Transform response for frontend
+    const transformed: any = {
+      id: match._id.toString(),
+      tournamentId: match.tournament?.toString() || '',
+      game: match.game || '',
+      team1: match.team1?.toString() || match.team1,
+      team2: match.team2?.toString() || match.team2,
+      status: match.status || 'upcoming',
+      startTime: match.startTime?.toISOString() || new Date().toISOString(),
+      endTime: match.endTime?.toISOString(),
+      score: match.score || {},
+      stats: match.stats || {},
+      winner: match.winner?.toString() || match.winner
+    };
+
     res.status(201).json({
       success: true,
-      data: match
+      data: transformed
     });
   } catch (error) {
     console.error('Error creating match:', error);
@@ -170,9 +255,24 @@ router.put('/:id/score', async (req, res) => {
 
     await match.save();
 
+    // Transform response
+    const transformed: any = {
+      id: match._id.toString(),
+      tournamentId: match.tournament?.toString() || '',
+      game: match.game || '',
+      team1: match.team1?.toString() || match.team1,
+      team2: match.team2?.toString() || match.team2,
+      status: match.status || 'upcoming',
+      startTime: match.startTime?.toISOString() || new Date().toISOString(),
+      endTime: match.endTime?.toISOString(),
+      score: match.score || {},
+      stats: match.stats || {},
+      winner: match.winner?.toString() || match.winner
+    };
+
     res.json({
       success: true,
-      data: match
+      data: transformed
     });
   } catch (error) {
     console.error('Error updating match score:', error);
@@ -203,9 +303,24 @@ router.put('/:id/status', async (req, res) => {
 
     await match.save();
 
+    // Transform response
+    const transformed: any = {
+      id: match._id.toString(),
+      tournamentId: match.tournament?.toString() || '',
+      game: match.game || '',
+      team1: match.team1?.toString() || match.team1,
+      team2: match.team2?.toString() || match.team2,
+      status: match.status || 'upcoming',
+      startTime: match.startTime?.toISOString() || new Date().toISOString(),
+      endTime: match.endTime?.toISOString(),
+      score: match.score || {},
+      stats: match.stats || {},
+      winner: match.winner?.toString() || match.winner
+    };
+
     res.json({
       success: true,
-      data: match
+      data: transformed
     });
   } catch (error) {
     console.error('Error updating match status:', error);

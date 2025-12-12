@@ -4,6 +4,37 @@ import User from '../models/User';
 
 const router = express.Router();
 
+// Get wallet balance (alias for compatibility)
+router.get('/balance', async (req, res) => {
+  try {
+    const user = await User.findOne({ telegramId: req.user?.id });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    let wallet = await Wallet.findOne({ user: user._id });
+    if (!wallet) {
+      wallet = await new Wallet({ user: user._id }).save();
+    }
+
+    res.json({
+      success: true,
+      balance: wallet.balance,
+      withdrawalLimit: wallet.withdrawalLimit,
+      data: wallet
+    });
+  } catch (error) {
+    console.error('Error fetching wallet balance:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch wallet balance'
+    });
+  }
+});
+
 // Get wallet details
 router.get('/', async (req, res) => {
   try {
