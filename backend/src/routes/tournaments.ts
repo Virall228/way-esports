@@ -22,7 +22,7 @@ router.get('/', async (req, res) => {
 
     // Transform for frontend compatibility
     const transformed = tournaments.map((t: any) => ({
-      id: t._id.toString(),
+      id: String(t._id),
       name: t.name,
       title: t.name, // Alias for frontend compatibility
       game: t.game,
@@ -84,7 +84,7 @@ router.get('/:id', async (req, res) => {
 
     // Transform for frontend compatibility
     const transformed: any = {
-      id: tournament._id.toString(),
+      id: String(tournament._id),
       name: tournament.name,
       title: tournament.name,
       game: tournament.game,
@@ -157,7 +157,7 @@ router.post('/', async (req, res) => {
 
     // Transform response for frontend
     const transformed: any = {
-      id: tournament._id.toString(),
+      id: String(tournament._id),
       name: tournament.name,
       title: tournament.name,
       game: tournament.game,
@@ -286,7 +286,7 @@ router.post('/:id/register', mockAuth, checkSubscriptionStatus, async (req: any,
 
     // Transform response
     const transformed: any = {
-      id: updatedTournament._id.toString(),
+      id: String(updatedTournament._id),
       name: updatedTournament.name,
       game: updatedTournament.game,
       status: updatedTournament.status === 'ongoing' ? 'in_progress' : updatedTournament.status,
@@ -377,7 +377,7 @@ router.post('/:id/join', mockAuth, checkSubscriptionStatus, async (req: any, res
 
     // Transform response
     const transformed: any = {
-      id: updatedTournament._id.toString(),
+      id: String(updatedTournament._id),
       name: updatedTournament.name,
       game: updatedTournament.game,
       status: updatedTournament.status === 'ongoing' ? 'in_progress' : updatedTournament.status,
@@ -440,7 +440,7 @@ router.put('/:id', async (req, res) => {
 
     // Transform response
     const transformed: any = {
-      id: updatedTournament._id.toString(),
+      id: String(updatedTournament._id),
       name: updatedTournament.name,
       game: updatedTournament.game,
       status: updatedTournament.status === 'ongoing' ? 'in_progress' : updatedTournament.status,

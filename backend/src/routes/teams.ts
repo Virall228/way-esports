@@ -22,7 +22,7 @@ router.get('/', async (req, res) => {
 
     // Transform for frontend compatibility
     const transformed = teams.map((team: any) => ({
-      id: team._id.toString(),
+      id: String(team._id),
       name: team.name,
       tag: team.tag || '',
       logo: team.logo || '',
@@ -92,7 +92,7 @@ router.get('/:id', async (req, res) => {
 
     // Transform for frontend compatibility
     const transformed: any = {
-      id: team._id.toString(),
+      id: String(team._id),
       name: team.name,
       tag: team.tag || '',
       logo: team.logo || '',
@@ -185,7 +185,7 @@ router.post('/', async (req, res) => {
 
     // Transform response for frontend
     const transformed: any = {
-      id: team._id.toString(),
+      id: String(team._id),
       name: team.name,
       tag: team.tag || '',
       logo: team.logo || '',
@@ -304,7 +304,7 @@ router.put('/:id', async (req, res) => {
 
     // Transform response
     const transformed: any = {
-      id: updatedTeam._id.toString(),
+      id: String(updatedTeam._id),
       name: updatedTeam.name,
       tag: updatedTeam.tag || '',
       logo: updatedTeam.logo || '',
@@ -424,7 +424,7 @@ router.delete('/:id/members/:userId', async (req, res) => {
 
     // Transform response
     const transformed: any = {
-      id: team._id.toString(),
+      id: String(team._id),
       name: team.name,
       tag: team.tag || '',
       logo: team.logo || '',
@@ -480,4 +480,4 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-export default router; 
+export default router;

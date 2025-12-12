@@ -24,7 +24,7 @@ router.get('/', async (req, res) => {
 
     // Transform for frontend compatibility
     const transformed = matches.map((match: any) => ({
-      id: match._id.toString(),
+      id: String(match._id),
       tournamentId: match.tournament?._id?.toString() || match.tournament?.toString() || '',
       tournamentName: match.tournament?.name || '',
       game: match.game || match.tournament?.game || '',
@@ -86,7 +86,7 @@ router.get('/:id', async (req, res) => {
 
     // Transform for frontend compatibility
     const transformed: any = {
-      id: match._id.toString(),
+      id: String(match._id),
       tournamentId: match.tournament?._id?.toString() || match.tournament?.toString() || '',
       tournamentName: match.tournament?.name || '',
       game: match.game || match.tournament?.game || '',
@@ -157,7 +157,7 @@ router.post('/', async (req, res) => {
 
     // Transform response for frontend
     const transformed: any = {
-      id: match._id.toString(),
+      id: String(match._id),
       tournamentId: match.tournament?.toString() || '',
       game: match.game || '',
       team1: match.team1?.toString() || match.team1,
@@ -257,7 +257,7 @@ router.put('/:id/score', async (req, res) => {
 
     // Transform response
     const transformed: any = {
-      id: match._id.toString(),
+      id: String(match._id),
       tournamentId: match.tournament?.toString() || '',
       game: match.game || '',
       team1: match.team1?.toString() || match.team1,
@@ -305,7 +305,7 @@ router.put('/:id/status', async (req, res) => {
 
     // Transform response
     const transformed: any = {
-      id: match._id.toString(),
+      id: String(match._id),
       tournamentId: match.tournament?.toString() || '',
       game: match.game || '',
       team1: match.team1?.toString() || match.team1,
@@ -331,4 +331,4 @@ router.put('/:id/status', async (req, res) => {
   }
 });
 
-export default router; 
+export default router;
