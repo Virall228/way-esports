@@ -77,7 +77,7 @@ router.get('/', async (req, res) => {
 // Get team by ID
 router.get('/:id', async (req, res) => {
   try {
-    const team = await Team.findById(req.params.id)
+    const team: any = await Team.findById(req.params.id)
       .populate('captain', 'username firstName lastName profileLogo telegramId')
       .populate('members', 'username firstName lastName profileLogo telegramId')
       .populate('achievements.tournamentId', 'name prizePool startDate endDate')
@@ -287,7 +287,7 @@ router.put('/:id', async (req, res) => {
       });
     }
 
-    const updatedTeam = await Team.findByIdAndUpdate(
+    const updatedTeam: any = await Team.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true }
