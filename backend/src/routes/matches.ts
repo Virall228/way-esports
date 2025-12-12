@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
     if (status) query.status = status;
     if (tournament) query.tournament = tournament;
 
-    const matches = await Match.find(query)
+    const matches: any[] = await Match.find(query)
       .populate('team1', 'name tag logo')
       .populate('team2', 'name tag logo')
       .populate('tournament', 'name game prizePool')
@@ -70,7 +70,7 @@ router.get('/', async (req, res) => {
 // Get match by ID
 router.get('/:id', async (req, res) => {
   try {
-    const match = await Match.findById(req.params.id)
+    const match: any = await Match.findById(req.params.id)
       .populate('team1', 'name tag logo members')
       .populate('team2', 'name tag logo members')
       .populate('tournament', 'name game prizePool startDate endDate')
@@ -138,7 +138,7 @@ router.post('/', async (req, res) => {
     const matchData: Partial<IMatch> = req.body;
 
     // Verify tournament exists
-    const tournament = await Tournament.findById(matchData.tournament);
+    const tournament: any = await Tournament.findById(matchData.tournament);
     if (!tournament) {
       return res.status(404).json({
         success: false,

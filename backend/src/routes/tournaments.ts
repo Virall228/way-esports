@@ -8,7 +8,7 @@ const router = express.Router();
 // Get all tournaments
 router.get('/', async (req, res) => {
   try {
-    const { game, status } = req.query;
+    const { game, status } = req.query as { game?: string; status?: string };
     const query: any = {};
 
     if (game) query.game = game;
@@ -69,7 +69,7 @@ router.get('/', async (req, res) => {
 // Get tournament by ID
 router.get('/:id', async (req, res) => {
   try {
-    const tournament = await Tournament.findById(req.params.id)
+    const tournament: any = await Tournament.findById(req.params.id)
       .populate('registeredTeams', 'name tag logo members captain')
       .populate('matches', 'team1 team2 status startTime endTime score winner')
       .populate('createdBy', 'username firstName lastName')
@@ -276,29 +276,33 @@ router.post('/:id/register', mockAuth, checkSubscriptionStatus, async (req: any,
     await tournament.save();
 
     // Reload tournament with populated data
-    const updatedTournament = await Tournament.findById(req.params.id)
+    const updatedTournament: any = await Tournament.findById(req.params.id)
       .populate('registeredTeams', 'name tag logo members')
       .lean();
 
+    if (!updatedTournament) {
+      return res.status(404).json({ success: false, error: 'Tournament not found' });
+    }
+
     // Transform response
     const transformed: any = {
-      id: updatedTournament!._id.toString(),
-      name: updatedTournament!.name,
-      game: updatedTournament!.game,
-      status: updatedTournament!.status === 'ongoing' ? 'in_progress' : updatedTournament!.status,
-      startDate: updatedTournament!.startDate?.toISOString(),
-      endDate: updatedTournament!.endDate?.toISOString(),
-      prizePool: updatedTournament!.prizePool || 0,
-      maxTeams: updatedTournament!.maxTeams || 0,
-      registeredTeams: (updatedTournament!.registeredTeams || []).map((team: any) => ({
+      id: updatedTournament._id.toString(),
+      name: updatedTournament.name,
+      game: updatedTournament.game,
+      status: updatedTournament.status === 'ongoing' ? 'in_progress' : updatedTournament.status,
+      startDate: updatedTournament.startDate?.toISOString(),
+      endDate: updatedTournament.endDate?.toISOString(),
+      prizePool: updatedTournament.prizePool || 0,
+      maxTeams: updatedTournament.maxTeams || 0,
+      registeredTeams: (updatedTournament.registeredTeams || []).map((team: any) => ({
         id: team._id?.toString() || team.toString(),
         name: team.name || '',
         tag: team.tag || '',
         logo: team.logo || '',
         players: team.members?.map((m: any) => m.toString()) || []
       })),
-      participants: updatedTournament!.registeredTeams?.length || 0,
-      currentParticipants: updatedTournament!.registeredTeams?.length || 0
+      participants: updatedTournament.registeredTeams?.length || 0,
+      currentParticipants: updatedTournament.registeredTeams?.length || 0
     };
 
     res.json({
@@ -363,29 +367,33 @@ router.post('/:id/join', mockAuth, checkSubscriptionStatus, async (req: any, res
     await tournament.save();
 
     // Reload tournament with populated data
-    const updatedTournament = await Tournament.findById(req.params.id)
+    const updatedTournament: any = await Tournament.findById(req.params.id)
       .populate('registeredTeams', 'name tag logo members')
       .lean();
 
+    if (!updatedTournament) {
+      return res.status(404).json({ success: false, error: 'Tournament not found' });
+    }
+
     // Transform response
     const transformed: any = {
-      id: updatedTournament!._id.toString(),
-      name: updatedTournament!.name,
-      game: updatedTournament!.game,
-      status: updatedTournament!.status === 'ongoing' ? 'in_progress' : updatedTournament!.status,
-      startDate: updatedTournament!.startDate?.toISOString(),
-      endDate: updatedTournament!.endDate?.toISOString(),
-      prizePool: updatedTournament!.prizePool || 0,
-      maxTeams: updatedTournament!.maxTeams || 0,
-      registeredTeams: (updatedTournament!.registeredTeams || []).map((team: any) => ({
+      id: updatedTournament._id.toString(),
+      name: updatedTournament.name,
+      game: updatedTournament.game,
+      status: updatedTournament.status === 'ongoing' ? 'in_progress' : updatedTournament.status,
+      startDate: updatedTournament.startDate?.toISOString(),
+      endDate: updatedTournament.endDate?.toISOString(),
+      prizePool: updatedTournament.prizePool || 0,
+      maxTeams: updatedTournament.maxTeams || 0,
+      registeredTeams: (updatedTournament.registeredTeams || []).map((team: any) => ({
         id: team._id?.toString() || team.toString(),
         name: team.name || '',
         tag: team.tag || '',
         logo: team.logo || '',
         players: team.members?.map((m: any) => m.toString()) || []
       })),
-      participants: updatedTournament!.registeredTeams?.length || 0,
-      currentParticipants: updatedTournament!.registeredTeams?.length || 0
+      participants: updatedTournament.registeredTeams?.length || 0,
+      currentParticipants: updatedTournament.registeredTeams?.length || 0
     };
 
     res.json({
@@ -420,11 +428,15 @@ router.put('/:id', async (req, res) => {
       });
     }
 
-    const updatedTournament = await Tournament.findByIdAndUpdate(
+    const updatedTournament: any = await Tournament.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true }
     );
+
+    if (!updatedTournament) {
+      return res.status(404).json({ success: false, error: 'Tournament not found' });
+    }
 
     // Transform response
     const transformed: any = {
@@ -490,4 +502,4 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-export default router; 
+export default router;
