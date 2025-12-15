@@ -4,12 +4,18 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 import { Document, Types } from 'mongoose';
 import User, { IUser } from '../models/User';
 
-type UserDocument = Document<unknown, {}, IUser> & IUser & { _id: Types.ObjectId };
+// Define the UserDocument type that includes all Mongoose document methods
+type UserDocument = Document<unknown, {}, IUser> & 
+                   IUser & 
+                   { _id: Types.ObjectId } &
+                   { comparePassword(candidatePassword: string): Promise<boolean> };
 
-interface AuthRequest extends Request {
+// Single AuthRequest interface
+export interface AuthRequest extends Request {
   user?: UserDocument;
 }
 
+// Single JwtUserPayload interface
 interface JwtUserPayload extends JwtPayload {
   userId: string;
   email: string;
@@ -23,36 +29,11 @@ const toPlainObject = (doc: UserDocument) => {
   return userData;
 };
 
-interface AuthRequest extends Request {
-  user?: IUser;
-}
-
-interface JwtUserPayload extends JwtPayload {
-  userId: string;
-  email: string;
-  role: string;
-}
-
 const SALT_ROUNDS = 10;
 const JWT_EXPIRATION = '24h';
 
-interface RegisterRequest extends Request {
-  body: {
-    email: string;
-    password: string;
-    name: string;
-  };
-}
-
-interface RegisterRequest extends Request {
-  body: {
-    email: string;
-    password: string;
-    name: string;
-  };
-}
-
-export const register = async (req: RegisterRequest, res: Response) => {
+// Register endpoint
+export const register = async (req: Request, res: Response) => {
   try {
     const { email, password, name } = req.body;
     
@@ -91,24 +72,18 @@ export const register = async (req: RegisterRequest, res: Response) => {
   }
 };
 
-interface LoginRequest extends Request {
-  body: {
-    email: string;
-    password: string;
-  };
-}
-
-export const login = async (req: LoginRequest, res: Response) => {
+// Login endpoint
+export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
     
-    // Find user
-    const user = await User.findOne({ email });
+    // Find user and explicitly select password field
+    const user = await User.findOne({ email }).select('+password');
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
-    // Check password
+    // Check password using the model method
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -118,11 +93,11 @@ export const login = async (req: LoginRequest, res: Response) => {
     const token = jwt.sign(
       { userId: user._id.toString(), email: user.email, role: user.role },
       process.env.JWT_SECRET || 'your_jwt_secret',
-      { expiresIn: '24h' }
+      { expiresIn: JWT_EXPIRATION }
     );
     
     // Return user data (without password) and token
-    const userData = toPlainObject(user);
+    const userData = toPlainObject(user as UserDocument);
     res.json({ user: userData, token });
   } catch (error) {
     console.error('Login error:', error);
@@ -130,6 +105,7 @@ export const login = async (req: LoginRequest, res: Response) => {
   }
 };
 
+// Get user profile
 export const getProfile = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
@@ -149,7 +125,7 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Admin only
+// Admin only: Get all users
 export const getAllUsers = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'developer')) {
