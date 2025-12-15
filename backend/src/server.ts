@@ -75,16 +75,17 @@ if (process.env.NODE_ENV !== 'production') {
   let openapiSpec: any = { openapi: '3.0.3', info: { title: 'WAY-Esports API', version: '1.0.0' } };
   
   for (const candidate of openapiCandidates) {
-  if (fs.existsSync(candidate)) {
-    try {
-      openapiSpec = JSON.parse(fs.readFileSync(candidate, 'utf-8'));
-      break;
-    } catch (err) {
-      console.error('Failed to read OpenAPI spec:', err);
+    if (fs.existsSync(candidate)) {
+      try {
+        openapiSpec = JSON.parse(fs.readFileSync(candidate, 'utf-8'));
+        break;
+      } catch (err) {
+        console.error('Failed to read OpenAPI spec:', err);
+      }
     }
   }
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapiSpec));
 }
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapiSpec));
 
 // Logging
 if (process.env.NODE_ENV === 'development') {
@@ -105,6 +106,14 @@ app.use('/api/rewards', rewardsRouter);
 app.post('/api/tasks/bulk-register', async (req, res) => {
   try {
     const { tournamentId, teamIds } = req.body || {};
+    // Placeholder handler body to avoid TS errors; implement real logic in queue service
+    res.json({ status: 'queued', tournamentId, teamIds });
+  } catch (err) {
+    console.error('bulk-register error', err);
+    res.status(500).json({ status: 'error' });
+  }
+});
+
 app.use((req, res) => {
   res.status(404).json({
     status: 'error',
