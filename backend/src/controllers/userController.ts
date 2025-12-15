@@ -1,71 +1,49 @@
 import { Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
-import jwt, { JwtPayload } from 'jsonwebtoken';
-import { Document, Types } from 'mongoose';
-import User, { IUser } from '../models/User';
+import jwt from 'jsonwebtoken';
+import User from '../models/User';
 
-// Define the UserDocument type that includes all Mongoose document methods
-type UserDocument = Document<unknown, {}, IUser> & 
-                   IUser & 
-                   { _id: Types.ObjectId } &
-                   { comparePassword(candidatePassword: string): Promise<boolean> };
-
-// Single AuthRequest interface
-export interface AuthRequest extends Request {
-  user?: UserDocument;
-}
-
-// Single JwtUserPayload interface
-interface JwtUserPayload extends JwtPayload {
-  userId: string;
-  email: string;
-  role: string;
-}
-
-// Helper function to convert Mongoose document to plain object
-const toPlainObject = (doc: UserDocument) => {
-  const obj = doc.toObject();
-  const { password, ...userData } = obj;
-  return userData;
-};
-
-const SALT_ROUNDS = 10;
 const JWT_EXPIRATION = '24h';
 
 // Register endpoint
 export const register = async (req: Request, res: Response) => {
   try {
-    const { email, password, name } = req.body;
-    
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ error: 'Email already in use' });
+    const { telegramId, username, firstName, lastName, photoUrl } = req.body || {};
+
+    if (!telegramId || !username || !firstName) {
+      return res.status(400).json({ error: 'telegramId, username and firstName are required' });
     }
-    
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-    
-    // Create user
-    const user = new User({
-      email,
-      password: hashedPassword,
-      name,
-      role: 'user' // Default role
-    });
-    
-    await user.save();
-    
-    // Generate JWT
+
+    const telegramIdNumber = typeof telegramId === 'string' ? parseInt(telegramId, 10) : telegramId;
+    if (!Number.isFinite(telegramIdNumber)) {
+      return res.status(400).json({ error: 'telegramId must be a number' });
+    }
+
+    const existingUser = await User.findOne({ telegramId: telegramIdNumber });
+    if (existingUser) {
+      const token = jwt.sign(
+        { userId: existingUser._id.toString(), telegramId: existingUser.telegramId, role: existingUser.role },
+        process.env.JWT_SECRET || 'your_jwt_secret',
+        { expiresIn: JWT_EXPIRATION }
+      );
+      return res.status(200).json({ user: existingUser.toObject(), token });
+    }
+
+    const user = await new User({
+      telegramId: telegramIdNumber,
+      username,
+      firstName,
+      lastName,
+      photoUrl,
+      role: 'user'
+    }).save();
+
     const token = jwt.sign(
-      { userId: user._id.toString(), email: user.email, role: user.role },
+      { userId: user._id.toString(), telegramId: user.telegramId, role: user.role },
       process.env.JWT_SECRET || 'your_jwt_secret',
       { expiresIn: JWT_EXPIRATION }
     );
-    
-    // Return user data (without password) and token
-    const userData = toPlainObject(user);
-    res.status(201).json({ user: userData, token });
+
+    res.status(201).json({ user: user.toObject(), token });
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Error registering user' });
@@ -75,30 +53,29 @@ export const register = async (req: Request, res: Response) => {
 // Login endpoint
 export const login = async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
-    
-    // Find user and explicitly select password field
-    const user = await User.findOne({ email }).select('+password');
+    const { telegramId } = req.body || {};
+
+    if (!telegramId) {
+      return res.status(400).json({ error: 'telegramId is required' });
+    }
+
+    const telegramIdNumber = typeof telegramId === 'string' ? parseInt(telegramId, 10) : telegramId;
+    if (!Number.isFinite(telegramIdNumber)) {
+      return res.status(400).json({ error: 'telegramId must be a number' });
+    }
+
+    const user = await User.findOne({ telegramId: telegramIdNumber });
     if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: 'User not found' });
     }
-    
-    // Check password using the model method
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-    
-    // Generate JWT
+
     const token = jwt.sign(
-      { userId: user._id.toString(), email: user.email, role: user.role },
+      { userId: user._id.toString(), telegramId: user.telegramId, role: user.role },
       process.env.JWT_SECRET || 'your_jwt_secret',
       { expiresIn: JWT_EXPIRATION }
     );
-    
-    // Return user data (without password) and token
-    const userData = toPlainObject(user as UserDocument);
-    res.json({ user: userData, token });
+
+    res.json({ user: user.toObject(), token });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Error logging in' });
@@ -106,13 +83,19 @@ export const login = async (req: Request, res: Response) => {
 };
 
 // Get user profile
-export const getProfile = async (req: AuthRequest, res: Response) => {
+export const getProfile = async (req: Request, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    const user = await User.findById(req.user._id).select('-password').lean();
+    const reqUser: any = req.user;
+    const userId = reqUser?._id?.toString();
+    const telegramId = typeof reqUser?.id === 'string' ? parseInt(reqUser.id, 10) : reqUser?.id;
+
+    const user = userId
+      ? await User.findById(userId).lean()
+      : await User.findOne({ telegramId }).lean();
     
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -126,9 +109,10 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
 };
 
 // Admin only: Get all users
-export const getAllUsers = async (req: AuthRequest, res: Response) => {
+export const getAllUsers = async (req: Request, res: Response) => {
   try {
-    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'developer')) {
+    const role = (req.user as any)?.role;
+    if (!req.user || (role !== 'admin' && role !== 'developer')) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 

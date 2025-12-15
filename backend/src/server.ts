@@ -23,7 +23,8 @@ import rewardsRouter from './routes/rewards';
 import authRouter from './routes/auth';
 
 const app = express();
-const PORT = config.port || 3000;
+const PORT = typeof config.port === 'string' ? parseInt(config.port, 10) : config.port;
+const PORT_NUMBER = Number.isFinite(PORT) ? PORT : 3000;
 
 // Security middleware
 app.use(cors({
@@ -136,17 +137,17 @@ async function start() {
     startWorkers();
     startSchedulers();
 
-    const server = app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server is running on port ${PORT}`);
-      console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
-      console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
+    const server = app.listen(PORT_NUMBER, '0.0.0.0', () => {
+      console.log(`🚀 Server is running on port ${PORT_NUMBER}`);
+      console.log(`📚 API Documentation: http://localhost:${PORT_NUMBER}/api-docs`);
+      console.log(`🌐 Health check: http://localhost:${PORT_NUMBER}/api/health`);
     });
 
     // Handle server errors
     server.on('error', (error: NodeJS.ErrnoException) => {
       if (error.syscall !== 'listen') throw error;
       
-      const bind = typeof PORT === 'string' ? 'Pipe ' + PORT : 'Port ' + PORT;
+      const bind = 'Port ' + PORT_NUMBER;
       
       switch (error.code) {
         case 'EACCES':

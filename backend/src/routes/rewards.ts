@@ -2,7 +2,6 @@ import express from 'express';
 import Reward from '../../models/Reward';
 import PlayerReward from '../../models/PlayerReward';
 import TeamReward from '../../models/TeamReward';
-import User from '../models/User';
 
 const router = express.Router();
 
@@ -96,8 +95,9 @@ router.post('/:id/claim', async (req, res) => {
     }
 
     // Check if user already claimed this reward
+    const userId = (req.user as any)._id || (req.user as any).id;
     const existingReward = await PlayerReward.findOne({
-      userId: req.user.id,
+      userId,
       rewardId: req.params.id
     });
 
@@ -110,7 +110,7 @@ router.post('/:id/claim', async (req, res) => {
 
     // Create player reward
     const playerReward = new PlayerReward({
-      userId: req.user.id,
+      userId,
       rewardId: req.params.id,
       gameId: reward.gameId,
       status: 'earned',
@@ -142,8 +142,9 @@ router.get('/user/claimed', async (req, res) => {
       });
     }
 
+    const userId = (req.user as any)._id || (req.user as any).id;
     const playerRewards = await PlayerReward.find({
-      userId: req.user.id
+      userId
     })
       .populate('rewardId')
       .sort({ earnedAt: -1 });

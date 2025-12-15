@@ -4,6 +4,9 @@ export const config = {
   mongoUri: process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/way-esports',
   jwtSecret: process.env.JWT_SECRET || 'your-secret-key',
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || '',
+  cors: {
+    origin: process.env.CORS_ORIGIN || '*'
+  },
   
   // Email configuration
   email: {

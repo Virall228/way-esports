@@ -3,15 +3,6 @@ import Tournament from '../models/Tournament';
 import { Team } from '../models/Team';
 import { IUser } from '../models/User';
 
-// Extend Request interface to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: IUser;
-    }
-  }
-}
-
 // Check if user can manage tournament (admin or creator)
 export const canManageTournament = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -30,7 +21,8 @@ export const canManageTournament = async (req: Request, res: Response, next: Nex
     }
 
     // Tournament creator can manage their tournament
-    if (tournament.createdBy && req.user && tournament.createdBy.toString() === req.user.id) {
+    const reqUserId = (req.user as any)?._id?.toString() || (req.user as any)?.id?.toString();
+    if (tournament.createdBy && reqUserId && tournament.createdBy.toString() === reqUserId) {
       return next();
     }
 

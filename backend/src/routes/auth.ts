@@ -9,9 +9,11 @@ const router = Router();
 router.post(
   '/register',
   [
-    body('email').isEmail().normalizeEmail(),
-    body('password').isLength({ min: 6 }),
-    body('name').not().isEmpty().trim().escape()
+    body('telegramId').not().isEmpty(),
+    body('username').not().isEmpty().trim(),
+    body('firstName').not().isEmpty().trim(),
+    body('lastName').optional().trim(),
+    body('photoUrl').optional().isString()
   ],
   register
 );
@@ -19,8 +21,7 @@ router.post(
 router.post(
   '/login',
   [
-    body('email').isEmail().normalizeEmail(),
-    body('password').not().isEmpty()
+    body('telegramId').not().isEmpty()
   ],
   login
 );

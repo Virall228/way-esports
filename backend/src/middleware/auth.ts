@@ -2,8 +2,10 @@ import { Request, Response, NextFunction } from 'express';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import User from '../models/User';
 
-interface JwtUserPayload extends JwtPayload {
-  userId: string;
+type JwtUserPayload = JwtPayload & { userId: string };
+
+function isJwtUserPayload(decoded: string | JwtPayload): decoded is JwtUserPayload {
+  return typeof decoded !== 'string' && typeof (decoded as any).userId === 'string';
 }
 
 export const authenticateJWT = async (req: Request, res: Response, next: NextFunction) => {
@@ -19,7 +21,12 @@ export const authenticateJWT = async (req: Request, res: Response, next: NextFun
   }
   
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret') as JwtUserPayload;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
+
+    if (!isJwtUserPayload(decoded)) {
+      return res.status(403).json({ error: 'Invalid token payload' });
+    }
+
     const user = await User.findById(decoded.userId);
     
     if (!user) {
@@ -38,7 +45,8 @@ export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  if (req.user.role === 'admin' || req.user.role === 'developer') {
+  const role = (req.user as any).role;
+  if (role === 'admin' || role === 'developer') {
     next();
   } else {
     res.status(403).json({ error: 'Admin access required' });
