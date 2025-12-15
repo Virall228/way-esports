@@ -23,6 +23,7 @@ import rewardsRouter from './routes/rewards';
 import authRouter from './routes/auth';
 
 const app = express();
+const PORT = config.port || 3000;
 
 // Security middleware
 app.use(cors({
@@ -104,76 +105,40 @@ app.use('/api/rewards', rewardsRouter);
 app.post('/api/tasks/bulk-register', async (req, res) => {
   try {
     const { tournamentId, teamIds } = req.body || {};
-    if (!tournamentId || !Array.isArray(teamIds) || !teamIds.length) {
-      return res.status(400).json({ success: false, error: 'tournamentId and teamIds[] required' });
-    }
-    await addTask('bulkRegisterTeams', { tournamentId, teamIds });
-    res.status(202).json({ success: true, queued: teamIds.length });
-  } catch (err) {
-    console.error('Error enqueue bulk register', err);
-    res.status(500).json({ success: false, error: 'Failed to enqueue task' });
-  }
-});
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
-});
-
-// DB health endpoint
-app.get('/health/db', (_req, res) => {
-  const states: Record<number, string> = {
-    0: 'disconnected',
-    1: 'connected',
-    2: 'connecting',
-    3: 'disconnecting'
-  };
-  res.json({ ok: mongoose.connection.readyState === 1, state: states[mongoose.connection.readyState] });
-});
-
-// Error handling
-app.use(errorHandler);
-
-// Handle unhandled routes (catch-all without path pattern - Express 5.x compatible)
 app.use((req, res) => {
   res.status(404).json({
-    success: false,
-    error: 'Route not found'
+    status: 'error',
+    message: 'Not Found',
+    path: req.path
   });
 });
 
-// Start server ONLY after successful DB connect
-const PORT: number = typeof config.port === 'string' ? parseInt(config.port, 10) : Number(config.port) || 3000;
+// Error handling middleware
+app.use(errorHandler);
 
 async function start() {
   try {
+    console.log('Connecting to MongoDB...');
     await connectDB();
     console.log('✅ MongoDB connected');
 
-    const server = app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 API on http://0.0.0.0:${PORT}`);
-    });
-
-    // Start background schedulers (registration close, tournament completion, stale matches)
+    // Start background workers
+    console.log('Starting background workers...');
+    startWorkers();
     startSchedulers();
 
-    const server = app.listen(PORT, () => {
+    const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server is running on port ${PORT}`);
       console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
       console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
     });
 
-    // Обработка ошибок сервера
+    // Handle server errors
     server.on('error', (error: NodeJS.ErrnoException) => {
       if (error.syscall !== 'listen') throw error;
       
       const bind = typeof PORT === 'string' ? 'Pipe ' + PORT : 'Port ' + PORT;
       
-      // Обработка специфических ошибок
       switch (error.code) {
         case 'EACCES':
           console.error(bind + ' requires elevated privileges');
@@ -188,11 +153,11 @@ async function start() {
       }
     });
 
-    // Обработка завершения приложения
+    // Handle graceful shutdown
     const shutdown = async () => {
       console.log('🛑 Received shutdown signal. Gracefully shutting down...');
       
-      // Даем время на завершение текущих запросов
+      // Give time for current requests to complete
       server.close(async () => {
         console.log('🔌 Server closed');
         
@@ -206,23 +171,24 @@ async function start() {
         }
       });
 
-      // Принудительное завершение, если сервер не завершился за 10 секунд
+      // Force shutdown after 10 seconds
       setTimeout(() => {
         console.error('⚠️ Forcing shutdown after timeout');
         process.exit(1);
       }, 10000);
     };
 
-    // Обработка сигналов завершения
+    // Handle termination signals
     process.on('SIGTERM', shutdown);
     process.on('SIGINT', shutdown);
 
-    // Обработка необработанных исключений
+    // Handle uncaught exceptions
     process.on('uncaughtException', (error) => {
       console.error('🔥 Uncaught Exception:', error);
       shutdown();
     });
 
+    // Handle unhandled rejections
     process.on('unhandledRejection', (reason, promise) => {
       console.error('🚨 Unhandled Rejection at:', promise, 'reason:', reason);
       shutdown();
@@ -235,4 +201,5 @@ async function start() {
   }
 }
 
+// Start the server
 start();
