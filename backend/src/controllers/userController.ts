@@ -1,7 +1,27 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt, { JwtPayload } from 'jsonwebtoken';
+import { Document, Types } from 'mongoose';
 import User, { IUser } from '../models/User';
+
+type UserDocument = Document<unknown, {}, IUser> & IUser & { _id: Types.ObjectId };
+
+interface AuthRequest extends Request {
+  user?: UserDocument;
+}
+
+interface JwtUserPayload extends JwtPayload {
+  userId: string;
+  email: string;
+  role: string;
+}
+
+// Helper function to convert Mongoose document to plain object
+const toPlainObject = (doc: UserDocument) => {
+  const obj = doc.toObject();
+  const { password, ...userData } = obj;
+  return userData;
+};
 
 interface AuthRequest extends Request {
   user?: IUser;
@@ -24,12 +44,20 @@ interface RegisterRequest extends Request {
   };
 }
 
+interface RegisterRequest extends Request {
+  body: {
+    email: string;
+    password: string;
+    name: string;
+  };
+}
+
 export const register = async (req: RegisterRequest, res: Response) => {
   try {
     const { email, password, name } = req.body;
     
     // Check if user already exists
-    const existingUser = await User.findOne({ where: { email } });
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ error: 'Email already in use' });
     }
@@ -38,22 +66,24 @@ export const register = async (req: RegisterRequest, res: Response) => {
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
     
     // Create user
-    const user = await User.create({
+    const user = new User({
       email,
       password: hashedPassword,
       name,
       role: 'user' // Default role
     });
     
+    await user.save();
+    
     // Generate JWT
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
+      { userId: user._id.toString(), email: user.email, role: user.role },
       process.env.JWT_SECRET || 'your_jwt_secret',
       { expiresIn: JWT_EXPIRATION }
     );
     
     // Return user data (without password) and token
-    const { password: _, ...userData } = user.get({ plain: true });
+    const userData = toPlainObject(user);
     res.status(201).json({ user: userData, token });
   } catch (error) {
     console.error('Registration error:', error);
@@ -73,26 +103,26 @@ export const login = async (req: LoginRequest, res: Response) => {
     const { email, password } = req.body;
     
     // Find user
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
     // Check password
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword) {
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
     // Generate JWT
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
+      { userId: user._id.toString(), email: user.email, role: user.role },
       process.env.JWT_SECRET || 'your_jwt_secret',
-      { expiresIn: JWT_EXPIRATION }
+      { expiresIn: '24h' }
     );
     
     // Return user data (without password) and token
-    const { password: _, ...userData } = user.get({ plain: true });
+    const userData = toPlainObject(user);
     res.json({ user: userData, token });
   } catch (error) {
     console.error('Login error:', error);
@@ -102,9 +132,11 @@ export const login = async (req: LoginRequest, res: Response) => {
 
 export const getProfile = async (req: AuthRequest, res: Response) => {
   try {
-    const user = await User.findByPk(req.user.id, {
-      attributes: { exclude: ['password'] }
-    });
+    if (!req.user) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const user = await User.findById(req.user._id).select('-password').lean();
     
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -120,10 +152,14 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
 // Admin only
 export const getAllUsers = async (req: AuthRequest, res: Response) => {
   try {
-    const users = await User.findAll({
-      attributes: { exclude: ['password'] },
-      order: [['createdAt', 'DESC']]
-    });
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'developer')) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const users = await User.find({})
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .lean();
     
     res.json(users);
   } catch (error) {
