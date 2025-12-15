@@ -1,15 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import Tournament from '../models/Tournament';
 import { Team } from '../models/Team';
+import { IUser } from '../models/User';
 
 // Extend Request interface to include user
 declare global {
   namespace Express {
     interface Request {
-      user?: {
-        id: string;
-        role: string;
-      };
+      user?: IUser;
     }
   }
 }

@@ -1,12 +1,30 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { User } from '../models/User';
+import jwt, { JwtPayload } from 'jsonwebtoken';
+import User, { IUser } from '../models/User';
+
+interface AuthRequest extends Request {
+  user?: IUser;
+}
+
+interface JwtUserPayload extends JwtPayload {
+  userId: string;
+  email: string;
+  role: string;
+}
 
 const SALT_ROUNDS = 10;
 const JWT_EXPIRATION = '24h';
 
-export const register = async (req: Request, res: Response) => {
+interface RegisterRequest extends Request {
+  body: {
+    email: string;
+    password: string;
+    name: string;
+  };
+}
+
+export const register = async (req: RegisterRequest, res: Response) => {
   try {
     const { email, password, name } = req.body;
     
@@ -43,7 +61,14 @@ export const register = async (req: Request, res: Response) => {
   }
 };
 
-export const login = async (req: Request, res: Response) => {
+interface LoginRequest extends Request {
+  body: {
+    email: string;
+    password: string;
+  };
+}
+
+export const login = async (req: LoginRequest, res: Response) => {
   try {
     const { email, password } = req.body;
     
@@ -75,7 +100,7 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
-export const getProfile = async (req: Request, res: Response) => {
+export const getProfile = async (req: AuthRequest, res: Response) => {
   try {
     const user = await User.findByPk(req.user.id, {
       attributes: { exclude: ['password'] }
@@ -93,7 +118,7 @@ export const getProfile = async (req: Request, res: Response) => {
 };
 
 // Admin only
-export const getAllUsers = async (req: Request, res: Response) => {
+export const getAllUsers = async (req: AuthRequest, res: Response) => {
   try {
     const users = await User.findAll({
       attributes: { exclude: ['password'] },
