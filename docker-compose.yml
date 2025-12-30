@@ -30,7 +30,7 @@ services:
       context: ./way-esports-front/frontend
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=http://reverse-proxy/api
+        - VITE_API_URL=${VITE_API_URL:-/api}
     container_name: way-esports-web
     expose:
       - "80"
