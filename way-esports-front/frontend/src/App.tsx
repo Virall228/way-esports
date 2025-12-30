@@ -9,6 +9,7 @@ import Tournaments from './pages/Tournaments';
 import Profile from './pages/Profile';
 import News from './pages/News';
 import Teams from './pages/Teams';
+import AdminPage from './pages/Admin/AdminPage';
 import { AppProvider } from './contexts/AppContext';
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -117,6 +118,7 @@ const App: React.FC = () => {
                   <Route path="/teams" element={<Teams />} />
                   <Route path="/news" element={<News />} />
                   <Route path="/profile" element={<Profile />} />
+                  <Route path="/admin" element={<AdminPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </MainContent>

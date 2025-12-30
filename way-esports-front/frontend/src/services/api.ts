@@ -1,50 +1,50 @@
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://your-backend-url.com/api' 
-  : 'http://localhost:4000/api';
+import { API_CONFIG, getFullUrl } from '../config/api';
+
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+
+const getToken = (): string | null => {
+  try {
+    return localStorage.getItem('auth_token');
+  } catch {
+    return null;
+  }
+};
+
+const buildUrl = (endpoint: string): string => {
+  if (/^https?:\/\//i.test(endpoint)) return endpoint;
+  return getFullUrl(endpoint);
+};
+
+const requestJson = async <T = any>(endpoint: string, method: HttpMethod, data?: any): Promise<T> => {
+  const token = getToken();
+  const headers: Record<string, string> = { ...API_CONFIG.DEFAULT_HEADERS };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const response = await fetch(buildUrl(endpoint), {
+    method,
+    headers,
+    body: data !== undefined ? JSON.stringify(data) : undefined
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+  const isJson = contentType.includes('application/json');
+  const payload = isJson ? await response.json() : await response.text();
+
+  if (!response.ok) {
+    const message = typeof payload === 'string' ? payload : (payload as any)?.error || (payload as any)?.message || 'Request failed';
+    throw new Error(message);
+  }
+
+  return payload as T;
+};
 
 export const api = {
-  get: async (endpoint: string) => {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`);
-    return response.json();
-  },
-  
-  post: async (endpoint: string, data: any) => {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-    return response.json();
-  },
-  
-  put: async (endpoint: string, data: any) => {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-    return response.json();
-  },
-  
-  delete: async (endpoint: string) => {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`);
-    return response.json();
-  },
-
-  // Generic request method that determines HTTP method based on data parameter
+  get: async (endpoint: string) => requestJson(endpoint, 'GET'),
+  post: async (endpoint: string, data: any) => requestJson(endpoint, 'POST', data),
+  put: async (endpoint: string, data: any) => requestJson(endpoint, 'PUT', data),
+  delete: async (endpoint: string) => requestJson(endpoint, 'DELETE'),
   request: async (endpoint: string, data?: any, method?: string) => {
-    const httpMethod = method || (data ? 'POST' : 'GET');
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: httpMethod,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: data ? JSON.stringify(data) : undefined,
-    });
-    return response.json();
-  },
+    const httpMethod = (method || (data ? 'POST' : 'GET')).toUpperCase() as HttpMethod;
+    return requestJson(endpoint, httpMethod, data);
+  }
 };

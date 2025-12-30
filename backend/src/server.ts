@@ -7,6 +7,7 @@ import path from 'path';
 import swaggerUi from 'swagger-ui-express';
 import { config } from './config';
 import { errorHandler } from './middleware/errorHandler';
+import { authenticateJWT } from './middleware/auth';
 import { apiLimiter } from './middleware/rateLimiter';
 import { connectDB, disconnectDB } from './config/db';
 import { startSchedulers } from './services/scheduler';
@@ -21,6 +22,7 @@ import tournamentsRouter from './routes/tournaments';
 import rankingsRouter from './routes/rankings';
 import rewardsRouter from './routes/rewards';
 import authRouter from './routes/auth';
+import newsRouter from './routes/news';
 
 const app = express();
 const PORT = typeof config.port === 'string' ? parseInt(config.port, 10) : config.port;
@@ -48,12 +50,13 @@ app.use((req, res, next) => {
 // API Routes
 app.use('/api/matches', matchesRouter);
 app.use('/api/teams', teamsRouter);
-app.use('/api/profile', profileRouter);
-app.use('/api/wallet', walletRouter);
+app.use('/api/profile', authenticateJWT, profileRouter);
+app.use('/api/wallet', authenticateJWT, walletRouter);
 app.use('/api/tournaments', tournamentsRouter);
 app.use('/api/rankings', rankingsRouter);
 app.use('/api/rewards', rewardsRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/news', newsRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -98,11 +101,12 @@ if (process.env.NODE_ENV === 'development') {
 // Routes
 app.use('/api/matches', matchesRouter);
 app.use('/api/teams', teamsRouter);
-app.use('/api/profile', profileRouter);
-app.use('/api/wallet', walletRouter);
+app.use('/api/profile', authenticateJWT, profileRouter);
+app.use('/api/wallet', authenticateJWT, walletRouter);
 app.use('/api/tournaments', tournamentsRouter);
 app.use('/api', rankingsRouter);
 app.use('/api/rewards', rewardsRouter);
+app.use('/api/news', newsRouter);
 // Queue control (minimal): enqueue bulk registration
 app.post('/api/tasks/bulk-register', async (req, res) => {
   try {

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
+import { api } from '../../services/api';
 
 const NewsContainer = styled.div`
   max-width: 800px;
@@ -45,32 +46,42 @@ const SocialLink = styled.a`
   }
 `;
 
-const NewsPage: React.FC = () => {
-  const newsItems = [
-    {
-      id: 1,
-      title: "WAY ESPORTS Announces New Tournament Series",
-      content: "Join us for the biggest tournament series of the year with $50,000 in prizes!",
-      date: "2024-01-15"
-    },
-    {
-      id: 2,
-      title: "New Partnership with Global Gaming Brands",
-      content: "We're excited to announce partnerships with leading gaming companies to bring you exclusive content.",
-      date: "2024-01-14"
-    },
-    {
-      id: 3,
-      title: "Community Spotlight: Top Players of the Month",
-      content: "Meet the top performers who dominated the leaderboards this month!",
-      date: "2024-01-13"
-    }
-  ];
+ const NewsPage: React.FC = () => {
+  const [items, setItems] = useState<Array<{ id: string; title: string; content: string; createdAt?: string }>>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result: any = await api.get('/api/news');
+        const data: any[] = (result && result.data) || [];
+        setItems(
+          data.map((n: any) => ({
+            id: (n._id || n.id || '').toString(),
+            title: n.title || '',
+            content: n.summary || n.content || '',
+            createdAt: n.publishDate || n.createdAt
+          }))
+        );
+      } catch (e: any) {
+        setError(e?.message || 'Failed to load news');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, []);
 
   return (
     <NewsContainer>
       <NewsTitle>Latest News</NewsTitle>
-      {newsItems.map(item => (
+      {loading && <div style={{ color: '#cccccc' }}>Loading...</div>}
+      {error && <div style={{ color: '#ff4757' }}>{error}</div>}
+      {!loading && !error && items.map(item => (
         <NewsItem key={item.id}>
           <NewsItemTitle>{item.title}</NewsItemTitle>
           <NewsItemContent>{item.content}</NewsItemContent>

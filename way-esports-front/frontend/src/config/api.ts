@@ -55,21 +55,27 @@ export const API_CONFIG = {
 
 // Функция для получения URL API
 function getApiUrl(): string {
+  const normalize = (rawUrl: string): string => {
+    const trimmed = rawUrl.trim();
+    if (!trimmed) return '';
+    const noTrailingSlash = trimmed.replace(/\/+$/, '');
+    return noTrailingSlash.replace(/\/api$/i, '');
+  };
+
   // Проверяем различные способы получения переменных окружения
   if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+    return normalize(import.meta.env.VITE_API_URL);
   }
   
   if (typeof process !== 'undefined' && process.env?.REACT_APP_API_URL) {
-    return process.env.REACT_APP_API_URL;
+    return normalize(process.env.REACT_APP_API_URL);
   }
   
   if (typeof window !== 'undefined' && (window as any).__API_URL__) {
-    return (window as any).__API_URL__;
+    return normalize((window as any).__API_URL__);
   }
   
-  // Fallback на localhost
-  return 'http://localhost:3001';
+  return '';
 }
 
 // Функция для проверки доступности API

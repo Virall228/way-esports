@@ -4,6 +4,13 @@ import User from '../models/User';
 
 const JWT_EXPIRATION = '24h';
 
+const getBootstrapAdminTelegramId = (): number | null => {
+  const raw = process.env.BOOTSTRAP_ADMIN_TELEGRAM_ID;
+  if (!raw) return null;
+  const num = parseInt(raw, 10);
+  return Number.isFinite(num) ? num : null;
+};
+
 // Register endpoint
 export const register = async (req: Request, res: Response) => {
   try {
@@ -18,8 +25,15 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'telegramId must be a number' });
     }
 
+    const bootstrapAdminTelegramId = getBootstrapAdminTelegramId();
+    const shouldBeAdmin = bootstrapAdminTelegramId !== null && telegramIdNumber === bootstrapAdminTelegramId;
+
     const existingUser = await User.findOne({ telegramId: telegramIdNumber });
     if (existingUser) {
+      if (shouldBeAdmin && existingUser.role !== 'admin' && existingUser.role !== 'developer') {
+        existingUser.role = 'admin';
+        await existingUser.save();
+      }
       const token = jwt.sign(
         { userId: existingUser._id.toString(), telegramId: existingUser.telegramId, role: existingUser.role },
         process.env.JWT_SECRET || 'your_jwt_secret',
@@ -34,7 +48,7 @@ export const register = async (req: Request, res: Response) => {
       firstName,
       lastName,
       photoUrl,
-      role: 'user'
+      role: shouldBeAdmin ? 'admin' : 'user'
     }).save();
 
     const token = jwt.sign(

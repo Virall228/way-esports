@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { api } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Container = styled.div`
   padding: 20px;
@@ -238,6 +240,7 @@ interface NewsArticle {
 }
 
 const AdminPage: React.FC = () => {
+  const { isAuthenticated, isLoading: authLoading, login } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [users, setUsers] = useState<User[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -245,41 +248,206 @@ const AdminPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'user' | 'tournament' | 'news' | 'reward'>('user');
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [modalData, setModalData] = useState<any>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data - в реальном приложении это будет загружаться с сервера
+  const setField = (key: string, value: any) => {
+    setModalData((prev: any) => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
   useEffect(() => {
-    // Загрузка данных
-    setUsers([
-      { id: '1', username: 'player1', email: 'player1@example.com', role: 'user', status: 'active', createdAt: '2024-01-01' },
-      { id: '2', username: 'admin1', email: 'admin1@example.com', role: 'admin', status: 'active', createdAt: '2024-01-02' },
-    ]);
+    const load = async () => {
+      if (!isAuthenticated) return;
+      setLoading(true);
+      setError(null);
+      try {
+        await Promise.all([fetchUsers(), fetchTournaments(), fetchNews()]);
+      } catch (e: any) {
+        setError(e?.message || 'Failed to load admin data');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    setTournaments([
-      { id: '1', name: 'Valorant Championship', game: 'Valorant', status: 'active', participants: 16, prizePool: 10000 },
-      { id: '2', name: 'CS:GO Tournament', game: 'CS:GO', status: 'upcoming', participants: 8, prizePool: 5000 },
-    ]);
+    load();
+  }, [isAuthenticated]);
 
-    setNews([
-      { id: '1', title: 'New Tournament Announced', content: 'Exciting news about upcoming tournaments...', author: 'admin', status: 'published', createdAt: '2024-01-01' },
-    ]);
-  }, []);
+  const formatDate = (value: any) => {
+    try {
+      const d = value ? new Date(value) : new Date();
+      return d.toISOString().slice(0, 10);
+    } catch {
+      return '';
+    }
+  };
+
+  const fetchUsers = async () => {
+    const result: any[] = await api.get('/api/auth/users');
+    setUsers(
+      (result || []).map((u: any) => ({
+        id: (u._id || u.id || '').toString(),
+        username: u.username || '',
+        email: u.email || '',
+        role: u.role || 'user',
+        status: u.isBanned ? 'banned' : 'active',
+        createdAt: formatDate(u.createdAt)
+      }))
+    );
+  };
+
+  const fetchTournaments = async () => {
+    const result: any = await api.get('/api/tournaments');
+    const items: any[] = (result && (result.data || result.tournaments)) || [];
+    setTournaments(
+      items.map((t: any) => ({
+        id: (t.id || t._id || '').toString(),
+        name: t.name || t.title || '',
+        game: t.game || '',
+        status: t.status || 'upcoming',
+        participants: Number(t.participants ?? t.currentParticipants ?? 0),
+        prizePool: Number(t.prizePool ?? 0)
+      }))
+    );
+  };
+
+  const fetchNews = async () => {
+    const result: any = await api.get('/api/news/admin?status=all');
+    const items: any[] = (result && result.data) || [];
+    setNews(
+      items.map((n: any) => ({
+        id: (n._id || n.id || '').toString(),
+        title: n.title || '',
+        content: n.content || '',
+        author: n.author?.username || n.author || '',
+        status: n.status || 'draft',
+        createdAt: formatDate(n.createdAt)
+      }))
+    );
+  };
+
+  const buildInitialModalData = (type: 'user' | 'tournament' | 'news' | 'reward', item: any | null) => {
+    if (type === 'tournament') {
+      const now = new Date();
+      const start = item?.startDate ? new Date(item.startDate) : now;
+      const end = item?.endDate ? new Date(item.endDate) : new Date(now.getTime() + 2 * 60 * 60 * 1000);
+      return {
+        name: item?.name || '',
+        game: item?.game || 'CS2',
+        prizePool: item?.prizePool ?? 0,
+        maxTeams: item?.maxTeams ?? item?.maxParticipants ?? 16,
+        status: item?.status || 'upcoming',
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        format: item?.format || 'single_elimination',
+        type: item?.type || 'team',
+        description: item?.description || 'TBD',
+        rules: item?.rules || 'TBD'
+      };
+    }
+
+    if (type === 'news') {
+      const content = item?.content || '';
+      return {
+        title: item?.title || '',
+        content,
+        summary: item?.summary || content.slice(0, 200),
+        category: item?.category || 'announcement',
+        status: item?.status || 'draft'
+      };
+    }
+
+    return item || {};
+  };
 
   const handleCreate = (type: 'user' | 'tournament' | 'news' | 'reward') => {
     setModalType(type);
     setEditingItem(null);
+    setModalData(buildInitialModalData(type, null));
     setIsModalOpen(true);
   };
 
   const handleEdit = (item: any, type: 'user' | 'tournament' | 'news' | 'reward') => {
     setModalType(type);
     setEditingItem(item);
+    setModalData(buildInitialModalData(type, item));
     setIsModalOpen(true);
   };
 
   const handleDelete = async (id: string, type: 'user' | 'tournament' | 'news') => {
     if (window.confirm('Are you sure you want to delete this item?')) {
-      // API call to delete
-      console.log(`Deleting ${type} with id: ${id}`);
+      try {
+        setError(null);
+        if (type === 'tournament') {
+          await api.delete(`/api/tournaments/${id}`);
+          await fetchTournaments();
+          return;
+        }
+        if (type === 'news') {
+          await api.delete(`/api/news/${id}`);
+          await fetchNews();
+          return;
+        }
+        setError('User management actions are not implemented yet');
+      } catch (e: any) {
+        setError(e?.message || 'Delete failed');
+      }
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      setError(null);
+      if (modalType === 'tournament') {
+        const payload: any = {
+          name: modalData.name,
+          game: modalData.game,
+          prizePool: Number(modalData.prizePool || 0),
+          maxTeams: Number(modalData.maxTeams || 0),
+          status: modalData.status,
+          startDate: modalData.startDate,
+          endDate: modalData.endDate,
+          format: modalData.format,
+          type: modalData.type,
+          description: modalData.description,
+          rules: modalData.rules
+        };
+
+        if (editingItem?.id) {
+          await api.put(`/api/tournaments/${editingItem.id}`, payload);
+        } else {
+          await api.post('/api/tournaments', payload);
+        }
+        await fetchTournaments();
+        setIsModalOpen(false);
+        return;
+      }
+
+      if (modalType === 'news') {
+        const payload: any = {
+          title: modalData.title,
+          content: modalData.content,
+          summary: modalData.summary || (modalData.content || '').slice(0, 200),
+          category: modalData.category,
+          status: modalData.status
+        };
+
+        if (editingItem?.id) {
+          await api.put(`/api/news/${editingItem.id}`, payload);
+        } else {
+          await api.post('/api/news', payload);
+        }
+        await fetchNews();
+        setIsModalOpen(false);
+        return;
+      }
+
+      setIsModalOpen(false);
+    } catch (e: any) {
+      setError(e?.message || 'Save failed');
     }
   };
 
@@ -456,14 +624,29 @@ const AdminPage: React.FC = () => {
         case 'user':
           return (
             <Form>
-              <Input placeholder="Username" defaultValue={editingItem?.username || ''} />
-              <Input placeholder="Email" type="email" defaultValue={editingItem?.email || ''} />
-              <Select defaultValue={editingItem?.role || 'user'}>
+              <Input
+                placeholder="Username"
+                value={modalData.username || ''}
+                onChange={(e) => setField('username', e.target.value)}
+              />
+              <Input
+                placeholder="Email"
+                type="email"
+                value={modalData.email || ''}
+                onChange={(e) => setField('email', e.target.value)}
+              />
+              <Select
+                value={modalData.role || 'user'}
+                onChange={(e) => setField('role', e.target.value)}
+              >
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
                 <option value="moderator">Moderator</option>
               </Select>
-              <Select defaultValue={editingItem?.status || 'active'}>
+              <Select
+                value={modalData.status || 'active'}
+                onChange={(e) => setField('status', e.target.value)}
+              >
                 <option value="active">Active</option>
                 <option value="suspended">Suspended</option>
                 <option value="banned">Banned</option>
@@ -473,17 +656,37 @@ const AdminPage: React.FC = () => {
         case 'tournament':
           return (
             <Form>
-              <Input placeholder="Tournament Name" defaultValue={editingItem?.name || ''} />
-              <Select defaultValue={editingItem?.game || 'valorant'}>
-                <option value="valorant">Valorant</option>
-                <option value="csgo">CS:GO</option>
-                <option value="criticalops">Critical Ops</option>
+              <Input
+                placeholder="Tournament Name"
+                value={modalData.name || ''}
+                onChange={(e) => setField('name', e.target.value)}
+              />
+              <Select
+                value={modalData.game || 'CS2'}
+                onChange={(e) => setField('game', e.target.value)}
+              >
+                <option value="CS2">CS2</option>
+                <option value="Critical Ops">Critical Ops</option>
+                <option value="PUBG Mobile">PUBG Mobile</option>
               </Select>
-              <Input placeholder="Prize Pool" type="number" defaultValue={editingItem?.prizePool || ''} />
-              <Input placeholder="Max Participants" type="number" defaultValue={editingItem?.participants || ''} />
-              <Select defaultValue={editingItem?.status || 'upcoming'}>
+              <Input
+                placeholder="Prize Pool"
+                type="number"
+                value={modalData.prizePool ?? 0}
+                onChange={(e) => setField('prizePool', e.target.value)}
+              />
+              <Input
+                placeholder="Max Teams"
+                type="number"
+                value={modalData.maxTeams ?? 16}
+                onChange={(e) => setField('maxTeams', e.target.value)}
+              />
+              <Select
+                value={modalData.status || 'upcoming'}
+                onChange={(e) => setField('status', e.target.value)}
+              >
                 <option value="upcoming">Upcoming</option>
-                <option value="active">Active</option>
+                <option value="ongoing">Ongoing</option>
                 <option value="completed">Completed</option>
               </Select>
             </Form>
@@ -491,9 +694,20 @@ const AdminPage: React.FC = () => {
         case 'news':
           return (
             <Form>
-              <Input placeholder="Title" defaultValue={editingItem?.title || ''} />
-              <TextArea placeholder="Content" defaultValue={editingItem?.content || ''} />
-              <Select defaultValue={editingItem?.status || 'draft'}>
+              <Input
+                placeholder="Title"
+                value={modalData.title || ''}
+                onChange={(e) => setField('title', e.target.value)}
+              />
+              <TextArea
+                placeholder="Content"
+                value={modalData.content || ''}
+                onChange={(e) => setField('content', e.target.value)}
+              />
+              <Select
+                value={modalData.status || 'draft'}
+                onChange={(e) => setField('status', e.target.value)}
+              >
                 <option value="draft">Draft</option>
                 <option value="published">Published</option>
                 <option value="archived">Archived</option>
@@ -525,7 +739,7 @@ const AdminPage: React.FC = () => {
           {renderForm()}
           <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
             <ActionButton onClick={() => setIsModalOpen(false)}>Cancel</ActionButton>
-            <ActionButton $variant="success">Save</ActionButton>
+            <ActionButton $variant="success" onClick={handleSave}>Save</ActionButton>
           </div>
         </ModalContent>
       </Modal>
@@ -560,6 +774,27 @@ const AdminPage: React.FC = () => {
         </p>
       </Header>
 
+      {!isAuthenticated && (
+        <div style={{ marginBottom: '20px', color: '#cccccc' }}>
+          <p>Authentication required.</p>
+          <ActionButton onClick={() => login()}>
+            {authLoading ? 'Loading...' : 'Login (Telegram)'}
+          </ActionButton>
+        </div>
+      )}
+
+      {error && (
+        <div style={{ marginBottom: '16px', color: '#ff4757' }}>
+          {error}
+        </div>
+      )}
+
+      {loading && (
+        <div style={{ marginBottom: '16px', color: '#cccccc' }}>
+          Loading...
+        </div>
+      )}
+
       <TabContainer>
         <Tab $active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')}>
           Dashboard
@@ -582,7 +817,7 @@ const AdminPage: React.FC = () => {
       </TabContainer>
 
       <ContentArea>
-        {renderContent()}
+        {isAuthenticated ? renderContent() : null}
       </ContentArea>
 
       {renderModal()}

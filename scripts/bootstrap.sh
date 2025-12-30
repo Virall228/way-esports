@@ -19,7 +19,8 @@ NODE_ENV=production
 PORT=3000
 MONGODB_URI=mongodb+srv://vb917185_db_user:scam1516@cluster0.45hef5t.mongodb.net/?appName=Cluster0
 MONGO_INITDB_DATABASE=way-esports
-JWT_SECRET=$(openssl rand -hex 32 2>/dev/null || echo change-me)
+JWT_SECRET=kaknado
+BOOTSTRAP_ADMIN_TELEGRAM_ID=413698665
 VITE_API_URL=http://localhost/api
 WEB_URL=http://localhost/
 API_URL=http://localhost/api
