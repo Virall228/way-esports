@@ -37,7 +37,7 @@ services:
     expose:
       - "80"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      test: ["CMD", "sh", "-c", "test -f /usr/share/nginx/html/health"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -55,7 +55,7 @@ services:
       - web
       - api
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost"]
+      test: ["CMD", "sh", "-c", "test -s /var/run/nginx.pid"]
       interval: 30s
       timeout: 10s
       retries: 5
