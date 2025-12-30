@@ -13,6 +13,7 @@ services:
       - MONGODB_URI=${MONGODB_URI}
       - JWT_SECRET=${JWT_SECRET}
       - BOOTSTRAP_ADMIN_TELEGRAM_ID=${BOOTSTRAP_ADMIN_TELEGRAM_ID}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
     expose:
       - "3000"
     healthcheck:
@@ -23,6 +24,7 @@ services:
       start_period: 20s
     depends_on:
       - mongo
+      - redis
     restart: unless-stopped
 
   web:
@@ -67,6 +69,13 @@ services:
       - MONGO_INITDB_DATABASE=${MONGO_INITDB_DATABASE}
     volumes:
       - mongo_data:/data/db
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: way-esports-redis
+    expose:
+      - "6379"
     restart: unless-stopped
 
 volumes:

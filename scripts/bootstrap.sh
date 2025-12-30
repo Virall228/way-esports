@@ -21,6 +21,7 @@ MONGODB_URI=mongodb+srv://vb917185_db_user:scam1516@cluster0.45hef5t.mongodb.net
 MONGO_INITDB_DATABASE=way-esports
 JWT_SECRET=kaknado
 BOOTSTRAP_ADMIN_TELEGRAM_ID=413698665
+REDIS_URL=redis://redis:6379
 VITE_API_URL=/api
 WEB_URL=http://localhost/
 API_URL=http://localhost/api
