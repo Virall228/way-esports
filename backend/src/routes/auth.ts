@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
-import { register, login, getProfile, getAllUsers } from '../controllers/userController';
+import { register, login, getProfile, getAllUsers, authenticateTelegram } from '../controllers/userController';
 import { authenticateJWT, isAdmin } from '../middleware/auth';
+import { telegramAuthMiddleware } from '../middleware/telegramAuth';
 
 const router = Router();
 
@@ -25,6 +26,10 @@ router.post(
   ],
   login
 );
+
+// Telegram Mini App authentication endpoint
+// Accepts initData from Telegram WebApp and authenticates/registers user
+router.post('/telegram', telegramAuthMiddleware, authenticateTelegram);
 
 // Protected routes
 router.get('/profile', authenticateJWT, getProfile);

@@ -2,6 +2,7 @@ import express from 'express';
 import Tournament, { ITournament } from '../models/Tournament';
 import { checkSubscriptionStatus } from '../../middleware/subscriptionAuth';
 import { mockAuth } from '../../middleware/mockAuth';
+import { authenticateJWT, isAdmin } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -142,14 +143,44 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create tournament
-router.post('/', async (req, res) => {
+// Create tournament (admin only)
+router.post('/', authenticateJWT, isAdmin, async (req, res) => {
   try {
+    // Parse and validate dates
+    const startDate = req.body.startDate ? new Date(req.body.startDate) : new Date();
+    const endDate = req.body.endDate ? new Date(req.body.endDate) : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return res.status(400).json({ success: false, error: 'Invalid date format' });
+    }
+
+    if (endDate <= startDate) {
+      return res.status(400).json({ success: false, error: 'End date must be after start date' });
+    }
+
     const tournamentData: Partial<ITournament> = {
-      ...req.body
+      name: req.body.name,
+      game: req.body.game,
+      startDate: startDate,
+      endDate: endDate,
+      prizePool: Number(req.body.prizePool) || 0,
+      maxTeams: Number(req.body.maxTeams) || 16,
+      maxPlayers: req.body.maxPlayers ? Number(req.body.maxPlayers) : undefined,
+      status: req.body.status || 'upcoming',
+      format: req.body.format || 'single_elimination',
+      type: req.body.type || 'team',
+      description: req.body.description || '',
+      rules: req.body.rules || '',
+      registeredTeams: [],
+      registeredPlayers: [],
+      matches: [],
+      bracket: {
+        matches: []
+      }
     };
-    if (req.user?.id) {
-      tournamentData.createdBy = req.user.id as any;
+
+    if (req.user?._id) {
+      tournamentData.createdBy = req.user._id as any;
     }
 
     const tournament = new Tournament(tournamentData);
@@ -193,7 +224,7 @@ router.post('/', async (req, res) => {
 });
 
 // Bulk create tournaments (admin/import use)
-router.post('/batch', async (req, res) => {
+router.post('/batch', authenticateJWT, isAdmin, async (req, res) => {
   try {
     const items = Array.isArray(req.body) ? req.body : [];
     if (!items.length) {
@@ -202,8 +233,8 @@ router.post('/batch', async (req, res) => {
 
     const payload = items.map((item) => {
       const doc: any = { ...item };
-      if (req.user?.id && !doc.createdBy) {
-        doc.createdBy = req.user.id;
+      if (req.user?._id && !doc.createdBy) {
+        doc.createdBy = req.user._id;
       }
       return doc;
     });
@@ -409,8 +440,8 @@ router.post('/:id/join', mockAuth, checkSubscriptionStatus, async (req: any, res
   }
 });
 
-// Update tournament
-router.put('/:id', async (req, res) => {
+// Update tournament (admin only)
+router.put('/:id', authenticateJWT, isAdmin, async (req, res) => {
   try {
     const tournament = await Tournament.findById(req.params.id);
 
@@ -421,38 +452,82 @@ router.put('/:id', async (req, res) => {
       });
     }
 
-    if (req.user?.id && tournament.createdBy.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        error: 'Not authorized to update this tournament'
-      });
+    // Admin can update any tournament, but we still check if user exists
+    // Remove the authorization check for admins - they should be able to update any tournament
+    
+    // Update tournament fields
+    const updateData: any = {};
+    
+    // Only allow updating specific fields
+    const allowedFields = ['name', 'game', 'startDate', 'endDate', 'prizePool', 'maxTeams', 'maxPlayers', 
+                          'status', 'format', 'type', 'description', 'rules', 'isRegistrationOpen'];
+    
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        if (field === 'startDate' || field === 'endDate') {
+          const date = new Date(req.body[field]);
+          if (!isNaN(date.getTime())) {
+            updateData[field] = date;
+          }
+        } else if (field === 'prizePool' || field === 'maxTeams' || field === 'maxPlayers') {
+          updateData[field] = Number(req.body[field]);
+        } else {
+          updateData[field] = req.body[field];
+        }
+      }
+    });
+
+    // Validate dates if both are being updated
+    if (updateData.startDate && updateData.endDate) {
+      const startDate = new Date(updateData.startDate);
+      const endDate = new Date(updateData.endDate);
+      if (endDate <= startDate) {
+        return res.status(400).json({ success: false, error: 'End date must be after start date' });
+      }
     }
 
     const updatedTournament: any = await Tournament.findByIdAndUpdate(
       req.params.id,
-      req.body,
-      { new: true }
+      updateData,
+      { new: true, runValidators: true }
     );
 
     if (!updatedTournament) {
       return res.status(404).json({ success: false, error: 'Tournament not found' });
     }
 
-    // Transform response
+    // Reload tournament with populated data for complete response
+    const populatedTournament: any = await Tournament.findById(updatedTournament._id)
+      .populate('registeredTeams', 'name tag logo members')
+      .lean();
+
+    // Transform response for frontend compatibility
     const transformed: any = {
-      id: String(updatedTournament._id),
-      name: updatedTournament.name,
-      game: updatedTournament.game,
-      status: updatedTournament.status === 'ongoing' ? 'in_progress' : updatedTournament.status,
-      startDate: updatedTournament.startDate?.toISOString(),
-      endDate: updatedTournament.endDate?.toISOString(),
-      prizePool: updatedTournament.prizePool || 0,
-      maxTeams: updatedTournament.maxTeams || 0,
-      registeredTeams: updatedTournament.registeredTeams?.map((t: any) => t.toString()) || [],
-      format: updatedTournament.format,
-      type: updatedTournament.type,
-      description: updatedTournament.description || '',
-      rules: updatedTournament.rules || ''
+      id: String(populatedTournament._id),
+      name: populatedTournament.name,
+      title: populatedTournament.name,
+      game: populatedTournament.game,
+      status: populatedTournament.status === 'ongoing' ? 'in_progress' : populatedTournament.status,
+      startDate: populatedTournament.startDate?.toISOString() || new Date().toISOString(),
+      endDate: populatedTournament.endDate?.toISOString() || new Date().toISOString(),
+      prizePool: populatedTournament.prizePool || 0,
+      maxTeams: populatedTournament.maxTeams || 0,
+      maxParticipants: populatedTournament.maxTeams || 0,
+      registeredTeams: (populatedTournament.registeredTeams || []).map((team: any) => ({
+        id: team._id?.toString() || team.toString(),
+        name: team.name || '',
+        tag: team.tag || '',
+        logo: team.logo || '',
+        players: team.members?.map((m: any) => m.toString()) || []
+      })),
+      participants: populatedTournament.registeredTeams?.length || 0,
+      currentParticipants: populatedTournament.registeredTeams?.length || 0,
+      format: populatedTournament.format || 'single_elimination',
+      type: populatedTournament.type || 'team',
+      description: populatedTournament.description || '',
+      rules: populatedTournament.rules || '',
+      createdAt: populatedTournament.createdAt?.toISOString(),
+      updatedAt: populatedTournament.updatedAt?.toISOString()
     };
 
     res.json({
@@ -468,8 +543,8 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Delete tournament
-router.delete('/:id', async (req, res) => {
+// Delete tournament (admin only)
+router.delete('/:id', authenticateJWT, isAdmin, async (req, res) => {
   try {
     const tournament = await Tournament.findById(req.params.id);
 
@@ -480,12 +555,7 @@ router.delete('/:id', async (req, res) => {
       });
     }
 
-    if (req.user?.id && tournament.createdBy.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        error: 'Not authorized to delete this tournament'
-      });
-    }
+    // Admin can delete any tournament - no need to check ownership
 
     await Tournament.findByIdAndDelete(req.params.id);
 

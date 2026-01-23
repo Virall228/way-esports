@@ -81,6 +81,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async () => {
     setIsLoading(true);
     try {
+      // Try Telegram Mini App authentication first
+      if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+        const initData = window.Telegram.WebApp.initData;
+        
+        if (initData) {
+          // Use new Telegram authentication endpoint
+          try {
+            const result: any = await api.post('/api/auth/telegram', { initData }, true);
+            if (result?.success && result?.token && result?.user) {
+              setToken(result.token);
+              setUser(normalizeUser(result.user));
+              return;
+            }
+          } catch (telegramError) {
+            console.warn('Telegram auth failed, falling back to manual registration:', telegramError);
+          }
+        }
+      }
+
+      // Fallback to manual registration
       const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
 
       const fallbackTelegramIdRaw = !tgUser?.id ? window.prompt('Enter Telegram ID (numeric)') : null;

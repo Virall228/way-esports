@@ -28,11 +28,42 @@ const app = express();
 const PORT = typeof config.port === 'string' ? parseInt(config.port, 10) : config.port;
 const PORT_NUMBER = Number.isFinite(PORT) ? PORT : 3000;
 
-// Security middleware
-app.use(cors({
-  origin: config.cors.origin || '*',
-  credentials: true
-}));
+// Security middleware - CORS configuration for Telegram Mini App
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Allow requests with no origin (like mobile apps, Postman, or Telegram Mini App)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    const allowedOrigins = config.cors.origin === '*' 
+      ? true 
+      : config.cors.origin.split(',').map(o => o.trim());
+
+    // Allow all origins if configured as '*'
+    if (allowedOrigins === true) {
+      return callback(null, true);
+    }
+
+    // Check if origin is in allowed list
+    if (Array.isArray(allowedOrigins) && allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Always allow Telegram WebApp origins
+    if (origin.includes('telegram.org') || origin.includes('t.me')) {
+      return callback(null, true);
+    }
+
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Telegram-Data', 'X-Requested-With'],
+  exposedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
 
 // Rate limiting
 app.use(apiLimiter);
@@ -97,16 +128,6 @@ if (process.env.NODE_ENV === 'development') {
 } else {
   console.log('Production mode');
 }
-
-// Routes
-app.use('/api/matches', matchesRouter);
-app.use('/api/teams', teamsRouter);
-app.use('/api/profile', authenticateJWT, profileRouter);
-app.use('/api/wallet', authenticateJWT, walletRouter);
-app.use('/api/tournaments', tournamentsRouter);
-app.use('/api', rankingsRouter);
-app.use('/api/rewards', rewardsRouter);
-app.use('/api/news', newsRouter);
 // Queue control (minimal): enqueue bulk registration
 app.post('/api/tasks/bulk-register', async (req, res) => {
   try {

@@ -15,10 +15,18 @@ const buildUrl = (endpoint: string): string => {
   return getFullUrl(endpoint);
 };
 
-const requestJson = async <T = any>(endpoint: string, method: HttpMethod, data?: any): Promise<T> => {
+const requestJson = async <T = any>(endpoint: string, method: HttpMethod, data?: any, includeTelegramData = false): Promise<T> => {
   const token = getToken();
   const headers: Record<string, string> = { ...API_CONFIG.DEFAULT_HEADERS };
   if (token) headers.Authorization = `Bearer ${token}`;
+
+  // Add Telegram initData if available and requested
+  if (includeTelegramData && typeof window !== 'undefined' && window.Telegram?.WebApp) {
+    const initData = window.Telegram.WebApp.initData;
+    if (initData) {
+      headers['X-Telegram-Data'] = initData;
+    }
+  }
 
   const response = await fetch(buildUrl(endpoint), {
     method,
@@ -39,12 +47,12 @@ const requestJson = async <T = any>(endpoint: string, method: HttpMethod, data?:
 };
 
 export const api = {
-  get: async (endpoint: string) => requestJson(endpoint, 'GET'),
-  post: async (endpoint: string, data: any) => requestJson(endpoint, 'POST', data),
-  put: async (endpoint: string, data: any) => requestJson(endpoint, 'PUT', data),
-  delete: async (endpoint: string) => requestJson(endpoint, 'DELETE'),
-  request: async (endpoint: string, data?: any, method?: string) => {
+  get: async (endpoint: string, includeTelegramData = false) => requestJson(endpoint, 'GET', undefined, includeTelegramData),
+  post: async (endpoint: string, data: any, includeTelegramData = false) => requestJson(endpoint, 'POST', data, includeTelegramData),
+  put: async (endpoint: string, data: any, includeTelegramData = false) => requestJson(endpoint, 'PUT', data, includeTelegramData),
+  delete: async (endpoint: string, includeTelegramData = false) => requestJson(endpoint, 'DELETE', undefined, includeTelegramData),
+  request: async (endpoint: string, data?: any, method?: string, includeTelegramData = false) => {
     const httpMethod = (method || (data ? 'POST' : 'GET')).toUpperCase() as HttpMethod;
-    return requestJson(endpoint, httpMethod, data);
+    return requestJson(endpoint, httpMethod, data, includeTelegramData);
   }
 };

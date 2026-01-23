@@ -122,6 +122,85 @@ export const getProfile = async (req: Request, res: Response) => {
   }
 };
 
+// Telegram Mini App authentication
+// This endpoint uses validated Telegram initData from telegramAuthMiddleware
+export const authenticateTelegram = async (req: Request, res: Response) => {
+  try {
+    const telegramInitData = (req as any).telegramInitData;
+    const telegramUser = (req as any).telegramUser;
+
+    if (!telegramInitData || !telegramUser) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Telegram user data not found' 
+      });
+    }
+
+    const telegramId = telegramUser.id;
+    if (!telegramId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Telegram user ID not found' 
+      });
+    }
+
+    const bootstrapAdminTelegramId = getBootstrapAdminTelegramId();
+    const shouldBeAdmin = bootstrapAdminTelegramId !== null && telegramId === bootstrapAdminTelegramId;
+
+    // Find or create user
+    let user = await User.findOne({ telegramId });
+    
+    if (user) {
+      // Update user data from Telegram
+      user.username = telegramUser.username || user.username || `user_${telegramId}`;
+      user.firstName = telegramUser.first_name || user.firstName;
+      user.lastName = telegramUser.last_name || user.lastName;
+      user.photoUrl = telegramUser.photo_url || user.photoUrl;
+      
+      // Update admin role if needed
+      if (shouldBeAdmin && user.role !== 'admin' && user.role !== 'developer') {
+        user.role = 'admin';
+      }
+      
+      await user.save();
+    } else {
+      // Create new user
+      user = await new User({
+        telegramId,
+        username: telegramUser.username || `user_${telegramId}`,
+        firstName: telegramUser.first_name || 'User',
+        lastName: telegramUser.last_name,
+        photoUrl: telegramUser.photo_url,
+        role: shouldBeAdmin ? 'admin' : 'user'
+      });
+      await user.save();
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        userId: user._id.toString(), 
+        telegramId: user.telegramId, 
+        role: user.role 
+      },
+      process.env.JWT_SECRET || 'your_jwt_secret',
+      { expiresIn: JWT_EXPIRATION }
+    );
+
+    res.json({ 
+      success: true,
+      user: user.toObject(), 
+      token 
+    });
+  } catch (error) {
+    console.error('Telegram authentication error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Error authenticating with Telegram' 
+    });
+  }
+};
+
 // Admin only: Get all users
 export const getAllUsers = async (req: Request, res: Response) => {
   try {

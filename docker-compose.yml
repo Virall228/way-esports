@@ -12,7 +12,9 @@ services:
       - PORT=3000
       - MONGODB_URI=${MONGODB_URI}
       - JWT_SECRET=${JWT_SECRET}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - BOOTSTRAP_ADMIN_TELEGRAM_ID=${BOOTSTRAP_ADMIN_TELEGRAM_ID}
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
     expose:
       - "3000"
@@ -34,6 +36,8 @@ services:
       args:
         - VITE_API_URL=${VITE_API_URL:-/api}
     container_name: way-esports-web
+    environment:
+      - VITE_API_URL=${VITE_API_URL:-/api}
     expose:
       - "80"
     healthcheck:
