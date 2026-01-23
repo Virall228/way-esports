@@ -48,7 +48,7 @@ sudo systemctl reload nginx
 
 ```bash
 # Замените your-email@example.com на ваш реальный email!
-sudo certbot --nginx -d wayesports.duckdns.org --non-interactive --agree-tos --email your-email@example.com --redirect
+sudo certbot --nginx -d wayesports.duckdns.org --non-interactive --agree-tos --email vb917185@gmail.com --redirect
 ```
 
 ### 5. Проверка автообновления
