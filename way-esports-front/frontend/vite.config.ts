@@ -10,13 +10,15 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true
-      }
-    },
+    minify: 'esbuild', // Используем esbuild (быстрее и встроен в Vite, не требует дополнительных зависимостей)
+    // Если нужен terser, раскомментируйте и убедитесь что terser установлен в package.json
+    // minify: 'terser',
+    // terserOptions: {
+    //   compress: {
+    //     drop_console: true,
+    //     drop_debugger: true
+    //   }
+    // },
     rollupOptions: {
       output: {
         manualChunks: {
