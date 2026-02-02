@@ -174,10 +174,20 @@ export const GlobalStyles = `
     line-height: 1.5;
     overflow-x: hidden;
     min-height: 100vh;
+    min-height: 100dvh;
+    overscroll-behavior-y: none;
   }
 
   #root {
+    --sat: env(safe-area-inset-top);
+    --sar: env(safe-area-inset-right);
+    --sab: env(safe-area-inset-bottom);
+    --sal: env(safe-area-inset-left);
+    --app-height: 100vh;
+
     min-height: 100vh;
+    min-height: 100dvh;
+    min-height: var(--app-height);
     background: linear-gradient(135deg, 
       ${eslTheme.colors.bg.primary} 0%, 
       ${eslTheme.colors.bg.secondary} 100%);
