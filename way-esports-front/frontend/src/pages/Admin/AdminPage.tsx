@@ -198,6 +198,7 @@ const Modal = styled.div<{ $isOpen: boolean }>`
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: calc(16px + var(--sat, 0px)) calc(16px + var(--sar, 0px)) calc(16px + var(--sab, 0px)) calc(16px + var(--sal, 0px));
 `;
 
 const ModalContent = styled.div`
@@ -444,7 +445,7 @@ const AdminPage: React.FC = () => {
         content,
         summary: item?.summary || content.slice(0, 200),
         category: item?.category || 'announcement',
-        status: item?.status || 'draft'
+        status: item?.status || 'published'
       };
     }
 
@@ -490,14 +491,31 @@ const AdminPage: React.FC = () => {
     try {
       setError(null);
       if (modalType === 'tournament') {
+        const statusMap: Record<string, string> = {
+          in_progress: 'ongoing',
+          ongoing: 'ongoing',
+          upcoming: 'upcoming',
+          completed: 'completed'
+        };
+
+        const now = new Date();
+        const parsedStart = modalData.startDate ? new Date(modalData.startDate) : now;
+        const startDate = Number.isFinite(parsedStart.getTime()) ? parsedStart : now;
+        const parsedEnd = modalData.endDate
+          ? new Date(modalData.endDate)
+          : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+        const endDate = Number.isFinite(parsedEnd.getTime())
+          ? parsedEnd
+          : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+
         const payload: any = {
           name: modalData.name,
           game: modalData.game,
           prizePool: Number(modalData.prizePool || 0),
           maxTeams: Number(modalData.maxTeams || 0),
-          status: modalData.status,
-          startDate: modalData.startDate,
-          endDate: modalData.endDate,
+          status: statusMap[modalData.status] || modalData.status || 'upcoming',
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
           format: modalData.format,
           type: modalData.type,
           description: modalData.description,
@@ -522,6 +540,10 @@ const AdminPage: React.FC = () => {
           category: modalData.category,
           status: modalData.status
         };
+
+        if (payload.status === 'published') {
+          payload.publishDate = new Date().toISOString();
+        }
 
         if (editingItem?.id) {
           await api.put(`/api/news/${editingItem.id}`, payload);

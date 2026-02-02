@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import CreateTeamModal from '../../components/Teams/CreateTeamModal';
+import { api } from '../../services/api';
 
 const Container = styled.div`
   padding: 1rem;
@@ -303,57 +304,80 @@ interface Tournament {
   id: string;
   title: string;
   game: string;
-  status: 'live' | 'upcoming' | 'completed' | 'in_progress';
-  prizePool: string;
+  status: 'live' | 'upcoming' | 'completed';
+  prizePool: number;
   participants: number;
   maxParticipants: number;
   startDate: string;
+  endDate?: string;
   format: string;
 }
-
-const mockTournaments: Tournament[] = [
-  {
-    id: '1',
-    title: 'WAY Esports Championship 2024',
-    game: 'Valorant',
-    status: 'upcoming',
-    prizePool: '$10 000',
-    participants: 8,
-    maxParticipants: 16,
-    startDate: 'Feb 1, 2024, 07:00 PM',
-    format: 'Single Elimination'
-  },
-  {
-    id: '2',
-    title: 'Critical Ops Pro League',
-    game: 'Critical Ops',
-    status: 'live',
-    prizePool: '$5 000',
-    participants: 8,
-    maxParticipants: 8,
-    startDate: 'Jan 10, 2024, 07:00 PM',
-    format: 'Round Robin'
-  },
-  {
-    id: '3',
-    title: 'Valorant Solo Championship',
-    game: 'valorant',
-    status: 'upcoming',
-    prizePool: '$2 000',
-    participants: 18,
-    maxParticipants: 32,
-    startDate: 'Feb 20, 2024, 07:00 PM',
-    format: 'Single Elimination'
-  }
-];
 
 const TournamentsPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState('all');
   const [isCreateTeamModalOpen, setIsCreateTeamModalOpen] = useState(false);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
 
-  const filteredTournaments = mockTournaments.filter(tournament => 
-    activeFilter === 'all' || tournament.game.toLowerCase() === activeFilter
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res: any = await api.get('/api/tournaments');
+        const items: any[] = (res && (res.data || res.tournaments)) || [];
+
+        const mapped: Tournament[] = items.map((t: any) => {
+          const rawStatus = (t.status || '').toString();
+          const status: Tournament['status'] =
+            rawStatus === 'in_progress' || rawStatus === 'ongoing' || rawStatus === 'live'
+              ? 'live'
+              : rawStatus === 'completed'
+                ? 'completed'
+                : 'upcoming';
+
+          return {
+            id: (t.id || t._id || '').toString(),
+            title: t.title || t.name || '',
+            game: t.game || '',
+            status,
+            prizePool: Number(t.prizePool) || 0,
+            participants: Number(t.participants) || 0,
+            maxParticipants: Number(t.maxParticipants || t.maxTeams) || 0,
+            startDate: t.startDate || '',
+            endDate: t.endDate || '',
+            format: t.format || ''
+          };
+        });
+
+        if (!mounted) return;
+        setTournaments(mapped);
+      } catch (e: any) {
+        if (!mounted) return;
+        setError(e?.message || 'Failed to load tournaments');
+      } finally {
+        if (!mounted) return;
+        setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const filteredTournaments = tournaments.filter((tournament) =>
+    activeFilter === 'all'
+      ? true
+      : activeFilter === 'upcoming' || activeFilter === 'live' || activeFilter === 'completed'
+        ? tournament.status === activeFilter
+        : tournament.game.toLowerCase() === activeFilter
   );
 
   const getStatusText = (status: string) => {
@@ -438,7 +462,19 @@ const TournamentsPage: React.FC = () => {
         </FilterSelect>
       </FilterDropdowns>
 
-      {filteredTournaments.length > 0 ? (
+      {error && (
+        <EmptyState>
+          {error}
+        </EmptyState>
+      )}
+
+      {loading && !error && (
+        <EmptyState>
+          Loading...
+        </EmptyState>
+      )}
+
+      {!loading && !error && filteredTournaments.length > 0 ? (
         <TournamentsGrid>
           {filteredTournaments.map(tournament => (
             <TournamentCard key={tournament.id}>
@@ -451,7 +487,7 @@ const TournamentsPage: React.FC = () => {
               
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ff6b00' }}>{tournament.prizePool}</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ff6b00' }}>${tournament.prizePool.toLocaleString()}</div>
                   <div style={{ fontSize: '0.9rem', color: '#cccccc' }}>Prize Pool</div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
@@ -459,7 +495,7 @@ const TournamentsPage: React.FC = () => {
                   <div style={{ fontSize: '0.9rem', color: '#cccccc' }}>Teams</div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ffffff' }}>${tournament.id === '1' ? '100' : tournament.id === '2' ? '50' : '15'}</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ffffff' }}>—</div>
                   <div style={{ fontSize: '0.9rem', color: '#cccccc' }}>Entry Fee</div>
                 </div>
               </div>
@@ -470,8 +506,8 @@ const TournamentsPage: React.FC = () => {
               </div>
 
               <div style={{ fontSize: '0.85rem', color: '#cccccc', marginBottom: '20px' }}>
-                <div>Start: {tournament.startDate.split(',')[0]}</div>
-                <div>End: {tournament.startDate.split(',')[1]}</div>
+                <div>Start: {tournament.startDate ? new Date(tournament.startDate).toLocaleDateString() : '—'}</div>
+                <div>End: {tournament.endDate ? new Date(tournament.endDate).toLocaleDateString() : '—'}</div>
               </div>
 
               <div style={{ display: 'flex', gap: '10px' }}>
@@ -536,7 +572,8 @@ const TournamentsPage: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000
+          zIndex: 1000,
+          padding: 'calc(16px + var(--sat, 0px)) calc(16px + var(--sar, 0px)) calc(16px + var(--sab, 0px)) calc(16px + var(--sal, 0px))'
         }} onClick={() => setIsRulesModalOpen(false)}>
           <div style={{
             background: '#1a1a1a',
@@ -544,7 +581,9 @@ const TournamentsPage: React.FC = () => {
             padding: '30px',
             width: '90%',
             maxWidth: '600px',
-            position: 'relative'
+            position: 'relative',
+            maxHeight: 'calc(var(--app-height, 100dvh) - 32px - var(--sat, 0px) - var(--sab, 0px))',
+            overflowY: 'auto'
           }} onClick={(e) => e.stopPropagation()}>
             <button 
               onClick={() => setIsRulesModalOpen(false)}

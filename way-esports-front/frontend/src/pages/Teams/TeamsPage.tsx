@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import CreateTeamModal from '../../components/Teams/CreateTeamModal';
+import { api } from '../../services/api';
 
 const Container = styled.div`
   padding: 1rem;
@@ -357,51 +358,81 @@ interface Team {
   isOwner?: boolean;
 }
 
-const mockTeams: Team[] = [
-  {
-    id: '1',
-    name: 'WAY Warriors',
-    tag: '#WAY',
-    game: 'Valorant',
-    description: 'Elite Valorant team representing WAY Esports',
-    members: [
-      { name: 'Captain (C)', role: 'captain' },
-      { name: 'Player1', role: 'player' },
-      { name: 'Player2', role: 'player' },
-      { name: 'Player3', role: 'player' }
-    ],
-    tournaments: 15,
-    wins: 12,
-    winRate: 80,
-    isOwner: true
-  },
-  {
-    id: '2',
-    name: 'Critical Strike',
-    tag: '#CS',
-    game: 'Critical Ops',
-    description: 'Professional Critical Ops team',
-    members: [
-      { name: 'Leader (C)', role: 'captain' },
-      { name: 'Sniper', role: 'player' },
-      { name: 'Rusher', role: 'player' },
-      { name: 'Support', role: 'player' },
-      { name: 'Flex', role: 'player' }
-    ],
-    tournaments: 8,
-    wins: 6,
-    winRate: 75
-  }
-];
-
 const TeamsPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState('teams');
   const [selectedGame, setSelectedGame] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const handleCreateTeam = (teamData: any) => {
-    console.log('Creating team:', teamData);
-    // Here you would typically send the data to your backend
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchTeams = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res: any = await api.get('/api/teams');
+      const items: any[] = (res && (res.data || res.teams)) || [];
+
+      const mapped: Team[] = items.map((t: any) => {
+        const captainId = t.captain?.id?.toString?.() || t.captain?.toString?.() || '';
+        const membersRaw: any[] = Array.isArray(t.members) ? t.members : [];
+
+        const members: Array<{ name: string; role: 'captain' | 'player' }> = membersRaw.map((m: any) => {
+          const id = (m?.id || m?._id || '').toString();
+          const label = (m?.username || m?.firstName || m?.lastName || id || 'Member').toString();
+          const role: 'captain' | 'player' = captainId && id === captainId ? 'captain' : 'player';
+          return { name: label, role };
+        });
+
+        if (t.captain && captainId && !members.some((m: any) => m.role === 'captain')) {
+          const captainName = (t.captain.username || t.captain.firstName || t.captain.lastName || 'Captain').toString();
+          members.unshift({ name: captainName, role: 'captain' });
+        }
+
+        return {
+          id: (t.id || t._id || '').toString(),
+          name: t.name || '',
+          tag: t.tag || '',
+          game: t.game || '',
+          description: t.description || '',
+          members,
+          tournaments: Number(t.tournaments) || 0,
+          wins: Number(t.stats?.wins) || Number(t.wins) || 0,
+          winRate: Number(t.stats?.winRate) || Number(t.winRate) || 0,
+          isOwner: false
+        };
+      });
+
+      setTeams(mapped);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load teams');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTeams();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleCreateTeam = async (teamData: any) => {
+    try {
+      setError(null);
+      await api.post('/api/teams', {
+        name: teamData?.name,
+        tag: teamData?.tag,
+        game: teamData?.game,
+        description: teamData?.description,
+        isPrivate: Boolean(teamData?.isPrivate),
+        requiresApproval: Boolean(teamData?.requiresApproval)
+      });
+      await fetchTeams();
+    } catch (e: any) {
+      setError(e?.message || 'Failed to create team');
+    }
   };
 
   const handleJoinTeam = (teamId: string) => {
@@ -466,8 +497,24 @@ const TeamsPage: React.FC = () => {
       </FilterSection>
 
       {activeFilter === 'teams' && (
-        <TeamsGrid>
-          {mockTeams.map(team => (
+        <>
+          {error && (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#e57373' }}>
+              {error}
+            </div>
+          )}
+
+          {loading && !error && (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#cccccc' }}>
+              Loading...
+            </div>
+          )}
+
+          {!loading && !error && (
+            <TeamsGrid>
+              {teams
+                .filter((team) => selectedGame === 'all' ? true : team.game.toLowerCase().includes(selectedGame.replace('-', ' ')))
+                .map(team => (
             <TeamCard key={team.id}>
               <TeamHeader>
                 <TeamAvatar>{team.tag.replace('#', '')}</TeamAvatar>
@@ -530,8 +577,10 @@ const TeamsPage: React.FC = () => {
                 )}
               </ActionButtons>
             </TeamCard>
-          ))}
-        </TeamsGrid>
+              ))}
+            </TeamsGrid>
+          )}
+        </>
       )}
 
       <CreateTeamModal

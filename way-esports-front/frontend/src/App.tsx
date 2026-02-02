@@ -194,6 +194,12 @@ const MainContent = styled.main`
   min-height: calc(var(--app-height, 100dvh) - 56px - var(--sab, 0px));
   padding-bottom: calc(72px + var(--sab, 0px));
 
+  @media (max-width: ${eslTheme.breakpoints.tablet}) {
+    padding-top: calc(1rem + var(--sat, 0px));
+    padding-left: calc(1rem + var(--sal, 0px));
+    padding-right: calc(1rem + var(--sar, 0px));
+  }
+
   @media (min-width: ${eslTheme.breakpoints.tablet}) {
     padding-bottom: 1.5rem;
     min-height: calc(100vh - 120px);
