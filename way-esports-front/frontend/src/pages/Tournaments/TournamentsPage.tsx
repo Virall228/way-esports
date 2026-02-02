@@ -3,22 +3,48 @@ import styled from 'styled-components';
 import CreateTeamModal from '../../components/Teams/CreateTeamModal';
 
 const Container = styled.div`
-  padding: 40px;
+  padding: 1rem;
   max-width: 1400px;
   margin: 0 auto;
   color: #ffffff;
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    padding: 1.5rem;
+  }
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
+    padding: 2.5rem;
+  }
 `;
 
 const Header = styled.div`
   background: #2a2a2a;
   border: 1px solid ${({ theme }) => theme.colors.border.medium};
   border-radius: 16px;
-  padding: 40px;
-  margin-bottom: 40px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
   position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 1rem;
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.desktop}) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
+    padding: 2.5rem;
+    margin-bottom: 2.5rem;
+    flex-direction: row;
+    align-items: center;
+  }
 `;
 
 const HeaderContent = styled.div`
@@ -41,7 +67,7 @@ const RulesButton = styled.button`
   background: rgba(255, 255, 255, 0.1);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.3);
-  padding: 12px 24px;
+  padding: 0.75rem 1.25rem;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
@@ -49,10 +75,14 @@ const RulesButton = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 44px;
+  justify-content: center;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
   }
 `;
 
@@ -60,7 +90,7 @@ const FilterSection = styled.div`
   display: flex;
   justify-content: center;
   gap: 10px;
-  margin-bottom: 30px;
+  margin-bottom: 1.5rem;
   flex-wrap: wrap;
 `;
 
@@ -69,6 +99,7 @@ const FilterTabs = styled.div`
   gap: 10px;
   margin-bottom: 20px;
   justify-content: center;
+  flex-wrap: wrap;
 `;
 
 const FilterTab = styled.button<{ $active: boolean }>`
@@ -76,16 +107,20 @@ const FilterTab = styled.button<{ $active: boolean }>`
     $active ? '#ff4757' : 'transparent'};
   color: ${({ $active }) => $active ? '#ffffff' : '#cccccc'};
   border: 1px solid ${({ $active, theme }) => $active ? theme.colors.border.strong : 'rgba(255, 255, 255, 0.2)'};
-  padding: 12px 24px;
+  padding: 0.75rem 1.25rem;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  min-height: 44px;
+  white-space: nowrap;
 
-  &:hover {
-    background: ${({ $active }) => 
-    $active ? 'rgba(255,255,255,0.12)' : 'rgba(255, 255, 255, 0.06)'};
-    transform: translateY(-2px);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: ${({ $active }) => 
+      $active ? 'rgba(255,255,255,0.12)' : 'rgba(255, 255, 255, 0.06)'};
+      transform: translateY(-2px);
+    }
   }
 `;
 
@@ -93,7 +128,10 @@ const FilterDropdowns = styled.div`
   display: flex;
   gap: 15px;
   justify-content: center;
-  margin-bottom: 30px;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  width: 100%;
 `;
 
 const FilterSelect = styled.select`
@@ -104,7 +142,14 @@ const FilterSelect = styled.select`
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
-  min-width: 150px;
+  min-height: 44px;
+  width: 100%;
+  max-width: 420px;
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    width: auto;
+    min-width: 180px;
+  }
 
   &:focus {
     outline: none;
@@ -119,9 +164,23 @@ const FilterSelect = styled.select`
 
 const TournamentsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 25px;
-  margin-bottom: 40px;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 2rem;
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+  }
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.wide}) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 `;
 
 const TournamentCard = styled.div`
@@ -133,10 +192,12 @@ const TournamentCard = styled.div`
   position: relative;
   overflow: hidden;
 
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
-    border-color: ${({ theme }) => theme.colors.border.medium};
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+      border-color: ${({ theme }) => theme.colors.border.medium};
+    }
   }
 
   &::before {
@@ -217,15 +278,18 @@ const JoinButton = styled.button`
   background: linear-gradient(135deg, ${({ theme }) => theme.colors.gray[700]}, ${({ theme }) => theme.colors.gray[900]});
   color: white;
   border: none;
-  padding: 12px;
+  padding: 0.75rem;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  min-height: 44px;
 
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(255, 107, 0, 0.4);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(255, 107, 0, 0.4);
+    }
   }
 `;
 

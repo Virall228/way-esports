@@ -147,9 +147,9 @@ export const eslTheme = {
   
   breakpoints: {
     mobile: '320px',
-    tablet: '768px',
-    desktop: '1024px',
-    wide: '1440px',
+    tablet: '481px',
+    desktop: '1025px',
+    wide: '1441px',
   },
 };
 
@@ -160,12 +160,20 @@ export const GlobalStyles = `
     box-sizing: border-box;
   }
 
+  html {
+    font-size: 16px;
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
   body {
     font-family: ${eslTheme.fonts.primary};
     background-color: ${eslTheme.colors.bg.primary};
     color: ${eslTheme.colors.text.primary};
     line-height: 1.5;
     overflow-x: hidden;
+    min-height: 100vh;
   }
 
   #root {
@@ -173,6 +181,26 @@ export const GlobalStyles = `
     background: linear-gradient(135deg, 
       ${eslTheme.colors.bg.primary} 0%, 
       ${eslTheme.colors.bg.secondary} 100%);
+  }
+
+  img, svg, video, canvas {
+    max-width: 100%;
+    height: auto;
+  }
+
+  h1 {
+    font-size: clamp(1.5rem, 4vw, 2.75rem);
+    line-height: 1.1;
+  }
+
+  h2 {
+    font-size: clamp(1.25rem, 3vw, 2rem);
+    line-height: 1.15;
+  }
+
+  h3 {
+    font-size: clamp(1.125rem, 2.2vw, 1.5rem);
+    line-height: 1.2;
   }
 
   /* Scrollbar styling */
@@ -212,12 +240,28 @@ export const GlobalStyles = `
     border: none;
     background: none;
     color: inherit;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
 
   /* Link reset */
   a {
     color: inherit;
     text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    a:hover {
+      color: ${eslTheme.colors.text.primary};
+    }
+  }
+
+  @media (hover: none) and (pointer: coarse) {
+    a:active {
+      color: ${eslTheme.colors.text.primary};
+    }
   }
 
   /* Input reset */

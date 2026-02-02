@@ -3,18 +3,36 @@ import styled from 'styled-components';
 import CreateTeamModal from '../../components/Teams/CreateTeamModal';
 
 const Container = styled.div`
-  padding: 40px;
+  padding: 1rem;
   max-width: 1400px;
   margin: 0 auto;
   color: #ffffff;
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    padding: 1.5rem;
+  }
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
+    padding: 2.5rem;
+  }
 `;
 
 const Header = styled.div`
   background: ${({ theme }) => theme.colors.bg.secondary};
   border-radius: 16px;
-  padding: 40px;
-  margin-bottom: 40px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
   position: relative;
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
+    padding: 2.5rem;
+    margin-bottom: 2.5rem;
+  }
 `;
 
 const HeaderContent = styled.div`
@@ -39,18 +57,27 @@ const CreateTeamButton = styled.button`
   background: ${({ theme }) => theme.colors.gray[800]};
   color: ${({ theme }) => theme.colors.white};
   border: none;
-  padding: 15px 30px;
+  padding: 0.75rem 1.25rem;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   text-transform: uppercase;
   font-size: 1rem;
+  min-height: 44px;
+  width: 100%;
+  max-width: 420px;
 
-  &:hover {
-    background: ${({ theme }) => theme.colors.gray[700]};
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    width: auto;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: ${({ theme }) => theme.colors.gray[700]};
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    }
   }
 `;
 
@@ -58,27 +85,38 @@ const FilterSection = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 40px;
+  margin-bottom: 1.5rem;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
+    flex-wrap: nowrap;
+  }
 `;
 
 const FilterTabs = styled.div`
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
 `;
 
 const FilterTab = styled.button<{ $active: boolean }>`
   background: ${({ $active, theme }) => $active ? theme.colors.gray[800] : 'transparent'};
   color: ${({ $active, theme }) => $active ? theme.colors.white : theme.colors.text.secondary};
   border: 1px solid ${({ $active, theme }) => $active ? theme.colors.border.strong : 'rgba(255, 255, 255, 0.2)'};
-  padding: 12px 24px;
+  padding: 0.75rem 1.25rem;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  min-height: 44px;
+  white-space: nowrap;
 
-  &:hover {
-    background: ${({ $active, theme }) => $active ? theme.colors.gray[700] : 'rgba(255, 255, 255, 0.1)'};
-    transform: translateY(-2px);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: ${({ $active, theme }) => $active ? theme.colors.gray[700] : 'rgba(255, 255, 255, 0.1)'};
+      transform: translateY(-2px);
+    }
   }
 `;
 
@@ -90,7 +128,14 @@ const FilterDropdown = styled.select`
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
-  min-width: 150px;
+  min-height: 44px;
+  width: 100%;
+  max-width: 420px;
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    width: auto;
+    min-width: 180px;
+  }
 
   &:focus { outline: none; border-color: ${({ theme }) => theme.colors.border.strong}; }
 
@@ -102,9 +147,23 @@ const FilterDropdown = styled.select`
 
 const TeamsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: 25px;
-  margin-bottom: 40px;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 2rem;
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+  }
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.wide}) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 `;
 
 const TeamCard = styled.div`
@@ -116,10 +175,12 @@ const TeamCard = styled.div`
   position: relative;
   overflow: hidden;
 
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
-    border-color: ${({ theme }) => theme.colors.border.medium};
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+      border-color: ${({ theme }) => theme.colors.border.medium};
+    }
   }
 
   &::before {
@@ -231,24 +292,27 @@ const ActionButtons = styled.div`
 
 const ActionButton = styled.button<{ $variant: 'primary' | 'secondary' | 'danger' }>`
   flex: 1;
-  padding: 10px;
+  padding: 0.75rem;
   border-radius: 6px;
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.3s ease;
+  min-height: 44px;
   
   ${({ $variant }) => {
     switch ($variant) {
       case 'primary':
         return `
-          background: linear-gradient(135deg, ${'${({ theme }) => theme.colors.gray[700]}'}, ${'${({ theme }) => theme.colors.gray[900]}'});
+          background: linear-gradient(135deg, ${'${({ theme }) => theme.colors.gray[700]}'}, ${'${({ theme }) => theme.colors.gray[900]}' });
           color: white;
           border: none;
           
-          &:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+          @media (hover: hover) and (pointer: fine) {
+            &:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+            }
           }
         `;
       case 'secondary':
@@ -257,9 +321,11 @@ const ActionButton = styled.button<{ $variant: 'primary' | 'secondary' | 'danger
           color: #cccccc;
           border: 1px solid rgba(255, 255, 255, 0.2);
           
-          &:hover {
-            background: rgba(255, 255, 255, 0.2);
-            color: #ffffff;
+          @media (hover: hover) and (pointer: fine) {
+            &:hover {
+              background: rgba(255, 255, 255, 0.2);
+              color: #ffffff;
+            }
           }
         `;
       case 'danger':
@@ -268,8 +334,10 @@ const ActionButton = styled.button<{ $variant: 'primary' | 'secondary' | 'danger
           color: #F44336;
           border: 1px solid rgba(244, 67, 54, 0.25);
           
-          &:hover {
-            background: rgba(244, 67, 54, 0.15);
+          @media (hover: hover) and (pointer: fine) {
+            &:hover {
+              background: rgba(244, 67, 54, 0.15);
+            }
           }
         `;
     }

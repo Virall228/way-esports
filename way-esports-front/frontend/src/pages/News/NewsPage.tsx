@@ -3,22 +3,44 @@ import styled from 'styled-components';
 import { api } from '../../services/api';
 
 const NewsContainer = styled.div`
-  max-width: 800px;
+  width: min(100% - 2rem, 800px);
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem 0;
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    width: min(100% - 3rem, 900px);
+    padding: 1.5rem 0;
+  }
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
+    width: min(100% - 4rem, 960px);
+    padding: 2rem 0;
+  }
 `;
 
 const NewsTitle = styled.h1`
   color: #ffffff;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    margin-bottom: 1.75rem;
+  }
 `;
 
 const NewsItem = styled.div`
   background: #1a1a1a;
-  padding: 1.5rem;
+  padding: 1rem;
   border-radius: 8px;
   margin-bottom: 1rem;
   border: 1px solid #333;
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    padding: 1.25rem;
+  }
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
+    padding: 1.5rem;
+  }
 `;
 
 const NewsItemTitle = styled.h2`
@@ -35,14 +57,22 @@ const SocialLinks = styled.div`
   display: flex;
   gap: 1rem;
   margin-top: 1rem;
+  flex-wrap: wrap;
 `;
 
 const SocialLink = styled.a`
   color: #007bff;
   text-decoration: none;
   font-size: 0.9rem;
-  &:hover {
-    text-decoration: underline;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      text-decoration: underline;
+    }
   }
 `;
 

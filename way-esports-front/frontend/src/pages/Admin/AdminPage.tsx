@@ -4,23 +4,41 @@ import { api } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Container = styled.div`
-  padding: 20px;
+  padding: 1rem;
   max-width: 1400px;
   margin: 0 auto;
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    padding: 1.5rem;
+  }
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
+    padding: 2rem;
+  }
 `;
 
 const Header = styled.div`
   background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
   border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 24px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
   border: 2px solid #ff6b00;
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
+    padding: 1.75rem;
+    margin-bottom: 1.75rem;
+  }
 `;
 
 const Title = styled.h1`
   color: #ffffff;
   margin: 0;
-  font-size: 32px;
+  font-size: clamp(1.5rem, 4vw, 2rem);
   background: linear-gradient(135deg, #ff6b00, #ffd700);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -30,8 +48,12 @@ const Title = styled.h1`
 const TabContainer = styled.div`
   display: flex;
   gap: 8px;
-  margin-bottom: 24px;
+  margin-bottom: 1.25rem;
   flex-wrap: wrap;
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    margin-bottom: 1.5rem;
+  }
 `;
 
 const Tab = styled.button<{ $active: boolean }>`
@@ -39,26 +61,38 @@ const Tab = styled.button<{ $active: boolean }>`
     $active ? 'linear-gradient(135deg, #ff6b00, #ff8533)' : 'rgba(42, 42, 42, 0.8)'};
   color: ${({ $active }) => $active ? '#000000' : '#ffffff'};
   border: 1px solid ${({ $active }) => $active ? '#ff6b00' : 'rgba(255, 107, 0, 0.3)'};
-  padding: 12px 24px;
+  padding: 0.75rem 1.25rem;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
+  min-height: 44px;
+  white-space: nowrap;
 
-  &:hover {
-    background: ${({ $active }) => 
-      $active ? 'linear-gradient(135deg, #ff8533, #ff9f66)' : 'rgba(255, 107, 0, 0.1)'};
-    transform: translateY(-2px);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: ${({ $active }) => 
+        $active ? 'linear-gradient(135deg, #ff8533, #ff9f66)' : 'rgba(255, 107, 0, 0.1)'};
+      transform: translateY(-2px);
+    }
   }
 `;
 
 const ContentArea = styled.div`
   background: rgba(42, 42, 42, 0.9);
   border-radius: 12px;
-  padding: 24px;
+  padding: 1rem;
   min-height: 600px;
   backdrop-filter: blur(10px);
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    padding: 1.25rem;
+  }
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
+    padding: 1.5rem;
+  }
 `;
 
 const StatsGrid = styled.div`
@@ -94,6 +128,12 @@ const Table = styled.table`
   margin-top: 20px;
 `;
 
+const TableWrap = styled.div`
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+`;
+
 const Th = styled.th`
   background: rgba(255, 107, 0, 0.1);
   color: #ffffff;
@@ -108,6 +148,13 @@ const Td = styled.td`
   color: #ffffff;
 `;
 
+const ActionsCell = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
 const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' | 'success' }>`
   background: ${({ $variant }) => 
     $variant === 'danger' ? 'linear-gradient(135deg, #ff4757, #ff6b7a)' :
@@ -115,16 +162,28 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' | 'success'
     'linear-gradient(135deg, #ff6b00, #ff8533)'};
   color: #ffffff;
   border: none;
-  padding: 8px 16px;
+  padding: 0.5rem 1rem;
   border-radius: 6px;
   cursor: pointer;
   font-size: 12px;
-  margin-right: 8px;
+  margin-right: 0.5rem;
+  margin-bottom: 0.5rem;
   transition: all 0.3s ease;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
 
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    min-height: 40px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
+    }
   }
 `;
 
@@ -144,12 +203,20 @@ const Modal = styled.div<{ $isOpen: boolean }>`
 const ModalContent = styled.div`
   background: linear-gradient(145deg, rgba(42, 42, 42, 0.95), rgba(26, 26, 26, 0.95));
   border-radius: 16px;
-  padding: 32px;
-  max-width: 600px;
-  width: 90%;
-  max-height: 80vh;
+  padding: 1rem;
+  width: min(92vw, 600px);
+  max-height: 86vh;
   overflow-y: auto;
   border: 2px solid #ff6b00;
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    padding: 1.5rem;
+    max-height: 80vh;
+  }
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
+    padding: 2rem;
+  }
 `;
 
 const Form = styled.form`
@@ -165,6 +232,7 @@ const Input = styled.input`
   border-radius: 8px;
   color: #ffffff;
   font-size: 14px;
+  min-height: 44px;
 
   &:focus {
     outline: none;
@@ -180,7 +248,7 @@ const TextArea = styled.textarea`
   border-radius: 8px;
   color: #ffffff;
   font-size: 14px;
-  min-height: 120px;
+  min-height: 160px;
   resize: vertical;
 
   &:focus {
@@ -197,6 +265,7 @@ const Select = styled.select`
   border-radius: 8px;
   color: #ffffff;
   font-size: 14px;
+  min-height: 44px;
 
   &:focus {
     outline: none;
@@ -238,6 +307,25 @@ interface NewsArticle {
   status: string;
   createdAt: string;
 }
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+
+  & > button {
+    width: 100%;
+  }
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    flex-wrap: nowrap;
+
+    & > button {
+      width: auto;
+    }
+  }
+`;
 
 const AdminPage: React.FC = () => {
   const { isAuthenticated, isLoading: authLoading, login } = useAuth();
@@ -483,110 +571,122 @@ const AdminPage: React.FC = () => {
 
   const renderUsers = () => (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
         <h3>User Management</h3>
         <ActionButton onClick={() => handleCreate('user')}>Add User</ActionButton>
       </div>
       
-      <Table>
-        <thead>
-          <tr>
-            <Th>Username</Th>
-            <Th>Email</Th>
-            <Th>Role</Th>
-            <Th>Status</Th>
-            <Th>Created</Th>
-            <Th>Actions</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map(user => (
-            <tr key={user.id}>
-              <Td>{user.username}</Td>
-              <Td>{user.email}</Td>
-              <Td>{user.role}</Td>
-              <Td>{user.status}</Td>
-              <Td>{user.createdAt}</Td>
-              <Td>
-                <ActionButton onClick={() => handleEdit(user, 'user')}>Edit</ActionButton>
-                <ActionButton $variant="danger" onClick={() => handleDelete(user.id, 'user')}>Delete</ActionButton>
-              </Td>
+      <TableWrap>
+        <Table>
+          <thead>
+            <tr>
+              <Th>Username</Th>
+              <Th>Email</Th>
+              <Th>Role</Th>
+              <Th>Status</Th>
+              <Th>Created</Th>
+              <Th>Actions</Th>
             </tr>
-          ))}
-        </tbody>
-      </Table>
+          </thead>
+          <tbody>
+            {users.map(user => (
+              <tr key={user.id}>
+                <Td>{user.username}</Td>
+                <Td>{user.email}</Td>
+                <Td>{user.role}</Td>
+                <Td>{user.status}</Td>
+                <Td>{user.createdAt}</Td>
+                <Td>
+                  <ActionsCell>
+                    <ActionButton onClick={() => handleEdit(user, 'user')}>Edit</ActionButton>
+                    <ActionButton $variant="danger" onClick={() => handleDelete(user.id, 'user')}>Delete</ActionButton>
+                  </ActionsCell>
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </TableWrap>
     </div>
   );
 
   const renderTournaments = () => (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
         <h3>Tournament Management</h3>
         <ActionButton onClick={() => handleCreate('tournament')}>Create Tournament</ActionButton>
       </div>
       
-      <Table>
-        <thead>
-          <tr>
-            <Th>Name</Th>
-            <Th>Game</Th>
-            <Th>Status</Th>
-            <Th>Participants</Th>
-            <Th>Prize Pool</Th>
-            <Th>Actions</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {tournaments.map(tournament => (
-            <tr key={tournament.id}>
-              <Td>{tournament.name}</Td>
-              <Td>{tournament.game}</Td>
-              <Td>{tournament.status}</Td>
-              <Td>{tournament.participants}</Td>
-              <Td>${tournament.prizePool}</Td>
-              <Td>
-                <ActionButton onClick={() => handleEdit(tournament, 'tournament')}>Edit</ActionButton>
-                <ActionButton $variant="danger" onClick={() => handleDelete(tournament.id, 'tournament')}>Delete</ActionButton>
-              </Td>
+      <TableWrap>
+        <Table>
+          <thead>
+            <tr>
+              <Th>Name</Th>
+              <Th>Game</Th>
+              <Th>Status</Th>
+              <Th>Participants</Th>
+              <Th>Prize Pool</Th>
+              <Th>Actions</Th>
             </tr>
-          ))}
-        </tbody>
-      </Table>
+          </thead>
+          <tbody>
+            {tournaments.map(tournament => (
+              <tr key={tournament.id}>
+                <Td>{tournament.name}</Td>
+                <Td>{tournament.game}</Td>
+                <Td>{tournament.status}</Td>
+                <Td>{tournament.participants}</Td>
+                <Td>${tournament.prizePool}</Td>
+                <Td>
+                  <ActionsCell>
+                    <ActionButton onClick={() => handleEdit(tournament, 'tournament')}>Edit</ActionButton>
+                    <ActionButton $variant="danger" onClick={() => handleDelete(tournament.id, 'tournament')}>Delete</ActionButton>
+                  </ActionsCell>
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </TableWrap>
     </div>
   );
 
   const renderNews = () => (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
         <h3>News Management</h3>
         <ActionButton onClick={() => handleCreate('news')}>Create Article</ActionButton>
       </div>
       
-      <Table>
-        <thead>
-          <tr>
-            <Th>Title</Th>
-            <Th>Author</Th>
-            <Th>Status</Th>
-            <Th>Created</Th>
-            <Th>Actions</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {news.map(article => (
-            <tr key={article.id}>
-              <Td>{article.title}</Td>
-              <Td>{article.author}</Td>
-              <Td>{article.status}</Td>
-              <Td>{article.createdAt}</Td>
-              <Td>
-                <ActionButton onClick={() => handleEdit(article, 'news')}>Edit</ActionButton>
-                <ActionButton $variant="danger" onClick={() => handleDelete(article.id, 'news')}>Delete</ActionButton>
-              </Td>
+      <TableWrap>
+        <Table>
+          <thead>
+            <tr>
+              <Th>Title</Th>
+              <Th>Author</Th>
+              <Th>Status</Th>
+              <Th>Created</Th>
+              <Th>Actions</Th>
             </tr>
-          ))}
-        </tbody>
-      </Table>
+          </thead>
+          <tbody>
+            {news.map(article => (
+              <tr key={article.id}>
+                <Td>{article.title}</Td>
+                <Td>{article.author}</Td>
+                <Td>{article.status}</Td>
+                <Td>{article.createdAt}</Td>
+                <Td>
+                  <ActionsCell>
+                    <ActionButton onClick={() => handleEdit(article, 'news')}>Edit</ActionButton>
+                    <ActionButton $variant="danger" onClick={() => handleDelete(article.id, 'news')}>Delete</ActionButton>
+                  </ActionsCell>
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </TableWrap>
     </div>
   );
 
@@ -737,10 +837,10 @@ const AdminPage: React.FC = () => {
         <ModalContent onClick={(e) => e.stopPropagation()}>
           <h3>{editingItem ? 'Edit' : 'Create'} {modalType}</h3>
           {renderForm()}
-          <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+          <ModalActions>
             <ActionButton onClick={() => setIsModalOpen(false)}>Cancel</ActionButton>
             <ActionButton $variant="success" onClick={handleSave}>Save</ActionButton>
-          </div>
+          </ModalActions>
         </ModalContent>
       </Modal>
     );
