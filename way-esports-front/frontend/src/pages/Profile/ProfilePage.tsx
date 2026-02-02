@@ -91,16 +91,20 @@ const SubscriptionButton = styled.button`
   background: ${({ theme }) => theme.colors.gray[800]};
   color: white;
   border: none;
-  padding: 12px 24px;
+  padding: 8px 14px;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   text-transform: uppercase;
+  font-size: 12px;
+  min-height: 40px;
 
-  &:hover {
-    background: ${({ theme }) => theme.colors.gray[700]};
-    transform: translateY(-2px);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: ${({ theme }) => theme.colors.gray[700]};
+      transform: translateY(-2px);
+    }
   }
 `;
 
