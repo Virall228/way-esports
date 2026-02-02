@@ -39,8 +39,13 @@ const requestJson = async <T = any>(endpoint: string, method: HttpMethod, data?:
   const payload = isJson ? await response.json() : await response.text();
 
   if (!response.ok) {
-    const message = typeof payload === 'string' ? payload : (payload as any)?.error || (payload as any)?.message || 'Request failed';
-    throw new Error(message);
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : (payload as any)?.error || (payload as any)?.message || 'Request failed';
+
+    const details = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    throw new Error(`[${response.status}] ${message}${details ? ` | ${details}` : ''}`);
   }
 
   return payload as T;
