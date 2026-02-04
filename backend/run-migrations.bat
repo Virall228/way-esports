@@ -1,0 +1,9 @@
+@echo off
+echo Running database migrations...
+cd /d "c:\Users\gosha\OneDrive\Документы\GitHub\WAY-Esports\backend"
+echo Adding referral fields...
+node scripts/add-referral-fields.js
+echo Seeding terms and conditions...
+node scripts/seed-terms.js
+echo Migration complete!
+pause

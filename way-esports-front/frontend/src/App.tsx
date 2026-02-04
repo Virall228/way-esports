@@ -1,7 +1,9 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
-import styled, { ThemeProvider, createGlobalStyle } from 'styled-components';
-import { eslTheme, GlobalStyles } from './styles/esl-theme';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from 'styled-components';
+import { AuthProvider } from './contexts/AuthContext';
+import GlobalStyle from './styles/GlobalStyle';
+import theme from './styles/theme';
 
 // Import pages
 import Home from './pages/Home';
@@ -12,6 +14,9 @@ import Teams from './pages/Teams';
 import AdminPage from './pages/Admin/AdminPage';
 import TournamentDetailsPage from './pages/Tournaments/TournamentDetailsPage';
 import BillingPage from './pages/Billing/BillingPage';
+
+// Import components
+import TermsGuard from './components/Legal/TermsGuard';
 import { AppProvider } from './contexts/AppContext';
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -362,63 +367,64 @@ const App: React.FC = () => {
       <AuthProvider>
         <ThemeProvider theme={eslTheme}>
           <GlobalStyle />
-          <BrowserRouter>
-            <AppContainer>
-              <Header>
-                <Logo>WAY ESPORTS</Logo>
-                <BurgerButton type="button" onClick={() => setMobileMenuOpen(true)} aria-label="Open menu">
-                  ☰
-                </BurgerButton>
-                <Navigation>
-                  <Link to="/"><NavButton as="span">Home</NavButton></Link>
-                  <Link to="/tournaments"><NavButton as="span">Tournaments</NavButton></Link>
-                  <Link to="/teams"><NavButton as="span">Teams</NavButton></Link>
-                  <Link to="/news"><NavButton as="span">News</NavButton></Link>
-                  <Link to="/profile"><NavButton as="span">Profile</NavButton></Link>
-                </Navigation>
-              </Header>
+          <TermsGuard>
+            <BrowserRouter>
+              <AppContainer>
+                <Header>
+                  <Logo>WAY ESPORTS</Logo>
+                  <BurgerButton type="button" onClick={() => setMobileMenuOpen(true)} aria-label="Open menu">
+                    ☰
+                  </BurgerButton>
+                  <Navigation>
+                    <Link to="/"><NavButton as="span">Home</NavButton></Link>
+                    <Link to="/tournaments"><NavButton as="span">Tournaments</NavButton></Link>
+                    <Link to="/teams"><NavButton as="span">Teams</NavButton></Link>
+                    <Link to="/news"><NavButton as="span">News</NavButton></Link>
+                    <Link to="/profile"><NavButton as="span">Profile</NavButton></Link>
+                  </Navigation>
+                </Header>
 
-              <MobileMenuOverlay $open={mobileMenuOpen} onClick={closeMobileMenu}>
-                <MobileMenuPanel onClick={(e) => e.stopPropagation()}>
-                  <MobileMenuHeader>
-                    <MobileMenuTitle>Menu</MobileMenuTitle>
-                    <CloseButton type="button" onClick={closeMobileMenu} aria-label="Close menu">
-                      ✕
-                    </CloseButton>
-                  </MobileMenuHeader>
+                <MobileMenuOverlay $open={mobileMenuOpen} onClick={closeMobileMenu}>
+                  <MobileMenuPanel onClick={(e) => e.stopPropagation()}>
+                    <MobileMenuHeader>
+                      <MobileMenuTitle>Menu</MobileMenuTitle>
+                      <CloseButton type="button" onClick={closeMobileMenu} aria-label="Close menu">
+                        ✕
+                      </CloseButton>
+                    </MobileMenuHeader>
 
-                  <Link to="/" onClick={closeMobileMenu}><NavButton as="span">Home</NavButton></Link>
-                  <Link to="/tournaments" onClick={closeMobileMenu}><NavButton as="span">Tournaments</NavButton></Link>
-                  <Link to="/teams" onClick={closeMobileMenu}><NavButton as="span">Teams</NavButton></Link>
-                  <Link to="/news" onClick={closeMobileMenu}><NavButton as="span">News</NavButton></Link>
-                  <Link to="/profile" onClick={closeMobileMenu}><NavButton as="span">Profile</NavButton></Link>
-                  <Link to="/admin" onClick={closeMobileMenu}><NavButton as="span">Admin</NavButton></Link>
-                </MobileMenuPanel>
-              </MobileMenuOverlay>
-              
-              <MobileShell>
-                <MainContent>
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/tournaments" element={<Tournaments />} />
-                    <Route path="/tournaments/:id" element={<TournamentDetailsPage />} />
-                    <Route path="/teams" element={<Teams />} />
-                    <Route path="/news" element={<News />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/billing" element={<BillingPage />} />
-                    <Route path="/admin" element={<AdminPage />} />
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </Routes>
-                </MainContent>
-              </MobileShell>
-              
-              <Footer>
-                <p>© 2024 WAY ESPORTS. All rights reserved.</p>
-                <p>Powered by Professional Gaming Technology</p>
-              </Footer>
-            </AppContainer>
-          </BrowserRouter>
-        </ThemeProvider>
+                    <Link to="/" onClick={closeMobileMenu}><NavButton as="span">Home</NavButton></Link>
+                    <Link to="/tournaments" onClick={closeMobileMenu}><NavButton as="span">Tournaments</NavButton></Link>
+                    <Link to="/teams" onClick={closeMobileMenu}><NavButton as="span">Teams</NavButton></Link>
+                    <Link to="/news" onClick={closeMobileMenu}><NavButton as="span">News</NavButton></Link>
+                    <Link to="/profile" onClick={closeMobileMenu}><NavButton as="span">Profile</NavButton></Link>
+                    <Link to="/admin" onClick={closeMobileMenu}><NavButton as="span">Admin</NavButton></Link>
+                  </MobileMenuPanel>
+                </MobileMenuOverlay>
+                
+                <MobileShell>
+                  <MainContent>
+                    <Routes>
+                      <Route path="/" element={<Home />} />
+                      <Route path="/tournaments" element={<Tournaments />} />
+                      <Route path="/tournaments/:id" element={<TournamentDetailsPage />} />
+                      <Route path="/teams" element={<Teams />} />
+                      <Route path="/news" element={<News />} />
+                      <Route path="/profile" element={<Profile />} />
+                      <Route path="/billing" element={<BillingPage />} />
+                      <Route path="/admin" element={<AdminPage />} />
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                  </MainContent>
+                </MobileShell>
+                
+                <Footer>
+                  <p>© 2024 WAY ESPORTS. All rights reserved.</p>
+                  <p>Powered by Professional Gaming Technology</p>
+                </Footer>
+              </AppContainer>
+            </BrowserRouter>
+          </TermsGuard>
       </AuthProvider>
     </AppProvider>
   );
