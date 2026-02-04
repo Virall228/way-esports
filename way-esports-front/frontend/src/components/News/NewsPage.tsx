@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { NewsCard } from './';
 import type { NewsItem } from './';
+import { api } from '../../services/api';
 
 const Container = styled.div`
     padding-bottom: 80px;
@@ -79,35 +80,82 @@ const FilterButton = styled.button<{ active: boolean }>`
     }
 `;
 
-const mockNews: NewsItem[] = [
-    {
-        id: '1',
-        title: 'WAY Esports Tournament Finals',
-        date: '2024-03-15',
-        category: 'Tournaments',
-        preview: 'Join us for the epic finale of our CS2 tournament series with a prize pool of $10,000!',
-        imageUrl: 'https://example.com/tournament.jpg',
-        content: 'Full article content here...'
-    },
-    {
-        id: '2',
-        title: 'New Team Registrations Open',
-        date: '2024-03-14',
-        category: 'Teams',
-        preview: 'Register your team for the upcoming spring season. Limited spots available!',
-        content: 'Full article content here...'
-    },
-    // Add more mock news items as needed
-];
+const SocialLinks = styled.div`
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+    flex-wrap: wrap;
+    justify-content: center;
+`;
+
+const SocialLink = styled.a`
+    color: #007bff;
+    text-decoration: none;
+    font-size: 0.9rem;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+
+    @media (hover: hover) and (pointer: fine) {
+        &:hover {
+            background: rgba(255, 255, 255, 0.1);
+            text-decoration: none;
+            color: #0056b3;
+        }
+    }
+`;
 
 const NewsPage: React.FC = () => {
     const [filter, setFilter] = useState<string>('all');
     const { t } = useLanguage();
     const navigate = useNavigate();
+    const [items, setItems] = useState<NewsItem[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const categories = ['all', 'tournaments', 'teams', 'updates', 'community'];
 
-    const filteredNews = mockNews.filter(news => 
+    useEffect(() => {
+        let mounted = true;
+        const load = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const result: any = await api.get('/api/news');
+                const data: any[] = (result && result.data) || [];
+
+                const mapped: NewsItem[] = data.map((n: any) => ({
+                    id: (n._id || n.id || '').toString(),
+                    title: n.title || '',
+                    date: (n.publishDate || n.createdAt || new Date().toISOString()).toString(),
+                    category: (n.category || 'other').toString(),
+                    preview: (n.summary || (n.content || '').slice(0, 200) || '').toString(),
+                    imageUrl: n.coverImage || n.imageUrl,
+                    content: (n.content || '').toString()
+                }));
+
+                if (!mounted) return;
+                setItems(mapped);
+            } catch (e: any) {
+                if (!mounted) return;
+                setError(e?.message || 'Failed to load news');
+            } finally {
+                if (!mounted) return;
+                setLoading(false);
+            }
+        };
+        load();
+        return () => {
+            mounted = false;
+        };
+    }, []);
+
+    const filteredNews = items.filter(news => 
         filter === 'all' || news.category.toLowerCase() === filter
     );
 
@@ -132,7 +180,15 @@ const NewsPage: React.FC = () => {
                 </FilterBar>
             </Header>
 
-            {filteredNews.map(news => (
+            {error && (
+                <div style={{ color: '#ff4757', marginBottom: '16px' }}>{error}</div>
+            )}
+
+            {loading && !error && (
+                <div style={{ color: '#cccccc', marginBottom: '16px' }}>Loading...</div>
+            )}
+
+            {!loading && !error && filteredNews.map(news => (
                 <NewsCard
                     key={news.id}
                     title={news.title}
@@ -143,8 +199,15 @@ const NewsPage: React.FC = () => {
                     onClick={() => handleNewsClick(news.id)}
                 />
             ))}
+
+            <SocialLinks>
+                <SocialLink href="https://www.wayesports.org/" target="_blank">Website</SocialLink>
+                <SocialLink href="https://t.me/wayesports" target="_blank">Telegram</SocialLink>
+                <SocialLink href="https://discord.gg/wayesports" target="_blank">Discord</SocialLink>
+                <SocialLink href="https://www.twitch.tv/WAY_Esports" target="_blank">Twitch</SocialLink>
+            </SocialLinks>
         </Container>
     );
 };
 
-export default NewsPage; 
+export default NewsPage;

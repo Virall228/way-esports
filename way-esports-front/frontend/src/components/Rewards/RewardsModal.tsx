@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
+import { api } from '../../services/api';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -12,16 +13,18 @@ const ModalOverlay = styled.div`
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: calc(16px + var(--sat, 0px)) calc(16px + var(--sar, 0px)) calc(16px + var(--sab, 0px)) calc(16px + var(--sal, 0px));
 `;
 
 const ModalContent = styled.div`
   background: #1a1a1a;
   border-radius: 16px;
   padding: 0;
-  width: 90%;
+  width: 92%;
   max-width: 800px;
   position: relative;
-  overflow: hidden;
+  max-height: 90vh;
+  overflow-y: auto;
 `;
 
 const CloseButton = styled.button`
@@ -34,9 +37,14 @@ const CloseButton = styled.button`
   font-size: 24px;
   cursor: pointer;
   z-index: 10;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   
   &:hover {
-  color: ${({ theme }) => theme.colors.text.primary};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
@@ -234,48 +242,112 @@ const RewardButton = styled.button<{ $locked?: boolean }>`
   }
 `;
 
+const NoResults = styled.div`
+  text-align: center;
+  padding: 20px;
+  font-size: 1rem;
+  color: #cccccc;
+`;
+
 interface RewardsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+interface UiReward {
+  id: string;
+  title: string;
+  description: string;
+  rarity: 'LEGENDARY' | 'EPIC' | 'RARE' | 'COMMON';
+  value: string;
+  icon: string;
+  locked: boolean;
+}
+
 const RewardsModal: React.FC<RewardsModalProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<'available' | 'unlocked' | 'achievements'>('available');
+  const [rewards, setRewards] = useState<UiReward[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const mockRewards = [
-    {
-      id: 1,
-      title: 'Tournament Champion',
-      description: 'Win your first tournament',
-      rarity: 'LEGENDARY',
-      value: '$1000',
-      icon: '🏆',
-      progress: { current: 0, total: 1 },
-      locked: true
-    },
-    {
-      id: 2,
-      title: 'Victory Streak',
-      description: 'Win 5 matches in a row',
-      rarity: 'EPIC',
-      value: '$500',
-      icon: '🔥',
-      progress: { current: 3, total: 5 },
-      locked: true
-    },
-    {
-      id: 3,
-      title: 'Team Player',
-      description: 'Join a team and participate in 10 matches',
-      rarity: 'RARE',
-      value: '$250',
-      icon: '👥',
-      progress: { current: 8, total: 10 },
-      locked: true
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res: any = await api.get('/api/rewards');
+        const items: any[] = (res && res.data) || [];
+
+        let claimedIds = new Set<string>();
+        try {
+          const claimedRes: any = await api.get('/api/rewards/me/claimed');
+          const claimed: any[] = (claimedRes && claimedRes.data) || [];
+          claimed.forEach((c: any) => {
+            const rewardDoc = c.rewardId && typeof c.rewardId === 'object' ? c.rewardId : null;
+            const rid = (rewardDoc?._id || c.rewardId || '').toString();
+            if (rid) claimedIds.add(rid);
+          });
+        } catch {
+          // ignore if not authenticated
+        }
+
+        const mapped: UiReward[] = items.map((r: any) => {
+          const id = (r._id || r.id || '').toString();
+          const rarity = ((r.rarity || 'common') as string).toUpperCase();
+          const valueNum = Number(r.value ?? r.points ?? 0);
+          return {
+            id,
+            title: r.name || '',
+            description: r.description || '',
+            rarity: (rarity === 'LEGENDARY' ? 'LEGENDARY' : rarity === 'EPIC' ? 'EPIC' : rarity === 'RARE' ? 'RARE' : 'COMMON'),
+            value: valueNum === 0 ? 'Free Tournament Entry' : `$${valueNum}`,
+            icon: r.icon || '🏆',
+            locked: !claimedIds.has(id)
+          };
+        });
+
+        if (!mounted) return;
+        setRewards(mapped);
+      } catch (e: any) {
+        if (!mounted) return;
+        setError(e?.message || 'Failed to load rewards');
+        setRewards([]);
+      } finally {
+        if (!mounted) return;
+        setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, [isOpen]);
+
+  const stats = useMemo(() => {
+    const unlockedCount = rewards.filter((r) => !r.locked).length;
+    const total = rewards.length;
+    return { unlockedCount, total };
+  }, [rewards]);
+
+  const visibleRewards = useMemo(() => {
+    if (activeTab === 'unlocked') return rewards.filter((r) => !r.locked);
+    if (activeTab === 'available') return rewards.filter((r) => r.locked);
+    return rewards;
+  }, [activeTab, rewards]);
+
+  const handleClaim = async (reward: UiReward) => {
+    if (!reward.locked) return;
+    try {
+      await api.post(`/api/rewards/${reward.id}/claim`, {});
+      setRewards((prev) => prev.map((r) => (r.id === reward.id ? { ...r, locked: false } : r)));
+    } catch (e: any) {
+      setError(e?.message || 'Failed to claim reward');
     }
-  ];
+  };
 
   return (
     <ModalOverlay onClick={onClose}>
@@ -289,15 +361,15 @@ const RewardsModal: React.FC<RewardsModalProps> = ({ isOpen, onClose }) => {
 
         <StatsGrid>
           <StatCard>
-            <StatNumber>2</StatNumber>
+            <StatNumber>{stats.unlockedCount}</StatNumber>
             <StatLabel>Unlocked Rewards</StatLabel>
           </StatCard>
           <StatCard>
-            <StatNumber>10</StatNumber>
+            <StatNumber>{stats.total}</StatNumber>
             <StatLabel>Total Rewards</StatLabel>
           </StatCard>
           <StatCard>
-            <StatNumber>$100 + 1 Free Entry</StatNumber>
+            <StatNumber>—</StatNumber>
             <StatLabel>Total Value</StatLabel>
           </StatCard>
           <StatCard>
@@ -328,26 +400,25 @@ const RewardsModal: React.FC<RewardsModalProps> = ({ isOpen, onClose }) => {
         </TabsContainer>
 
         <RewardsGrid>
-          {mockRewards.map(reward => (
+          {loading ? (
+            <NoResults>Loading...</NoResults>
+          ) : error ? (
+            <NoResults>{error}</NoResults>
+          ) : visibleRewards.length === 0 ? (
+            <NoResults>No rewards</NoResults>
+          ) : visibleRewards.map(reward => (
             <RewardCard key={reward.id} $locked={reward.locked}>
               <RewardIcon>{reward.icon}</RewardIcon>
               <RewardTitle>{reward.title}</RewardTitle>
               <RewardDescription>{reward.description}</RewardDescription>
-              
+
               <RewardStats>
                 <RewardRarity $rarity={reward.rarity}>{reward.rarity}</RewardRarity>
                 <RewardValue>{reward.value}</RewardValue>
               </RewardStats>
 
-              <ProgressContainer>
-                <ProgressLabel>Progress: {reward.progress.current}/{reward.progress.total}</ProgressLabel>
-                <ProgressBar>
-                  <ProgressFill $percentage={(reward.progress.current / reward.progress.total) * 100} />
-                </ProgressBar>
-              </ProgressContainer>
-
-              <RewardButton $locked={reward.locked}>
-                {reward.locked ? 'Locked' : 'Claim Reward'}
+              <RewardButton $locked={reward.locked} onClick={() => reward.locked && handleClaim(reward)}>
+                {reward.locked ? 'Claim Reward' : 'Claimed'}
               </RewardButton>
             </RewardCard>
           ))}

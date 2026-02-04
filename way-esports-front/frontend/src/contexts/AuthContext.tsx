@@ -100,29 +100,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      // Fallback to manual registration
-      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-
-      const fallbackTelegramIdRaw = !tgUser?.id ? window.prompt('Enter Telegram ID (numeric)') : null;
-      const telegramId = tgUser?.id || (fallbackTelegramIdRaw ? parseInt(fallbackTelegramIdRaw, 10) : null);
-      if (!telegramId || !Number.isFinite(telegramId)) {
-        throw new Error('Telegram user not available');
+      // Fallback: Email OTP (passwordless)
+      const emailRaw = window.prompt('Enter email for login');
+      const email = (emailRaw || '').trim();
+      if (!email) {
+        throw new Error('Email is required');
       }
 
-      const payload = {
-        telegramId,
-        username: tgUser?.username || `user_${telegramId}`,
-        firstName: tgUser?.first_name || tgUser?.username || 'User',
-        lastName: tgUser?.last_name || '',
-        photoUrl: tgUser?.photo_url
-      };
+      await api.post('/api/auth/email/request-otp', { email });
+      const codeRaw = window.prompt('Enter OTP code from email');
+      const code = (codeRaw || '').trim();
+      if (!code) {
+        throw new Error('OTP code is required');
+      }
 
-      const result: any = await api.post('/api/auth/register', payload);
-      const token = result?.token;
+      const result: any = await api.post('/api/auth/email/verify-otp', { email, code });
+      const token = result?.token || result?.sessionToken;
       const rawUser = result?.user;
       if (!token || !rawUser) {
         throw new Error('Invalid auth response');
       }
+
       setToken(token);
       setUser(normalizeUser(rawUser));
     } finally {

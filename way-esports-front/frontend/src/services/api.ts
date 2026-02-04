@@ -2,6 +2,18 @@ import { API_CONFIG, getFullUrl } from '../config/api';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
+export class ApiError extends Error {
+  status: number;
+  payload: any;
+
+  constructor(status: number, message: string, payload?: any) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.payload = payload;
+  }
+}
+
 const getToken = (): string | null => {
   try {
     return localStorage.getItem('auth_token');
@@ -45,7 +57,12 @@ const requestJson = async <T = any>(endpoint: string, method: HttpMethod, data?:
         : (payload as any)?.error || (payload as any)?.message || 'Request failed';
 
     const details = typeof payload === 'string' ? payload : JSON.stringify(payload);
-    throw new Error(`[${response.status}] ${message}${details ? ` | ${details}` : ''}`);
+
+    throw new ApiError(
+      response.status,
+      `[${response.status}] ${message}${details ? ` | ${details}` : ''}`,
+      payload
+    );
   }
 
   return payload as T;

@@ -23,6 +23,10 @@ import rankingsRouter from './routes/rankings';
 import rewardsRouter from './routes/rewards';
 import authRouter from './routes/auth';
 import newsRouter from './routes/news';
+import achievementsRouter from './routes/achievements';
+import searchRouter from './routes/search';
+
+import { seedDefaultAchievements } from './services/achievements/seedAchievements';
 
 const app = express();
 const PORT = typeof config.port === 'string' ? parseInt(config.port, 10) : config.port;
@@ -86,8 +90,10 @@ app.use('/api/wallet', authenticateJWT, walletRouter);
 app.use('/api/tournaments', tournamentsRouter);
 app.use('/api/rankings', rankingsRouter);
 app.use('/api/rewards', rewardsRouter);
+app.use('/api/search', searchRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/news', newsRouter);
+app.use('/api/achievements', achievementsRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -156,6 +162,8 @@ async function start() {
     console.log('Connecting to MongoDB...');
     await connectDB();
     console.log('✅ MongoDB connected');
+
+    await seedDefaultAchievements();
 
     // Start background workers
     console.log('Starting background workers...');

@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import tournamentRoutes from './routes/tournaments';
 import authRoutes from './routes/auth';
+import prizesRoutes from './routes/prizes';
+import referralsRoutes from './routes/referrals';
 import { errorHandler } from './middleware/errorHandler';
 
 // Load environment variables
@@ -29,6 +31,8 @@ app.use((req, res, next) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/tournaments', tournamentRoutes);
+app.use('/api/prizes', prizesRoutes);
+app.use('/api/referrals', referralsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

@@ -1,8 +1,22 @@
 import { Request, Response } from 'express';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
+import Session from '../models/Session';
 
 const JWT_EXPIRATION = '24h';
+const SESSION_TTL_DAYS = 30;
+
+const hash = (value: string) => crypto.createHash('sha256').update(value).digest('hex');
+const randomToken = () => crypto.randomBytes(32).toString('hex');
+
+const createSessionToken = async (userId: string) => {
+  const sessionToken = randomToken();
+  const tokenHash = hash(sessionToken);
+  const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
+  await Session.create({ user: userId, tokenHash, expiresAt });
+  return sessionToken;
+};
 
 const getBootstrapAdminTelegramId = (): number | null => {
   const raw = process.env.BOOTSTRAP_ADMIN_TELEGRAM_ID;
@@ -34,12 +48,14 @@ export const register = async (req: Request, res: Response) => {
         existingUser.role = 'admin';
         await existingUser.save();
       }
-      const token = jwt.sign(
+      const jwtToken = jwt.sign(
         { userId: existingUser._id.toString(), telegramId: existingUser.telegramId, role: existingUser.role },
         process.env.JWT_SECRET || 'your_jwt_secret',
         { expiresIn: JWT_EXPIRATION }
       );
-      return res.status(200).json({ user: existingUser.toObject(), token });
+
+      const sessionToken = await createSessionToken(existingUser._id.toString());
+      return res.status(200).json({ user: existingUser.toObject(), token: sessionToken, jwtToken });
     }
 
     const user = await new User({
@@ -51,13 +67,15 @@ export const register = async (req: Request, res: Response) => {
       role: shouldBeAdmin ? 'admin' : 'user'
     }).save();
 
-    const token = jwt.sign(
+    const jwtToken = jwt.sign(
       { userId: user._id.toString(), telegramId: user.telegramId, role: user.role },
       process.env.JWT_SECRET || 'your_jwt_secret',
       { expiresIn: JWT_EXPIRATION }
     );
 
-    res.status(201).json({ user: user.toObject(), token });
+    const sessionToken = await createSessionToken(user._id.toString());
+
+    res.status(201).json({ user: user.toObject(), token: sessionToken, jwtToken });
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Error registering user' });
@@ -83,13 +101,15 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'User not found' });
     }
 
-    const token = jwt.sign(
+    const jwtToken = jwt.sign(
       { userId: user._id.toString(), telegramId: user.telegramId, role: user.role },
       process.env.JWT_SECRET || 'your_jwt_secret',
       { expiresIn: JWT_EXPIRATION }
     );
 
-    res.json({ user: user.toObject(), token });
+    const sessionToken = await createSessionToken(user._id.toString());
+
+    res.json({ user: user.toObject(), token: sessionToken, jwtToken });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Error logging in' });
@@ -177,7 +197,7 @@ export const authenticateTelegram = async (req: Request, res: Response) => {
     }
 
     // Generate JWT token
-    const token = jwt.sign(
+    const jwtToken = jwt.sign(
       { 
         userId: user._id.toString(), 
         telegramId: user.telegramId, 
@@ -187,10 +207,13 @@ export const authenticateTelegram = async (req: Request, res: Response) => {
       { expiresIn: JWT_EXPIRATION }
     );
 
+    const sessionToken = await createSessionToken(user._id.toString());
+
     res.json({ 
       success: true,
       user: user.toObject(), 
-      token 
+      token: sessionToken,
+      jwtToken
     });
   } catch (error) {
     console.error('Telegram authentication error:', error);

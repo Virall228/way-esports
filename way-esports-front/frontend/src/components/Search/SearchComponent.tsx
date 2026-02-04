@@ -1,6 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { useSearch, SearchResult, SearchFilters } from '../../hooks/useSearch';
+import { api } from '../../services/api';
+
+type SearchItemType = 'player' | 'team' | 'tournament' | 'news';
+
+export interface SearchResult {
+  id: string;
+  type: SearchItemType;
+  name: string;
+  avatar?: string;
+  details?: string;
+  tag?: string;
+  game?: string;
+  status?: string;
+  relevance?: number;
+}
 
 const SearchContainer = styled.div`
   position: relative;
@@ -181,14 +195,17 @@ const ResultType = styled.div<{ $type: string }>`
   background: ${({ $type }) => 
     $type === 'player' ? 'rgba(46, 213, 115, 0.2)' :
     $type === 'team' ? 'rgba(255, 107, 0, 0.2)' :
+    $type === 'news' ? 'rgba(255, 215, 0, 0.2)' :
     'rgba(255, 215, 0, 0.2)'};
   color: ${({ $type }) => 
     $type === 'player' ? '#2ed573' :
     $type === 'team' ? '#ff6b00' :
+    $type === 'news' ? '#ffd700' :
     '#ffd700'};
   border: 1px solid ${({ $type }) => 
     $type === 'player' ? 'rgba(46, 213, 115, 0.3)' :
     $type === 'team' ? 'rgba(255, 107, 0, 0.3)' :
+    $type === 'news' ? 'rgba(255, 215, 0, 0.3)' :
     'rgba(255, 215, 0, 0.3)'};
 `;
 
@@ -253,77 +270,78 @@ const FilterTab = styled.button<{ $active: boolean }>`
   }
 `;
 
-const Suggestions = styled.div`
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-`;
-
-const SuggestionItem = styled.div`
-  padding: 8px 12px;
-  cursor: pointer;
-  border-radius: 6px;
-  color: #cccccc;
-  font-size: 14px;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: rgba(255, 107, 0, 0.1);
-    color: #ff6b00;
-  }
-`;
-
 interface SearchComponentProps {
   onResultSelect?: (result: SearchResult) => void;
   placeholder?: string;
   className?: string;
-  initialFilters?: SearchFilters;
 }
-
-// Mock data for search
-const mockSearchData: SearchResult[] = [
-  // Players
-  { id: '1', type: 'player', name: 'WAY.Striker', avatar: '👤', details: 'WAY Esports • K/D: 2.45', tag: 'WAY', game: 'Critical Ops', relevance: 100, lastUpdated: new Date() },
-  { id: '2', type: 'player', name: 'Phoenix_Flame', avatar: '👤', details: 'Phoenix Rising • K/D: 2.72', tag: 'PHX', game: 'CS2', relevance: 95, lastUpdated: new Date() },
-  { id: '3', type: 'player', name: 'Shadow_Stalker', avatar: '👤', details: 'Shadow Hunters • K/D: 2.68', tag: 'SH', game: 'PUBG Mobile', relevance: 90, lastUpdated: new Date() },
-  
-  // Teams
-  { id: '4', type: 'team', name: 'WAY Tigers', avatar: '🐯', details: 'Critical Ops • 5 members', tag: 'WAY', game: 'Critical Ops', status: 'active', relevance: 100, lastUpdated: new Date() },
-  { id: '5', type: 'team', name: 'Phoenix Rising', avatar: '🔥', details: 'CS2 • 4 members', tag: 'PHX', game: 'CS2', status: 'recruiting', relevance: 95, lastUpdated: new Date() },
-  { id: '6', type: 'team', name: 'Shadow Hunters', avatar: '🌙', details: 'PUBG Mobile • 5 members', tag: 'SH', game: 'PUBG Mobile', status: 'active', relevance: 90, lastUpdated: new Date() },
-  
-  // Tournaments
-  { id: '7', type: 'tournament', name: 'CS2 Pro League Season 1', avatar: '🏆', details: 'Prize Pool: $1,000 • 16 teams', status: 'registering', relevance: 100, lastUpdated: new Date() },
-  { id: '8', type: 'tournament', name: 'Critical Ops Championship', avatar: '🏆', details: 'Prize Pool: $500 • 8 teams', status: 'upcoming', relevance: 95, lastUpdated: new Date() },
-  { id: '9', type: 'tournament', name: 'PUBG Mobile Masters', avatar: '🏆', details: 'Prize Pool: $750 • 12 teams', status: 'live', relevance: 90, lastUpdated: new Date() }
-];
 
 const SearchComponent: React.FC<SearchComponentProps> = ({ 
   onResultSelect, 
   placeholder = "Search players, teams, tournaments...",
-  className,
-  initialFilters = { type: 'all' }
+  className
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'players' | 'teams' | 'tournaments'>('all');
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  const {
-    query,
-    setQuery,
-    filters,
-    setFilters,
-    results,
-    isLoading,
-    groupedResults,
-    suggestions,
-    hasResults,
-    totalCount
-  } = useSearch(mockSearchData, {
-    debounceMs: 300,
-    maxResults: 20,
-    enableCache: true,
-    cacheExpiryMs: 5 * 60 * 1000
-  });
+  useEffect(() => {
+    let mounted = true;
+    const t = setTimeout(async () => {
+      const q = query.trim();
+      if (!q) {
+        if (!mounted) return;
+        setResults([]);
+        setError(null);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const res: any = await api.get(`/api/search?q=${encodeURIComponent(q)}&limit=20`);
+        const data = (res && res.data) || {};
+
+        const flat: SearchResult[] = [
+          ...((data.players || []) as any[]),
+          ...((data.teams || []) as any[]),
+          ...((data.tournaments || []) as any[]),
+          ...((data.news || []) as any[])
+        ].map((x: any) => ({
+          id: String(x.id || x._id || ''),
+          type: x.type,
+          name: x.name,
+          avatar: x.avatar,
+          details: x.details,
+          tag: x.tag,
+          game: x.game,
+          status: x.status,
+          relevance: x.relevance
+        }));
+
+        if (!mounted) return;
+        setResults(flat);
+      } catch (e: any) {
+        if (!mounted) return;
+        setError(e?.message || 'Search failed');
+        setResults([]);
+      } finally {
+        if (!mounted) return;
+        setIsLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      mounted = false;
+      clearTimeout(t);
+    };
+  }, [query]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -342,8 +360,8 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
       return;
     }
 
-    setIsVisible(hasResults || suggestions.length > 0);
-  }, [query, hasResults, suggestions]);
+    setIsVisible(true);
+  }, [query]);
 
   const handleResultClick = (result: SearchResult) => {
     onResultSelect?.(result);
@@ -356,22 +374,28 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
   };
 
   const handleInputFocus = () => {
-    if (query.trim().length > 0 && (hasResults || suggestions.length > 0)) {
+    if (query.trim().length > 0) {
       setIsVisible(true);
     }
   };
 
   const handleFilterChange = (filter: 'all' | 'players' | 'teams' | 'tournaments') => {
     setActiveFilter(filter);
-    setFilters({
-      ...filters,
-      type: filter === 'all' ? 'all' : filter.slice(0, -1) as 'player' | 'team' | 'tournament'
-    });
   };
+
+  const groupedResults = {
+    players: results.filter((r) => r.type === 'player'),
+    teams: results.filter((r) => r.type === 'team'),
+    tournaments: results.filter((r) => r.type === 'tournament'),
+    news: results.filter((r) => r.type === 'news')
+  };
+
+  const totalCount = results.length;
 
   return (
     <SearchContainer ref={searchRef} className={className}>
       <SearchIcon>🔍</SearchIcon>
+
       <SearchInput
         type="text"
         placeholder={placeholder}
@@ -389,6 +413,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
           >
             All ({totalCount})
           </FilterTab>
+
           <FilterTab 
             $active={activeFilter === 'players'} 
             onClick={() => handleFilterChange('players')}
@@ -411,15 +436,8 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
 
         {isLoading ? (
           <LoadingSpinner>Searching...</LoadingSpinner>
-        ) : suggestions.length > 0 && query.trim().length > 0 && !hasResults ? (
-          <Suggestions>
-            <CategoryTitle>Suggestions</CategoryTitle>
-            {suggestions.map((suggestion, index) => (
-              <SuggestionItem key={index} onClick={() => handleSuggestionClick(suggestion)}>
-                {suggestion}
-              </SuggestionItem>
-            ))}
-          </Suggestions>
+        ) : error ? (
+          <NoResults>{error}</NoResults>
         ) : results.length === 0 && query.trim().length > 0 ? (
           <NoResults>
             No results found for "{query}"
@@ -488,6 +506,27 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
                 </SearchCategory>
               )
             ) : null}
+
+            {activeFilter === 'all' ? (
+              groupedResults.news.length > 0 && (
+                <SearchCategory>
+                  <CategoryTitle>
+                    News
+                    <CategoryCount>{groupedResults.news.length}</CategoryCount>
+                  </CategoryTitle>
+                  {groupedResults.news.map(result => (
+                    <SearchResultItem key={result.id} onClick={() => handleResultClick(result)}>
+                      <ResultAvatar $imageUrl={result.avatar}>{result.avatar}</ResultAvatar>
+                      <ResultInfo>
+                        <ResultName>{result.name}</ResultName>
+                        <ResultDetails>{result.details}</ResultDetails>
+                      </ResultInfo>
+                      <ResultType $type={result.type}>News</ResultType>
+                    </SearchResultItem>
+                  ))}
+                </SearchCategory>
+              )
+            ) : null}
           </>
         )}
       </SearchResults>
@@ -495,4 +534,4 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
   );
 };
 
-export default SearchComponent; 
+export default SearchComponent;

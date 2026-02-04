@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { api } from '../../services/api';
 
 const scanline = keyframes`
     0% {
@@ -159,29 +160,35 @@ const NewsDetail: React.FC = () => {
     const navigate = useNavigate();
     const { t } = useLanguage();
 
-    // Mock data - replace with actual data fetching
-    const newsItem = {
-        title: 'WAY Esports Tournament Finals',
-        date: '2024-03-15',
-        category: 'Tournaments',
-        content: `
-            <h2>Tournament Details</h2>
-            <p>Join us for the epic finale of our CS2 tournament series with a prize pool of $10,000! The best teams from around the world will compete for glory and prizes.</p>
-            
-            <h2>Schedule</h2>
-            <p>The finals will take place over two days, featuring intense matches and special events for our community.</p>
-            
-            <blockquote>
-                "This tournament represents the pinnacle of competitive gaming in our region" - Tournament Director
-            </blockquote>
-            
-            <h2>Prize Distribution</h2>
-            <p>1st Place: $5,000<br>
-            2nd Place: $3,000<br>
-            3rd Place: $2,000</p>
-        `,
-        imageUrl: 'https://example.com/tournament.jpg'
-    };
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [newsItem, setNewsItem] = useState<any>(null);
+
+    useEffect(() => {
+        let mounted = true;
+        const load = async () => {
+            if (!id) return;
+            try {
+                setLoading(true);
+                setError(null);
+                const result: any = await api.get(`/api/news/${id}`);
+                const data = (result && result.data) || null;
+                if (!mounted) return;
+                setNewsItem(data);
+            } catch (e: any) {
+                if (!mounted) return;
+                setError(e?.message || 'Failed to load news');
+            } finally {
+                if (!mounted) return;
+                setLoading(false);
+            }
+        };
+
+        load();
+        return () => {
+            mounted = false;
+        };
+    }, [id]);
 
     const handleShare = (platform: string) => {
         // Implement sharing functionality
@@ -191,28 +198,38 @@ const NewsDetail: React.FC = () => {
     return (
         <Container>
             <BackButton onClick={() => navigate('/news')}>{t('back')}</BackButton>
-            
-            <Header>
-                {newsItem.imageUrl && <HeroImage src={newsItem.imageUrl} alt={newsItem.title} />}
-                <Title>{newsItem.title}</Title>
-                <Meta>
-                    <span>{new Date(newsItem.date).toLocaleDateString()}</span>
-                    <Tag>{newsItem.category}</Tag>
-                </Meta>
-            </Header>
 
-            <Content dangerouslySetInnerHTML={{ __html: newsItem.content }} />
+            {error && (
+                <div style={{ color: '#ff4757', marginBottom: '16px' }}>{error}</div>
+            )}
 
-            <ShareSection>
-                <ShareTitle>{t('share')}</ShareTitle>
-                <ShareButtons>
-                    <ShareButton onClick={() => handleShare('telegram')}>Telegram</ShareButton>
-                    <ShareButton onClick={() => handleShare('twitter')}>Twitter</ShareButton>
-                    <ShareButton onClick={() => handleShare('facebook')}>Facebook</ShareButton>
-                </ShareButtons>
-            </ShareSection>
+            {loading && !error && (
+                <div style={{ color: '#cccccc', marginBottom: '16px' }}>Loading...</div>
+            )}
+
+            {!loading && !error && newsItem && (
+                <Header>
+                    {(newsItem.coverImage || newsItem.imageUrl) && <HeroImage src={newsItem.coverImage || newsItem.imageUrl} alt={newsItem.title} />}
+                    <Title>{newsItem.title || ''}</Title>
+                    <Meta>
+                        <span>{new Date(newsItem.publishDate || newsItem.createdAt || Date.now()).toLocaleDateString()}</span>
+                        <Tag>{newsItem.category || 'other'}</Tag>
+                    </Meta>
+                </Header>
+
+                <Content dangerouslySetInnerHTML={{ __html: newsItem.content || '' }} />
+
+                <ShareSection>
+                    <ShareTitle>{t('share')}</ShareTitle>
+                    <ShareButtons>
+                        <ShareButton onClick={() => handleShare('telegram')}>Telegram</ShareButton>
+                        <ShareButton onClick={() => handleShare('twitter')}>Twitter</ShareButton>
+                        <ShareButton onClick={() => handleShare('facebook')}>Facebook</ShareButton>
+                    </ShareButtons>
+                </ShareSection>
+            )}
         </Container>
     );
 };
 
-export default NewsDetail; 
+export default NewsDetail;

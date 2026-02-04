@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { api } from '../../services/api';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -36,9 +37,14 @@ const CloseButton = styled.button`
   font-size: 24px;
   cursor: pointer;
   z-index: 10;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   
   &:hover {
-  color: ${({ theme }) => theme.colors.text.primary};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
@@ -166,38 +172,61 @@ interface WalletModalProps {
 }
 
 const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => {
-  if (!isOpen) return null;
+  const [balance, setBalance] = useState(0);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const transactions = [
-    {
-      id: 1,
-      title: 'Tournament Prize - CS2 Cup',
-      date: '2024-03-15',
-      amount: 500.00,
-      type: 'income' as const
-    },
-    {
-      id: 2,
-      title: 'Deposit via Card',
-      date: '2024-03-10',
-      amount: 200.00,
-      type: 'income' as const
-    },
-    {
-      id: 3,
-      title: 'Withdrawal to Bank',
-      date: '2024-03-08',
-      amount: 150.00,
-      type: 'expense' as const
-    },
-    {
-      id: 4,
-      title: 'Tournament Prize - Critical Ops',
-      date: '2024-03-05',
-      amount: 300.00,
-      type: 'income' as const
+  useEffect(() => {
+    if (isOpen) {
+      loadWalletData();
     }
-  ];
+  }, [isOpen]);
+
+  const loadWalletData = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/api/prizes/user/history');
+      const data = response.data;
+      
+      setBalance(data.totalPrizes || 0);
+      
+      // Transform prize transactions to wallet format
+      const walletTransactions = data.transactions.map((tx: any, index: number) => ({
+        id: index + 1,
+        title: tx.description,
+        date: new Date(tx.date).toISOString().split('T')[0],
+        amount: tx.amount,
+        type: 'income' as const
+      }));
+
+      // If no transactions, show empty state
+      if (walletTransactions.length === 0) {
+        setTransactions([{
+          id: 1,
+          title: 'No transactions yet',
+          date: new Date().toISOString().split('T')[0],
+          amount: 0.00,
+          type: 'income' as const
+        }]);
+      } else {
+        setTransactions(walletTransactions);
+      }
+    } catch (error) {
+      console.error('Failed to load wallet data:', error);
+      // Show empty state on error
+      setTransactions([{
+        id: 1,
+        title: 'No transactions yet',
+        date: new Date().toISOString().split('T')[0],
+        amount: 0.00,
+        type: 'income' as const
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
 
   return (
     <ModalOverlay onClick={onClose}>
@@ -210,7 +239,7 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => {
         </WalletHeader>
 
         <BalanceCard>
-          <CurrentBalance>$1250.50</CurrentBalance>
+          <CurrentBalance>${balance.toFixed(2)}</CurrentBalance>
           <BalanceLabel>CURRENT BALANCE</BalanceLabel>
         </BalanceCard>
 

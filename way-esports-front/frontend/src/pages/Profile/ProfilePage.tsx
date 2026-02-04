@@ -3,6 +3,9 @@ import styled from 'styled-components';
 import WalletModal from '../../components/Wallet/WalletModal';
 import SubscriptionModal from '../../components/Subscription/SubscriptionModal';
 import PhotoUploadModal from '../../components/Profile/PhotoUploadModal';
+import AchievementsSection from '../../components/Profile/AchievementsSection';
+import ReferralCard from '../../components/Referral/ReferralCard';
+import SubscriptionCard from '../../components/Subscription/SubscriptionCard';
 
 const Container = styled.div`
   padding: 20px;
@@ -272,19 +275,19 @@ const ProfilePage: React.FC = () => {
           </ProfileTop>
           <UserStats>
             <StatItem>
-              <StatValue>156</StatValue>
+              <StatValue>0</StatValue>
               <StatLabel>Matches</StatLabel>
             </StatItem>
             <StatItem>
-              <StatValue>98</StatValue>
+              <StatValue>0</StatValue>
               <StatLabel>Wins</StatLabel>
             </StatItem>
             <StatItem>
-              <StatValue>45</StatValue>
+              <StatValue>0</StatValue>
               <StatLabel>MVPs</StatLabel>
             </StatItem>
             <StatItem>
-              <StatValue>2.45</StatValue>
+              <StatValue>0.00</StatValue>
               <StatLabel>K/D Ratio</StatLabel>
             </StatItem>
           </UserStats>
@@ -294,26 +297,9 @@ const ProfilePage: React.FC = () => {
       <StatsGrid>
         <StatsCard>
           <CardTitle>Recent Matches</CardTitle>
-          <GameStats>
-            <GameName>vs Nova Esports</GameName>
-            <GameRank style={{ color: '#4CAF50' }}>13-7</GameRank>
-          </GameStats>
-          <GameStats>
-            <GameName>vs Tribe Gaming</GameName>
-            <GameRank style={{ color: '#4CAF50' }}>16-14</GameRank>
-          </GameStats>
-          <GameStats>
-            <GameName>vs Cloud9</GameName>
-            <GameRank style={{ color: '#F44336' }}>7-13</GameRank>
-          </GameStats>
-          <GameStats>
-            <GameName>vs Team Liquid</GameName>
-            <GameRank style={{ color: '#4CAF50' }}>13-11</GameRank>
-          </GameStats>
-          <GameStats>
-            <GameName>vs NaVi</GameName>
-            <GameRank style={{ color: '#F44336' }}>10-13</GameRank>
-          </GameStats>
+          <div style={{ color: '#999', fontStyle: 'italic', textAlign: 'center', padding: '40px 0' }}>
+            No matches played yet. Join tournaments to see your match history!
+          </div>
         </StatsCard>
 
         <StatsCard>
@@ -327,7 +313,7 @@ const ProfilePage: React.FC = () => {
       <StatsCard>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
           <span style={{ fontSize: '1.5rem' }}>📊</span>
-          <CardTitle style={{ margin: 0 }}>Match Statistics - WAY.Striker</CardTitle>
+          <CardTitle style={{ margin: 0 }}>Match Statistics</CardTitle>
         </div>
         
         <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
@@ -339,7 +325,7 @@ const ProfilePage: React.FC = () => {
             borderRadius: '6px',
             fontSize: '14px'
           }}>
-            All Matches (3)
+            All Matches (0)
           </button>
           <button style={{ 
             background: 'transparent', 
@@ -349,7 +335,7 @@ const ProfilePage: React.FC = () => {
             borderRadius: '6px',
             fontSize: '14px'
           }}>
-            Wins (2)
+            Wins (0)
           </button>
           <button style={{ 
             background: 'transparent', 
@@ -359,26 +345,19 @@ const ProfilePage: React.FC = () => {
             borderRadius: '6px',
             fontSize: '14px'
           }}>
-            Losses (1)
+            Losses (0)
           </button>
         </div>
 
-        <div style={{ 
-          background: 'rgba(0, 255, 0, 0.1)', 
-          border: '1px solid #00ff00',
-          borderRadius: '8px',
-          padding: '15px',
-          marginBottom: '10px'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div style={{ color: '#ffffff', fontWeight: 'bold' }}>Critical Ops Pro League</div>
-              <div style={{ color: '#cccccc', fontSize: '14px' }}>Tournament Match</div>
-            </div>
-            <div style={{ color: '#00ff00', fontWeight: 'bold', fontSize: '18px' }}>VICTORY</div>
-          </div>
+        <div style={{ color: '#999', fontStyle: 'italic', textAlign: 'center', padding: '40px 0' }}>
+          No match statistics available yet. Start playing to see your performance data!
         </div>
       </StatsCard>
+
+      <AchievementsSection />
+
+      <ReferralCard />
+      <SubscriptionCard />
 
       {/* Modals */}
       <WalletModal 

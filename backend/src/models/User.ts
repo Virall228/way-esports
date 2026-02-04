@@ -7,7 +7,9 @@ export interface IToken {
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
   id: string;
-  telegramId: number;
+  telegramId?: number;
+  email?: string;
+  newsletter_subscriber?: boolean;
   username: string;
   firstName: string;
   lastName?: string;
@@ -16,6 +18,14 @@ export interface IUser extends Document {
   teams: mongoose.Types.ObjectId[];
   role: 'user' | 'admin' | 'developer';
   isBanned: boolean;
+  
+  // Subscription fields
+  isSubscribed: boolean;
+  subscriptionExpiresAt?: Date;
+  freeEntriesCount: number;
+  referralCode?: string;
+  referredBy?: string;
+  
   stats: {
     wins: number;
     losses: number;
@@ -27,7 +37,7 @@ export interface IUser extends Document {
   wallet: {
     balance: number;
     transactions: {
-      type: 'deposit' | 'withdrawal' | 'prize' | 'fee';
+      type: 'deposit' | 'withdrawal' | 'prize' | 'fee' | 'subscription' | 'referral';
       amount: number;
       description: string;
       date: Date;
@@ -59,13 +69,30 @@ export interface IUser extends Document {
   generateAuthToken(): Promise<string>;
   getTeam(): Promise<any>;
   addAchievement(achievementId: string): Promise<boolean>;
+  hasActiveSubscription(): boolean;
+  canJoinTournament(): boolean;
+  useFreeEntry(): Promise<boolean>;
+  addFreeEntry(count: number): Promise<void>;
+  generateReferralCode(): string;
 }
 
 const userSchema = new Schema<IUser>({
   telegramId: {
     type: Number,
-    required: true,
-    unique: true
+    required: false,
+    unique: true,
+    sparse: true
+  },
+  email: {
+    type: String,
+    trim: true,
+    lowercase: true,
+    unique: true,
+    sparse: true
+  },
+  newsletter_subscriber: {
+    type: Boolean,
+    default: false
   },
   username: {
     type: String,
@@ -91,6 +118,28 @@ const userSchema = new Schema<IUser>({
     type: Boolean,
     default: false
   },
+  
+  // Subscription fields
+  isSubscribed: {
+    type: Boolean,
+    default: false
+  },
+  subscriptionExpiresAt: {
+    type: Date
+  },
+  freeEntriesCount: {
+    type: Number,
+    default: 0
+  },
+  referralCode: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  referredBy: {
+    type: String,
+    trim: true
+  },
   stats: {
     wins: { type: Number, default: 0 },
     losses: { type: Number, default: 0 },
@@ -112,7 +161,7 @@ const userSchema = new Schema<IUser>({
     transactions: [{
       type: {
         type: String,
-        enum: ['deposit', 'withdrawal', 'prize', 'fee']
+        enum: ['deposit', 'withdrawal', 'prize', 'fee', 'subscription', 'referral']
       },
       amount: Number,
       description: String,
@@ -173,9 +222,20 @@ const userSchema = new Schema<IUser>({
 });
 
 // Indexes
-userSchema.index({ telegramId: 1 }, { unique: true });
+userSchema.index({ telegramId: 1 }, { unique: true, sparse: true });
+userSchema.index({ email: 1 }, { unique: true, sparse: true });
 userSchema.index({ username: 1 });
 userSchema.index({ role: 1 });
+userSchema.index({ referralCode: 1 }, { unique: true, sparse: true });
+userSchema.index({ isSubscribed: 1 });
+
+// Pre-save middleware to generate referral code
+userSchema.pre('save', function(next) {
+  if (this.isNew && !this.referralCode) {
+    this.referralCode = this.generateReferralCode();
+  }
+  next();
+});
 
 // Methods
 userSchema.methods.generateAuthToken = async function(): Promise<string> {
@@ -193,6 +253,56 @@ userSchema.methods.addAchievement = async function(achievementId: string): Promi
     return true;
   }
   return false;
+};
+
+userSchema.methods.hasActiveSubscription = function(): boolean {
+  if (!this.isSubscribed) return false;
+  if (!this.subscriptionExpiresAt) return true; // Lifetime subscription
+  return this.subscriptionExpiresAt > new Date();
+};
+
+userSchema.methods.canJoinTournament = function(): boolean {
+  return this.hasActiveSubscription() || this.freeEntriesCount > 0;
+};
+
+userSchema.methods.useFreeEntry = async function(): Promise<boolean> {
+  if (this.freeEntriesCount <= 0) return false;
+  
+  this.freeEntriesCount -= 1;
+  
+  // Add transaction record
+  this.wallet.transactions.push({
+    type: 'referral',
+    amount: 0,
+    description: 'Used free tournament entry',
+    date: new Date()
+  });
+  
+  await this.save();
+  return true;
+};
+
+userSchema.methods.addFreeEntry = async function(count: number): Promise<void> {
+  this.freeEntriesCount += count;
+  
+  // Add transaction record
+  this.wallet.transactions.push({
+    type: 'referral',
+    amount: 0,
+    description: `Received ${count} free tournament entr${count > 1 ? 'ies' : 'y'}`,
+    date: new Date()
+  });
+  
+  await this.save();
+};
+
+userSchema.methods.generateReferralCode = function(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
 };
 
 export default mongoose.model<IUser>('User', userSchema); 

@@ -1,8 +1,10 @@
 import express from 'express';
 import Tournament, { ITournament } from '../models/Tournament';
+import Match from '../models/Match';
 import { checkSubscriptionStatus } from '../../middleware/subscriptionAuth';
 import { mockAuth } from '../../middleware/mockAuth';
 import { authenticateJWT, isAdmin } from '../middleware/auth';
+import { checkTournamentAccess, checkTournamentRegistration, consumeFreeEntry } from '../middleware/tournamentAccess';
 
 const router = express.Router();
 
@@ -259,72 +261,59 @@ router.post('/batch', authenticateJWT, isAdmin, async (req, res) => {
 });
 
 // Register for tournament (also available as /join for frontend compatibility)
-router.post('/:id/register', mockAuth, checkSubscriptionStatus, async (req: any, res) => {
+router.post('/:id/register', authenticateJWT, checkTournamentAccess, checkTournamentRegistration, consumeFreeEntry, async (req: any, res) => {
   try {
-    // Check if user has active subscription
-    if (!req.hasActiveSubscription) {
-      return res.status(403).json({
-        success: false,
-        message: 'Active subscription required to register for tournaments',
-        requiresSubscription: true,
-        redirectTo: '/subscription'
-      });
-    }
+    const tournament = req.tournament;
+    const user = req.tournamentUser;
+    const usedFreeEntry = req.usedFreeEntry;
 
-    const tournament = await Tournament.findById(req.params.id);
-
-    if (!tournament) {
-      return res.status(404).json({
-        success: false,
-        error: 'Tournament not found'
-      });
-    }
-
-    if (tournament.registeredTeams.length >= tournament.maxTeams) {
+    if (!tournament || !user) {
       return res.status(400).json({
         success: false,
-        error: 'Tournament is full'
-      });
-    }
-
-    if (tournament.status !== 'upcoming') {
-      return res.status(400).json({
-        success: false,
-        error: 'Tournament registration is closed'
+        error: 'Invalid tournament or user'
       });
     }
 
     const { teamId } = req.body;
 
-    if (tournament.registeredTeams.includes(teamId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Team is already registered'
-      });
+    // Register user for tournament (solo registration)
+    if (!tournament.registeredPlayers.includes(user._id)) {
+      tournament.registeredPlayers.push(user._id);
     }
 
-    tournament.registeredTeams.push(teamId);
+    // If team registration, also register team
+    if (teamId && tournament.type === 'team') {
+      if (!tournament.registeredTeams.includes(teamId)) {
+        tournament.registeredTeams.push(teamId);
+      }
+    }
+
     await tournament.save();
 
     // Reload tournament with populated data
     const updatedTournament: any = await Tournament.findById(req.params.id)
       .populate('registeredTeams', 'name tag logo members')
+      .populate('registeredPlayers', 'username firstName lastName')
       .lean();
 
     if (!updatedTournament) {
-      return res.status(404).json({ success: false, error: 'Tournament not found' });
+      return res.status(404).json({
+        success: false,
+        error: 'Tournament not found after registration'
+      });
     }
 
-    // Transform response
-    const transformed: any = {
+    const transformed = {
       id: String(updatedTournament._id),
       name: updatedTournament.name,
+      title: updatedTournament.name,
       game: updatedTournament.game,
       status: updatedTournament.status === 'ongoing' ? 'in_progress' : updatedTournament.status,
       startDate: updatedTournament.startDate?.toISOString(),
       endDate: updatedTournament.endDate?.toISOString(),
       prizePool: updatedTournament.prizePool || 0,
       maxTeams: updatedTournament.maxTeams || 0,
+      maxParticipants: updatedTournament.maxTeams || 0,
       registeredTeams: (updatedTournament.registeredTeams || []).map((team: any) => ({
         id: team._id?.toString() || team.toString(),
         name: team.name || '',
@@ -332,12 +321,22 @@ router.post('/:id/register', mockAuth, checkSubscriptionStatus, async (req: any,
         logo: team.logo || '',
         players: team.members?.map((m: any) => m.toString()) || []
       })),
-      participants: updatedTournament.registeredTeams?.length || 0,
-      currentParticipants: updatedTournament.registeredTeams?.length || 0
+      registeredPlayers: (updatedTournament.registeredPlayers || []).map((player: any) => ({
+        id: player._id?.toString() || player.toString(),
+        username: player.username || '',
+        firstName: player.firstName || '',
+        lastName: player.lastName || ''
+      })),
+      participants: updatedTournament.registeredPlayers?.length || 0,
+      currentParticipants: updatedTournament.registeredPlayers?.length || 0
     };
 
     res.json({
       success: true,
+      message: usedFreeEntry ? 
+        'Successfully registered using free entry' : 
+        'Successfully registered for tournament',
+      usedFreeEntry,
       data: transformed
     });
   } catch (error) {
@@ -350,94 +349,9 @@ router.post('/:id/register', mockAuth, checkSubscriptionStatus, async (req: any,
 });
 
 // Join tournament (alias for register, frontend compatibility)
-router.post('/:id/join', mockAuth, checkSubscriptionStatus, async (req: any, res) => {
-  try {
-    // Check if user has active subscription
-    if (!req.hasActiveSubscription) {
-      return res.status(403).json({
-        success: false,
-        message: 'Active subscription required to register for tournaments',
-        requiresSubscription: true,
-        redirectTo: '/subscription'
-      });
-    }
-
-    const tournament = await Tournament.findById(req.params.id);
-
-    if (!tournament) {
-      return res.status(404).json({
-        success: false,
-        error: 'Tournament not found'
-      });
-    }
-
-    if (tournament.registeredTeams.length >= tournament.maxTeams) {
-      return res.status(400).json({
-        success: false,
-        error: 'Tournament is full'
-      });
-    }
-
-    if (tournament.status !== 'upcoming') {
-      return res.status(400).json({
-        success: false,
-        error: 'Tournament registration is closed'
-      });
-    }
-
-    const { teamId } = req.body;
-
-    if (tournament.registeredTeams.includes(teamId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Team is already registered'
-      });
-    }
-
-    tournament.registeredTeams.push(teamId);
-    await tournament.save();
-
-    // Reload tournament with populated data
-    const updatedTournament: any = await Tournament.findById(req.params.id)
-      .populate('registeredTeams', 'name tag logo members')
-      .lean();
-
-    if (!updatedTournament) {
-      return res.status(404).json({ success: false, error: 'Tournament not found' });
-    }
-
-    // Transform response
-    const transformed: any = {
-      id: String(updatedTournament._id),
-      name: updatedTournament.name,
-      game: updatedTournament.game,
-      status: updatedTournament.status === 'ongoing' ? 'in_progress' : updatedTournament.status,
-      startDate: updatedTournament.startDate?.toISOString(),
-      endDate: updatedTournament.endDate?.toISOString(),
-      prizePool: updatedTournament.prizePool || 0,
-      maxTeams: updatedTournament.maxTeams || 0,
-      registeredTeams: (updatedTournament.registeredTeams || []).map((team: any) => ({
-        id: team._id?.toString() || team.toString(),
-        name: team.name || '',
-        tag: team.tag || '',
-        logo: team.logo || '',
-        players: team.members?.map((m: any) => m.toString()) || []
-      })),
-      participants: updatedTournament.registeredTeams?.length || 0,
-      currentParticipants: updatedTournament.registeredTeams?.length || 0
-    };
-
-    res.json({
-      success: true,
-      data: transformed
-    });
-  } catch (error) {
-    console.error('Error joining tournament:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to join tournament'
-    });
-  }
+router.post('/:id/join', authenticateJWT, checkTournamentAccess, checkTournamentRegistration, consumeFreeEntry, async (req: any, res) => {
+  // Same logic as register, just different endpoint name
+  return req.route.handle(req, res);
 });
 
 // Update tournament (admin only)
@@ -569,6 +483,93 @@ router.delete('/:id', authenticateJWT, isAdmin, async (req, res) => {
       success: false,
       error: 'Failed to delete tournament'
     });
+  }
+});
+
+// Get tournament schedule (upcoming matches)
+router.get('/:id/schedule', async (req, res) => {
+  try {
+    const tournamentId = req.params.id;
+    const matches = await Match.find({ tournament: tournamentId, status: 'scheduled' })
+      .populate('team1', 'name tag logo')
+      .populate('team2', 'name tag logo')
+      .sort({ startTime: 1 })
+      .lean();
+
+    const transformed = matches.map((m: any) => ({
+      id: String(m._id),
+      tournamentId,
+      game: m.game,
+      team1: m.team1 ? {
+        id: m.team1._id?.toString() || m.team1.toString(),
+        name: m.team1.name || '',
+        tag: m.team1.tag || '',
+        logo: m.team1.logo || ''
+      } : m.team1,
+      team2: m.team2 ? {
+        id: m.team2._id?.toString() || m.team2.toString(),
+        name: m.team2.name || '',
+        tag: m.team2.tag || '',
+        logo: m.team2.logo || ''
+      } : m.team2,
+      status: 'upcoming',
+      startTime: m.startTime?.toISOString() || new Date().toISOString(),
+      round: m.round || '',
+      map: m.map || '',
+      score: m.score || {}
+    }));
+
+    res.json({ success: true, data: transformed });
+  } catch (error) {
+    console.error('Error fetching tournament schedule:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch schedule' });
+  }
+});
+
+// Get tournament live matches
+router.get('/:id/live', async (req, res) => {
+  try {
+    const tournamentId = req.params.id;
+    const matches = await Match.find({ tournament: tournamentId, status: 'live' })
+      .populate('team1', 'name tag logo')
+      .populate('team2', 'name tag logo')
+      .populate('winner', 'name tag logo')
+      .sort({ startTime: 1 })
+      .lean();
+
+    const transformed = matches.map((m: any) => ({
+      id: String(m._id),
+      tournamentId,
+      game: m.game,
+      team1: m.team1 ? {
+        id: m.team1._id?.toString() || m.team1.toString(),
+        name: m.team1.name || '',
+        tag: m.team1.tag || '',
+        logo: m.team1.logo || ''
+      } : m.team1,
+      team2: m.team2 ? {
+        id: m.team2._id?.toString() || m.team2.toString(),
+        name: m.team2.name || '',
+        tag: m.team2.tag || '',
+        logo: m.team2.logo || ''
+      } : m.team2,
+      status: 'live',
+      startTime: m.startTime?.toISOString() || new Date().toISOString(),
+      round: m.round || '',
+      map: m.map || '',
+      score: m.score || {},
+      winner: m.winner ? {
+        id: m.winner._id?.toString() || m.winner.toString(),
+        name: m.winner.name || '',
+        tag: m.winner.tag || '',
+        logo: m.winner.logo || ''
+      } : m.winner
+    }));
+
+    res.json({ success: true, data: transformed });
+  } catch (error) {
+    console.error('Error fetching tournament live matches:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch live matches' });
   }
 });
 

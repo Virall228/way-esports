@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import navigationService from '../../services/NavigationService';
+import { api } from '../../services/api';
+import { useTournamentAccess } from '../../hooks/useTournamentAccess';
+import TournamentRegistrationGuard from '../../components/Tournament/TournamentRegistrationGuard';
 
 const Container = styled.div`
   padding: ${({ theme }) => theme.spacing.xl};
@@ -169,67 +172,99 @@ const games = [
   { id: 'ValorantMobile', name: 'Valorant Mobile' }
 ];
 
-const mockTournaments: Tournament[] = [
-  {
-    id: '1',
-    title: 'CS2 Pro League Season 1',
-    game: 'CS2',
-    status: 'live',
-    date: '2024-02-20',
-    prizePool: '$10,000',
-    participants: 64,
-    maxParticipants: 128,
-    skillLevel: 'Professional'
-  },
-  {
-    id: '2',
-    title: 'Critical Ops Championship',
-    game: 'CriticalOps',
-    status: 'upcoming',
-    date: '2024-02-25',
-    prizePool: '$5,000',
-    participants: 32,
-    maxParticipants: 64,
-    skillLevel: 'Advanced'
-  },
-  {
-    id: '3',
-    title: 'PUBG Mobile Masters',
-    game: 'PUBG',
-    status: 'upcoming',
-    date: '2024-03-01',
-    prizePool: '$7,500',
-    participants: 48,
-    maxParticipants: 100,
-    skillLevel: 'Professional'
-  },
-  {
-    id: '4',
-    title: 'Valorant Mobile Launch Tournament',
-    game: 'ValorantMobile',
-    status: 'comingSoon',
-    date: '2024-Q3',
-    prizePool: '$15,000',
-    participants: 0,
-    maxParticipants: 256,
-    skillLevel: 'All Levels'
-  }
-];
-
 const AllTournaments: React.FC = () => {
   const [selectedGame, setSelectedGame] = useState('all');
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showAccessModal, setShowAccessModal] = useState(false);
+  const { joinTournament } = useTournamentAccess();
 
-  const filteredTournaments = mockTournaments.filter(
-    tournament => selectedGame === 'all' || tournament.game === selectedGame
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res: any = await api.get('/api/tournaments');
+        const items: any[] = (res && (res.data || res.tournaments)) || [];
+
+        const mapped: Tournament[] = items.map((t: any) => {
+          const rawGame = (t.game || '').toString();
+          const game: Tournament['game'] =
+            rawGame === 'CS2' ? 'CS2'
+            : rawGame === 'Critical Ops' || rawGame === 'CriticalOps' ? 'CriticalOps'
+            : rawGame === 'PUBG Mobile' || rawGame === 'PUBG' ? 'PUBG'
+            : rawGame === 'ValorantMobile' || rawGame === 'Valorant Mobile' ? 'ValorantMobile'
+            : 'CS2';
+
+          const rawStatus = (t.status || '').toString();
+          const status: Tournament['status'] =
+            rawStatus === 'completed' ? 'completed'
+            : rawStatus === 'in_progress' || rawStatus === 'ongoing' || rawStatus === 'live'
+              ? 'live'
+              : rawStatus ? 'upcoming' : 'comingSoon';
+
+          const startDate = t.startDate || t.date || '';
+          const dateText = startDate ? new Date(startDate).toLocaleDateString() : 'TBD';
+
+          const prize = Number(t.prizePool || 0);
+
+          return {
+            id: (t.id || t._id || '').toString(),
+            title: t.title || t.name || '',
+            game,
+            status,
+            date: dateText,
+            prizePool: prize ? `$${prize.toLocaleString()}` : '—',
+            participants: Number(t.participants ?? t.currentParticipants ?? 0),
+            maxParticipants: Number(t.maxParticipants ?? t.maxTeams ?? 0),
+            skillLevel: t.skillLevel || 'All Levels'
+          };
+        });
+
+        if (!mounted) return;
+        setTournaments(mapped);
+      } catch (e: any) {
+        if (!mounted) return;
+        setError(e?.message || 'Failed to load tournaments');
+      } finally {
+        if (!mounted) return;
+        setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const filteredTournaments = useMemo(
+    () => tournaments.filter((t) => selectedGame === 'all' || t.game === selectedGame),
+    [tournaments, selectedGame]
   );
 
   const handleGameChange = (gameId: string) => {
     setSelectedGame(gameId);
   };
 
+  const handleJoinTournament = async (tournament: Tournament) => {
+    try {
+      await joinTournament(tournament.id);
+      // Refresh tournaments to update participant count
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Failed to join tournament:', error);
+      // Error is handled by the hook, which may redirect to billing
+    }
+  };
+
   const handleTournamentClick = (tournament: Tournament) => {
     if (tournament.status === 'comingSoon') {
       navigationService.goToGameHub(tournament.game);
+    } else if (tournament.status === 'upcoming') {
+      // For upcoming tournaments, try to join directly
+      handleJoinTournament(tournament);
     } else {
       navigationService.goToTournamentDetails(tournament.id, tournament.title);
     }
@@ -259,8 +294,16 @@ const AllTournaments: React.FC = () => {
         ))}
       </GameTabs>
 
+      {error && (
+        <div style={{ color: '#ff4757', marginBottom: '16px' }}>{error}</div>
+      )}
+
+      {loading && !error && (
+        <div style={{ color: '#cccccc', marginBottom: '16px' }}>Loading...</div>
+      )}
+
       <Grid>
-        {filteredTournaments.map(tournament => (
+        {!loading && !error && filteredTournaments.map(tournament => (
           <TournamentCard
             key={tournament.id}
             status={tournament.status}
@@ -303,4 +346,4 @@ const AllTournaments: React.FC = () => {
   );
 };
 
-export default AllTournaments; 
+export default AllTournaments;

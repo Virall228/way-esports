@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { api } from '../../services/api';
+import { api, ApiError } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Container = styled.div`
@@ -14,6 +14,30 @@ const Container = styled.div`
 
   @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
     padding: 2rem;
+  }
+`;
+
+const CloseButton = styled.button`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: rgba(0, 0, 0, 0.5);
+    }
   }
 `;
 
@@ -204,6 +228,7 @@ const Modal = styled.div<{ $isOpen: boolean }>`
 const ModalContent = styled.div`
   background: linear-gradient(145deg, rgba(42, 42, 42, 0.95), rgba(26, 26, 26, 0.95));
   border-radius: 16px;
+  position: relative;
   padding: 1rem;
   width: min(92vw, 600px);
   max-height: 86vh;
@@ -280,7 +305,7 @@ const Select = styled.select`
   }
 `;
 
-type TabType = 'dashboard' | 'users' | 'tournaments' | 'news' | 'rewards' | 'analytics';
+type TabType = 'dashboard' | 'users' | 'tournaments' | 'news' | 'achievements' | 'rewards' | 'analytics';
 
 interface User {
   id: string;
@@ -309,6 +334,17 @@ interface NewsArticle {
   createdAt: string;
 }
 
+interface Achievement {
+  id: string;
+  key: string;
+  name: string;
+  description: string;
+  icon: string;
+  isActive: boolean;
+  criteriaType: string;
+  criteriaValue: number;
+}
+
 const ModalActions = styled.div`
   display: flex;
   gap: 12px;
@@ -334,12 +370,28 @@ const AdminPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [news, setNews] = useState<NewsArticle[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalType, setModalType] = useState<'user' | 'tournament' | 'news' | 'reward'>('user');
+  const [modalType, setModalType] = useState<'user' | 'tournament' | 'news' | 'reward' | 'achievement'>('user');
   const [editingItem, setEditingItem] = useState<any>(null);
   const [modalData, setModalData] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const formatApiError = (e: any, fallback: string) => {
+    if (e instanceof ApiError) {
+      const p = e.payload;
+      const details =
+        typeof p === 'string'
+          ? p
+          : (p?.error || p?.message || p?.details || (p ? JSON.stringify(p) : ''));
+
+      const msg = details || e.message || fallback;
+      return `[${e.status}] ${msg}`;
+    }
+
+    return e?.message || fallback;
+  };
 
   const setField = (key: string, value: any) => {
     setModalData((prev: any) => ({
@@ -354,9 +406,9 @@ const AdminPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        await Promise.all([fetchUsers(), fetchTournaments(), fetchNews()]);
+        await Promise.all([fetchUsers(), fetchTournaments(), fetchNews(), fetchAchievements()]);
       } catch (e: any) {
-        setError(e?.message || 'Failed to load admin data');
+        setError(formatApiError(e, 'Failed to load admin data'));
       } finally {
         setLoading(false);
       }
@@ -418,7 +470,24 @@ const AdminPage: React.FC = () => {
     );
   };
 
-  const buildInitialModalData = (type: 'user' | 'tournament' | 'news' | 'reward', item: any | null) => {
+  const fetchAchievements = async () => {
+    const result: any = await api.get('/api/achievements/admin');
+    const items: any[] = (result && result.data) || [];
+    setAchievements(
+      items.map((a: any) => ({
+        id: (a._id || a.id || '').toString(),
+        key: a.key || '',
+        name: a.name || '',
+        description: a.description || '',
+        icon: a.icon || '',
+        isActive: !!a.isActive,
+        criteriaType: a.criteria?.type || '',
+        criteriaValue: Number(a.criteria?.value || 0)
+      }))
+    );
+  };
+
+  const buildInitialModalData = (type: 'user' | 'tournament' | 'news' | 'reward' | 'achievement', item: any | null) => {
     if (type === 'tournament') {
       const now = new Date();
       const start = item?.startDate ? new Date(item.startDate) : now;
@@ -449,24 +518,36 @@ const AdminPage: React.FC = () => {
       };
     }
 
+    if (type === 'achievement') {
+      return {
+        key: item?.key || '',
+        name: item?.name || '',
+        description: item?.description || '',
+        icon: item?.icon || '',
+        isActive: item?.isActive ?? true,
+        criteriaType: item?.criteriaType || item?.criteria?.type || 'wins_gte',
+        criteriaValue: item?.criteriaValue ?? item?.criteria?.value ?? 1
+      };
+    }
+
     return item || {};
   };
 
-  const handleCreate = (type: 'user' | 'tournament' | 'news' | 'reward') => {
+  const handleCreate = (type: 'user' | 'tournament' | 'news' | 'reward' | 'achievement') => {
     setModalType(type);
     setEditingItem(null);
     setModalData(buildInitialModalData(type, null));
     setIsModalOpen(true);
   };
 
-  const handleEdit = (item: any, type: 'user' | 'tournament' | 'news' | 'reward') => {
+  const handleEdit = (item: any, type: 'user' | 'tournament' | 'news' | 'reward' | 'achievement') => {
     setModalType(type);
     setEditingItem(item);
     setModalData(buildInitialModalData(type, item));
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string, type: 'user' | 'tournament' | 'news') => {
+  const handleDelete = async (id: string, type: 'user' | 'tournament' | 'news' | 'achievement') => {
     if (window.confirm('Are you sure you want to delete this item?')) {
       try {
         setError(null);
@@ -480,9 +561,14 @@ const AdminPage: React.FC = () => {
           await fetchNews();
           return;
         }
+        if (type === 'achievement') {
+          await api.delete(`/api/achievements/admin/${id}`);
+          await fetchAchievements();
+          return;
+        }
         setError('User management actions are not implemented yet');
       } catch (e: any) {
-        setError(e?.message || 'Delete failed');
+        setError(formatApiError(e, 'Delete failed'));
       }
     }
   };
@@ -555,9 +641,32 @@ const AdminPage: React.FC = () => {
         return;
       }
 
+      if (modalType === 'achievement') {
+        const payload: any = {
+          key: modalData.key,
+          name: modalData.name,
+          description: modalData.description,
+          icon: modalData.icon,
+          isActive: !!modalData.isActive,
+          criteria: {
+            type: modalData.criteriaType,
+            value: Number(modalData.criteriaValue || 0)
+          }
+        };
+
+        if (editingItem?.id) {
+          await api.put(`/api/achievements/admin/${editingItem.id}`, payload);
+        } else {
+          await api.post('/api/achievements/admin', payload);
+        }
+        await fetchAchievements();
+        setIsModalOpen(false);
+        return;
+      }
+
       setIsModalOpen(false);
     } catch (e: any) {
-      setError(e?.message || 'Save failed');
+      setError(formatApiError(e, 'Save failed'));
     }
   };
 
@@ -565,29 +674,66 @@ const AdminPage: React.FC = () => {
     <div>
       <StatsGrid>
         <StatCard>
-          <StatValue>1,234</StatValue>
+          <StatValue>0</StatValue>
           <StatLabel>Total Users</StatLabel>
         </StatCard>
         <StatCard>
-          <StatValue>45</StatValue>
+          <StatValue>0</StatValue>
           <StatLabel>Active Tournaments</StatLabel>
         </StatCard>
         <StatCard>
-          <StatValue>89</StatValue>
+          <StatValue>0</StatValue>
           <StatLabel>News Articles</StatLabel>
         </StatCard>
         <StatCard>
-          <StatValue>$50,000</StatValue>
+          <StatValue>$0</StatValue>
           <StatLabel>Total Prize Pool</StatLabel>
         </StatCard>
       </StatsGrid>
       
       <h3>Recent Activity</h3>
       <div style={{ color: '#cccccc' }}>
-        <p>• New user registered: player123</p>
-        <p>• Tournament "Valorant Championship" started</p>
-        <p>• News article "New Features" published</p>
+        <p>• No recent activity</p>
       </div>
+    </div>
+  );
+
+  const renderAchievements = () => (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+        <h3>Achievements</h3>
+        <ActionButton onClick={() => handleCreate('achievement')}>Create Achievement</ActionButton>
+      </div>
+
+      <TableWrap>
+        <Table>
+          <thead>
+            <tr>
+              <Th>Key</Th>
+              <Th>Name</Th>
+              <Th>Active</Th>
+              <Th>Criteria</Th>
+              <Th>Actions</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {achievements.map((a) => (
+              <tr key={a.id}>
+                <Td>{a.key}</Td>
+                <Td>{a.icon ? `${a.icon} ` : ''}{a.name}</Td>
+                <Td>{a.isActive ? 'yes' : 'no'}</Td>
+                <Td>{a.criteriaType}:{a.criteriaValue}</Td>
+                <Td>
+                  <ActionsCell>
+                    <ActionButton onClick={() => handleEdit(a, 'achievement')}>Edit</ActionButton>
+                    <ActionButton $variant="danger" onClick={() => handleDelete(a.id, 'achievement')}>Delete</ActionButton>
+                  </ActionsCell>
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </TableWrap>
     </div>
   );
 
@@ -836,6 +982,52 @@ const AdminPage: React.FC = () => {
               </Select>
             </Form>
           );
+        case 'achievement':
+          return (
+            <Form>
+              <Input
+                placeholder="Key"
+                value={modalData.key || ''}
+                onChange={(e) => setField('key', e.target.value)}
+              />
+              <Input
+                placeholder="Name"
+                value={modalData.name || ''}
+                onChange={(e) => setField('name', e.target.value)}
+              />
+              <Input
+                placeholder="Icon"
+                value={modalData.icon || ''}
+                onChange={(e) => setField('icon', e.target.value)}
+              />
+              <TextArea
+                placeholder="Description"
+                value={modalData.description || ''}
+                onChange={(e) => setField('description', e.target.value)}
+              />
+              <Select
+                value={(modalData.isActive ? 'true' : 'false')}
+                onChange={(e) => setField('isActive', e.target.value === 'true')}
+              >
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+              </Select>
+              <Select
+                value={modalData.criteriaType || 'wins_gte'}
+                onChange={(e) => setField('criteriaType', e.target.value)}
+              >
+                <option value="wins_gte">wins_gte</option>
+                <option value="matches_played_gte">matches_played_gte</option>
+                <option value="tournaments_played_gte">tournaments_played_gte</option>
+              </Select>
+              <Input
+                placeholder="Criteria Value"
+                type="number"
+                value={modalData.criteriaValue ?? 1}
+                onChange={(e) => setField('criteriaValue', e.target.value)}
+              />
+            </Form>
+          );
         case 'reward':
           return (
             <Form>
@@ -857,6 +1049,7 @@ const AdminPage: React.FC = () => {
     return (
       <Modal $isOpen={isModalOpen} onClick={() => setIsModalOpen(false)}>
         <ModalContent onClick={(e) => e.stopPropagation()}>
+          <CloseButton onClick={() => setIsModalOpen(false)} aria-label="Close">×</CloseButton>
           <h3>{editingItem ? 'Edit' : 'Create'} {modalType}</h3>
           {renderForm()}
           <ModalActions>
@@ -878,6 +1071,8 @@ const AdminPage: React.FC = () => {
         return renderTournaments();
       case 'news':
         return renderNews();
+      case 'achievements':
+        return renderAchievements();
       case 'rewards':
         return renderRewards();
       case 'analytics':
@@ -929,6 +1124,9 @@ const AdminPage: React.FC = () => {
         </Tab>
         <Tab $active={activeTab === 'news'} onClick={() => setActiveTab('news')}>
           News
+        </Tab>
+        <Tab $active={activeTab === 'achievements'} onClick={() => setActiveTab('achievements')}>
+          Achievements
         </Tab>
         <Tab $active={activeTab === 'rewards'} onClick={() => setActiveTab('rewards')}>
           Rewards

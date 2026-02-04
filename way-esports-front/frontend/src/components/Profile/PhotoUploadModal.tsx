@@ -33,9 +33,14 @@ const CloseButton = styled.button`
   color: #ffffff;
   font-size: 24px;
   cursor: pointer;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   
   &:hover {
-  color: ${({ theme }) => theme.colors.text.primary};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 

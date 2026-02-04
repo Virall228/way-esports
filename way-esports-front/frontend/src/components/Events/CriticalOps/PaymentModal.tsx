@@ -13,16 +13,20 @@ const ModalOverlay = styled.div`
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    padding: calc(16px + var(--sat, 0px)) calc(16px + var(--sar, 0px)) calc(16px + var(--sab, 0px)) calc(16px + var(--sal, 0px));
 `;
 
 const ModalContent = styled.div`
     background: ${({ theme }) => theme.colors.bg.secondary};
     border-radius: 16px;
     padding: 24px;
-    width: 100%;
+    width: 92%;
     max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
     border: 1px solid ${({ theme }) => theme.colors.border.light};
     box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    position: relative;
 `;
 
 const Title = styled.h3`
@@ -132,6 +136,26 @@ const CancelButton = styled.button`
     }
 `;
 
+const CloseButton = styled.button`
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 24px;
+    cursor: pointer;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    &:hover {
+        color: #cccccc;
+    }
+`;
+
 interface PaymentModalProps {
     tournamentTitle: string;
     onClose: () => void;
@@ -181,7 +205,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     return (
         <ModalOverlay onClick={onClose}>
             <ModalContent onClick={e => e.stopPropagation()}>
-                <Title>Tournament Registration</Title>
+                <CloseButton onClick={onClose}>×</CloseButton>
+
+                <Title>Tournament Entry Fee</Title>
                 
                 <PaymentInfo>
                     <InfoRow>

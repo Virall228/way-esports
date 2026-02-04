@@ -1,8 +1,68 @@
 import express from 'express';
 import Match, { IMatch } from '../models/Match';
 import Tournament from '../models/Tournament';
+import Team from '../models/Team';
+import User from '../models/User';
+import { evaluateUserAchievements } from '../services/achievements/engine';
 
 const router = express.Router();
+
+async function handleMatchCompleted(matchId: string, winnerTeamId?: string | null) {
+  const match: any = await Match.findById(matchId).lean();
+  if (!match) return;
+
+  const team1Id = match.team1?.toString();
+  const team2Id = match.team2?.toString();
+  if (!team1Id || !team2Id) return;
+
+  const [team1, team2] = await Promise.all([
+    Team.findById(team1Id).select('members').lean(),
+    Team.findById(team2Id).select('members').lean()
+  ]);
+
+  const team1Members: string[] = (team1?.members || []).map((m: any) => m.toString());
+  const team2Members: string[] = (team2?.members || []).map((m: any) => m.toString());
+
+  const incTournament = match.tournament ? 1 : 0;
+  const winnerId = winnerTeamId ? winnerTeamId.toString() : (match.winner ? match.winner.toString() : null);
+
+  const team1Won = !!winnerId && winnerId === team1Id;
+  const team2Won = !!winnerId && winnerId === team2Id;
+
+  const updateUsers = async (userIds: string[], inc: any) => {
+    if (!userIds.length) return;
+    await Promise.all(
+      userIds.map(async (uid) => {
+        try {
+          await User.updateOne({ _id: uid }, { $inc: inc });
+          await evaluateUserAchievements(uid);
+        } catch (e) {
+          console.error('achievement evaluation error:', e);
+        }
+      })
+    );
+  };
+
+  const baseInc = incTournament ? { 'stats.tournamentsPlayed': incTournament } : {};
+
+  if (team1Won) {
+    await updateUsers(team1Members, { ...baseInc, 'stats.wins': 1 });
+    await updateUsers(team2Members, { ...baseInc, 'stats.losses': 1 });
+    return;
+  }
+
+  if (team2Won) {
+    await updateUsers(team2Members, { ...baseInc, 'stats.wins': 1 });
+    await updateUsers(team1Members, { ...baseInc, 'stats.losses': 1 });
+    return;
+  }
+
+  // If match completed without a winner, only track tournament participation.
+  if (incTournament) {
+    await updateUsers(team1Members, baseInc);
+    await updateUsers(team2Members, baseInc);
+  }
+}
 
 // Get all matches
 router.get('/', async (req, res) => {
@@ -23,6 +83,12 @@ router.get('/', async (req, res) => {
       .lean();
 
     // Transform for frontend compatibility
+    const normalizeStatus = (raw: any) => {
+      const s = (raw || '').toString();
+      if (s === 'scheduled') return 'upcoming';
+      return s || 'upcoming';
+    };
+
     const transformed = matches.map((match: any) => ({
       id: String(match._id),
       tournamentId: match.tournament?._id?.toString() || match.tournament?.toString() || '',
@@ -40,9 +106,11 @@ router.get('/', async (req, res) => {
         tag: match.team2.tag || '',
         logo: match.team2.logo || ''
       } : match.team2,
-      status: match.status || 'upcoming',
+      status: normalizeStatus(match.status),
       startTime: match.startTime?.toISOString() || new Date().toISOString(),
       endTime: match.endTime?.toISOString(),
+      round: match.round || '',
+      map: match.map || '',
       score: match.score || {},
       stats: match.stats || {},
       winner: match.winner ? {
@@ -85,6 +153,12 @@ router.get('/:id', async (req, res) => {
     }
 
     // Transform for frontend compatibility
+    const normalizeStatus = (raw: any) => {
+      const s = (raw || '').toString();
+      if (s === 'scheduled') return 'upcoming';
+      return s || 'upcoming';
+    };
+
     const transformed: any = {
       id: String(match._id),
       tournamentId: match.tournament?._id?.toString() || match.tournament?.toString() || '',
@@ -104,9 +178,11 @@ router.get('/:id', async (req, res) => {
         logo: match.team2.logo || '',
         members: match.team2.members?.map((m: any) => m.toString()) || []
       } : match.team2,
-      status: match.status || 'upcoming',
+      status: normalizeStatus(match.status),
       startTime: match.startTime?.toISOString() || new Date().toISOString(),
       endTime: match.endTime?.toISOString(),
+      round: match.round || '',
+      map: match.map || '',
       score: match.score || {},
       stats: match.stats || {},
       winner: match.winner ? {
@@ -243,6 +319,8 @@ router.put('/:id/score', async (req, res) => {
       });
     }
 
+    const wasCompleted = match.status === 'completed';
+
     const { score, stats, winner } = req.body;
 
     match.score = score;
@@ -254,6 +332,11 @@ router.put('/:id/score', async (req, res) => {
     }
 
     await match.save();
+
+    const nowCompleted = match.status === 'completed';
+    if (!wasCompleted && nowCompleted) {
+      await handleMatchCompleted(match._id.toString(), match.winner?.toString());
+    }
 
     // Transform response
     const transformed: any = {
@@ -296,12 +379,18 @@ router.put('/:id/status', async (req, res) => {
       });
     }
 
+    const wasCompleted = match.status === 'completed';
     match.status = status;
     if (status === 'completed' && !match.endTime) {
       match.endTime = new Date();
     }
 
     await match.save();
+
+    const nowCompleted = match.status === 'completed';
+    if (!wasCompleted && nowCompleted) {
+      await handleMatchCompleted(match._id.toString(), match.winner?.toString());
+    }
 
     // Transform response
     const transformed: any = {

@@ -3,6 +3,7 @@ import { body } from 'express-validator';
 import { register, login, getProfile, getAllUsers, authenticateTelegram } from '../controllers/userController';
 import { authenticateJWT, isAdmin } from '../middleware/auth';
 import { telegramAuthMiddleware } from '../middleware/telegramAuth';
+import { requestEmailOtp, verifyEmailOtp, logoutSession } from '../controllers/emailAuthController';
 
 const router = Router();
 
@@ -30,6 +31,21 @@ router.post(
 // Telegram Mini App authentication endpoint
 // Accepts initData from Telegram WebApp and authenticates/registers user
 router.post('/telegram', telegramAuthMiddleware, authenticateTelegram);
+
+// Email passwordless auth (OTP)
+router.post(
+  '/email/request-otp',
+  [body('email').isEmail().normalizeEmail()],
+  requestEmailOtp
+);
+
+router.post(
+  '/email/verify-otp',
+  [body('email').isEmail().normalizeEmail(), body('code').isLength({ min: 4, max: 10 })],
+  verifyEmailOtp
+);
+
+router.post('/logout', authenticateJWT, logoutSession);
 
 // Protected routes
 router.get('/profile', authenticateJWT, getProfile);

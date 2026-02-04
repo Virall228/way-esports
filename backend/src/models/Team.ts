@@ -7,6 +7,7 @@ export interface ITeam extends Document {
   game: string;
   captain?: mongoose.Types.ObjectId;
   members: mongoose.Types.ObjectId[];
+  players?: mongoose.Types.ObjectId[]; // Alias for members for compatibility
   achievements: {
     tournamentId: mongoose.Types.ObjectId;
     position: number;
@@ -51,6 +52,10 @@ const teamSchema = new Schema<ITeam>({
     required: false
   },
   members: [{
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  players: [{
     type: Schema.Types.ObjectId,
     ref: 'User'
   }],

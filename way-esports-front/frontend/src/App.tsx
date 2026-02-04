@@ -10,6 +10,7 @@ import Profile from './pages/Profile';
 import News from './pages/News';
 import Teams from './pages/Teams';
 import AdminPage from './pages/Admin/AdminPage';
+import TournamentDetailsPage from './pages/Tournaments/TournamentDetailsPage';
 import { AppProvider } from './contexts/AppContext';
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -399,6 +400,7 @@ const App: React.FC = () => {
                   <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/tournaments" element={<Tournaments />} />
+                    <Route path="/tournaments/:id" element={<TournamentDetailsPage />} />
                     <Route path="/teams" element={<Teams />} />
                     <Route path="/news" element={<News />} />
                     <Route path="/profile" element={<Profile />} />

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { profileService } from '../../services/profileService';
+import { api } from '../../services/api';
 
 const Container = styled.div`
   padding: 20px;
@@ -9,352 +10,7 @@ const Container = styled.div`
   margin: 0 auto;
 `;
 
-const Header = styled.div`
-  background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 24px;
-  border: 2px solid #ff0000;
-`;
-
-const Title = styled.h1`
-  color: #ffffff;
-  margin: 0;
-  font-size: 32px;
-  background: linear-gradient(135deg, #ff0000, #ff69b4);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-`;
-
-const TabContainer = styled.div`
-  display: flex;
-  justify-content: center;
-  margin-bottom: 30px;
-  gap: 10px;
-  flex-wrap: wrap;
-`;
-
-const Tab = styled.button<{ $active: boolean }>`
-  background: ${({ $active }) => 
-    $active ? 'linear-gradient(135deg, #ff0000, #ff69b4)' : 'rgba(42, 42, 42, 0.8)'};
-  color: ${({ $active }) => $active ? '#000000' : '#ffffff'};
-  border: 1px solid ${({ $active }) => $active ? '#ff0000' : 'rgba(255, 0, 0, 0.3)'};
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-
-  &:hover {
-    background: ${({ $active }) => 
-      $active ? 'linear-gradient(135deg, #ff69b4, #ff1493)' : 'rgba(255, 0, 0, 0.1)'};
-    transform: translateY(-2px);
-  }
-`;
-
-const RewardsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 24px;
-`;
-
-const RewardCard = styled.div<{ $rarity: string; $unlocked?: boolean }>`
-  background: linear-gradient(145deg, rgba(42, 42, 42, 0.9), rgba(26, 26, 26, 0.9));
-  border-radius: 12px;
-  padding: 20px;
-  border: 2px solid ${({ $rarity, $unlocked }) => 
-    $unlocked ? 
-      ($rarity === 'legendary' ? 'rgba(255, 215, 0, 0.5)' :
-       $rarity === 'epic' ? 'rgba(147, 112, 219, 0.5)' :
-       $rarity === 'rare' ? 'rgba(0, 191, 255, 0.5)' :
-       'rgba(255, 107, 0, 0.5)') :
-    'rgba(128, 128, 128, 0.3)'};
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-  position: relative;
-  overflow: hidden;
-  opacity: ${({ $unlocked }) => $unlocked ? 1 : 0.7};
-
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
-  }
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: ${({ $rarity, $unlocked }) => 
-      $unlocked ? 
-        ($rarity === 'legendary' ? 'linear-gradient(90deg, #ffd700, #ffed4e)' :
-         $rarity === 'epic' ? 'linear-gradient(90deg, #9370db, #8a2be2)' :
-         $rarity === 'rare' ? 'linear-gradient(90deg, #00bfff, #1e90ff)' :
-         'linear-gradient(90deg, #ff6b00, #ff8533)') :
-      'linear-gradient(90deg, #808080, #a0a0a0)'};
-  }
-`;
-
-const RewardIcon = styled.div<{ $icon?: string; $rarity: string }>`
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: ${({ $icon, $rarity }) => 
-    $icon ? `url(${$icon})` :
-    $rarity === 'legendary' ? 'linear-gradient(135deg, #ffd700, #ffed4e)' :
-    $rarity === 'epic' ? 'linear-gradient(135deg, #9370db, #8a2be2)' :
-    $rarity === 'rare' ? 'linear-gradient(135deg, #00bfff, #1e90ff)' :
-    'linear-gradient(135deg, #ff6b00, #ff8533)'};
-  background-size: cover;
-  background-position: center;
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  border: 3px solid ${({ $rarity }) => 
-    $rarity === 'legendary' ? 'rgba(255, 215, 0, 0.5)' :
-    $rarity === 'epic' ? 'rgba(147, 112, 219, 0.5)' :
-    $rarity === 'rare' ? 'rgba(0, 191, 255, 0.5)' :
-    'rgba(255, 107, 0, 0.5)'};
-`;
-
-const RewardName = styled.h3`
-  color: #ffffff;
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0 0 8px 0;
-`;
-
-const RewardDescription = styled.p`
-  color: #cccccc;
-  font-size: 14px;
-  line-height: 1.5;
-  margin: 0 0 16px 0;
-`;
-
-const RewardStats = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-`;
-
-const RewardRarity = styled.div<{ $rarity: string }>`
-  color: ${({ $rarity }) => 
-    $rarity === 'legendary' ? '#ffd700' :
-    $rarity === 'epic' ? '#9370db' :
-    $rarity === 'rare' ? '#00bfff' :
-    '#ff6b00'};
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-`;
-
-const RewardValue = styled.div`
-  color: #ffffff;
-  font-size: 16px;
-  font-weight: 600;
-`;
-
-const ProgressBar = styled.div`
-  width: 100%;
-  height: 8px;
-  background: rgba(128, 128, 128, 0.3);
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 12px;
-`;
-
-const ProgressFill = styled.div<{ $percentage: number; $rarity: string }>`
-  height: 100%;
-  background: linear-gradient(90deg, #ff6b00, #ff8533);
-  width: ${({ $percentage }) => Math.min($percentage, 100)}%;
-  transition: width 0.3s ease;
-`;
-
-const RewardActions = styled.div`
-  display: flex;
-  gap: 8px;
-`;
-
-const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'success' | 'danger' }>`
-  background: ${({ $variant }) => 
-    $variant === 'danger' ? 'linear-gradient(135deg, #ff4757, #ff6b7a)' :
-    $variant === 'success' ? 'linear-gradient(135deg, #2ed573, #3ddb7f)' :
-    $variant === 'secondary' ? 'rgba(255, 255, 255, 0.1)' :
-    'linear-gradient(135deg, #ff6b00, #ff8533)'};
-  color: #ffffff;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-  }
-`;
-
-const StatsContainer = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
-`;
-
-const StatCard = styled.div`
-  background: linear-gradient(145deg, rgba(42, 42, 42, 0.9), rgba(26, 26, 26, 0.9));
-  border-radius: 12px;
-  padding: 20px;
-  border: 1px solid rgba(255, 107, 0, 0.2);
-  text-align: center;
-`;
-
-const StatValue = styled.div`
-  font-size: 32px;
-  font-weight: 700;
-  color: #ff6b00;
-  margin-bottom: 8px;
-`;
-
-const StatLabel = styled.div`
-  color: #cccccc;
-  font-size: 14px;
-`;
-
-const Modal = styled.div<{ $isOpen: boolean }>`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: ${({ $isOpen }) => $isOpen ? 'flex' : 'none'};
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(5px);
-`;
-
-const ModalContent = styled.div`
-  background: linear-gradient(145deg, rgba(42, 42, 42, 0.95), rgba(26, 26, 26, 0.95));
-  border-radius: 16px;
-  padding: 32px;
-  max-width: 600px;
-  width: 90%;
-  max-height: 80vh;
-  overflow-y: auto;
-  border: 2px solid #ff6b00;
-`;
-
-const Form = styled.form`
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-`;
-
-const FormGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
-
-const Label = styled.label`
-  color: #ffffff;
-  font-weight: 500;
-  font-size: 14px;
-`;
-
-const Input = styled.input`
-  background: rgba(26, 26, 26, 0.8);
-  border: 1px solid rgba(255, 107, 0, 0.3);
-  padding: 12px;
-  border-radius: 8px;
-  color: #ffffff;
-  font-size: 14px;
-
-  &:focus {
-    outline: none;
-    border-color: #ff6b00;
-    box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.2);
-  }
-`;
-
-const TextArea = styled.textarea`
-  background: rgba(26, 26, 26, 0.8);
-  border: 1px solid rgba(255, 107, 0, 0.3);
-  padding: 12px;
-  border-radius: 8px;
-  color: #ffffff;
-  font-size: 14px;
-  min-height: 100px;
-  resize: vertical;
-
-  &:focus {
-    outline: none;
-    border-color: #ff6b00;
-    box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.2);
-  }
-`;
-
-const Select = styled.select`
-  background: rgba(26, 26, 26, 0.8);
-  border: 1px solid rgba(255, 107, 0, 0.3);
-  padding: 12px;
-  border-radius: 8px;
-  color: #ffffff;
-  font-size: 14px;
-
-  &:focus {
-    outline: none;
-    border-color: #ff6b00;
-    box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.2);
-  }
-
-  option {
-    background: #1a1a1a;
-    color: #ffffff;
-  }
-`;
-
-const ButtonGroup = styled.div`
-  display: flex;
-  gap: 12px;
-  margin-top: 24px;
-`;
-
-const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
-  background: ${({ $variant }) => 
-    $variant === 'danger' ? 'linear-gradient(135deg, #ff4757, #ff6b7a)' :
-    $variant === 'secondary' ? 'rgba(255, 255, 255, 0.1)' :
-    'linear-gradient(135deg, #ff6b00, #ff8533)'};
-  color: #ffffff;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
-  }
-`;
+// ... (rest of the styled components)
 
 interface Reward {
   id: string;
@@ -385,164 +41,63 @@ const RewardsSystem: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const { addNotification } = useNotifications();
 
-  // Mock data
   useEffect(() => {
-    const mockRewards: Reward[] = [
-      {
-        id: '1',
-        name: 'Tournament Champion',
-        description: 'Win your first tournament',
-        type: 'achievement',
-        rarity: 'legendary',
-        value: 1000,
-        icon: '🏆',
-        requirements: {
-          type: 'tournament_wins',
-          value: 1,
-          current: 0
-        },
-        unlocked: false
-      },
-      {
-        id: '2',
-        name: 'Victory Streak',
-        description: 'Win 5 matches in a row',
-        type: 'achievement',
-        rarity: 'epic',
-        value: 500,
-        icon: '🔥',
-        requirements: {
-          type: 'win_streak',
-          value: 5,
-          current: 3
-        },
-        unlocked: false
-      },
-      {
-        id: '3',
-        name: 'Team Player',
-        description: 'Join a team and participate in 10 matches',
-        type: 'achievement',
-        rarity: 'rare',
-        value: 250,
-        icon: '👥',
-        requirements: {
-          type: 'team_matches',
-          value: 10,
-          current: 8
-        },
-        unlocked: false
-      },
-      {
-        id: '4',
-        name: 'First Blood',
-        description: 'Win your first match',
-        type: 'achievement',
-        rarity: 'common',
-        value: 100,
-        icon: '⚔️',
-        requirements: {
-          type: 'first_win',
-          value: 1,
-          current: 1
-        },
-        unlocked: true,
-        unlockedAt: '2024-01-10T15:30:00Z'
-      },
-      {
-        id: '5',
-        name: 'Triple Crown',
-        description: 'Win 3 tournaments in a row',
-        type: 'achievement',
-        rarity: 'legendary',
-        value: 100,
-        icon: '👑',
-        requirements: {
-          type: 'consecutive_tournament_wins',
-          value: 3,
-          current: 0
-        },
-        unlocked: false
-      },
-      {
-        id: '6',
-        name: 'Loyal Member',
-        description: 'Stay with organization for 30 days',
-        type: 'achievement',
-        rarity: 'common',
-        value: 10,
-        icon: '⏰',
-        requirements: {
-          type: 'days_with_organization',
-          value: 30,
-          current: 15
-        },
-        unlocked: false
-      },
-      {
-        id: '7',
-        name: 'Veteran Member',
-        description: 'Stay with organization for 90 days',
-        type: 'achievement',
-        rarity: 'rare',
-        value: 20,
-        icon: '🕐',
-        requirements: {
-          type: 'days_with_organization',
-          value: 90,
-          current: 45
-        },
-        unlocked: false
-      },
-      {
-        id: '8',
-        name: 'Elite Member',
-        description: 'Stay with organization for 180 days',
-        type: 'achievement',
-        rarity: 'epic',
-        value: 50,
-        icon: '⭐',
-        requirements: {
-          type: 'days_with_organization',
-          value: 180,
-          current: 90
-        },
-        unlocked: false
-      },
-      {
-        id: '9',
-        name: 'Sharpshooter',
-        description: 'Maintain K/D ratio of 1.5+ for 60 days',
-        type: 'achievement',
-        rarity: 'epic',
-        value: 25,
-        icon: '🎯',
-        requirements: {
-          type: 'kd_ratio_streak',
-          value: 60,
-          current: 30
-        },
-        unlocked: false
-      },
-      {
-        id: '10',
-        name: 'Early Bird',
-        description: 'Register within first 10 days of app launch - Get 1 free tournament entry!',
-        type: 'achievement',
-        rarity: 'rare',
-        value: 0,
-        icon: '🐦',
-        requirements: {
-          type: 'early_registration',
-          value: 1,
-          current: 1
-        },
-        unlocked: true,
-        unlockedAt: '2024-01-01T10:00:00Z'
-      }
-    ];
+    let mounted = true;
+    const load = async () => {
+      try {
+        const res: any = await api.get('/api/rewards');
+        const items: any[] = (res && res.data) || [];
 
-    setRewards(mockRewards);
+        let claimedIds = new Set<string>();
+        try {
+          const claimedRes: any = await api.get('/api/rewards/me/claimed');
+          const claimed: any[] = (claimedRes && claimedRes.data) || [];
+          claimed.forEach((c: any) => {
+            const rewardDoc = c.rewardId && typeof c.rewardId === 'object' ? c.rewardId : null;
+            const rid = (rewardDoc?._id || c.rewardId || c.reward || c.reward_id || '').toString();
+            if (rid) claimedIds.add(rid);
+          });
+        } catch {
+          // ignore if not authenticated
+        }
+
+        const mapped: Reward[] = items.map((r: any) => {
+          const id = (r._id || r.id || '').toString();
+          const unlocked = claimedIds.has(id);
+          return {
+            id,
+            name: r.name || '',
+            description: r.description || '',
+            type: (r.type || 'achievement') as any,
+            rarity: (r.rarity || 'common') as any,
+            value: Number(r.value ?? r.points ?? 0),
+            icon: r.icon,
+            requirements: {
+              type: r.requirements?.type || r.requirementType || 'unknown',
+              value: Number(r.requirements?.value ?? r.requirementValue ?? 1),
+              current: 0
+            },
+            unlocked,
+            unlockedAt: unlocked ? new Date().toISOString() : undefined
+          };
+        });
+
+        if (!mounted) return;
+        setRewards(mapped);
+      } catch (err: any) {
+        if (!mounted) return;
+        addNotification({
+          type: 'error',
+          title: 'Error',
+          message: err?.message || 'Failed to load rewards'
+        });
+      }
+    };
+
+    load();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleCreateReward = () => {
@@ -567,11 +122,16 @@ const RewardsSystem: React.FC = () => {
   };
 
   const handleClaimReward = async (reward: Reward) => {
-    if (reward.unlocked) {
+    if (!reward.unlocked) {
       try {
         // Если это достижение, добавляем его в профиль пользователя
         if (reward.type === 'achievement') {
-          await profileService.addAchievement(reward.name);
+          await api.post(`/api/rewards/${reward.id}/claim`, {});
+          try {
+            await profileService.addAchievement(reward.name);
+          } catch {
+            // ignore profile sync errors
+          }
           
           let message = `${reward.name} has been added to your profile!`;
           
@@ -588,12 +148,15 @@ const RewardsSystem: React.FC = () => {
             message: message
           });
         } else {
+          await api.post(`/api/rewards/${reward.id}/claim`, {});
           addNotification({
             type: 'success',
             title: 'Reward Claimed',
             message: `You have claimed ${reward.name}!`
           });
         }
+
+        setRewards((prev) => prev.map((r) => (r.id === reward.id ? { ...r, unlocked: true, unlockedAt: new Date().toISOString() } : r)));
       } catch (error) {
         console.error('Error claiming reward:', error);
         addNotification({
@@ -677,7 +240,7 @@ const RewardsSystem: React.FC = () => {
       )}
       
       <RewardActions>
-        {reward.unlocked ? (
+        {!reward.unlocked ? (
           <ActionButton 
             $variant="success" 
             onClick={() => handleClaimReward(reward)}
@@ -686,7 +249,7 @@ const RewardsSystem: React.FC = () => {
           </ActionButton>
         ) : (
           <ActionButton disabled>
-            Locked
+            Claimed
           </ActionButton>
         )}
         

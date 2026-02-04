@@ -2,17 +2,20 @@
   "name": "way-esports-backend",
   "version": "1.0.0",
   "description": "Backend for WAY-Esports",
-  "main": "dist/index.js",
+  "main": "dist/src/server.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "start": "node dist/src/server.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:unit": "jest tests/models",
     "test:e2e": "jest tests/e2e",
-    "test:performance": "jest tests/performance --runInBand --detectOpenHandles"
+    "test:performance": "jest tests/performance --runInBand --detectOpenHandles",
+    "migrate": "ts-node src/scripts/run-migrations.ts up",
+    "migrate:down": "ts-node src/scripts/run-migrations.ts down",
+    "migrate:status": "ts-node src/scripts/run-migrations.ts status"
   },
   "dependencies": {
     "@types/express-validator": "^2.20.33",
@@ -38,6 +41,7 @@
     "@types/node": "^20.19.6",
     "@types/node-telegram-bot-api": "^0.64.9",
     "@types/supertest": "^6.0.2",
+    "commander": "^12.0.0",
     "jest": "^29.7.0",
     "mongodb-memory-server": "^9.1.6",
     "supertest": "^6.3.4",
