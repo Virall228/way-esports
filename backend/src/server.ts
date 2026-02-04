@@ -27,6 +27,9 @@ import achievementsRouter from './routes/achievements';
 import searchRouter from './routes/search';
 import prizesRouter from './routes/prizes';
 import referralsRouter from './routes/referrals';
+import webhooksRouter from './routes/webhooks';
+import analyticsRouter from './routes/analytics';
+import termsRouter from './routes/terms';
 
 import { seedDefaultAchievements } from './services/achievements/seedAchievements';
 
@@ -98,6 +101,9 @@ app.use('/api/news', newsRouter);
 app.use('/api/achievements', achievementsRouter);
 app.use('/api/prizes', prizesRouter);
 app.use('/api/referrals', referralsRouter);
+app.use('/api/webhooks', webhooksRouter);
+app.use('/api/analytics', analyticsRouter);
+app.use('/api/terms', termsRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

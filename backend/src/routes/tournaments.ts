@@ -3,6 +3,10 @@ import Tournament, { ITournament } from '../models/Tournament';
 import Match from '../models/Match';
 import { authenticateJWT, isAdmin } from '../middleware/auth';
 import { checkTournamentAccess, checkTournamentRegistration, consumeFreeEntry } from '../middleware/tournamentAccess';
+import { handleTournamentConcurrency, rateLimitRegistration } from '../middleware/concurrency';
+import { detectReferralFraud, validateReferralCompletion } from '../middleware/fraudDetection';
+import cacheService from '../services/cacheService';
+import { logTournamentEvent } from '../services/loggingService';
 
 const router = express.Router();
 
@@ -10,36 +14,11 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const { game, status } = req.query as { game?: string; status?: string };
-    const query: any = {};
-
-    if (game) query.game = game;
-    if (status) query.status = status;
-
-    const tournaments = await Tournament.find(query)
-      .populate('registeredTeams', 'name tag logo members')
-      .populate('matches', 'team1 team2 status startTime')
-      .sort({ startDate: 1 })
-      .lean();
-
-    // Transform for frontend compatibility
-    const transformed = tournaments.map((t: any) => ({
-      id: String(t._id),
-      name: t.name,
-      title: t.name, // Alias for frontend compatibility
-      game: t.game,
-      status: t.status === 'ongoing' ? 'in_progress' : t.status, // Map status
-      startDate: t.startDate?.toISOString() || new Date().toISOString(),
-      endDate: t.endDate?.toISOString() || new Date().toISOString(),
-      prizePool: t.prizePool || 0,
-      maxTeams: t.maxTeams || 0,
-      maxParticipants: t.maxTeams || 0, // Alias
-      registeredTeams: (t.registeredTeams || []).map((team: any) => ({
-        id: team._id?.toString() || team.toString(),
-        name: team.name || '',
-        tag: team.tag || '',
-        logo: team.logo || '',
-        players: team.members?.map((m: any) => m.toString()) || []
-      })),
+    
+    // Use cached tournaments
+    const tournaments = await cacheService.getTournaments({ game, status });
+    
+    res.json({ tournaments });
       participants: t.registeredTeams?.length || 0,
       currentParticipants: t.registeredTeams?.length || 0,
       format: t.format || 'single_elimination',
@@ -259,7 +238,16 @@ router.post('/batch', authenticateJWT, isAdmin, async (req, res) => {
 });
 
 // Register for tournament (also available as /join for frontend compatibility)
-router.post('/:id/register', authenticateJWT, checkTournamentAccess, checkTournamentRegistration, consumeFreeEntry, async (req: any, res) => {
+router.post('/:id/register', 
+  authenticateJWT, 
+  detectReferralFraud,
+  rateLimitRegistration(5, 60000), // 5 attempts per minute
+  handleTournamentConcurrency,
+  checkTournamentAccess, 
+  checkTournamentRegistration, 
+  consumeFreeEntry, 
+  validateReferralCompletion,
+  async (req: any, res) => {
   try {
     const tournament = req.tournament;
     const user = req.tournamentUser;
@@ -337,8 +325,25 @@ router.post('/:id/register', authenticateJWT, checkTournamentAccess, checkTourna
       usedFreeEntry,
       data: transformed
     });
+
+    // Log tournament registration event
+    logTournamentEvent('registration_completed', {
+      tournamentId: tournament._id,
+      userId: user._id,
+      usedFreeEntry,
+      currentParticipants: updatedTournament.registeredPlayers?.length || 0
+    });
+
+    // Invalidate tournament caches
+    await cacheService.invalidateTournamentCaches();
+    await cacheService.invalidateUserCaches(user._id.toString());
   } catch (error) {
     console.error('Error registering for tournament:', error);
+    logTournamentEvent('registration_failed', {
+      tournamentId: req.params.id,
+      userId: (req.user as any)?._id,
+      error: (error as Error).message
+    });
     res.status(500).json({
       success: false,
       error: 'Failed to register for tournament'
