@@ -1,7 +1,23 @@
 import mongoose from 'mongoose';
 import User from '../models/User';
-import Referral from '../models/Referral';
-import ReferralSettings from '../models/ReferralSettings';
+
+// Временно используем заглушки для моделей
+const Referral = mongoose.models.Referral || mongoose.model('Referral', new mongoose.Schema({
+  referrer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  referee: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  status: { type: String, enum: ['pending', 'completed', 'rewarded'], default: 'pending' },
+  rewardType: { type: String, enum: ['free_entry', 'subscription'], default: 'free_entry' },
+  createdAt: { type: Date, default: Date.now },
+  completedAt: { type: Date }
+}));
+
+const ReferralSettings = mongoose.models.ReferralSettings || mongoose.model('ReferralSettings', new mongoose.Schema({
+  referralBonusThreshold: { type: Number, default: 3 },
+  refereeBonus: { type: Number, default: 1 },
+  referrerBonus: { type: Number, default: 1 },
+  subscriptionPrice: { type: Number, default: 9.99 },
+  createdAt: { type: Date, default: Date.now }
+}));
 
 /**
  * Referral Service - manages referral system logic

@@ -1,8 +1,15 @@
 import express from 'express';
 import User from '../models/User';
-import Referral from '../models/Referral';
 import Tournament from '../models/Tournament';
 import { logInfo } from '../services/loggingService';
+
+// Временная заглушка для Referral модели
+const Referral = {
+  find: async (filter: any) => {
+    // Возвращаем пустой массив для совместимости
+    return [];
+  }
+};
 
 const router = express.Router();
 

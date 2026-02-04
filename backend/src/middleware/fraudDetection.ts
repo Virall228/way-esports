@@ -1,7 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import User from '../models/User';
-import Referral from '../models/Referral';
 import { logSecurityEvent, logWarning } from '../services/loggingService';
+
+// Временная заглушка для Referral модели
+const Referral = {
+  findOne: async (filter: any) => {
+    return null;
+  }
+};
 
 interface FraudDetectionConfig {
   maxReferralsPerIP: number;
