@@ -11,6 +11,7 @@ import News from './pages/News';
 import Teams from './pages/Teams';
 import AdminPage from './pages/Admin/AdminPage';
 import TournamentDetailsPage from './pages/Tournaments/TournamentDetailsPage';
+import BillingPage from './pages/Billing/BillingPage';
 import { AppProvider } from './contexts/AppContext';
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -404,6 +405,7 @@ const App: React.FC = () => {
                     <Route path="/teams" element={<Teams />} />
                     <Route path="/news" element={<News />} />
                     <Route path="/profile" element={<Profile />} />
+                    <Route path="/billing" element={<BillingPage />} />
                     <Route path="/admin" element={<AdminPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>

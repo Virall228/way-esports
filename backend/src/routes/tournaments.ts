@@ -1,8 +1,6 @@
 import express from 'express';
 import Tournament, { ITournament } from '../models/Tournament';
 import Match from '../models/Match';
-import { checkSubscriptionStatus } from '../../middleware/subscriptionAuth';
-import { mockAuth } from '../../middleware/mockAuth';
 import { authenticateJWT, isAdmin } from '../middleware/auth';
 import { checkTournamentAccess, checkTournamentRegistration, consumeFreeEntry } from '../middleware/tournamentAccess';
 
