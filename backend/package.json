@@ -26,9 +26,11 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "express-validator": "^7.3.1",
+    "ioredis": "^5.3.2",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.16.2",
     "node-telegram-bot-api": "^0.66.0",
+    "stripe": "^14.9.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   },
