@@ -363,9 +363,9 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <AppProvider>
+    <ThemeProvider theme={eslTheme}>
       <AuthProvider>
-        <ThemeProvider theme={eslTheme}>
+        <AppProvider>
           <GlobalStyle />
           <TermsGuard>
             <BrowserRouter>
@@ -425,8 +425,9 @@ const App: React.FC = () => {
               </AppContainer>
             </BrowserRouter>
           </TermsGuard>
+        </AppProvider>
       </AuthProvider>
-    </AppProvider>
+    </ThemeProvider>
   );
 };
 
