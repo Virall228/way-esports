@@ -4,10 +4,11 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
+import fs from 'fs';
 import swaggerUi from 'swagger-ui-express';
 import { config } from './config';
 import { errorHandler } from './middleware/errorHandler';
-import { authenticateJWT } from './middleware/auth';
+import { authenticateJWT, isAdmin } from './middleware/auth';
 import { apiLimiter } from './middleware/rateLimiter';
 import { connectDB, disconnectDB } from './config/db';
 import { startSchedulers } from './services/scheduler';
@@ -27,9 +28,6 @@ import achievementsRouter from './routes/achievements';
 import searchRouter from './routes/search';
 import prizesRouter from './routes/prizes';
 import referralsRouter from './routes/referrals';
-import webhooksRouter from './routes/webhooks';
-import analyticsRouter from './routes/analytics';
-import termsRouter from './routes/terms';
 
 import { seedDefaultAchievements } from './services/achievements/seedAchievements';
 
@@ -101,9 +99,6 @@ app.use('/api/news', newsRouter);
 app.use('/api/achievements', achievementsRouter);
 app.use('/api/prizes', prizesRouter);
 app.use('/api/referrals', referralsRouter);
-app.use('/api/webhooks', webhooksRouter);
-app.use('/api/analytics', analyticsRouter);
-app.use('/api/terms', termsRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
