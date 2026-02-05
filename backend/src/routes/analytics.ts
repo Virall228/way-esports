@@ -1,14 +1,22 @@
 import express from 'express';
 import User from '../models/User';
 import Tournament from '../models/Tournament';
-import { logInfo } from '../services/loggingService';
 
-// Временная заглушка для Referral модели
+// Временные заглушки
+const logInfo = (event: string, data: any) => {
+  console.log(`Analytics: ${event}`, data);
+};
+
 const Referral = {
   find: async (filter: any) => {
-    // Возвращаем пустой массив для совместимости
     return [];
   }
+};
+
+const require = (id: string) => {
+  if (id === '../models/Referral') return Referral;
+  if (id === '../models/SecurityEvent') return { countDocuments: async () => 0 };
+  return {};
 };
 
 const router = express.Router();

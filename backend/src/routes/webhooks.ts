@@ -1,8 +1,21 @@
 import express from 'express';
 import crypto from 'crypto';
 import User from '../models/User';
-import ReferralService from '../services/referralService';
-import { logPaymentEvent, logError } from '../services/loggingService';
+
+// Временные заглушки для сервисов
+const ReferralService = {
+  checkAndAwardReferrerBonus: async (userId: string) => {
+    console.log(`Would check and award bonus for ${userId}`);
+  }
+};
+
+const logPaymentEvent = (event: string, data: any) => {
+  console.log(`Payment event: ${event}`, data);
+};
+
+const logError = (event: string, error?: Error, data?: any) => {
+  console.error(`Error: ${event}`, error, data);
+};
 
 const router = express.Router();
 

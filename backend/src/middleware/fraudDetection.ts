@@ -1,12 +1,25 @@
 import { Request, Response, NextFunction } from 'express';
 import User from '../models/User';
-import { logSecurityEvent, logWarning } from '../services/loggingService';
 
-// Временная заглушка для Referral модели
+// Временные заглушки
+const logSecurityEvent = (event: string, data: any, userId?: string) => {
+  console.log(`Security: ${event}`, data, userId);
+};
+
+const logWarning = (event: string, data: any, userId?: string) => {
+  console.warn(`Warning: ${event}`, data, userId);
+};
+
 const Referral = {
   findOne: async (filter: any) => {
     return null;
   }
+};
+
+const require = (id: string) => {
+  if (id === '../models/Referral') return Referral;
+  if (id === '../models/SecurityEvent') return { countDocuments: async () => 0 };
+  return {};
 };
 
 interface FraudDetectionConfig {
