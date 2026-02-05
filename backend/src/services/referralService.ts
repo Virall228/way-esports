@@ -39,8 +39,8 @@ export class ReferralService {
 
       // Check if referral already exists
       const existingReferral = await Referral.findOne({
-        referralCode,
-        refereeId: newUserId
+        referrer: referrer._id,
+        referee: newUserId
       });
 
       if (existingReferral) {
@@ -50,9 +50,8 @@ export class ReferralService {
 
       // Create referral record
       const referral = new Referral({
-        referrerId: referrer._id,
-        refereeId: newUserId,
-        referralCode,
+        referrer: referrer._id,
+        referee: newUserId,
         status: 'completed',
         rewardType: 'free_entry',
         completedAt: new Date()
@@ -69,7 +68,7 @@ export class ReferralService {
 
       // Give new user their bonus
       const settings = await ReferralSettings.findOne();
-      const newUserBonus = settings?.newUserBonus || 1;
+      const newUserBonus = settings?.refereeBonus || 1;
       
       if (newUser && newUserBonus > 0) {
         await newUser.addFreeEntry(newUserBonus);
@@ -94,18 +93,18 @@ export class ReferralService {
       const settings = await ReferralSettings.findOne();
       if (!settings) return;
 
-      const referralsNeeded = settings.referralsNeededForBonus;
-      const bonusValue = settings.bonusValue;
+      const referralsNeeded = settings.referralBonusThreshold;
+      const bonusValue = settings.referrerBonus;
 
       // Count completed referrals for this referrer
       const completedReferrals = await Referral.countDocuments({
-        referrerId: referrerId,
+        referrer: referrerId,
         status: 'completed'
       });
 
       // Count already rewarded referrals
       const rewardedReferrals = await Referral.countDocuments({
-        referrerId: referrerId,
+        referrer: referrerId,
         status: 'rewarded'
       });
 
@@ -121,7 +120,7 @@ export class ReferralService {
           
           // Mark referrals as rewarded
           const referralsToMark = await Referral.find({
-            referrerId: referrerId,
+            referrer: referrerId,
             status: 'completed'
           }).limit(bonusesToGive * referralsNeeded);
 
@@ -150,18 +149,18 @@ export class ReferralService {
       }
 
       const completedReferrals = await Referral.countDocuments({
-        referrerId: userId,
+        referrer: userId,
         status: 'completed'
       });
 
       const rewardedReferrals = await Referral.countDocuments({
-        referrerId: userId,
+        referrer: userId,
         status: 'rewarded'
       });
 
       const settings = await ReferralSettings.findOne();
-      const referralsNeeded = settings?.referralsNeededForBonus || 3;
-      const bonusValue = settings?.bonusValue || 1;
+      const referralsNeeded = settings?.referralBonusThreshold || 3;
+      const bonusValue = settings?.referrerBonus || 1;
 
       const totalBonusesEarned = Math.floor(completedReferrals / referralsNeeded);
       const pendingReferrals = completedReferrals - rewardedReferrals;
