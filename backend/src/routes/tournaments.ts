@@ -52,29 +52,33 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const { game, status } = req.query as { game?: string; status?: string };
-    
-    // Use cached tournaments
-    const tournaments = await cacheService.getTournaments({ game, status });
-    
-    res.json({ tournaments });
-      participants: t.registeredTeams?.length || 0,
-      currentParticipants: t.registeredTeams?.length || 0,
-      format: t.format || 'single_elimination',
-      type: t.type || 'team',
-      description: t.description || '',
-      rules: t.rules || '',
-      matches: (t.matches || []).map((m: any) => ({
-        id: m._id?.toString() || m.toString(),
-        ...m
-      })),
-      createdAt: t.createdAt?.toISOString(),
-      updatedAt: t.updatedAt?.toISOString()
+    const query: any = {};
+
+    if (game) query.game = game;
+    if (status) query.status = status;
+
+    const tournaments = await Tournament.find(query)
+      .populate('registeredTeams', 'name tag logo members')
+      .populate('matches', 'team1 team2 status startTime')
+      .sort({ startDate: 1 })
+      .lean();
+
+    // Transform for frontend compatibility
+    const transformed = tournaments.map((t: any) => ({
+      id: String(t._id),
+      name: t.name,
+      title: t.name,
+      game: t.game,
+      status: t.status,
+      startDate: t.startDate,
+      date: t.startDate ? new Date(t.startDate).toLocaleDateString() : 'TBD',
+      prizePool: Number(t.prizePool || 0),
+      participants: Number(t.participants ?? t.currentParticipants ?? 0),
+      maxParticipants: Number(t.maxParticipants ?? t.maxTeams ?? 0),
+      skillLevel: t.skillLevel || 'All Levels'
     }));
 
-    res.json({
-      success: true,
-      data: transformed
-    });
+    res.json({ tournaments: transformed });
   } catch (error) {
     console.error('Error fetching tournaments:', error);
     res.status(500).json({
