@@ -16,7 +16,7 @@ const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
 const adminAuth_1 = require("../middleware/adminAuth");
 const Reward_1 = require("../models/Reward");
-const PlayerReward_1 = require("../models/PlayerReward");
+const PlayerReward_1 = require("../models/PlayerReward"); 
 const TeamReward_1 = require("../models/TeamReward");
 const router = express_1.default.Router();
 // Get available rewards for player
