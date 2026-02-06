@@ -1,6 +1,8 @@
-import express from 'express';
 import User from '../models/User';
 import Wallet from '../models/Wallet';
+import express from 'express';
+import { body } from 'express-validator';
+import { validateRequest } from '../middleware/validate';
 
 const router = express.Router();
 
@@ -8,7 +10,7 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     if (!req.user) {
-        return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: 'User not authenticated' });
     }
     const user = await User.findOne({ telegramId: req.user.id })
       .populate('teams')
@@ -41,28 +43,55 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Update user profile
-router.put('/', async (req, res) => {
+const isValidOperation = updates.every(update => allowedUpdates.includes(update));
+
+if (!isValidOperation) {
+  return res.status(400).json({
+    success: false,
+    error: 'Invalid updates'
+  });
+}
+
+const user = await User.findOneAndUpdate(
+  { telegramId: req.user.id },
+  { $set: req.body },
+  { new: true, runValidators: true }
+).populate('teams');
+
+if (!user) {
+  return res.status(404).json({
+    success: false,
+    error: 'User not found'
+  });
+}
+
+res.json({
+  success: true,
+  data: user
+});
+  } catch (error: any) {
+  console.error('Error updating profile:', error);
+  if (error.code === 11000) {
+    return res.status(400).json({ success: false, error: 'Username already taken' });
+  }
+  res.status(500).json({
+    success: false,
+    error: 'Failed to update profile'
+  });
+}
+});
+
+// Get public user profile by ID or username
+router.get('/:identifier/public', async (req, res) => {
   try {
-    if (!req.user) {
-        return res.status(401).json({ message: 'User not authenticated' });
-    }
-    const allowedUpdates = ['gameProfiles', 'profileLogo'];
-    const updates = Object.keys(req.body);
-    const isValidOperation = updates.every(update => allowedUpdates.includes(update));
+    const { identifier } = req.params;
+    const isId = identifier.match(/^[0-9a-fA-F]{24}$/);
 
-    if (!isValidOperation) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid updates'
-      });
-    }
+    const query = isId ? { _id: identifier } : { username: identifier };
 
-    const user = await User.findOneAndUpdate(
-      { telegramId: req.user.id },
-      req.body,
-      { new: true }
-    ).populate('teams');
+    const user = await User.findOne(query)
+      .populate('teams', 'name tag logo')
+      .select('username firstName lastName bio profileLogo teams stats gameProfiles achievements createdAt');
 
     if (!user) {
       return res.status(404).json({
@@ -76,10 +105,10 @@ router.put('/', async (req, res) => {
       data: user
     });
   } catch (error) {
-    console.error('Error updating profile:', error);
+    console.error('Error fetching public profile:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to update profile'
+      error: 'Failed to fetch public profile'
     });
   }
 });
@@ -88,10 +117,10 @@ router.put('/', async (req, res) => {
 router.post('/upload-logo', async (req, res) => {
   try {
     if (!req.user) {
-        return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: 'User not authenticated' });
     }
     const { logoUrl } = req.body;
-    
+
     if (!logoUrl) {
       return res.status(400).json({
         success: false,
@@ -129,7 +158,7 @@ router.post('/upload-logo', async (req, res) => {
 router.get('/notifications', async (req, res) => {
   try {
     if (!req.user) {
-        return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: 'User not authenticated' });
     }
     const user = await User.findOne({ telegramId: req.user.id })
       .select('notifications')
@@ -159,7 +188,7 @@ router.get('/notifications', async (req, res) => {
 router.put('/notifications/:id', async (req, res) => {
   try {
     if (!req.user) {
-        return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: 'User not authenticated' });
     }
     const user = await User.findOneAndUpdate(
       {
@@ -198,7 +227,7 @@ router.put('/notifications/:id', async (req, res) => {
 router.get('/game-profiles', async (req, res) => {
   try {
     if (!req.user) {
-        return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: 'User not authenticated' });
     }
     const user = await User.findOne({ telegramId: req.user.id })
       .select('gameProfiles');
@@ -227,7 +256,7 @@ router.get('/game-profiles', async (req, res) => {
 router.put('/game-profiles/:game', async (req, res) => {
   try {
     if (!req.user) {
-        return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: 'User not authenticated' });
     }
     const user = await User.findOne({ telegramId: req.user.id });
 
@@ -273,7 +302,7 @@ router.put('/game-profiles/:game', async (req, res) => {
 router.get('/achievements', async (req, res) => {
   try {
     if (!req.user) {
-        return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: 'User not authenticated' });
     }
     const user = await User.findOne({ telegramId: req.user.id })
       .select('achievements');
@@ -293,7 +322,7 @@ router.get('/achievements', async (req, res) => {
     console.error('Error fetching achievements:', error);
     res.status(500).json({
       success: false,
-        error: 'Failed to fetch achievements'
+      error: 'Failed to fetch achievements'
     });
   }
 });
@@ -302,10 +331,10 @@ router.get('/achievements', async (req, res) => {
 router.post('/achievements', async (req, res) => {
   try {
     if (!req.user) {
-        return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: 'User not authenticated' });
     }
     const { achievement } = req.body;
-    
+
     if (!achievement) {
       return res.status(400).json({
         success: false,

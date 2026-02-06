@@ -1,6 +1,8 @@
 import express from 'express';
 import Team, { ITeam } from '../models/Team';
 import User from '../models/User';
+import { body } from 'express-validator';
+import { validateRequest } from '../middleware/validate';
 
 const router = express.Router();
 
@@ -147,89 +149,94 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create team
-router.post('/', async (req, res) => {
-  try {
-    const teamData: Partial<ITeam> = {
-      ...req.body
-    };
-    // If authenticated user exists, attach as captain/member; otherwise allow anonymous create
-    if (req.user?.id) {
-      teamData.captain = req.user.id as any;
-      teamData.members = [req.user.id as any];
-    }
+router.post('/',
+  body('name').notEmpty().withMessage('Team name is required'),
+  body('tag').isLength({ min: 2, max: 5 }).withMessage('Tag must be 2-5 characters'),
+  body('game').notEmpty().withMessage('Game is required'),
+  validateRequest,
+  async (req: any, res: any) => {
+    try {
+      const teamData: Partial<ITeam> = {
+        ...req.body
+      };
+      // If authenticated user exists, attach as captain/member; otherwise allow anonymous create
+      if (req.user?.id) {
+        teamData.captain = req.user.id as any;
+        teamData.members = [req.user.id as any];
+      }
 
-    // Check if team name or tag already exists
-    const existingTeam = await Team.findOne({
-      $or: [
-        { name: teamData.name },
-        { tag: teamData.tag }
-      ]
-    });
-
-    if (existingTeam) {
-      return res.status(400).json({
-        success: false,
-        error: 'Team name or tag already exists'
+      // Check if team name or tag already exists
+      const existingTeam = await Team.findOne({
+        $or: [
+          { name: teamData.name },
+          { tag: teamData.tag }
+        ]
       });
-    }
 
-    const team = new Team(teamData);
-    await team.save();
+      if (existingTeam) {
+        return res.status(400).json({
+          success: false,
+          error: 'Team name or tag already exists'
+        });
+      }
 
-    // Add team to user's teams
-    if (req.user?.id) {
-      await User.findByIdAndUpdate(req.user.id, {
-        $push: { teams: team._id }
+      const team = new Team(teamData);
+      await team.save();
+
+      // Add team to user's teams
+      if (req.user?.id) {
+        await User.findByIdAndUpdate(req.user.id, {
+          $push: { teams: team._id }
+        });
+      }
+
+      // Transform response for frontend
+      const transformed: any = {
+        id: String(team._id),
+        name: team.name,
+        tag: team.tag || '',
+        logo: team.logo || '',
+        game: team.game,
+        status: team.status || 'active',
+        captain: team.captain ? {
+          id: team.captain.toString(),
+          username: '',
+          firstName: '',
+          lastName: ''
+        } : null,
+        members: (team.members || []).map((m: any) => ({
+          id: m.toString(),
+          username: '',
+          firstName: '',
+          lastName: ''
+        })),
+        stats: {
+          totalMatches: team.stats?.totalMatches || 0,
+          wins: team.stats?.wins || 0,
+          losses: team.stats?.losses || 0,
+          winRate: team.stats?.winRate || 0,
+          totalPrizeMoney: team.stats?.totalPrizeMoney || 0
+        },
+        tournaments: 0,
+        createdAt: team.createdAt?.toISOString(),
+        updatedAt: team.updatedAt?.toISOString()
+      };
+
+      res.status(201).json({
+        success: true,
+        data: transformed
       });
+    } catch (error: any) {
+      console.error('Error creating team:', error);
+      if (error.name === 'ValidationError') {
+        return res.status(400).json({ success: false, error: error.message });
+      }
+      if (error.code === 11000) {
+        return res.status(400).json({ success: false, error: 'Team name or tag already exists' });
+      }
+      res.status(500).json({ success: false, error: 'Failed to create team' });
     }
-
-    // Transform response for frontend
-    const transformed: any = {
-      id: String(team._id),
-      name: team.name,
-      tag: team.tag || '',
-      logo: team.logo || '',
-      game: team.game,
-      status: team.status || 'active',
-      captain: team.captain ? {
-        id: team.captain.toString(),
-        username: '',
-        firstName: '',
-        lastName: ''
-      } : null,
-      members: (team.members || []).map((m: any) => ({
-        id: m.toString(),
-        username: '',
-        firstName: '',
-        lastName: ''
-      })),
-      stats: {
-        totalMatches: team.stats?.totalMatches || 0,
-        wins: team.stats?.wins || 0,
-        losses: team.stats?.losses || 0,
-        winRate: team.stats?.winRate || 0,
-        totalPrizeMoney: team.stats?.totalPrizeMoney || 0
-      },
-      tournaments: 0,
-      createdAt: team.createdAt?.toISOString(),
-      updatedAt: team.updatedAt?.toISOString()
-    };
-
-    res.status(201).json({
-      success: true,
-      data: transformed
-    });
-  } catch (error: any) {
-    console.error('Error creating team:', error);
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({ success: false, error: error.message });
-    }
-    if (error.code === 11000) {
-      return res.status(400).json({ success: false, error: 'Team name or tag already exists' });
-    }
-    res.status(500).json({ success: false, error: 'Failed to create team' });
-  }
-});
+  });
 
 // Bulk create teams (admin/import use)
 router.post('/batch', async (req, res) => {
@@ -269,74 +276,78 @@ router.post('/batch', async (req, res) => {
 });
 
 // Update team
-router.put('/:id', async (req, res) => {
-  try {
-    const team = await Team.findById(req.params.id);
+router.put('/:id',
+  body('name').optional().notEmpty().withMessage('Team name cannot be empty'),
+  body('tag').optional().isLength({ min: 2, max: 5 }).withMessage('Tag must be 2-5 characters'),
+  validateRequest,
+  async (req: any, res: any) => {
+    try {
+      const team = await Team.findById(req.params.id);
 
-    if (!team) {
-      return res.status(404).json({
+      if (!team) {
+        return res.status(404).json({
+          success: false,
+          error: 'Team not found'
+        });
+      }
+
+      if (req.user?.id && team.captain && team.captain.toString() !== req.user.id) {
+        return res.status(403).json({
+          success: false,
+          error: 'Not authorized to update this team'
+        });
+      }
+
+      const updatedTeam: any = await Team.findByIdAndUpdate(
+        req.params.id,
+        req.body,
+        { new: true }
+      ).populate('captain', 'username firstName lastName')
+        .populate('members', 'username firstName lastName')
+        .lean();
+
+      if (!updatedTeam) {
+        return res.status(404).json({
+          success: false,
+          error: 'Team not found'
+        });
+      }
+
+      // Transform response
+      const transformed: any = {
+        id: String(updatedTeam._id),
+        name: updatedTeam.name,
+        tag: updatedTeam.tag || '',
+        logo: updatedTeam.logo || '',
+        game: updatedTeam.game,
+        status: updatedTeam.status || 'active',
+        captain: updatedTeam.captain ? {
+          id: updatedTeam.captain._id?.toString() || '',
+          username: updatedTeam.captain.username || '',
+          firstName: updatedTeam.captain.firstName || '',
+          lastName: updatedTeam.captain.lastName || ''
+        } : null,
+        members: (updatedTeam.members || []).map((m: any) => ({
+          id: m._id?.toString() || m.toString(),
+          username: m.username || '',
+          firstName: m.firstName || '',
+          lastName: m.lastName || ''
+        })),
+        stats: updatedTeam.stats || {}
+      };
+
+      res.json({
+        success: true,
+        data: transformed
+      });
+    } catch (error) {
+      console.error('Error updating team:', error);
+      res.status(500).json({
         success: false,
-        error: 'Team not found'
+        error: 'Failed to update team'
       });
     }
-
-    if (req.user?.id && team.captain && team.captain.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        error: 'Not authorized to update this team'
-      });
-    }
-
-    const updatedTeam: any = await Team.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    ).populate('captain', 'username firstName lastName')
-     .populate('members', 'username firstName lastName')
-     .lean();
-
-    if (!updatedTeam) {
-      return res.status(404).json({
-        success: false,
-        error: 'Team not found'
-      });
-    }
-
-    // Transform response
-    const transformed: any = {
-      id: String(updatedTeam._id),
-      name: updatedTeam.name,
-      tag: updatedTeam.tag || '',
-      logo: updatedTeam.logo || '',
-      game: updatedTeam.game,
-      status: updatedTeam.status || 'active',
-      captain: updatedTeam.captain ? {
-        id: updatedTeam.captain._id?.toString() || '',
-        username: updatedTeam.captain.username || '',
-        firstName: updatedTeam.captain.firstName || '',
-        lastName: updatedTeam.captain.lastName || ''
-      } : null,
-      members: (updatedTeam.members || []).map((m: any) => ({
-        id: m._id?.toString() || m.toString(),
-        username: m.username || '',
-        firstName: m.firstName || '',
-        lastName: m.lastName || ''
-      })),
-      stats: updatedTeam.stats || {}
-    };
-
-    res.json({
-      success: true,
-      data: transformed
-    });
-  } catch (error) {
-    console.error('Error updating team:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to update team'
-    });
-  }
-});
+  });
 
 // Add member to team
 router.post('/:id/members', async (req, res) => {

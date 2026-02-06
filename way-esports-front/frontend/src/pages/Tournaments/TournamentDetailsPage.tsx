@@ -109,34 +109,41 @@ const Meta = styled.div`
   font-size: 0.85rem;
 `;
 
-type Tournament = {
-  id: string;
-  name?: string;
-  title?: string;
-  game?: string;
-  status?: string;
-  startDate?: string;
-  endDate?: string;
-};
+const Banner = styled.div<{ $src?: string }>`
+  height: 250px;
+  width: 100%;
+  background: ${({ $src, theme }) => ($src ? `url(${$src})` : theme.colors.bg.tertiary)};
+  background-size: cover;
+  background-position: center;
+  border-radius: 16px;
+  margin-bottom: 1.5rem;
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
+  display: flex;
+  align-items: flex-end;
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
 
-type MatchItem = {
-  id: string;
-  tournamentId: string;
-  status: 'upcoming' | 'live' | 'completed' | string;
-  startTime: string;
-  endTime?: string;
-  round?: string;
-  map?: string;
-  team1?: { name?: string; tag?: string } | string;
-  team2?: { name?: string; tag?: string } | string;
-  score?: { team1?: number; team2?: number };
-  winner?: any;
-};
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60%;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+`;
 
 const TournamentDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [tab, setTab] = useState<'schedule' | 'live' | 'results' | 'bracket'>('schedule');
-  const [tournament, setTournament] = useState<Tournament | null>(null);
+  const [tournament, setTournament] = useState<any | null>(null);
   const [matches, setMatches] = useState<MatchItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -204,18 +211,18 @@ const TournamentDetailsPage: React.FC = () => {
 
   return (
     <Container>
-      <Header>
-        <Title>{title}</Title>
-        <Subtitle>
-          <span>{tournament?.game || '—'}</span>
-          <span>{tournament?.status || '—'}</span>
-          <span>
-            {tournament?.startDate ? new Date(tournament.startDate).toLocaleDateString() : '—'}
-            {' - '}
-            {tournament?.endDate ? new Date(tournament.endDate).toLocaleDateString() : '—'}
-          </span>
-        </Subtitle>
-      </Header>
+      <Banner $src={tournament?.image || tournament?.coverImage}>
+        <div>
+          <Title style={{ color: '#fff', marginBottom: '0.25rem' }}>{title}</Title>
+          <Subtitle>
+            <span style={{ color: '#ff6b00', fontWeight: 'bold' }}>{tournament?.game || '—'}</span>
+            <span style={{ color: '#fff' }}>• {tournament?.status || '—'}</span>
+            <span style={{ color: '#fff' }}>
+              • {tournament?.startDate ? new Date(tournament.startDate).toLocaleDateString() : '—'}
+            </span>
+          </Subtitle>
+        </div>
+      </Banner>
 
       <Tabs>
         <Tab $active={tab === 'schedule'} onClick={() => setTab('schedule')}>Schedule</Tab>

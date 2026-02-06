@@ -13,6 +13,7 @@ export interface IUser extends Document {
   username: string;
   firstName: string;
   lastName?: string;
+  bio?: string;
   photoUrl?: string;
   profileLogo?: string;
   teams: mongoose.Types.ObjectId[];
@@ -150,6 +151,11 @@ const userSchema = new Schema<IUser>({
   referredBy: {
     type: String,
     trim: true
+  },
+  bio: {
+    type: String,
+    trim: true,
+    maxlength: 500
   },
   stats: {
     wins: { type: Number, default: 0 },

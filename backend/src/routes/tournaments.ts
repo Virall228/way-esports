@@ -6,6 +6,8 @@ import { checkTournamentAccess, checkTournamentRegistration, consumeFreeEntry } 
 import { detectReferralFraud } from '../middleware/fraudDetection';
 import { logTournamentEvent } from '../services/loggingService';
 import cacheService from '../services/cacheService';
+import { body } from 'express-validator';
+import { validateRequest } from '../middleware/validate';
 
 // Временные заглушки для новых middleware
 const handleTournamentConcurrency = async (req: any, res: any, next: any) => next();
@@ -155,80 +157,89 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create tournament (admin only)
-router.post('/', authenticateJWT, isAdmin, async (req, res) => {
-  try {
-    // Parse and validate dates
-    const startDate = req.body.startDate ? new Date(req.body.startDate) : new Date();
-    const endDate = req.body.endDate ? new Date(req.body.endDate) : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+router.post('/',
+  authenticateJWT,
+  isAdmin,
+  body('name').notEmpty().withMessage('Tournament name is required'),
+  body('game').notEmpty().withMessage('Game is required'),
+  body('prizePool').isNumeric().withMessage('Prize pool must be a number'),
+  body('startDate').isISO8601().withMessage('Invalid start date'),
+  body('endDate').isISO8601().withMessage('Invalid end date'),
+  validateRequest,
+  async (req: any, res: any) => {
+    try {
+      // Parse and validate dates
+      const startDate = req.body.startDate ? new Date(req.body.startDate) : new Date();
+      const endDate = req.body.endDate ? new Date(req.body.endDate) : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
 
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      return res.status(400).json({ success: false, error: 'Invalid date format' });
-    }
-
-    if (endDate <= startDate) {
-      return res.status(400).json({ success: false, error: 'End date must be after start date' });
-    }
-
-    const tournamentData: Partial<ITournament> = {
-      name: req.body.name,
-      game: req.body.game,
-      startDate: startDate,
-      endDate: endDate,
-      prizePool: Number(req.body.prizePool) || 0,
-      registeredTeams: [],
-      registeredPlayers: [],
-      matches: [],
-      bracket: {
-        matches: []
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return res.status(400).json({ success: false, error: 'Invalid date format' });
       }
-    };
 
-    if (req.user?._id) {
-      tournamentData.createdBy = req.user._id as any;
+      if (endDate <= startDate) {
+        return res.status(400).json({ success: false, error: 'End date must be after start date' });
+      }
+
+      const tournamentData: Partial<ITournament> = {
+        name: req.body.name,
+        game: req.body.game,
+        startDate: startDate,
+        endDate: endDate,
+        prizePool: Number(req.body.prizePool) || 0,
+        registeredTeams: [],
+        registeredPlayers: [],
+        matches: [],
+        bracket: {
+          matches: []
+        }
+      };
+
+      if (req.user?._id) {
+        tournamentData.createdBy = req.user._id as any;
+      }
+
+      const tournament = new Tournament(tournamentData);
+      await tournament.save();
+
+      // Transform response for frontend
+      const transformed: any = {
+        id: String(tournament._id),
+        name: tournament.name,
+        title: tournament.name,
+        game: tournament.game,
+        status: tournament.status === 'ongoing' ? 'in_progress' : tournament.status,
+        startDate: tournament.startDate?.toISOString() || new Date().toISOString(),
+        endDate: tournament.endDate?.toISOString() || new Date().toISOString(),
+        prizePool: tournament.prizePool || 0,
+        maxTeams: tournament.maxTeams || 0,
+        maxParticipants: tournament.maxTeams || 0,
+        registeredTeams: [],
+        participants: 0,
+        currentParticipants: 0,
+        format: tournament.format || 'single_elimination',
+        type: tournament.type || 'team',
+        description: tournament.description || '',
+        rules: tournament.rules || ''
+      };
+
+      // Invalidate caches
+      await cacheService.invalidateTournamentCaches();
+
+      res.status(201).json({
+        success: true,
+        data: transformed
+      });
+    } catch (error: any) {
+      console.error('Error creating tournament:', error);
+      if (error.name === 'ValidationError') {
+        return res.status(400).json({ success: false, error: error.message });
+      }
+      if (error.code === 11000) {
+        return res.status(400).json({ success: false, error: 'Duplicate tournament' });
+      }
+      res.status(500).json({ success: false, error: 'Failed to create tournament' });
     }
-
-    const tournament = new Tournament(tournamentData);
-    await tournament.save();
-
-    // Transform response for frontend
-    const transformed: any = {
-      id: String(tournament._id),
-      name: tournament.name,
-      title: tournament.name,
-      game: tournament.game,
-      status: tournament.status === 'ongoing' ? 'in_progress' : tournament.status,
-      startDate: tournament.startDate?.toISOString() || new Date().toISOString(),
-      endDate: tournament.endDate?.toISOString() || new Date().toISOString(),
-      prizePool: tournament.prizePool || 0,
-      maxTeams: tournament.maxTeams || 0,
-      maxParticipants: tournament.maxTeams || 0,
-      registeredTeams: [],
-      participants: 0,
-      currentParticipants: 0,
-      format: tournament.format || 'single_elimination',
-      type: tournament.type || 'team',
-      description: tournament.description || '',
-      rules: tournament.rules || ''
-    };
-
-    // Invalidate caches
-    await cacheService.invalidateTournamentCaches();
-
-    res.status(201).json({
-      success: true,
-      data: transformed
-    });
-  } catch (error: any) {
-    console.error('Error creating tournament:', error);
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({ success: false, error: error.message });
-    }
-    if (error.code === 11000) {
-      return res.status(400).json({ success: false, error: 'Duplicate tournament' });
-    }
-    res.status(500).json({ success: false, error: 'Failed to create tournament' });
-  }
-});
+  });
 
 // Bulk create tournaments (admin/import use)
 router.post('/batch', authenticateJWT, isAdmin, async (req, res) => {
@@ -428,98 +439,104 @@ router.post('/:id/join', authenticateJWT, detectReferralFraud, rateLimitRegistra
 });
 
 // Update tournament (admin only)
-router.put('/:id', authenticateJWT, isAdmin, async (req, res) => {
-  try {
-    const tournament = await Tournament.findById(req.params.id);
+router.put('/:id',
+  authenticateJWT,
+  isAdmin,
+  body('name').optional().notEmpty().withMessage('Name cannot be empty'),
+  body('prizePool').optional().isNumeric().withMessage('Prize pool must be a number'),
+  validateRequest,
+  async (req: any, res: any) => {
+    try {
+      const tournament = await Tournament.findById(req.params.id);
 
-    if (!tournament) {
-      return res.status(404).json({
+      if (!tournament) {
+        return res.status(404).json({
+          success: false,
+          error: 'Tournament not found'
+        });
+      }
+
+      const {
+        name,
+        game,
+        status,
+        startDate,
+        endDate,
+        prizePool,
+        maxTeams,
+        maxParticipants,
+        skillLevel,
+        format,
+        type,
+        description,
+        rules
+      } = req.body;
+
+      // Update tournament fields
+      if (name) tournament.name = name;
+      if (game) tournament.game = game;
+      if (status) tournament.status = status;
+      if (startDate) tournament.startDate = new Date(startDate);
+      if (endDate) tournament.endDate = new Date(endDate);
+      if (prizePool !== undefined) tournament.prizePool = prizePool;
+      if (maxTeams !== undefined) tournament.maxTeams = maxTeams;
+      if (maxParticipants !== undefined) tournament.maxParticipants = maxParticipants;
+      if (skillLevel) tournament.skillLevel = skillLevel;
+      if (format) tournament.format = format;
+      if (type) tournament.type = type;
+      if (description !== undefined) tournament.description = description;
+      if (rules !== undefined) tournament.rules = rules;
+
+      await tournament.save();
+
+      // Reload for response
+      const populatedTournament: any = await Tournament.findById(req.params.id)
+        .populate('registeredTeams', 'name tag logo members')
+        .lean();
+
+      const transformed: any = {
+        id: String(populatedTournament._id),
+        name: populatedTournament.name,
+        title: populatedTournament.name,
+        game: populatedTournament.game,
+        status: populatedTournament.status === 'ongoing' ? 'in_progress' : populatedTournament.status,
+        startDate: populatedTournament.startDate?.toISOString() || new Date().toISOString(),
+        endDate: populatedTournament.endDate?.toISOString() || new Date().toISOString(),
+        prizePool: populatedTournament.prizePool || 0,
+        maxTeams: populatedTournament.maxTeams || 0,
+        maxParticipants: populatedTournament.maxParticipants || 0,
+        registeredTeams: (populatedTournament.registeredTeams || []).map((team: any) => ({
+          id: team._id?.toString() || team.toString(),
+          name: team.name || '',
+          tag: team.tag || '',
+          logo: team.logo || '',
+          players: team.members?.map((m: any) => m.toString()) || []
+        })),
+        participants: populatedTournament.registeredTeams?.length || 0,
+        currentParticipants: populatedTournament.registeredTeams?.length || 0,
+        format: populatedTournament.format || 'single_elimination',
+        type: populatedTournament.type || 'team',
+        description: populatedTournament.description || '',
+        rules: populatedTournament.rules || '',
+        createdAt: populatedTournament.createdAt?.toISOString(),
+        updatedAt: populatedTournament.updatedAt?.toISOString()
+      };
+
+      // Invalidate caches
+      await cacheService.invalidateTournamentCaches();
+
+      res.json({
+        success: true,
+        data: transformed
+      });
+    } catch (error) {
+      console.error('Error updating tournament:', error);
+      res.status(500).json({
         success: false,
-        error: 'Tournament not found'
+        error: 'Failed to update tournament'
       });
     }
-
-    const {
-      name,
-      game,
-      status,
-      startDate,
-      endDate,
-      prizePool,
-      maxTeams,
-      maxParticipants,
-      skillLevel,
-      format,
-      type,
-      description,
-      rules
-    } = req.body;
-
-    // Update tournament fields
-    if (name) tournament.name = name;
-    if (game) tournament.game = game;
-    if (status) tournament.status = status;
-    if (startDate) tournament.startDate = new Date(startDate);
-    if (endDate) tournament.endDate = new Date(endDate);
-    if (prizePool !== undefined) tournament.prizePool = prizePool;
-    if (maxTeams !== undefined) tournament.maxTeams = maxTeams;
-    if (maxParticipants !== undefined) tournament.maxParticipants = maxParticipants;
-    if (skillLevel) tournament.skillLevel = skillLevel;
-    if (format) tournament.format = format;
-    if (type) tournament.type = type;
-    if (description !== undefined) tournament.description = description;
-    if (rules !== undefined) tournament.rules = rules;
-
-    await tournament.save();
-
-    // Reload for response
-    const populatedTournament: any = await Tournament.findById(req.params.id)
-      .populate('registeredTeams', 'name tag logo members')
-      .lean();
-
-    const transformed: any = {
-      id: String(populatedTournament._id),
-      name: populatedTournament.name,
-      title: populatedTournament.name,
-      game: populatedTournament.game,
-      status: populatedTournament.status === 'ongoing' ? 'in_progress' : populatedTournament.status,
-      startDate: populatedTournament.startDate?.toISOString() || new Date().toISOString(),
-      endDate: populatedTournament.endDate?.toISOString() || new Date().toISOString(),
-      prizePool: populatedTournament.prizePool || 0,
-      maxTeams: populatedTournament.maxTeams || 0,
-      maxParticipants: populatedTournament.maxParticipants || 0,
-      registeredTeams: (populatedTournament.registeredTeams || []).map((team: any) => ({
-        id: team._id?.toString() || team.toString(),
-        name: team.name || '',
-        tag: team.tag || '',
-        logo: team.logo || '',
-        players: team.members?.map((m: any) => m.toString()) || []
-      })),
-      participants: populatedTournament.registeredTeams?.length || 0,
-      currentParticipants: populatedTournament.registeredTeams?.length || 0,
-      format: populatedTournament.format || 'single_elimination',
-      type: populatedTournament.type || 'team',
-      description: populatedTournament.description || '',
-      rules: populatedTournament.rules || '',
-      createdAt: populatedTournament.createdAt?.toISOString(),
-      updatedAt: populatedTournament.updatedAt?.toISOString()
-    };
-
-    // Invalidate caches
-    await cacheService.invalidateTournamentCaches();
-
-    res.json({
-      success: true,
-      data: transformed
-    });
-  } catch (error) {
-    console.error('Error updating tournament:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to update tournament'
-    });
-  }
-});
+  });
 
 
 // Delete tournament (admin only)

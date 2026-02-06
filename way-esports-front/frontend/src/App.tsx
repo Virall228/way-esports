@@ -14,6 +14,8 @@ import Teams from './pages/Teams';
 import AdminPage from './pages/Admin/AdminPage';
 import TournamentDetailsPage from './pages/Tournaments/TournamentDetailsPage';
 import BillingPage from './pages/Billing/BillingPage';
+import PublicProfilePage from './pages/Profile/PublicProfilePage';
+import TeamPage from './pages/Teams/TeamPage';
 
 // Import components
 import TermsGuard from './components/Legal/TermsGuard';
@@ -430,6 +432,8 @@ const AppContent: React.FC = () => {
             <Route path="/teams" element={<Teams />} />
             <Route path="/news" element={<News />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/:id" element={<PublicProfilePage />} />
+            <Route path="/team/:id" element={<TeamPage />} />
             <Route path="/billing" element={<BillingPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />

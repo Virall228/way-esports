@@ -8,6 +8,14 @@ import ReferralCard from '../../components/Referral/ReferralCard';
 import SubscriptionCard from '../../components/Subscription/SubscriptionCard';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
+import { Link } from 'react-router-dom';
+
+const Bio = styled.p`
+  line-height: 1.6;
+  color: #ddd;
+  font-style: italic;
+  margin-top: 15px;
+`;
 
 const Container = styled.div`
   padding: 20px;
@@ -238,6 +246,28 @@ const ProfilePage: React.FC = () => {
   const [isSubscriptionOpen, setIsSubscriptionOpen] = useState(false);
   const [isPhotoUploadOpen, setIsPhotoUploadOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isEditingBio, setIsEditingBio] = useState(false);
+  const [newBio, setNewBio] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (user?.bio) {
+      setNewBio(user.bio);
+    }
+  }, [user]);
+
+  const handleSaveBio = async () => {
+    try {
+      setIsSaving(true);
+      await api.patch('/api/profile', { bio: newBio });
+      await fetchProfile();
+      setIsEditingBio(false);
+    } catch (error) {
+      console.error('Error saving bio:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handlePhotoUpload = async (file: File) => {
     try {
@@ -282,6 +312,9 @@ const ProfilePage: React.FC = () => {
             <div>
               <Username>{user?.username || 'Gamer'}</Username>
               <UserOrg>{user?.email || 'WAY Esports Member'}</UserOrg>
+              <Link to={`/profile/${user?.id}`} style={{ color: '#ff6b00', fontSize: '0.9rem', textDecoration: 'none' }}>
+                🔗 View Public Profile
+              </Link>
             </div>
             <div>
               <SubscriptionButton onClick={() => setIsSubscriptionOpen(true)}>
@@ -310,6 +343,46 @@ const ProfilePage: React.FC = () => {
               <StatLabel>K/D Ratio</StatLabel>
             </StatItem>
           </UserStats>
+
+          <div style={{ marginTop: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <StatLabel>BIO</StatLabel>
+              {!isEditingBio ? (
+                <button onClick={() => setIsEditingBio(true)} style={{ background: 'none', border: 'none', color: '#ff6b00', cursor: 'pointer', fontSize: '0.8rem' }}>
+                  Edit Bio
+                </button>
+              ) : (
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={handleSaveBio} disabled={isSaving} style={{ background: 'none', border: 'none', color: '#00ff00', cursor: 'pointer', fontSize: '0.8rem' }}>
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </button>
+                  <button onClick={() => setIsEditingBio(false)} style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', fontSize: '0.8rem' }}>
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {isEditingBio ? (
+              <textarea
+                value={newBio}
+                onChange={(e) => setNewBio(e.target.value)}
+                style={{
+                  width: '100%',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid #333',
+                  color: '#fff',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  minHeight: '80px',
+                  resize: 'vertical'
+                }}
+                placeholder="Tell the world about yourself..."
+              />
+            ) : (
+              <Bio style={{ marginTop: 0 }}>{user?.bio || "No bio set yet. Tell people who you are!"}</Bio>
+            )}
+          </div>
         </ProfileInfo>
       </ProfileHeader>
 

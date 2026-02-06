@@ -10,4 +10,9 @@ router.use(authenticateJWT, isAdmin);
 router.get('/stats', getDashboardStats);
 router.get('/analytics', getAnalytics);
 
+// Universal CRUD
+import { updateEntity, deleteEntity } from '../controllers/adminController';
+router.patch('/:entity/:id', updateEntity);
+router.delete('/:entity/:id', deleteEntity);
+
 export default router;
