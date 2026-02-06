@@ -31,6 +31,7 @@ import termsRouter from './routes/terms';
 import adminRouter from './routes/admin';
 import uploadsRouter from './routes/uploads';
 import refundsRouter from './routes/refunds';
+import statsRouter from './routes/stats';
 
 import { seedDefaultAchievements } from './services/achievements/seedAchievements';
 
@@ -106,6 +107,7 @@ app.use('/api/terms', termsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/uploads', uploadsRouter);
 app.use('/api/refunds', authenticateJWT, refundsRouter);
+app.use('/api/stats', statsRouter);
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));

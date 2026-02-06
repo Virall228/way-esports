@@ -185,14 +185,36 @@ const StatLabel = styled.div`
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const [isBooting, setIsBooting] = useState(true);
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeTournaments: 0,
+    activeTeams: 0,
+    totalPrizePool: 0
+  });
 
   useEffect(() => {
     const run = async () => {
-      if ((window as any).Telegram?.WebApp) {
-        (window as any).Telegram.WebApp.ready();
-        (window as any).Telegram.WebApp.expand();
+      try {
+        if ((window as any).Telegram?.WebApp) {
+          (window as any).Telegram.WebApp.ready();
+          (window as any).Telegram.WebApp.expand();
+        }
+
+        // Fetch real stats
+        const res: any = await api.get('/api/stats');
+        if (res?.success && res.data) {
+          setStats({
+            totalUsers: res.data.totalUsers || 0,
+            activeTournaments: res.data.activeTournaments || 0,
+            activeTeams: res.data.activeTeams || 120, // Default if not in backend yet
+            totalPrizePool: res.data.totalPrizePool || 0
+          });
+        }
+      } catch (e) {
+        console.error('Failed to fetch stats:', e);
+      } finally {
+        setIsBooting(false);
       }
-      setIsBooting(false);
     };
     run();
   }, []);
@@ -286,19 +308,19 @@ const HomePage: React.FC = () => {
         <StatsTitle>PLATFORM STATISTICS</StatsTitle>
         <StatsGrid>
           <StatCard>
-            <StatNumber>25+</StatNumber>
+            <StatNumber>{stats.activeTournaments}+</StatNumber>
             <StatLabel>Active Tournaments</StatLabel>
           </StatCard>
           <StatCard>
-            <StatNumber>1500+</StatNumber>
+            <StatNumber>{stats.totalUsers.toLocaleString()}+</StatNumber>
             <StatLabel>Registered Players</StatLabel>
           </StatCard>
           <StatCard>
-            <StatNumber>120+</StatNumber>
+            <StatNumber>{stats.activeTeams}+</StatNumber>
             <StatLabel>Active Teams</StatLabel>
           </StatCard>
           <StatCard>
-            <StatNumber>$50 000</StatNumber>
+            <StatNumber>${stats.totalPrizePool.toLocaleString()}</StatNumber>
             <StatLabel>Total Prize Pool</StatLabel>
           </StatCard>
         </StatsGrid>

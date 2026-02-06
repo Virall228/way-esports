@@ -1,3 +1,5 @@
+import { api } from '../services/api';
+
 export interface RoomCredentials {
     roomId: string;
     password: string;
@@ -85,19 +87,8 @@ export const joinTournamentRoom = async (roomId: string, password: string): Prom
     }
 
     try {
-        const response = await fetch('/api/tournament-rooms/join', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ roomId, password }),
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to join room');
-        }
-    } catch (error) {
-        throw new Error('Failed to connect to the room. Please check your credentials and try again.');
+        await api.post('/api/tournament-rooms/join', { roomId, password });
+    } catch (error: any) {
+        throw new Error(error.message || 'Failed to connect to the room. Please check your credentials and try again.');
     }
 }; 

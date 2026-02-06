@@ -27,6 +27,48 @@ const NewsTitle = styled.h1`
   }
 `;
 
+const NewsHeader = styled.div`
+  background: linear-gradient(135deg, ${({ theme }) => theme.colors.bg.secondary}, ${({ theme }) => theme.colors.bg.tertiary});
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 1px solid ${({ theme }) => theme.colors.border.medium};
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  text-align: center;
+`;
+
+const SocialLinksHeader = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+`;
+
+const SocialLink = styled.a`
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: rgba(255, 255, 255, 0.05);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 50px;
+  border: 1px solid ${({ theme }) => theme.colors.border.medium};
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: #ff6b00;
+    border-color: #ff6b00;
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.4);
+  }
+`;
+
 const NewsItem = styled.div`
   background: linear-gradient(145deg, #1a1a1a, #222222);
   border-radius: 12px;
@@ -72,34 +114,8 @@ const NewsItemTitle = styled.h2`
 
 const NewsItemContent = styled.p`
   color: #bbbbbb;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
   line-height: 1.6;
-`;
-
-const SocialLinks = styled.div`
-  display: flex;
-  gap: 1rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid #333;
-  flex-wrap: wrap;
-`;
-
-const SocialLink = styled.a`
-  color: #ff6b00;
-  text-decoration: none;
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s ease;
-
-  &:hover {
-    color: #ff8533;
-    transform: translateX(2px);
-  }
 `;
 
 const NewsPage: React.FC = () => {
@@ -135,6 +151,17 @@ const NewsPage: React.FC = () => {
 
   return (
     <NewsContainer>
+      <NewsHeader>
+        <h2 style={{ color: '#fff', textAlign: 'center', marginBottom: '0.5rem' }}>Join the Community</h2>
+        <p style={{ color: '#ccc', textAlign: 'center', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Follow us for latest updates and tournament news</p>
+        <SocialLinksHeader>
+          <SocialLink href="https://www.wayesports.org/" target="_blank">🌐 Website</SocialLink>
+          <SocialLink href="https://t.me/wayesports" target="_blank">✈️ Telegram</SocialLink>
+          <SocialLink href="https://discord.gg/wayesports" target="_blank">💬 Discord</SocialLink>
+          <SocialLink href="https://www.twitch.tv/WAY_Esports" target="_blank">📺 Twitch</SocialLink>
+        </SocialLinksHeader>
+      </NewsHeader>
+
       <NewsTitle>Latest News</NewsTitle>
       {loading && <div style={{ color: '#cccccc', textAlign: 'center', padding: '50px' }}>Loading news...</div>}
       {error && <div style={{ color: '#ff4757', textAlign: 'center', padding: '20px' }}>{error}</div>}
@@ -147,12 +174,6 @@ const NewsPage: React.FC = () => {
           <NewsContentWrapper>
             <NewsItemTitle>{item.title}</NewsItemTitle>
             <NewsItemContent>{item.content}</NewsItemContent>
-            <SocialLinks>
-              <SocialLink href="https://www.wayesports.org/" target="_blank">🌐 Website</SocialLink>
-              <SocialLink href="https://t.me/wayesports" target="_blank">✈️ Telegram</SocialLink>
-              <SocialLink href="https://discord.gg/wayesports" target="_blank">💬 Discord</SocialLink>
-              <SocialLink href="https://www.twitch.tv/WAY_Esports" target="_blank">📺 Twitch</SocialLink>
-            </SocialLinks>
           </NewsContentWrapper>
         </NewsItem>
       ))}

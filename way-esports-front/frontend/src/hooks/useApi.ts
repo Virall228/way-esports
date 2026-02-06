@@ -23,13 +23,13 @@ const apiCache = new Map<string, { data: any; timestamp: number; ttl: number }>(
 const getCachedData = (key: string): any => {
   const cached = apiCache.get(key);
   if (!cached) return null;
-  
+
   const now = Date.now();
   if (now - cached.timestamp > cached.ttl) {
     apiCache.delete(key);
     return null;
   }
-  
+
   return cached.data;
 };
 
@@ -48,7 +48,7 @@ export function useApi<T = any>(
   const {
     initialData = null,
     cacheKey,
-    cacheTTL = 5 * 60 * 1000, // 5 minutes default
+    cacheTTL = 5 * 1000, // 5 seconds default to avoid stale data
     onSuccess,
     onError,
     enabled = true
@@ -84,20 +84,20 @@ export function useApi<T = any>(
 
     try {
       const result = await apiCall();
-      
+
       setData(result);
-      
+
       // Cache the result
       if (cacheKey) {
         setCachedData(cacheKey, result, cacheTTL);
       }
-      
+
       onSuccess?.(result);
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
         return; // Request was cancelled
       }
-      
+
       const error = err instanceof Error ? err : new Error('Unknown error');
       setError(error);
       onError?.(error);
@@ -122,7 +122,7 @@ export function useApi<T = any>(
 
   useEffect(() => {
     fetchData();
-    
+
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();

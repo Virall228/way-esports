@@ -3,6 +3,7 @@ export interface User {
   username: string;
   telegramId: number;
   email?: string;
+  role: 'user' | 'admin' | 'developer';
   avatar?: string;
   teamId?: string;
   createdAt: Date;

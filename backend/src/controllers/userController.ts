@@ -25,6 +25,26 @@ const getBootstrapAdminTelegramId = (): number | null => {
   return Number.isFinite(num) ? num : null;
 };
 
+const getBootstrapAdminEmail = (): string | null => {
+  return process.env.BOOTSTRAP_ADMIN_EMAIL || null;
+};
+
+const checkAdminBootstrap = async (user: any) => {
+  const bootstrapId = getBootstrapAdminTelegramId();
+  const bootstrapEmail = getBootstrapAdminEmail();
+
+  const isIdMatch = bootstrapId && user.telegramId === bootstrapId;
+  const isEmailMatch = bootstrapEmail && user.email === bootstrapEmail;
+
+  if (isIdMatch || isEmailMatch) {
+    if (user.role !== 'admin' && user.role !== 'developer') {
+      user.role = 'admin';
+      await user.save();
+      console.log(`User ${user.username} promoted to admin via bootstrap (${isIdMatch ? 'ID' : 'Email'})`);
+    }
+  }
+};
+
 // Register endpoint
 export const register = async (req: Request, res: Response) => {
   try {
@@ -39,15 +59,9 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'telegramId must be a number' });
     }
 
-    const bootstrapAdminTelegramId = getBootstrapAdminTelegramId();
-    const shouldBeAdmin = bootstrapAdminTelegramId !== null && telegramIdNumber === bootstrapAdminTelegramId;
-
     const existingUser = await User.findOne({ telegramId: telegramIdNumber });
     if (existingUser) {
-      if (shouldBeAdmin && existingUser.role !== 'admin' && existingUser.role !== 'developer') {
-        existingUser.role = 'admin';
-        await existingUser.save();
-      }
+      await checkAdminBootstrap(existingUser);
       const jwtToken = jwt.sign(
         { userId: existingUser._id.toString(), telegramId: existingUser.telegramId, role: existingUser.role },
         process.env.JWT_SECRET || 'your_jwt_secret',
@@ -58,14 +72,17 @@ export const register = async (req: Request, res: Response) => {
       return res.status(200).json({ user: existingUser.toObject(), token: sessionToken, jwtToken });
     }
 
-    const user = await new User({
+    const user = new User({
       telegramId: telegramIdNumber,
       username,
       firstName,
       lastName,
       photoUrl,
-      role: shouldBeAdmin ? 'admin' : 'user'
-    }).save();
+      role: 'user'
+    });
+
+    await checkAdminBootstrap(user);
+    await user.save();
 
     const jwtToken = jwt.sign(
       { userId: user._id.toString(), telegramId: user.telegramId, role: user.role },
@@ -128,14 +145,17 @@ export const getProfile = async (req: Request, res: Response) => {
     const telegramId = typeof reqUser?.id === 'string' ? parseInt(reqUser.id, 10) : reqUser?.id;
 
     const user = userId
-      ? await User.findById(userId).lean()
-      : await User.findOne({ telegramId }).lean();
+      ? await User.findById(userId)
+      : await User.findOne({ telegramId });
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json(user);
+    // Check for admin bootstrap every time profile is fetched
+    await checkAdminBootstrap(user);
+
+    res.json(user.toObject());
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({ error: 'Error fetching profile' });
@@ -164,9 +184,6 @@ export const authenticateTelegram = async (req: Request, res: Response) => {
       });
     }
 
-    const bootstrapAdminTelegramId = getBootstrapAdminTelegramId();
-    const shouldBeAdmin = bootstrapAdminTelegramId !== null && telegramId === bootstrapAdminTelegramId;
-
     // Find or create user
     let user = await User.findOne({ telegramId });
 
@@ -176,25 +193,21 @@ export const authenticateTelegram = async (req: Request, res: Response) => {
       user.firstName = telegramUser.first_name || user.firstName;
       user.lastName = telegramUser.last_name || user.lastName;
       user.photoUrl = telegramUser.photo_url || user.photoUrl;
-
-      // Update admin role if needed
-      if (shouldBeAdmin && user.role !== 'admin' && user.role !== 'developer') {
-        user.role = 'admin';
-      }
-
-      await user.save();
     } else {
       // Create new user
-      user = await new User({
+      user = new User({
         telegramId,
         username: telegramUser.username || `user_${telegramId}`,
         firstName: telegramUser.first_name || 'User',
         lastName: telegramUser.last_name,
         photoUrl: telegramUser.photo_url,
-        role: shouldBeAdmin ? 'admin' : 'user'
+        role: 'user'
       });
-      await user.save();
     }
+
+    // Check/apply admin role
+    await checkAdminBootstrap(user);
+    await user.save();
 
     // Generate JWT token
     const jwtToken = jwt.sign(

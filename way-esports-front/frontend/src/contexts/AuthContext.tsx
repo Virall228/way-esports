@@ -23,6 +23,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       username: raw?.username || 'User',
       telegramId: Number(raw?.telegramId ?? raw?.telegram_id ?? 0),
       email: raw?.email,
+      role: raw?.role || 'user',
       avatar: raw?.photoUrl || raw?.photo_url || raw?.profileLogo || raw?.avatar,
       teamId: raw?.teamId,
       createdAt: raw?.createdAt ? new Date(raw.createdAt) : new Date()
