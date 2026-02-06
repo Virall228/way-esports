@@ -2,8 +2,8 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import styled, { ThemeProvider } from 'styled-components';
 
-import GlobalStyle from './styles/GlobalStyles';
-import eslTheme from './styles/theme';
+import { GlobalStyles as GlobalStyle } from './styles/GlobalStyles';
+import { theme as eslTheme } from './styles/theme';
 
 // Import pages
 import Home from './pages/Home';
