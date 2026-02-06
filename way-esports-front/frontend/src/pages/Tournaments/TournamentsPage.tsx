@@ -53,10 +53,11 @@ const HeaderContent = styled.div`
 `;
 
 const Title = styled.h1`
-  font-size: 3rem;
+  font-size: clamp(2rem, 8vw, 3.5rem);
   font-weight: 700;
   color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 15px;
+  line-height: 1.1;
 `;
 
 const Subtitle = styled.p`

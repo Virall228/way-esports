@@ -211,6 +211,9 @@ router.post('/', authenticateJWT, isAdmin, async (req, res) => {
       rules: tournament.rules || ''
     };
 
+    // Invalidate caches
+    await cacheService.invalidateTournamentCaches();
+
     res.status(201).json({
       success: true,
       data: transformed
@@ -244,6 +247,9 @@ router.post('/batch', authenticateJWT, isAdmin, async (req, res) => {
     });
 
     const result = await Tournament.insertMany(payload, { ordered: false });
+
+    // Invalidate caches
+    await cacheService.invalidateTournamentCaches();
 
     res.status(201).json({
       success: true,
@@ -499,6 +505,9 @@ router.put('/:id', authenticateJWT, isAdmin, async (req, res) => {
       updatedAt: populatedTournament.updatedAt?.toISOString()
     };
 
+    // Invalidate caches
+    await cacheService.invalidateTournamentCaches();
+
     res.json({
       success: true,
       data: transformed
@@ -528,6 +537,9 @@ router.delete('/:id', authenticateJWT, isAdmin, async (req, res) => {
     // Admin can delete any tournament - no need to check ownership
 
     await Tournament.findByIdAndDelete(req.params.id);
+
+    // Invalidate caches
+    await cacheService.invalidateTournamentCaches();
 
     res.json({
       success: true,
@@ -673,6 +685,9 @@ router.put('/:id/reschedule', authenticateJWT, isAdmin, async (req, res) => {
 
     // Notify participants (Placeholder - should ideally trigger notification service)
     // notificationService.notifyParticipants(tournamentId, 'Tournament Rescheduled', ...);
+
+    // Invalidate caches
+    await cacheService.invalidateTournamentCaches();
 
     res.json({
       success: true,

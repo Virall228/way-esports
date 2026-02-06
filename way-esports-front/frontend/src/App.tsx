@@ -200,20 +200,20 @@ const MainContent = styled.main`
   width: 100%;
   margin: 0 auto;
   min-height: calc(var(--app-height, 100vh) - 56px - var(--sab, 0px));
-  padding-bottom: calc(72px + var(--sab, 0px));
+  padding-bottom: calc(80px + var(--sab, 0px)); /* Increased for bottom nav */
+  display: flex;
+  flex-direction: column;
 
   @media (max-width: ${eslTheme.breakpoints.tablet}) {
-    padding-top: calc(1rem + var(--sat, 0px));
-    padding-left: calc(1rem + var(--sal, 0px));
-    padding-right: calc(1rem + var(--sar, 0px));
+    padding-top: calc(0.5rem + var(--sat, 0px));
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-bottom: calc(90px + var(--sab, 0px));
   }
 
   @media (min-width: ${eslTheme.breakpoints.tablet}) {
-    padding-bottom: 1.5rem;
-    min-height: calc(100vh - 120px);
-  }
-
-  @media (min-width: ${eslTheme.breakpoints.tablet}) {
+    padding-bottom: 2rem;
+    min-height: calc(100vh - 80px); /* Adjust for header */
     padding: 1.5rem;
     width: min(100% - 3rem, 1200px);
   }

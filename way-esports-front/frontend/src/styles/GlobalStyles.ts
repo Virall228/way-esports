@@ -18,15 +18,18 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   body {
-    font-family: ${theme.fonts.body};
-    font-weight: ${theme.fontWeights.regular};
-    line-height: 1.6;
+    background-color: ${theme.colors.bg.primary};
     color: ${theme.colors.text.primary};
-    background: ${theme.colors.background};
-    overflow-x: hidden;
+    font-family: ${theme.fonts.primary};
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    width: 100%;
     position: relative;
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
   }
 
   /* Remove global gradients and overlays to allow custom background image */
@@ -174,7 +177,7 @@ export const GlobalStyles = createGlobalStyle`
   /* Global title styles */
   h1, h2, h3, h4, h5, h6 {
     font-family: ${theme.fonts.title};
-    font-weight: ${theme.fontWeights.semiBold};
+    font-weight: ${theme.fontWeights.semibold};
     letter-spacing: 1px;
     margin-bottom: 1rem;
     text-transform: uppercase;
@@ -187,7 +190,7 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   h2 {
-    font-weight: ${theme.fontWeights.semiBold};
+    font-weight: ${theme.fontWeights.semibold};
     font-size: 2rem;
     letter-spacing: 1.5px;
   }
@@ -305,15 +308,15 @@ export const GlobalStyles = createGlobalStyle`
 
   /* Utility classes for fonts */
   .font-title {
-    font-family: ${theme.fonts.title} !important;
+    font-family: ${theme.fonts.accent} !important;
   }
 
   .font-body {
-    font-family: ${theme.fonts.body} !important;
+    font-family: ${theme.fonts.primary} !important;
   }
 
   .font-weight-light {
-    font-weight: ${theme.fontWeights.light} !important;
+    font-weight: ${theme.fontWeights.regular} !important;
   }
 
   .font-weight-regular {
@@ -325,7 +328,7 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   .font-weight-semibold {
-    font-weight: ${theme.fontWeights.semiBold} !important;
+    font-weight: ${theme.fontWeights.semibold} !important;
   }
 
   .font-weight-bold {

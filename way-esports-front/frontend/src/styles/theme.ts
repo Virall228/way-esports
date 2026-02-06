@@ -47,22 +47,18 @@ export const theme = {
   },
   fonts: {
     primary: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    primary: "'Inter', sans-serif",
     secondary: "'JetBrains Mono', 'Courier New', monospace",
-    accent: "'Orbitron', monospace",
+    accent: "'Orbitron', sans-serif",
     title: "'Orbitron', monospace",
     body: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    mono: "'Fira Code', monospace"
   },
   fontWeights: {
-    light: 300,
     regular: 400,
     medium: 500,
-    semiBold: 600,
     semibold: 600,
-    bold: 700,
-    extraBold: 800,
-    extrabold: 800,
-    black: 900,
-    normal: 400,
+    bold: 700
   },
   spacing: {
     xs: '0.25rem',
@@ -70,7 +66,7 @@ export const theme = {
     md: '1rem',
     lg: '1.5rem',
     xl: '2rem',
-    xxl: '3rem',
+    xxl: '3rem'
   },
   borderRadius: {
     none: '0',

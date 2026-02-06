@@ -81,7 +81,7 @@ const TabContainer = styled.div`
 `;
 
 const Tab = styled.button<{ $active: boolean }>`
-  background: ${({ $active }) => 
+  background: ${({ $active }) =>
     $active ? 'linear-gradient(135deg, #ff6b00, #ff8533)' : 'rgba(42, 42, 42, 0.8)'};
   color: ${({ $active }) => $active ? '#000000' : '#ffffff'};
   border: 1px solid ${({ $active }) => $active ? '#ff6b00' : 'rgba(255, 107, 0, 0.3)'};
@@ -96,8 +96,8 @@ const Tab = styled.button<{ $active: boolean }>`
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      background: ${({ $active }) => 
-        $active ? 'linear-gradient(135deg, #ff8533, #ff9f66)' : 'rgba(255, 107, 0, 0.1)'};
+      background: ${({ $active }) =>
+    $active ? 'linear-gradient(135deg, #ff8533, #ff9f66)' : 'rgba(255, 107, 0, 0.1)'};
       transform: translateY(-2px);
     }
   }
@@ -180,10 +180,10 @@ const ActionsCell = styled.div`
 `;
 
 const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' | 'success' }>`
-  background: ${({ $variant }) => 
+  background: ${({ $variant }) =>
     $variant === 'danger' ? 'linear-gradient(135deg, #ff4757, #ff6b7a)' :
-    $variant === 'success' ? 'linear-gradient(135deg, #2ed573, #3ddb7f)' :
-    'linear-gradient(135deg, #ff6b00, #ff8533)'};
+      $variant === 'success' ? 'linear-gradient(135deg, #2ed573, #3ddb7f)' :
+        'linear-gradient(135deg, #ff6b00, #ff8533)'};
   color: #ffffff;
   border: none;
   padding: 0.5rem 1rem;
@@ -400,32 +400,47 @@ const AdminPage: React.FC = () => {
     }));
   };
 
-  useEffect(() => {
-    const load = async () => {
-      if (!isAuthenticated) return;
-      setLoading(true);
-      setError(null);
-      try {
-        await Promise.all([fetchUsers(), fetchTournaments(), fetchNews(), fetchAchievements()]);
-      } catch (e: any) {
-        setError(formatApiError(e, 'Failed to load admin data'));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    load();
-  }, [isAuthenticated]);
-
-  const formatDate = (value: any) => {
+  const load = async () => {
+    if (!isAuthenticated) return;
+    setLoading(true);
+    setError(null);
     try {
-      const d = value ? new Date(value) : new Date();
-      return d.toISOString().slice(0, 10);
+      await Promise.all([fetchUsers(), fetchTournaments(), fetchNews(), fetchAchievements()]);
+    } catch (e: any) {
+      setError(formatApiError(e, 'Failed to load admin data'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, [isAuthenticated, activeTab]);
+
+  const formatDateForInput = (value: any) => {
+    try {
+      if (!value) return '';
+      const d = new Date(value);
+      if (isNaN(d.getTime())) return '';
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
     } catch {
       return '';
     }
   };
 
+  const formatDate = (value: any) => {
+    try {
+      const d = value ? new Date(value) : new Date();
+      return d.toLocaleDateString();
+    } catch {
+      return '';
+    }
+  };
   const fetchUsers = async () => {
     const result: any[] = await api.get('/api/auth/users');
     setUsers(
@@ -690,7 +705,7 @@ const AdminPage: React.FC = () => {
           <StatLabel>Total Prize Pool</StatLabel>
         </StatCard>
       </StatsGrid>
-      
+
       <h3>Recent Activity</h3>
       <div style={{ color: '#cccccc' }}>
         <p>• No recent activity</p>
@@ -743,7 +758,7 @@ const AdminPage: React.FC = () => {
         <h3>User Management</h3>
         <ActionButton onClick={() => handleCreate('user')}>Add User</ActionButton>
       </div>
-      
+
       <TableWrap>
         <Table>
           <thead>
@@ -784,7 +799,7 @@ const AdminPage: React.FC = () => {
         <h3>Tournament Management</h3>
         <ActionButton onClick={() => handleCreate('tournament')}>Create Tournament</ActionButton>
       </div>
-      
+
       <TableWrap>
         <Table>
           <thead>
@@ -825,7 +840,7 @@ const AdminPage: React.FC = () => {
         <h3>News Management</h3>
         <ActionButton onClick={() => handleCreate('news')}>Create Article</ActionButton>
       </div>
-      
+
       <TableWrap>
         <Table>
           <thead>
@@ -864,7 +879,7 @@ const AdminPage: React.FC = () => {
         <h3>Rewards Management</h3>
         <ActionButton onClick={() => handleCreate('reward')}>Create Reward</ActionButton>
       </div>
-      
+
       <div style={{ color: '#cccccc', textAlign: 'center', padding: '40px' }}>
         <h4>Rewards System</h4>
         <p>Manage player rewards, achievements, and incentives</p>
@@ -934,6 +949,7 @@ const AdminPage: React.FC = () => {
                 onChange={(e) => setField('game', e.target.value)}
               >
                 <option value="CS2">CS2</option>
+                <option value="Valorant">Valorant</option>
                 <option value="Critical Ops">Critical Ops</option>
                 <option value="PUBG Mobile">PUBG Mobile</option>
               </Select>
@@ -941,13 +957,13 @@ const AdminPage: React.FC = () => {
                 placeholder="Prize Pool"
                 type="number"
                 value={modalData.prizePool ?? 0}
-                onChange={(e) => setField('prizePool', e.target.value)}
+                onChange={(e) => setField('prizePool', Number(e.target.value))}
               />
               <Input
                 placeholder="Max Teams"
                 type="number"
                 value={modalData.maxTeams ?? 16}
-                onChange={(e) => setField('maxTeams', e.target.value)}
+                onChange={(e) => setField('maxTeams', Number(e.target.value))}
               />
               <Select
                 value={modalData.status || 'upcoming'}
@@ -957,6 +973,50 @@ const AdminPage: React.FC = () => {
                 <option value="ongoing">Ongoing</option>
                 <option value="completed">Completed</option>
               </Select>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ color: '#ccc', fontSize: '12px' }}>Start Date</label>
+                  <Input
+                    type="datetime-local"
+                    value={formatDateForInput(modalData.startDate)}
+                    onChange={(e) => setField('startDate', e.target.value)}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ color: '#ccc', fontSize: '12px' }}>End Date</label>
+                  <Input
+                    type="datetime-local"
+                    value={formatDateForInput(modalData.endDate)}
+                    onChange={(e) => setField('endDate', e.target.value)}
+                  />
+                </div>
+              </div>
+              <Select
+                value={modalData.format || 'single_elimination'}
+                onChange={(e) => setField('format', e.target.value)}
+              >
+                <option value="single_elimination">Single Elimination</option>
+                <option value="double_elimination">Double Elimination</option>
+                <option value="round_robin">Round Robin</option>
+                <option value="swiss">Swiss</option>
+              </Select>
+              <Select
+                value={modalData.type || 'team'}
+                onChange={(e) => setField('type', e.target.value)}
+              >
+                <option value="team">Team</option>
+                <option value="solo">Solo</option>
+              </Select>
+              <TextArea
+                placeholder="Description"
+                value={modalData.description || ''}
+                onChange={(e) => setField('description', e.target.value)}
+              />
+              <TextArea
+                placeholder="Rules"
+                value={modalData.rules || ''}
+                onChange={(e) => setField('rules', e.target.value)}
+              />
             </Form>
           );
         case 'news':
@@ -1085,10 +1145,17 @@ const AdminPage: React.FC = () => {
   return (
     <Container>
       <Header>
-        <Title>Admin Panel</Title>
-        <p style={{ color: '#cccccc', margin: '8px 0 0 0' }}>
-          Manage users, tournaments, news, and system settings
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <Title>Admin Panel</Title>
+            <p style={{ color: '#cccccc', margin: '8px 0 0 0' }}>
+              Manage users, tournaments, news, and system settings
+            </p>
+          </div>
+          <ActionButton onClick={() => load()}>
+            {loading ? '...' : 'Refresh'}
+          </ActionButton>
+        </div>
       </Header>
 
       {!isAuthenticated && (
