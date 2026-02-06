@@ -3,6 +3,7 @@ import Tournament, { ITournament } from '../models/Tournament';
 import Match from '../models/Match';
 import { authenticateJWT, isAdmin } from '../middleware/auth';
 import { checkTournamentAccess, checkTournamentRegistration, consumeFreeEntry } from '../middleware/tournamentAccess';
+import { detectReferralFraud } from '../middleware/fraudDetection';
 import { logTournamentEvent } from '../services/loggingService';
 import cacheService from '../services/cacheService';
 
@@ -27,11 +28,7 @@ const rateLimitRegistration = (limit: number, windowMs: number) => (req: any, re
   next();
 };
 
-const detectReferralFraud = async (req: any, res: any, next: any) => {
-  // Basic check: prevent fast automated registrations from same IP?
-  // For now, allow but log
-  next();
-};
+
 
 const validateReferralCompletion = async (req: any, res: any, next: any) => {
   // Logic moved to successful registration block
@@ -629,6 +626,67 @@ router.get('/:id/live', async (req, res) => {
   } catch (error) {
     console.error('Error fetching tournament live matches:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch live matches' });
+  }
+});
+
+/**
+ * Reschedule tournament (admin only)
+ */
+router.put('/:id/reschedule', authenticateJWT, isAdmin, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.body;
+    const tournamentId = req.params.id;
+
+    if (!startDate) {
+      return res.status(400).json({ success: false, error: 'New start date is required' });
+    }
+
+    const newStart = new Date(startDate);
+    const newEnd = endDate ? new Date(endDate) : new Date(newStart.getTime() + 2 * 60 * 60 * 1000);
+
+    if (isNaN(newStart.getTime()) || isNaN(newEnd.getTime())) {
+      return res.status(400).json({ success: false, error: 'Invalid date format' });
+    }
+
+    const tournament = await Tournament.findById(tournamentId);
+    if (!tournament) {
+      return res.status(404).json({ success: false, error: 'Tournament not found' });
+    }
+
+    if (tournament.status !== 'upcoming') {
+      return res.status(400).json({
+        success: false,
+        error: 'Only upcoming tournaments can be rescheduled'
+      });
+    }
+
+    tournament.startDate = newStart;
+    tournament.endDate = newEnd;
+    await tournament.save();
+
+    logTournamentEvent('tournament_rescheduled', {
+      tournamentId,
+      newStart,
+      newEnd,
+      adminId: (req.user as any)._id
+    });
+
+    // Notify participants (Placeholder - should ideally trigger notification service)
+    // notificationService.notifyParticipants(tournamentId, 'Tournament Rescheduled', ...);
+
+    res.json({
+      success: true,
+      message: 'Tournament rescheduled successfully',
+      data: {
+        id: tournament._id,
+        startDate: tournament.startDate,
+        endDate: tournament.endDate
+      }
+    });
+
+  } catch (error) {
+    console.error('Reschedule failed:', error);
+    res.status(500).json({ success: false, error: 'Failed to reschedule tournament' });
   }
 });
 

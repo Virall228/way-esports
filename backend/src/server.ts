@@ -27,6 +27,8 @@ import achievementsRouter from './routes/achievements';
 import searchRouter from './routes/search';
 import prizesRouter from './routes/prizes';
 import referralsRouter from './routes/referrals';
+import termsRouter from './routes/terms';
+import refundsRouter from './routes/refunds';
 
 import { seedDefaultAchievements } from './services/achievements/seedAchievements';
 
@@ -98,6 +100,8 @@ app.use('/api/news', newsRouter);
 app.use('/api/achievements', achievementsRouter);
 app.use('/api/prizes', prizesRouter);
 app.use('/api/referrals', referralsRouter);
+app.use('/api/terms', termsRouter);
+app.use('/api/refunds', authenticateJWT, refundsRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

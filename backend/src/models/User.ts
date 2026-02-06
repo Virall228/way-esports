@@ -44,10 +44,14 @@ export interface IUser extends Document {
   wallet: {
     balance: number;
     transactions: {
+      _id?: mongoose.Types.ObjectId;
       type: 'deposit' | 'withdrawal' | 'prize' | 'fee' | 'subscription' | 'referral';
       amount: number;
       description: string;
       date: Date;
+      status?: 'pending' | 'completed' | 'failed' | 'refund_pending' | 'refunded' | 'refund_denied';
+      refundReason?: string;
+      refundRequestedAt?: Date;
     }[];
   };
   gameProfiles: {
@@ -175,7 +179,14 @@ const userSchema = new Schema<IUser>({
       date: {
         type: Date,
         default: Date.now
-      }
+      },
+      status: {
+        type: String,
+        enum: ['pending', 'completed', 'failed', 'refund_pending', 'refunded', 'refund_denied'],
+        default: 'completed'
+      },
+      refundReason: String,
+      refundRequestedAt: Date
     }]
   },
   gameProfiles: [{
