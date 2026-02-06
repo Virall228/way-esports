@@ -305,7 +305,7 @@ const Select = styled.select`
   }
 `;
 
-type TabType = 'dashboard' | 'users' | 'tournaments' | 'news' | 'achievements' | 'rewards' | 'analytics';
+type TabType = 'dashboard' | 'users' | 'tournaments' | 'news' | 'achievements' | 'rewards' | 'analytics' | 'referrals';
 
 interface User {
   id: string;
