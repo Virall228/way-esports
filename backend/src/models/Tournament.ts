@@ -9,6 +9,7 @@ export interface ITournament extends Document {
   maxTeams: number;
   maxPlayers?: number;
   maxParticipants?: number; // Added for compatibility
+  currentParticipants?: number; // Added for compatibility
   skillLevel?: string; // Added
   registeredTeams: mongoose.Types.ObjectId[];
   registeredPlayers: mongoose.Types.ObjectId[];

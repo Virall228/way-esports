@@ -14,7 +14,7 @@ const Referral = {
   }
 };
 
-const require = (id: string) => {
+const getService = (id: string) => {
   if (id === '../models/Referral') return Referral;
   if (id === '../models/SecurityEvent') return { countDocuments: async () => 0 };
   return {};

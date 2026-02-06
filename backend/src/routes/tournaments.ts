@@ -3,6 +3,8 @@ import Tournament, { ITournament } from '../models/Tournament';
 import Match from '../models/Match';
 import { authenticateJWT, isAdmin } from '../middleware/auth';
 import { checkTournamentAccess, checkTournamentRegistration, consumeFreeEntry } from '../middleware/tournamentAccess';
+import { logTournamentEvent } from '../services/loggingService';
+import cacheService from '../services/cacheService';
 
 // Временные заглушки для новых middleware
 const handleTournamentConcurrency = async (req: any, res: any, next: any) => next();

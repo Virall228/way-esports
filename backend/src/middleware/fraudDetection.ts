@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import User from '../models/User';
+import Referral from '../models/Referral';
 
 // Временные заглушки
 const logSecurityEvent = (event: string, data: any, userId?: string) => {
@@ -10,13 +11,8 @@ const logWarning = (event: string, data: any, userId?: string) => {
   console.warn(`Warning: ${event}`, data, userId);
 };
 
-const Referral = {
-  findOne: async (filter: any) => {
-    return null;
-  }
-};
-
-const require = (id: string) => {
+// Mock service getter to replace dynamic require
+const getService = (id: string) => {
   if (id === '../models/Referral') return Referral;
   if (id === '../models/SecurityEvent') return { countDocuments: async () => 0 };
   return {};
@@ -60,7 +56,7 @@ export const detectReferralFraud = async (req: Request, res: Response, next: Nex
     // 1. Check IP-based rate limiting
     const ipKey = `ip:${clientIP}`;
     const ipStats = referralTracker.get(ipKey) || { count: 0, lastReferral: 0 };
-    
+
     const now = Date.now();
     const timeWindow = config.timeWindowMinutes * 60 * 1000;
 
@@ -166,7 +162,7 @@ export const detectReferralFraud = async (req: Request, res: Response, next: Nex
       });
     }
 
-    if (config.requireEmailVerification && !refereeUser.emailVerified) {
+    if (config.requireEmailVerification && !(refereeUser as any).emailVerified) {
       logSecurityEvent('referral_without_email_verification', {
         userId,
         referralCode
@@ -267,7 +263,7 @@ export const validateReferralCompletion = async (req: Request, res: Response, ne
 
     next();
   } catch (error) {
-    logError('referral_completion_validation_error', error as Error, { userId });
+    console.error('referral_completion_validation_error', error, { userId });
     next(); // Don't block the request for validation errors
   }
 };
@@ -277,7 +273,7 @@ export const validateReferralCompletion = async (req: Request, res: Response, ne
  */
 async function checkReferralCompletionCriteria(refereeUser: any, referrerUser: any): Promise<boolean> {
   // Criteria 1: Email verification
-  if (config.requireEmailVerification && !refereeUser.emailVerified) {
+  if (config.requireEmailVerification && !(refereeUser as any).emailVerified) {
     return false;
   }
 
@@ -302,7 +298,7 @@ async function checkReferralCompletionCriteria(refereeUser: any, referrerUser: a
   }
 
   // Criteria 4: No suspicious activity
-  const recentSecurityEvents = await require('../models/SecurityEvent').countDocuments({
+  const recentSecurityEvents = await getService('../models/SecurityEvent').countDocuments({
     userId: refereeUser._id,
     createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
   });
@@ -319,8 +315,8 @@ async function checkReferralCompletionCriteria(refereeUser: any, referrerUser: a
  */
 function getClientIP(req: Request): string {
   return (
-    req.headers['x-forwarded-for'] as string ||
-    req.headers['x-real-ip'] as string ||
+    (req.headers['x-forwarded-for'] as string) ||
+    (req.headers['x-real-ip'] as string) ||
     req.connection?.remoteAddress ||
     req.socket?.remoteAddress ||
     'unknown'

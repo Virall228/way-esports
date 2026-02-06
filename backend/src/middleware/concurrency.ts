@@ -11,8 +11,8 @@ export const handleTournamentConcurrency = async (req: Request, res: Response, n
   const userId = (req.user as any)?._id?.toString() || (req.user as any)?.id;
 
   if (!tournamentId || !userId) {
-    return res.status(400).json({ 
-      error: 'Tournament ID and User ID required' 
+    return res.status(400).json({
+      error: 'Tournament ID and User ID required'
     });
   }
 
@@ -37,9 +37,9 @@ export const handleTournamentConcurrency = async (req: Request, res: Response, n
       if (tournament.status !== 'upcoming') {
         await session.abortTransaction();
         session.endSession();
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Tournament is not accepting registrations',
-          status: tournament.status 
+          status: tournament.status
         });
       }
 
@@ -50,7 +50,7 @@ export const handleTournamentConcurrency = async (req: Request, res: Response, n
       if (currentParticipants >= maxParticipants) {
         await session.abortTransaction();
         session.endSession();
-        return res.status(409).json({ 
+        return res.status(409).json({
           error: 'Tournament is full',
           currentParticipants,
           maxParticipants,
@@ -68,26 +68,26 @@ export const handleTournamentConcurrency = async (req: Request, res: Response, n
 
       const isAlreadyRegistered = tournament.registeredTeams?.some(
         (teamId: any) => teamId.toString() === userId
-      ) || user.teams?.some(teamId => 
+      ) || user.teams?.some(teamId =>
         tournament.registeredTeams?.includes(teamId)
       );
 
       if (isAlreadyRegistered) {
         await session.abortTransaction();
         session.endSession();
-        return res.status(409).json({ 
-          error: 'Already registered for this tournament' 
+        return res.status(409).json({
+          error: 'Already registered for this tournament'
         });
       }
 
       // Atomic increment of participants
       const updatedTournament = await Tournament.findByIdAndUpdate(
         tournamentId,
-        { 
+        {
           $inc: { currentParticipants: 1 },
           $addToSet: { registeredTeams: userId }
         },
-        { 
+        {
           new: true,
           session: session,
           runValidators: true
@@ -95,11 +95,11 @@ export const handleTournamentConcurrency = async (req: Request, res: Response, n
       ).select('maxParticipants currentParticipants status registeredTeams');
 
       // Double-check after increment
-      if (updatedTournament.currentParticipants > updatedTournament.maxParticipants) {
+      if (updatedTournament && updatedTournament.currentParticipants > (updatedTournament.maxParticipants || 100)) {
         // Rollback if overbooked
         await Tournament.findByIdAndUpdate(
           tournamentId,
-          { 
+          {
             $inc: { currentParticipants: -1 },
             $pull: { registeredTeams: userId }
           },
@@ -108,7 +108,7 @@ export const handleTournamentConcurrency = async (req: Request, res: Response, n
 
         await session.abortTransaction();
         session.endSession();
-        return res.status(409).json({ 
+        return res.status(409).json({
           error: 'Tournament became full during registration',
           currentParticipants: updatedTournament.currentParticipants,
           maxParticipants: updatedTournament.maxParticipants,
@@ -135,7 +135,7 @@ export const handleTournamentConcurrency = async (req: Request, res: Response, n
     }
   } catch (error) {
     console.error('Concurrency error during tournament registration:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Registration failed due to server error',
       details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     });
@@ -174,7 +174,7 @@ export const rateLimitRegistration = (maxAttempts: number = 5, windowMs: number 
 
     // Check limit
     if (attempts.count >= maxAttempts) {
-      return res.status(429).json({ 
+      return res.status(429).json({
         error: 'Too many registration attempts',
         retryAfter: Math.ceil((windowMs - (now - attempts.lastAttempt)) / 1000)
       });
