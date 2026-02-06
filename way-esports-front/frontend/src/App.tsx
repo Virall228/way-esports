@@ -18,7 +18,9 @@ import BillingPage from './pages/Billing/BillingPage';
 // Import components
 import TermsGuard from './components/Legal/TermsGuard';
 import { AppProvider } from './contexts/AppContext';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { NotificationProvider, useNotifications } from './contexts/NotificationContext';
+import { api } from './services/api';
 
 // Styled components for clean black/white/gray design
 // (Keeping existing styled components)
@@ -290,6 +292,7 @@ const BottomNavIcon = styled.span`
 
 const MobileShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
+  const { user } = useAuth();
 
   return (
     <>
@@ -311,19 +314,35 @@ const MobileShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <BottomNavIcon>📰</BottomNavIcon>
           News
         </BottomNavItem>
-        <BottomNavItem to="/profile" $active={location.pathname.startsWith('/profile')}>
-          <BottomNavIcon>👤</BottomNavIcon>
-          Profile
-        </BottomNavItem>
+        {(user?.role === 'admin' || user?.role === 'developer') ? (
+          <BottomNavItem to="/admin" $active={location.pathname.startsWith('/admin')}>
+            <BottomNavIcon>⚙️</BottomNavIcon>
+            Admin
+          </BottomNavItem>
+        ) : (
+          <BottomNavItem to="/profile" $active={location.pathname.startsWith('/profile')}>
+            <BottomNavIcon>👤</BottomNavIcon>
+            Profile
+          </BottomNavItem>
+        )}
       </BottomNav>
     </>
   );
 };
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const { addNotification } = useNotifications();
+  const { user } = useAuth();
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
+
+  React.useEffect(() => {
+    // Initialize API notification handler
+    api.setNotifyHandler((type, title, message) => {
+      addNotification({ type, title, message });
+    });
+  }, [addNotification]);
 
   React.useEffect(() => {
     const setAppHeight = () => {
@@ -364,70 +383,82 @@ const App: React.FC = () => {
   }, []);
 
   return (
+    <AppContainer>
+      <Header>
+        <Logo>WAY ESPORTS</Logo>
+        <BurgerButton type="button" onClick={() => setMobileMenuOpen(true)} aria-label="Open menu">
+          ☰
+        </BurgerButton>
+        <Navigation>
+          <Link to="/"><NavButton as="span">Home</NavButton></Link>
+          <Link to="/tournaments"><NavButton as="span">Tournaments</NavButton></Link>
+          <Link to="/teams"><NavButton as="span">Teams</NavButton></Link>
+          <Link to="/news"><NavButton as="span">News</NavButton></Link>
+          <Link to="/profile"><NavButton as="span">Profile</NavButton></Link>
+          {(user?.role === 'admin' || user?.role === 'developer') && (
+            <Link to="/admin"><NavButton as="span">Admin</NavButton></Link>
+          )}
+        </Navigation>
+      </Header>
+
+      <MobileMenuOverlay $open={mobileMenuOpen} onClick={closeMobileMenu}>
+        <MobileMenuPanel onClick={(e) => e.stopPropagation()}>
+          <MobileMenuHeader>
+            <MobileMenuTitle>Menu</MobileMenuTitle>
+            <CloseButton type="button" onClick={closeMobileMenu} aria-label="Close menu">
+              ✕
+            </CloseButton>
+          </MobileMenuHeader>
+
+          <Link to="/" onClick={closeMobileMenu}><NavButton as="span">Home</NavButton></Link>
+          <Link to="/tournaments" onClick={closeMobileMenu}><NavButton as="span">Tournaments</NavButton></Link>
+          <Link to="/teams" onClick={closeMobileMenu}><NavButton as="span">Teams</NavButton></Link>
+          <Link to="/news" onClick={closeMobileMenu}><NavButton as="span">News</NavButton></Link>
+          <Link to="/profile" onClick={closeMobileMenu}><NavButton as="span">Profile</NavButton></Link>
+          {(user?.role === 'admin' || user?.role === 'developer') && (
+            <Link to="/admin" onClick={closeMobileMenu}><NavButton as="span">Admin</NavButton></Link>
+          )}
+        </MobileMenuPanel>
+      </MobileMenuOverlay>
+
+      <MobileShell>
+        <MainContent>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/tournaments" element={<Tournaments />} />
+            <Route path="/tournaments/:id" element={<TournamentDetailsPage />} />
+            <Route path="/teams" element={<Teams />} />
+            <Route path="/news" element={<News />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/billing" element={<BillingPage />} />
+            <Route path="/admin" element={<AdminPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </MainContent>
+      </MobileShell>
+
+      <Footer>
+        <p>© 2024 WAY ESPORTS. All rights reserved.</p>
+        <p>Powered by Professional Gaming Technology</p>
+      </Footer>
+    </AppContainer>
+  );
+};
+
+const App: React.FC = () => {
+  return (
     <ThemeProvider theme={eslTheme}>
       <AuthProvider>
-        <AppProvider>
-          <GlobalStyle />
-          <TermsGuard>
-            <BrowserRouter>
-              <AppContainer>
-                <Header>
-                  <Logo>WAY ESPORTS</Logo>
-                  <BurgerButton type="button" onClick={() => setMobileMenuOpen(true)} aria-label="Open menu">
-                    ☰
-                  </BurgerButton>
-                  <Navigation>
-                    <Link to="/"><NavButton as="span">Home</NavButton></Link>
-                    <Link to="/tournaments"><NavButton as="span">Tournaments</NavButton></Link>
-                    <Link to="/teams"><NavButton as="span">Teams</NavButton></Link>
-                    <Link to="/news"><NavButton as="span">News</NavButton></Link>
-                    <Link to="/profile"><NavButton as="span">Profile</NavButton></Link>
-                    <Link to="/admin"><NavButton as="span">Admin</NavButton></Link>
-                  </Navigation>
-                </Header>
-
-                <MobileMenuOverlay $open={mobileMenuOpen} onClick={closeMobileMenu}>
-                  <MobileMenuPanel onClick={(e) => e.stopPropagation()}>
-                    <MobileMenuHeader>
-                      <MobileMenuTitle>Menu</MobileMenuTitle>
-                      <CloseButton type="button" onClick={closeMobileMenu} aria-label="Close menu">
-                        ✕
-                      </CloseButton>
-                    </MobileMenuHeader>
-
-                    <Link to="/" onClick={closeMobileMenu}><NavButton as="span">Home</NavButton></Link>
-                    <Link to="/tournaments" onClick={closeMobileMenu}><NavButton as="span">Tournaments</NavButton></Link>
-                    <Link to="/teams" onClick={closeMobileMenu}><NavButton as="span">Teams</NavButton></Link>
-                    <Link to="/news" onClick={closeMobileMenu}><NavButton as="span">News</NavButton></Link>
-                    <Link to="/profile" onClick={closeMobileMenu}><NavButton as="span">Profile</NavButton></Link>
-                    <Link to="/admin" onClick={closeMobileMenu}><NavButton as="span">Admin</NavButton></Link>
-                  </MobileMenuPanel>
-                </MobileMenuOverlay>
-
-                <MobileShell>
-                  <MainContent>
-                    <Routes>
-                      <Route path="/" element={<Home />} />
-                      <Route path="/tournaments" element={<Tournaments />} />
-                      <Route path="/tournaments/:id" element={<TournamentDetailsPage />} />
-                      <Route path="/teams" element={<Teams />} />
-                      <Route path="/news" element={<News />} />
-                      <Route path="/profile" element={<Profile />} />
-                      <Route path="/billing" element={<BillingPage />} />
-                      <Route path="/admin" element={<AdminPage />} />
-                      <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
-                  </MainContent>
-                </MobileShell>
-
-                <Footer>
-                  <p>© 2024 WAY ESPORTS. All rights reserved.</p>
-                  <p>Powered by Professional Gaming Technology</p>
-                </Footer>
-              </AppContainer>
-            </BrowserRouter>
-          </TermsGuard>
-        </AppProvider>
+        <NotificationProvider>
+          <AppProvider>
+            <GlobalStyle />
+            <TermsGuard>
+              <BrowserRouter>
+                <AppContent />
+              </BrowserRouter>
+            </TermsGuard>
+          </AppProvider>
+        </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   );

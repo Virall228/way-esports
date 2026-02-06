@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import WalletModal from '../../components/Wallet/WalletModal';
 import SubscriptionModal from '../../components/Subscription/SubscriptionModal';
@@ -6,6 +6,8 @@ import PhotoUploadModal from '../../components/Profile/PhotoUploadModal';
 import AchievementsSection from '../../components/Profile/AchievementsSection';
 import ReferralCard from '../../components/Referral/ReferralCard';
 import SubscriptionCard from '../../components/Subscription/SubscriptionCard';
+import { useAuth } from '../../contexts/AuthContext';
+import { api } from '../../services/api';
 
 const Container = styled.div`
   padding: 20px;
@@ -26,11 +28,11 @@ const ProfileHeader = styled.div`
   flex-wrap: wrap;
 `;
 
-const Avatar = styled.div<{ $hasImage?: boolean }>`
+const Avatar = styled.div<{ $hasImage?: boolean; $imageUrl?: string | null }>`
   width: 120px;
   height: 120px;
   border-radius: 50%;
-  background: ${({ theme, $hasImage }) => $hasImage ? 'transparent' : theme.colors.surface};
+  background: ${({ theme, $hasImage, $imageUrl }) => ($hasImage || $imageUrl) ? 'transparent' : theme.colors.surface};
   border: 3px solid ${({ theme }) => theme.colors.border.medium};
   display: flex;
   align-items: center;
@@ -231,63 +233,80 @@ const AchievementDescription = styled.div`
 `;
 
 const ProfilePage: React.FC = () => {
+  const { user, fetchProfile } = useAuth();
   const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [isSubscriptionOpen, setIsSubscriptionOpen] = useState(false);
   const [isPhotoUploadOpen, setIsPhotoUploadOpen] = useState(false);
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handlePhotoUpload = (file: File) => {
-    // Create a URL for the uploaded file
-    const imageUrl = URL.createObjectURL(file);
-    setProfileImage(imageUrl);
-    
-    // Here you would typically upload the file to your server
-    console.log('Uploading photo:', file);
+  const handlePhotoUpload = async (file: File) => {
+    try {
+      setIsUploading(true);
+      const { url } = await api.uploadImage(file);
+
+      // Update user profile with new logo URL
+      await api.put('/api/auth/profile', { profileLogo: url });
+
+      // Refresh profile to get updated data
+      await fetchProfile();
+    } catch (error) {
+      console.error('Error in photo upload:', error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const getFullAvatarUrl = (path: string | null | undefined) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    // Assuming the backend serves static files at the base URL + path
+    return path;
   };
 
   return (
     <Container>
       <ProfileHeader>
-        <Avatar 
-          $hasImage={!!profileImage}
+        <Avatar
+          $hasImage={!!user?.profileLogo}
+          $imageUrl={user?.profileLogo}
           onClick={() => setIsPhotoUploadOpen(true)}
         >
-          {profileImage ? (
-            <AvatarImage src={profileImage} alt="Profile" />
+          {user?.profileLogo ? (
+            <AvatarImage src={getFullAvatarUrl(user.profileLogo) || ''} alt="Profile" />
           ) : (
-            '👤'
+            user?.username?.charAt(0).toUpperCase() || '👤'
           )}
         </Avatar>
         <ProfileInfo>
           <ProfileTop>
             <div>
-              <Username>WAY.Striker</Username>
-              <UserOrg>WAY Esports</UserOrg>
+              <Username>{user?.username || 'Gamer'}</Username>
+              <UserOrg>{user?.email || 'WAY Esports Member'}</UserOrg>
             </div>
             <div>
               <SubscriptionButton onClick={() => setIsSubscriptionOpen(true)}>
-                SUBSCRIPTION
+                {user?.isSubscribed ? 'MANAGE SUBSCRIPTION' : 'GET SUBSCRIPTION'}
               </SubscriptionButton>
               <WalletButton onClick={() => setIsWalletOpen(true)}>
-                💰
+                💰 {user?.balance?.toFixed(2) || '0.00'}
               </WalletButton>
             </div>
           </ProfileTop>
           <UserStats>
             <StatItem>
-              <StatValue>0</StatValue>
+              <StatValue>{user?.stats?.matches || 0}</StatValue>
               <StatLabel>Matches</StatLabel>
             </StatItem>
             <StatItem>
-              <StatValue>0</StatValue>
+              <StatValue>{user?.stats?.wins || 0}</StatValue>
               <StatLabel>Wins</StatLabel>
             </StatItem>
             <StatItem>
-              <StatValue>0</StatValue>
+              <StatValue>{user?.stats?.mvps || 0}</StatValue>
               <StatLabel>MVPs</StatLabel>
             </StatItem>
             <StatItem>
-              <StatValue>0.00</StatValue>
+              <StatValue>{user?.stats?.kdRatio || '0.00'}</StatValue>
               <StatLabel>K/D Ratio</StatLabel>
             </StatItem>
           </UserStats>
@@ -315,33 +334,33 @@ const ProfilePage: React.FC = () => {
           <span style={{ fontSize: '1.5rem' }}>📊</span>
           <CardTitle style={{ margin: 0 }}>Match Statistics</CardTitle>
         </div>
-        
+
         <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
-          <button style={{ 
-            background: '#ff6b00', 
-            color: 'white', 
-            border: 'none', 
-            padding: '8px 16px', 
+          <button style={{
+            background: '#ff6b00',
+            color: 'white',
+            border: 'none',
+            padding: '8px 16px',
             borderRadius: '6px',
             fontSize: '14px'
           }}>
             All Matches (0)
           </button>
-          <button style={{ 
-            background: 'transparent', 
-            color: '#cccccc', 
-            border: '1px solid #333', 
-            padding: '8px 16px', 
+          <button style={{
+            background: 'transparent',
+            color: '#cccccc',
+            border: '1px solid #333',
+            padding: '8px 16px',
             borderRadius: '6px',
             fontSize: '14px'
           }}>
             Wins (0)
           </button>
-          <button style={{ 
-            background: 'transparent', 
-            color: '#cccccc', 
-            border: '1px solid #333', 
-            padding: '8px 16px', 
+          <button style={{
+            background: 'transparent',
+            color: '#cccccc',
+            border: '1px solid #333',
+            padding: '8px 16px',
             borderRadius: '6px',
             fontSize: '14px'
           }}>
@@ -360,19 +379,19 @@ const ProfilePage: React.FC = () => {
       <SubscriptionCard />
 
       {/* Modals */}
-      <WalletModal 
-        isOpen={isWalletOpen} 
-        onClose={() => setIsWalletOpen(false)} 
+      <WalletModal
+        isOpen={isWalletOpen}
+        onClose={() => setIsWalletOpen(false)}
       />
-      
-      <SubscriptionModal 
-        isOpen={isSubscriptionOpen} 
-        onClose={() => setIsSubscriptionOpen(false)} 
+
+      <SubscriptionModal
+        isOpen={isSubscriptionOpen}
+        onClose={() => setIsSubscriptionOpen(false)}
       />
-      
-      <PhotoUploadModal 
-        isOpen={isPhotoUploadOpen} 
-        onClose={() => setIsPhotoUploadOpen(false)} 
+
+      <PhotoUploadModal
+        isOpen={isPhotoUploadOpen}
+        onClose={() => setIsPhotoUploadOpen(false)}
         onUpload={handlePhotoUpload}
       />
     </Container>

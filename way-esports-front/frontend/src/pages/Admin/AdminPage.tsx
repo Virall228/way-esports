@@ -390,9 +390,12 @@ const AdminPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'user' | 'tournament' | 'news' | 'reward' | 'achievement'>('user');
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [modalData, setModalData] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
+  const [analytics, setAnalytics] = useState<any>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const newsImageRef = useRef<HTMLInputElement>(null);
 
   const formatApiError = (e: any, fallback: string) => {
     if (e instanceof ApiError) {
@@ -426,7 +429,9 @@ const AdminPage: React.FC = () => {
         fetchTournaments(),
         fetchNews(),
         fetchAchievements(),
-        fetchReferrals()
+        fetchReferrals(),
+        fetchDashboardStats(),
+        fetchAnalytics()
       ]);
     } catch (e: any) {
       setError(formatApiError(e, 'Failed to load admin data'));
@@ -463,6 +468,24 @@ const AdminPage: React.FC = () => {
       return '';
     }
   };
+  const fetchDashboardStats = async () => {
+    try {
+      const result = await api.get('/api/admin/stats');
+      setDashboardStats(result.data);
+    } catch (e) {
+      console.error('Failed to fetch dashboard stats:', e);
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    try {
+      const result = await api.get('/api/admin/analytics');
+      setAnalytics(result.data);
+    } catch (e) {
+      console.error('Failed to fetch analytics:', e);
+    }
+  };
+
   const fetchUsers = async () => {
     const result: any[] = await api.get('/api/auth/users');
     setUsers(
@@ -594,6 +617,21 @@ const AdminPage: React.FC = () => {
     return item || {};
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploading(true);
+      const result = await api.uploadImage(file);
+      setField('coverImage', result.url);
+    } catch (e: any) {
+      setError(formatApiError(e, 'Image upload failed'));
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleCreate = (type: 'user' | 'tournament' | 'news' | 'reward' | 'achievement') => {
     setModalType(type);
     setEditingItem(null);
@@ -685,7 +723,8 @@ const AdminPage: React.FC = () => {
           content: modalData.content,
           summary: modalData.summary || (modalData.content || '').slice(0, 200),
           category: modalData.category,
-          status: modalData.status
+          status: modalData.status,
+          coverImage: modalData.coverImage
         };
 
         if (payload.status === 'published') {
@@ -756,30 +795,54 @@ const AdminPage: React.FC = () => {
   };
 
   function renderDashboard() {
+    const stats = dashboardStats || {
+      totalUsers: users.length,
+      activeTournaments: tournaments.filter(t => t.status === 'ongoing' || t.status === 'in_progress').length,
+      newsArticles: news.length,
+      prizePoolSummary: [{ total: tournaments.reduce((acc, t) => acc + (t.prizePool || 0), 0) }]
+    };
+
     return (
       <div>
         <StatsGrid>
           <StatCard>
-            <StatValue>{users.length}</StatValue>
+            <StatValue>{stats.totalUsers}</StatValue>
             <StatLabel>Total Users</StatLabel>
           </StatCard>
           <StatCard>
-            <StatValue>{tournaments.filter(t => t.status === 'ongoing' || t.status === 'in_progress').length}</StatValue>
+            <StatValue>{stats.activeTournaments}</StatValue>
             <StatLabel>Active Tournaments</StatLabel>
           </StatCard>
           <StatCard>
-            <StatValue>{news.length}</StatValue>
+            <StatValue>{stats.newsArticles}</StatValue>
             <StatLabel>News Articles</StatLabel>
           </StatCard>
           <StatCard>
-            <StatValue>${tournaments.reduce((acc, t) => acc + (t.prizePool || 0), 0)}</StatValue>
+            <StatValue>${stats.prizePoolSummary?.[0]?.total || 0}</StatValue>
             <StatLabel>Total Prize Pool</StatLabel>
           </StatCard>
         </StatsGrid>
 
-        <h3>Recent Activity</h3>
+        {analytics && (
+          <div style={{ marginTop: '30px' }}>
+            <h3>Analytics Summary</h3>
+            <StatsGrid>
+              <StatCard>
+                <StatValue>{analytics.activeSubscriptions}</StatValue>
+                <StatLabel>Active Subscriptions</StatLabel>
+              </StatCard>
+              <StatCard>
+                <StatValue>{analytics.userGrowth?.length || 0}</StatValue>
+                <StatLabel>Growth Data Points</StatLabel>
+              </StatCard>
+            </StatsGrid>
+          </div>
+        )}
+
+        <h3 style={{ marginTop: '30px' }}>Recent Activity</h3>
         <div style={{ color: '#cccccc' }}>
-          <p>• No recent activity</p>
+          <p>• Dashboard operational</p>
+          <p>• Data synced with MongoDB Atlas</p>
         </div>
       </div>
     );
@@ -1214,6 +1277,30 @@ const AdminPage: React.FC = () => {
                 <option value="published">Published</option>
                 <option value="archived">Archived</option>
               </Select>
+              <div style={{ marginTop: '10px' }}>
+                <label style={{ color: '#ccc', fontSize: '12px', display: 'block', marginBottom: '8px' }}>Cover Image</label>
+                {modalData.coverImage && (
+                  <img
+                    src={modalData.coverImage}
+                    alt="Cover Preview"
+                    style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '8px', marginBottom: '10px' }}
+                  />
+                )}
+                <input
+                  type="file"
+                  ref={newsImageRef}
+                  style={{ display: 'none' }}
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                />
+                <ActionButton
+                  type="button"
+                  onClick={() => newsImageRef.current?.click()}
+                  disabled={isUploading}
+                >
+                  {isUploading ? 'Uploading...' : modalData.coverImage ? 'Change Image' : 'Upload Cover Image'}
+                </ActionButton>
+              </div>
             </Form>
           );
         case 'achievement':

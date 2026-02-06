@@ -28,6 +28,8 @@ import searchRouter from './routes/search';
 import prizesRouter from './routes/prizes';
 import referralsRouter from './routes/referrals';
 import termsRouter from './routes/terms';
+import adminRouter from './routes/admin';
+import uploadsRouter from './routes/uploads';
 import refundsRouter from './routes/refunds';
 
 import { seedDefaultAchievements } from './services/achievements/seedAchievements';
@@ -101,7 +103,12 @@ app.use('/api/achievements', achievementsRouter);
 app.use('/api/prizes', prizesRouter);
 app.use('/api/referrals', referralsRouter);
 app.use('/api/terms', termsRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api/uploads', uploadsRouter);
 app.use('/api/refunds', authenticateJWT, refundsRouter);
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
