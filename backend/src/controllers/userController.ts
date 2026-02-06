@@ -130,11 +130,11 @@ export const getProfile = async (req: Request, res: Response) => {
     const user = userId
       ? await User.findById(userId).lean()
       : await User.findOne({ telegramId }).lean();
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
+
     res.json(user);
   } catch (error) {
     console.error('Get profile error:', error);
@@ -150,17 +150,17 @@ export const authenticateTelegram = async (req: Request, res: Response) => {
     const telegramUser = (req as any).telegramUser;
 
     if (!telegramInitData || !telegramUser) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        error: 'Telegram user data not found' 
+        error: 'Telegram user data not found'
       });
     }
 
     const telegramId = telegramUser.id;
     if (!telegramId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        error: 'Telegram user ID not found' 
+        error: 'Telegram user ID not found'
       });
     }
 
@@ -169,19 +169,19 @@ export const authenticateTelegram = async (req: Request, res: Response) => {
 
     // Find or create user
     let user = await User.findOne({ telegramId });
-    
+
     if (user) {
       // Update user data from Telegram
       user.username = telegramUser.username || user.username || `user_${telegramId}`;
       user.firstName = telegramUser.first_name || user.firstName;
       user.lastName = telegramUser.last_name || user.lastName;
       user.photoUrl = telegramUser.photo_url || user.photoUrl;
-      
+
       // Update admin role if needed
       if (shouldBeAdmin && user.role !== 'admin' && user.role !== 'developer') {
         user.role = 'admin';
       }
-      
+
       await user.save();
     } else {
       // Create new user
@@ -198,10 +198,10 @@ export const authenticateTelegram = async (req: Request, res: Response) => {
 
     // Generate JWT token
     const jwtToken = jwt.sign(
-      { 
-        userId: user._id.toString(), 
-        telegramId: user.telegramId, 
-        role: user.role 
+      {
+        userId: user._id.toString(),
+        telegramId: user.telegramId,
+        role: user.role
       },
       process.env.JWT_SECRET || 'your_jwt_secret',
       { expiresIn: JWT_EXPIRATION }
@@ -209,17 +209,17 @@ export const authenticateTelegram = async (req: Request, res: Response) => {
 
     const sessionToken = await createSessionToken(user._id.toString());
 
-    res.json({ 
+    res.json({
       success: true,
-      user: user.toObject(), 
+      user: user.toObject(),
       token: sessionToken,
       jwtToken
     });
   } catch (error) {
     console.error('Telegram authentication error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: 'Error authenticating with Telegram' 
+      error: 'Error authenticating with Telegram'
     });
   }
 };
@@ -236,10 +236,69 @@ export const getAllUsers = async (req: Request, res: Response) => {
       .select('-password')
       .sort({ createdAt: -1 })
       .lean();
-    
+
     res.json(users);
   } catch (error) {
     console.error('Get all users error:', error);
     res.status(500).json({ error: 'Error fetching users' });
+  }
+};
+
+// Admin only: Update user (balance, role, subscription, etc.)
+export const updateUser = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const {
+      role,
+      isBanned,
+      isSubscribed,
+      subscriptionExpiresAt,
+      freeEntriesCount,
+      balance,
+      firstName,
+      lastName,
+      username
+    } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Update fields if provided
+    if (role) user.role = role;
+    if (typeof isBanned === 'boolean') user.isBanned = isBanned;
+    if (typeof isSubscribed === 'boolean') user.isSubscribed = isSubscribed;
+    if (subscriptionExpiresAt !== undefined) user.subscriptionExpiresAt = subscriptionExpiresAt;
+    if (typeof freeEntriesCount === 'number') user.freeEntriesCount = freeEntriesCount;
+    if (firstName) user.firstName = firstName;
+    if (lastName) user.lastName = lastName;
+    if (username) user.username = username;
+
+    // Update balance and log transaction if balance changed
+    if (typeof balance === 'number') {
+      const balanceDiff = balance - user.wallet.balance;
+      if (balanceDiff !== 0) {
+        user.wallet.transactions.push({
+          type: balanceDiff > 0 ? 'deposit' : 'withdrawal',
+          amount: Math.abs(balanceDiff),
+          description: `Admin adjustment: ${balanceDiff > 0 ? 'added' : 'removed'} by admin`,
+          date: new Date(),
+          status: 'completed'
+        });
+        user.wallet.balance = balance;
+      }
+    }
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'User updated successfully',
+      user: user.toObject()
+    });
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({ error: 'Error updating user' });
   }
 };

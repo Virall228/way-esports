@@ -203,13 +203,13 @@ export const GlobalStyles = createGlobalStyle`
 
   /* Body text styles */
   p, span, div, li, a {
-    font-family: ${theme.fonts.body};
+    font-family: ${theme.fonts.primary};
     font-weight: ${theme.fontWeights.regular};
   }
 
   /* Button styles */
   button {
-    font-family: ${theme.fonts.title};
+    font-family: ${theme.fonts.accent};
     font-weight: ${theme.fontWeights.medium};
     letter-spacing: 1px;
     text-transform: uppercase;
@@ -217,13 +217,13 @@ export const GlobalStyles = createGlobalStyle`
 
   /* Input styles */
   input, textarea, select {
-    font-family: ${theme.fonts.body};
+    font-family: ${theme.fonts.primary};
     font-weight: ${theme.fontWeights.regular};
   }
 
   /* Label styles */
   label {
-    font-family: ${theme.fonts.title};
+    font-family: ${theme.fonts.accent};
     font-weight: ${theme.fontWeights.medium};
     letter-spacing: 0.8px;
     text-transform: uppercase;

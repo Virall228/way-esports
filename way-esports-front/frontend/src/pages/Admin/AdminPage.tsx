@@ -310,10 +310,25 @@ type TabType = 'dashboard' | 'users' | 'tournaments' | 'news' | 'achievements' |
 interface User {
   id: string;
   username: string;
+  firstName: string;
+  lastName?: string;
   email: string;
   role: string;
-  status: string;
+  isBanned: boolean;
+  isSubscribed: boolean;
+  subscriptionExpiresAt?: string;
+  freeEntriesCount: number;
+  balance: number;
   createdAt: string;
+}
+
+interface ReferralLog {
+  id: string;
+  referrer: string;
+  referred: string;
+  reward: number;
+  date: string;
+  status: string;
 }
 
 interface Tournament {
@@ -371,6 +386,7 @@ const AdminPage: React.FC = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [news, setNews] = useState<NewsArticle[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [referrals, setReferrals] = useState<ReferralLog[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'user' | 'tournament' | 'news' | 'reward' | 'achievement'>('user');
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -405,7 +421,13 @@ const AdminPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      await Promise.all([fetchUsers(), fetchTournaments(), fetchNews(), fetchAchievements()]);
+      await Promise.all([
+        fetchUsers(),
+        fetchTournaments(),
+        fetchNews(),
+        fetchAchievements(),
+        fetchReferrals()
+      ]);
     } catch (e: any) {
       setError(formatApiError(e, 'Failed to load admin data'));
     } finally {
@@ -447,12 +469,36 @@ const AdminPage: React.FC = () => {
       (result || []).map((u: any) => ({
         id: (u._id || u.id || '').toString(),
         username: u.username || '',
+        firstName: u.firstName || '',
+        lastName: u.lastName || '',
         email: u.email || '',
         role: u.role || 'user',
-        status: u.isBanned ? 'banned' : 'active',
+        isBanned: !!u.isBanned,
+        isSubscribed: !!u.isSubscribed,
+        subscriptionExpiresAt: u.subscriptionExpiresAt,
+        freeEntriesCount: Number(u.freeEntriesCount || 0),
+        balance: Number(u.wallet?.balance || 0),
         createdAt: formatDate(u.createdAt)
       }))
     );
+  };
+
+  const fetchReferrals = async () => {
+    try {
+      const result: any = await api.get('/api/referrals/all');
+      setReferrals(
+        (result || []).map((r: any) => ({
+          id: (r._id || r.id || '').toString(),
+          referrer: r.referrer?.username || r.referrer?.toString() || 'Unknown',
+          referred: r.referred?.username || r.referred?.toString() || 'Unknown',
+          reward: r.rewardAmount || 0,
+          date: formatDate(r.createdAt),
+          status: r.status || 'completed'
+        }))
+      );
+    } catch (e) {
+      console.error('Failed to fetch referrals:', e);
+    }
   };
 
   const fetchTournaments = async () => {
@@ -679,230 +725,302 @@ const AdminPage: React.FC = () => {
         return;
       }
 
+      if (modalType === 'user') {
+        const payload = {
+          role: modalData.role,
+          isBanned: modalData.isBanned,
+          isSubscribed: modalData.isSubscribed,
+          subscriptionExpiresAt: modalData.subscriptionExpiresAt,
+          freeEntriesCount: Number(modalData.freeEntriesCount || 0),
+          balance: Number(modalData.balance || 0),
+          username: modalData.username,
+          firstName: modalData.firstName,
+          lastName: modalData.lastName
+        };
+
+        if (editingItem?.id) {
+          await api.put(`/api/auth/users/${editingItem.id}`, payload);
+          await fetchUsers();
+          setIsModalOpen(false);
+          return;
+        } else {
+          setError('Adding new users manually is not recommended. Users should register via Telegram.');
+          return;
+        }
+      }
+
       setIsModalOpen(false);
     } catch (e: any) {
       setError(formatApiError(e, 'Save failed'));
     }
   };
 
-  const renderDashboard = () => (
-    <div>
-      <StatsGrid>
-        <StatCard>
-          <StatValue>0</StatValue>
-          <StatLabel>Total Users</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>0</StatValue>
-          <StatLabel>Active Tournaments</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>0</StatValue>
-          <StatLabel>News Articles</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>$0</StatValue>
-          <StatLabel>Total Prize Pool</StatLabel>
-        </StatCard>
-      </StatsGrid>
+  function renderDashboard() {
+    return (
+      <div>
+        <StatsGrid>
+          <StatCard>
+            <StatValue>{users.length}</StatValue>
+            <StatLabel>Total Users</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>{tournaments.filter(t => t.status === 'ongoing' || t.status === 'in_progress').length}</StatValue>
+            <StatLabel>Active Tournaments</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>{news.length}</StatValue>
+            <StatLabel>News Articles</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>${tournaments.reduce((acc, t) => acc + (t.prizePool || 0), 0)}</StatValue>
+            <StatLabel>Total Prize Pool</StatLabel>
+          </StatCard>
+        </StatsGrid>
 
-      <h3>Recent Activity</h3>
-      <div style={{ color: '#cccccc' }}>
-        <p>• No recent activity</p>
+        <h3>Recent Activity</h3>
+        <div style={{ color: '#cccccc' }}>
+          <p>• No recent activity</p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
-  const renderAchievements = () => (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
-        <h3>Achievements</h3>
-        <ActionButton onClick={() => handleCreate('achievement')}>Create Achievement</ActionButton>
-      </div>
+  function renderAchievements() {
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+          <h3>Achievements</h3>
+          <ActionButton onClick={() => handleCreate('achievement')}>Create Achievement</ActionButton>
+        </div>
 
-      <TableWrap>
-        <Table>
-          <thead>
-            <tr>
-              <Th>Key</Th>
-              <Th>Name</Th>
-              <Th>Active</Th>
-              <Th>Criteria</Th>
-              <Th>Actions</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {achievements.map((a) => (
-              <tr key={a.id}>
-                <Td>{a.key}</Td>
-                <Td>{a.icon ? `${a.icon} ` : ''}{a.name}</Td>
-                <Td>{a.isActive ? 'yes' : 'no'}</Td>
-                <Td>{a.criteriaType}:{a.criteriaValue}</Td>
-                <Td>
-                  <ActionsCell>
-                    <ActionButton onClick={() => handleEdit(a, 'achievement')}>Edit</ActionButton>
-                    <ActionButton $variant="danger" onClick={() => handleDelete(a.id, 'achievement')}>Delete</ActionButton>
-                  </ActionsCell>
-                </Td>
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Key</Th>
+                <Th>Name</Th>
+                <Th>Active</Th>
+                <Th>Criteria</Th>
+                <Th>Actions</Th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
-      </TableWrap>
-    </div>
-  );
-
-  const renderUsers = () => (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
-        <h3>User Management</h3>
-        <ActionButton onClick={() => handleCreate('user')}>Add User</ActionButton>
+            </thead>
+            <tbody>
+              {achievements.map((a) => (
+                <tr key={a.id}>
+                  <Td>{a.key}</Td>
+                  <Td>{a.icon ? `${a.icon} ` : ''}{a.name}</Td>
+                  <Td>{a.isActive ? 'yes' : 'no'}</Td>
+                  <Td>{a.criteriaType}:{a.criteriaValue}</Td>
+                  <Td>
+                    <ActionsCell>
+                      <ActionButton onClick={() => handleEdit(a, 'achievement')}>Edit</ActionButton>
+                      <ActionButton $variant="danger" onClick={() => handleDelete(a.id, 'achievement')}>Delete</ActionButton>
+                    </ActionsCell>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
       </div>
+    );
+  }
 
-      <TableWrap>
-        <Table>
-          <thead>
-            <tr>
-              <Th>Username</Th>
-              <Th>Email</Th>
-              <Th>Role</Th>
-              <Th>Status</Th>
-              <Th>Created</Th>
-              <Th>Actions</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map(user => (
-              <tr key={user.id}>
-                <Td>{user.username}</Td>
-                <Td>{user.email}</Td>
-                <Td>{user.role}</Td>
-                <Td>{user.status}</Td>
-                <Td>{user.createdAt}</Td>
-                <Td>
-                  <ActionsCell>
-                    <ActionButton onClick={() => handleEdit(user, 'user')}>Edit</ActionButton>
-                    <ActionButton $variant="danger" onClick={() => handleDelete(user.id, 'user')}>Delete</ActionButton>
-                  </ActionsCell>
-                </Td>
+  function renderUsers() {
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+          <h3>User Management</h3>
+          <ActionButton onClick={() => handleCreate('user')}>Add User</ActionButton>
+        </div>
+
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Username</Th>
+                <Th>Role</Th>
+                <Th>Subscription</Th>
+                <Th>Balance</Th>
+                <Th>Status</Th>
+                <Th>Actions</Th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
-      </TableWrap>
-    </div>
-  );
-
-  const renderTournaments = () => (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
-        <h3>Tournament Management</h3>
-        <ActionButton onClick={() => handleCreate('tournament')}>Create Tournament</ActionButton>
+            </thead>
+            <tbody>
+              {users.map(user => (
+                <tr key={user.id}>
+                  <Td>{user.username}</Td>
+                  <Td>{user.role}</Td>
+                  <Td>{user.isSubscribed ? '✅ Active' : '❌ None'} {user.freeEntriesCount > 0 ? `(${user.freeEntriesCount} free)` : ''}</Td>
+                  <Td>${user.balance}</Td>
+                  <Td>{user.isBanned ? '🚫 Banned' : '🟢 Active'}</Td>
+                  <Td>
+                    <ActionsCell>
+                      <ActionButton onClick={() => handleEdit(user, 'user')}>Edit</ActionButton>
+                    </ActionsCell>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
       </div>
+    );
+  }
 
-      <TableWrap>
-        <Table>
-          <thead>
-            <tr>
-              <Th>Name</Th>
-              <Th>Game</Th>
-              <Th>Status</Th>
-              <Th>Participants</Th>
-              <Th>Prize Pool</Th>
-              <Th>Actions</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {tournaments.map(tournament => (
-              <tr key={tournament.id}>
-                <Td>{tournament.name}</Td>
-                <Td>{tournament.game}</Td>
-                <Td>{tournament.status}</Td>
-                <Td>{tournament.participants}</Td>
-                <Td>${tournament.prizePool}</Td>
-                <Td>
-                  <ActionsCell>
-                    <ActionButton onClick={() => handleEdit(tournament, 'tournament')}>Edit</ActionButton>
-                    <ActionButton $variant="danger" onClick={() => handleDelete(tournament.id, 'tournament')}>Delete</ActionButton>
-                  </ActionsCell>
-                </Td>
+  function renderReferrals() {
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h3>Referral Logs</h3>
+        </div>
+
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Referrer</Th>
+                <Th>Referred User</Th>
+                <Th>Reward</Th>
+                <Th>Status</Th>
+                <Th>Date</Th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
-      </TableWrap>
-    </div>
-  );
-
-  const renderNews = () => (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
-        <h3>News Management</h3>
-        <ActionButton onClick={() => handleCreate('news')}>Create Article</ActionButton>
+            </thead>
+            <tbody>
+              {referrals.map(r => (
+                <tr key={r.id}>
+                  <Td>{r.referrer}</Td>
+                  <Td>{r.referred}</Td>
+                  <Td>{r.reward} entries</Td>
+                  <Td>{r.status}</Td>
+                  <Td>{r.date}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
       </div>
+    );
+  }
 
-      <TableWrap>
-        <Table>
-          <thead>
-            <tr>
-              <Th>Title</Th>
-              <Th>Author</Th>
-              <Th>Status</Th>
-              <Th>Created</Th>
-              <Th>Actions</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {news.map(article => (
-              <tr key={article.id}>
-                <Td>{article.title}</Td>
-                <Td>{article.author}</Td>
-                <Td>{article.status}</Td>
-                <Td>{article.createdAt}</Td>
-                <Td>
-                  <ActionsCell>
-                    <ActionButton onClick={() => handleEdit(article, 'news')}>Edit</ActionButton>
-                    <ActionButton $variant="danger" onClick={() => handleDelete(article.id, 'news')}>Delete</ActionButton>
-                  </ActionsCell>
-                </Td>
+  function renderTournaments() {
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+          <h3>Tournament Management</h3>
+          <ActionButton onClick={() => handleCreate('tournament')}>Create Tournament</ActionButton>
+        </div>
+
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Name</Th>
+                <Th>Game</Th>
+                <Th>Status</Th>
+                <Th>Participants</Th>
+                <Th>Prize Pool</Th>
+                <Th>Actions</Th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
-      </TableWrap>
-    </div>
-  );
-
-  const renderRewards = () => (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3>Rewards Management</h3>
-        <ActionButton onClick={() => handleCreate('reward')}>Create Reward</ActionButton>
+            </thead>
+            <tbody>
+              {tournaments.map(tournament => (
+                <tr key={tournament.id}>
+                  <Td>{tournament.name}</Td>
+                  <Td>{tournament.game}</Td>
+                  <Td>{tournament.status}</Td>
+                  <Td>{tournament.participants}</Td>
+                  <Td>${tournament.prizePool}</Td>
+                  <Td>
+                    <ActionsCell>
+                      <ActionButton onClick={() => handleEdit(tournament, 'tournament')}>Edit</ActionButton>
+                      <ActionButton $variant="danger" onClick={() => handleDelete(tournament.id, 'tournament')}>Delete</ActionButton>
+                    </ActionsCell>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
       </div>
+    );
+  }
 
-      <div style={{ color: '#cccccc', textAlign: 'center', padding: '40px' }}>
-        <h4>Rewards System</h4>
-        <p>Manage player rewards, achievements, and incentives</p>
-        <p>Coming soon...</p>
+  function renderNews() {
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+          <h3>News Management</h3>
+          <ActionButton onClick={() => handleCreate('news')}>Create Article</ActionButton>
+        </div>
+
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Title</Th>
+                <Th>Author</Th>
+                <Th>Status</Th>
+                <Th>Created</Th>
+                <Th>Actions</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {news.map(article => (
+                <tr key={article.id}>
+                  <Td>{article.title}</Td>
+                  <Td>{article.author}</Td>
+                  <Td>{article.status}</Td>
+                  <Td>{article.createdAt}</Td>
+                  <Td>
+                    <ActionsCell>
+                      <ActionButton onClick={() => handleEdit(article, 'news')}>Edit</ActionButton>
+                      <ActionButton $variant="danger" onClick={() => handleDelete(article.id, 'news')}>Delete</ActionButton>
+                    </ActionsCell>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
       </div>
-    </div>
-  );
+    );
+  }
 
-  const renderAnalytics = () => (
-    <div>
-      <h3>Analytics Dashboard</h3>
-      <div style={{ color: '#cccccc', textAlign: 'center', padding: '40px' }}>
-        <h4>Detailed Analytics</h4>
-        <p>User engagement, tournament performance, revenue metrics</p>
-        <p>Coming soon...</p>
+  function renderRewards() {
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h3>Rewards Management</h3>
+          <ActionButton onClick={() => handleCreate('reward')}>Create Reward</ActionButton>
+        </div>
+
+        <div style={{ color: '#cccccc', textAlign: 'center', padding: '40px' }}>
+          <h4>Rewards System</h4>
+          <p>Manage player rewards, achievements, and incentives</p>
+          <p>Coming soon...</p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
-  const renderModal = () => {
+  function renderAnalytics() {
+    return (
+      <div>
+        <h3>Analytics Dashboard</h3>
+        <div style={{ color: '#cccccc', textAlign: 'center', padding: '40px' }}>
+          <h4>Detailed Analytics</h4>
+          <p>User engagement, tournament performance, revenue metrics</p>
+          <p>Coming soon...</p>
+        </div>
+      </div>
+    );
+  }
+
+  function renderModal() {
     if (!isModalOpen) return null;
 
-    const renderForm = () => {
+    function renderForm() {
       switch (modalType) {
         case 'user':
           return (
@@ -911,6 +1029,16 @@ const AdminPage: React.FC = () => {
                 placeholder="Username"
                 value={modalData.username || ''}
                 onChange={(e) => setField('username', e.target.value)}
+              />
+              <Input
+                placeholder="First Name"
+                value={modalData.firstName || ''}
+                onChange={(e) => setField('firstName', e.target.value)}
+              />
+              <Input
+                placeholder="Last Name"
+                value={modalData.lastName || ''}
+                onChange={(e) => setField('lastName', e.target.value)}
               />
               <Input
                 placeholder="Email"
@@ -927,13 +1055,59 @@ const AdminPage: React.FC = () => {
                 <option value="moderator">Moderator</option>
               </Select>
               <Select
-                value={modalData.status || 'active'}
-                onChange={(e) => setField('status', e.target.value)}
+                value={modalData.isBanned ? 'banned' : 'active'}
+                onChange={(e) => setField('isBanned', e.target.value === 'banned')}
               >
                 <option value="active">Active</option>
-                <option value="suspended">Suspended</option>
                 <option value="banned">Banned</option>
               </Select>
+              <div style={{ padding: '12px', background: 'rgba(255, 107, 0, 0.05)', border: '1px solid rgba(255, 107, 0, 0.2)', borderRadius: '8px' }}>
+                <label style={{ color: '#ff6b00', fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '12px' }}>WALLET & SUBSCRIPTION</label>
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ color: '#ccc', fontSize: '11px', display: 'block', marginBottom: '4px' }}>Balance ($)</label>
+                    <Input
+                      placeholder="Balance"
+                      type="number"
+                      style={{ width: '100%' }}
+                      value={modalData.balance ?? 0}
+                      onChange={(e) => setField('balance', Number(e.target.value))}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ color: '#ccc', fontSize: '11px', display: 'block', marginBottom: '4px' }}>Free Entries</label>
+                    <Input
+                      placeholder="Free Entries"
+                      type="number"
+                      style={{ width: '100%' }}
+                      value={modalData.freeEntriesCount ?? 0}
+                      onChange={(e) => setField('freeEntriesCount', Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+                <div style={{ padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px' }}>
+                  <label style={{ color: '#fff', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      style={{ width: '18px', height: '18px' }}
+                      checked={!!modalData.isSubscribed}
+                      onChange={(e) => setField('isSubscribed', e.target.checked)}
+                    />
+                    Active Subscription
+                  </label>
+                  {modalData.isSubscribed && (
+                    <div style={{ marginTop: '10px' }}>
+                      <label style={{ color: '#ccc', fontSize: '11px', display: 'block', marginBottom: '4px' }}>Expires At</label>
+                      <Input
+                        type="datetime-local"
+                        style={{ width: '100%' }}
+                        value={formatDateForInput(modalData.subscriptionExpiresAt)}
+                        onChange={(e) => setField('subscriptionExpiresAt', e.target.value)}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
             </Form>
           );
         case 'tournament':
@@ -1104,7 +1278,7 @@ const AdminPage: React.FC = () => {
         default:
           return null;
       }
-    };
+    }
 
     return (
       <Modal $isOpen={isModalOpen} onClick={() => setIsModalOpen(false)}>
@@ -1119,9 +1293,9 @@ const AdminPage: React.FC = () => {
         </ModalContent>
       </Modal>
     );
-  };
+  }
 
-  const renderContent = () => {
+  function renderContent() {
     switch (activeTab) {
       case 'dashboard':
         return renderDashboard();
@@ -1137,10 +1311,12 @@ const AdminPage: React.FC = () => {
         return renderRewards();
       case 'analytics':
         return renderAnalytics();
+      case 'referrals':
+        return renderReferrals();
       default:
         return renderDashboard();
     }
-  };
+  }
 
   return (
     <Container>
@@ -1200,6 +1376,9 @@ const AdminPage: React.FC = () => {
         </Tab>
         <Tab $active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')}>
           Analytics
+        </Tab>
+        <Tab $active={activeTab === 'referrals'} onClick={() => setActiveTab('referrals')}>
+          Referrals
         </Tab>
       </TabContainer>
 

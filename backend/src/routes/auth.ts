@@ -52,5 +52,6 @@ router.get('/profile', authenticateJWT, getProfile);
 
 // Admin routes
 router.get('/users', authenticateJWT, isAdmin, getAllUsers);
+router.put('/users/:id', authenticateJWT, isAdmin, updateUser);
 
 export default router;

@@ -46,12 +46,11 @@ export const theme = {
     },
   },
   fonts: {
-    primary: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-    primary: "'Inter', sans-serif",
+    primary: "'Exo 2', sans-serif",
     secondary: "'JetBrains Mono', 'Courier New', monospace",
-    accent: "'Orbitron', sans-serif",
-    title: "'Orbitron', monospace",
-    body: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    accent: "'Chakra Petch', sans-serif",
+    title: "'Orbitron', sans-serif",
+    body: "'Exo 2', sans-serif",
     mono: "'Fira Code', monospace"
   },
   fontWeights: {
@@ -96,7 +95,7 @@ export const theme = {
     default: '300ms ease',
   },
   typography: {
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    fontFamily: "'Exo 2', sans-serif",
     fontSizes: {
       xs: '12px',
       sm: '14px',
@@ -132,7 +131,7 @@ export const theme = {
 
 export const titleStyles = `
   font-family: ${theme.fonts.title};
-  font-weight: ${theme.fontWeights.semiBold};
+  font-weight: ${theme.fontWeights.semibold};
   letter-spacing: 1px;
   text-transform: uppercase;
 `;
@@ -170,6 +169,6 @@ export const statusStyles = `
 
 export const amountStyles = `
   font-family: ${theme.fonts.title};
-  font-weight: ${theme.fontWeights.semiBold};
+  font-weight: ${theme.fontWeights.semibold};
   letter-spacing: 1px;
 `;
