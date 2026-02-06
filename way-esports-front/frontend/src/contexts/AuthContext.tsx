@@ -62,7 +62,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const bootstrap = async () => {
       const token = getToken();
+
+      // If we have no token but are in Telegram, try auto-login
+      if (!token && typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initData) {
+        setIsLoading(true);
+        try {
+          await login();
+          return; // login already handles setIsLoading(false)
+        } catch (e) {
+          console.error('Auto-login failed:', e);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+
       if (!token) return;
+
       setIsLoading(true);
       try {
         const ok = await fetchProfile();
@@ -82,9 +97,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       // Try Telegram Mini App authentication first
-      if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-        const initData = window.Telegram.WebApp.initData;
-        
+      if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
+        const initData = (window as any).Telegram.WebApp.initData;
+
         if (initData) {
           // Use new Telegram authentication endpoint
           try {

@@ -185,32 +185,16 @@ const StatLabel = styled.div`
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const [isBooting, setIsBooting] = useState(true);
-  const [status, setStatus] = useState('Initializing...');
 
   useEffect(() => {
-    let isMounted = true;
-    const stages = [
-      'Connecting to Telegram WebApp...',
-      'Loading user authentication...',
-      'Fetching platform data...',
-      'Preparing interface...',
-      'System ready...'
-    ];
-
     const run = async () => {
-      for (const s of stages) {
-        if (!isMounted) return;
-        setStatus(s);
-        await new Promise(r => setTimeout(r, 800));
+      if ((window as any).Telegram?.WebApp) {
+        (window as any).Telegram.WebApp.ready();
+        (window as any).Telegram.WebApp.expand();
       }
-      if (window.Telegram?.WebApp) {
-        window.Telegram.WebApp.ready();
-        window.Telegram.WebApp.expand();
-      }
-      if (isMounted) setIsBooting(false);
+      setIsBooting(false);
     };
     run();
-    return () => { isMounted = false; };
   }, []);
 
   if (isBooting) {
@@ -256,7 +240,7 @@ const HomePage: React.FC = () => {
             Compete in high-stakes tournaments with substantial prize pools and professional organization.
           </FeatureDescription>
         </FeatureCard>
-        
+
         <FeatureCard>
           <FeatureIcon>👥</FeatureIcon>
           <FeatureTitle>Team Management</FeatureTitle>
@@ -264,7 +248,7 @@ const HomePage: React.FC = () => {
             Create, manage, and lead your esports team with advanced tools and analytics.
           </FeatureDescription>
         </FeatureCard>
-        
+
         <FeatureCard>
           <FeatureIcon>🎮</FeatureIcon>
           <FeatureTitle>Multi-Platform Gaming</FeatureTitle>
@@ -272,7 +256,7 @@ const HomePage: React.FC = () => {
             Participate in tournaments across various popular esports titles and genres.
           </FeatureDescription>
         </FeatureCard>
-        
+
         <FeatureCard>
           <FeatureIcon>📊</FeatureIcon>
           <FeatureTitle>Advanced Analytics</FeatureTitle>
@@ -280,7 +264,7 @@ const HomePage: React.FC = () => {
             Track your performance with detailed statistics and insights to improve your game.
           </FeatureDescription>
         </FeatureCard>
-        
+
         <FeatureCard>
           <FeatureIcon>🏅</FeatureIcon>
           <FeatureTitle>Rewards System</FeatureTitle>
@@ -288,7 +272,7 @@ const HomePage: React.FC = () => {
             Earn points, badges, and rewards for your achievements and participation.
           </FeatureDescription>
         </FeatureCard>
-        
+
         <FeatureCard>
           <FeatureIcon>🌐</FeatureIcon>
           <FeatureTitle>Global Community</FeatureTitle>

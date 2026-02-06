@@ -199,7 +199,7 @@ const MainContent = styled.main`
   padding: 1rem;
   width: 100%;
   margin: 0 auto;
-  min-height: calc(var(--app-height, 100dvh) - 56px - var(--sab, 0px));
+  min-height: calc(var(--app-height, 100vh) - 56px - var(--sab, 0px));
   padding-bottom: calc(72px + var(--sab, 0px));
 
   @media (max-width: ${eslTheme.breakpoints.tablet}) {

@@ -25,9 +25,23 @@ declare module 'styled-components' {
       background: string;
       surface: string;
       white: string;
+      black: string;
+      gray: {
+        50: string;
+        100: string;
+        200: string;
+        300: string;
+        400: string;
+        500: string;
+        600: string;
+        700: string;
+        800: string;
+        900: string;
+      };
       text: {
         primary: string;
         secondary: string;
+        tertiary: string;
         disabled: string;
       };
       textSecondary: string;
@@ -36,6 +50,12 @@ declare module 'styled-components' {
       error: string;
       success: string;
       info: string;
+      bg: {
+        primary: string;
+        secondary: string;
+        tertiary: string;
+        elevated: string;
+      };
       border: {
         light: string;
         medium: string;

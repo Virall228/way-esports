@@ -104,7 +104,7 @@ const FilterTabs = styled.div`
 `;
 
 const FilterTab = styled.button<{ $active: boolean }>`
-  background: ${({ $active }) => 
+  background: ${({ $active }) =>
     $active ? '#ff4757' : 'transparent'};
   color: ${({ $active }) => $active ? '#ffffff' : '#cccccc'};
   border: 1px solid ${({ $active, theme }) => $active ? theme.colors.border.strong : 'rgba(255, 255, 255, 0.2)'};
@@ -118,8 +118,8 @@ const FilterTab = styled.button<{ $active: boolean }>`
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      background: ${({ $active }) => 
-      $active ? 'rgba(255,255,255,0.12)' : 'rgba(255, 255, 255, 0.06)'};
+      background: ${({ $active }) =>
+    $active ? 'rgba(255,255,255,0.12)' : 'rgba(255, 255, 255, 0.06)'};
       transform: translateY(-2px);
     }
   }
@@ -263,14 +263,14 @@ const StatusBadge = styled.div<{ $status: string }>`
   border-radius: 20px;
   font-size: 0.8rem;
   font-weight: 600;
-  background: ${({ $status }) => 
+  background: ${({ $status }) =>
     $status === 'live' ? 'rgba(76, 175, 80, 0.2)' :
-    $status === 'upcoming' ? 'rgba(33, 150, 243, 0.2)' :
-    'rgba(158, 158, 158, 0.2)'};
-  color: ${({ $status }) => 
+      $status === 'upcoming' ? 'rgba(33, 150, 243, 0.2)' :
+        'rgba(158, 158, 158, 0.2)'};
+  color: ${({ $status }) =>
     $status === 'live' ? '#4CAF50' :
-    $status === 'upcoming' ? '#2196F3' :
-    '#9E9E9E'};
+      $status === 'upcoming' ? '#2196F3' :
+        '#9E9E9E'};
   margin-bottom: 15px;
 `;
 
@@ -414,32 +414,32 @@ const TournamentsPage: React.FC = () => {
 
       <FilterSection>
         <FilterTabs>
-          <FilterTab 
-            $active={activeFilter === 'all'} 
+          <FilterTab
+            $active={activeFilter === 'all'}
             onClick={() => setActiveFilter('all')}
           >
             All Tournaments
           </FilterTab>
-          <FilterTab 
-            $active={activeFilter === 'upcoming'} 
+          <FilterTab
+            $active={activeFilter === 'upcoming'}
             onClick={() => setActiveFilter('upcoming')}
           >
             Registration Open
           </FilterTab>
-          <FilterTab 
-            $active={activeFilter === 'live'} 
+          <FilterTab
+            $active={activeFilter === 'live'}
             onClick={() => setActiveFilter('live')}
           >
             In Progress
           </FilterTab>
-          <FilterTab 
-            $active={activeFilter === 'completed'} 
+          <FilterTab
+            $active={activeFilter === 'completed'}
             onClick={() => setActiveFilter('completed')}
           >
             Completed
           </FilterTab>
-          <FilterTab 
-            $active={activeFilter === 'my'} 
+          <FilterTab
+            $active={activeFilter === 'my'}
             onClick={() => setActiveFilter('my')}
           >
             My Tournaments
@@ -482,9 +482,9 @@ const TournamentsPage: React.FC = () => {
               <StatusBadge $status={tournament.status} style={{ color: getStatusColor(tournament.status) }}>
                 {getStatusText(tournament.status)} • TEAM
               </StatusBadge>
-              
+
               <TournamentTitle>{tournament.title}</TournamentTitle>
-              
+
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ff6b00' }}>${tournament.prizePool.toLocaleString()}</div>
@@ -511,9 +511,9 @@ const TournamentsPage: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', gap: '10px' }}>
-                <JoinButton 
-                  style={{ 
-                    flex: 1, 
+                <JoinButton
+                  style={{
+                    flex: 1,
                     background: tournament.status === 'upcoming' ? '#ff6b00' : '#666666',
                     opacity: tournament.status === 'upcoming' ? 1 : 0.7
                   }}
@@ -525,12 +525,12 @@ const TournamentsPage: React.FC = () => {
                     }
                   }}
                 >
-                  {tournament.status === 'live' ? 'View Details' : 
-                   tournament.status === 'upcoming' ? 'Register Team' : 'View Details'}
+                  {tournament.status === 'live' ? 'View Details' :
+                    tournament.status === 'upcoming' ? 'Register Team' : 'View Details'}
                 </JoinButton>
-                <JoinButton 
-                  style={{ 
-                    flex: 1, 
+                <JoinButton
+                  style={{
+                    flex: 1,
                     background: 'transparent',
                     border: '1px solid #666666',
                     color: '#cccccc'
@@ -582,10 +582,10 @@ const TournamentsPage: React.FC = () => {
             width: '90%',
             maxWidth: '600px',
             position: 'relative',
-            maxHeight: 'calc(var(--app-height, 100dvh) - 32px - var(--sat, 0px) - var(--sab, 0px))',
+            maxHeight: 'calc(var(--app-height, 100vh) - 32px - var(--sat, 0px) - var(--sab, 0px))',
             overflowY: 'auto'
           }} onClick={(e) => e.stopPropagation()}>
-            <button 
+            <button
               onClick={() => setIsRulesModalOpen(false)}
               style={{
                 position: 'absolute',
@@ -598,9 +598,9 @@ const TournamentsPage: React.FC = () => {
                 cursor: 'pointer'
               }}
             >×</button>
-            
+
             <h2 style={{ color: '#ff6b00', marginBottom: '20px' }}>Tournament Rules</h2>
-            
+
             <div style={{ color: '#cccccc', lineHeight: '1.6' }}>
               <h3 style={{ color: '#ffffff', marginBottom: '15px' }}>General Rules</h3>
               <ul style={{ marginBottom: '20px' }}>
@@ -609,7 +609,7 @@ const TournamentsPage: React.FC = () => {
                 <li>No cheating, hacking, or exploiting allowed</li>
                 <li>Respect all players and staff members</li>
               </ul>
-              
+
               <h3 style={{ color: '#ffffff', marginBottom: '15px' }}>Match Rules</h3>
               <ul style={{ marginBottom: '20px' }}>
                 <li>Matches are best of 3 (BO3) format</li>
@@ -617,7 +617,7 @@ const TournamentsPage: React.FC = () => {
                 <li>Screenshots required for dispute resolution</li>
                 <li>Server location will be announced before match</li>
               </ul>
-              
+
               <h3 style={{ color: '#ffffff', marginBottom: '15px' }}>Prize Distribution</h3>
               <ul>
                 <li>1st Place: 50% of prize pool</li>
