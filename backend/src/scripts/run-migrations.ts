@@ -11,7 +11,7 @@
 
 import { program } from 'commander';
 import mongoose from 'mongoose';
-import config from '../config/config';
+import { config } from '../config';
 import { createIndexes, dropCustomIndexes, getIndexStats } from '../migrations/indexes';
 
 program
@@ -24,11 +24,11 @@ program
   .description('Create all required indexes')
   .action(async () => {
     try {
-      await mongoose.connect(config.database.url);
+      await mongoose.connect(config.mongoUri);
       console.log('🔗 Connected to MongoDB');
-      
+
       await createIndexes();
-      
+
       await mongoose.disconnect();
       console.log('🔌 Disconnected from MongoDB');
       process.exit(0);
@@ -43,11 +43,11 @@ program
   .description('Drop all custom indexes (for testing)')
   .action(async () => {
     try {
-      await mongoose.connect(config.database.url);
+      await mongoose.connect(config.mongoUri);
       console.log('🔗 Connected to MongoDB');
-      
+
       await dropCustomIndexes();
-      
+
       await mongoose.disconnect();
       console.log('🔌 Disconnected from MongoDB');
       process.exit(0);
@@ -62,11 +62,11 @@ program
   .description('Show current index statistics')
   .action(async () => {
     try {
-      await mongoose.connect(config.database.url);
+      await mongoose.connect(config.mongoUri);
       console.log('🔗 Connected to MongoDB');
-      
+
       await getIndexStats();
-      
+
       await mongoose.disconnect();
       console.log('🔌 Disconnected from MongoDB');
       process.exit(0);

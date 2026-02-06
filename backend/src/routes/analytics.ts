@@ -3,21 +3,14 @@ import User from '../models/User';
 import Tournament from '../models/Tournament';
 import AnalyticsEvent from '../models/AnalyticsEvent';
 
-// Временные заглушки
+import express from 'express';
+import User from '../models/User';
+import Tournament from '../models/Tournament';
+import AnalyticsEvent from '../models/AnalyticsEvent';
+import Referral from '../models/Referral';
+
 const logInfo = (event: string, data: any) => {
   console.log(`Analytics: ${event}`, data);
-};
-
-const Referral = {
-  find: async (filter: any) => {
-    return [];
-  }
-};
-
-const getService = (id: string) => {
-  if (id === '../models/Referral') return Referral;
-  if (id === '../models/SecurityEvent') return { countDocuments: async () => 0 };
-  return {};
 };
 
 const router = express.Router();

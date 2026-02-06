@@ -17,7 +17,7 @@ export class PrizeDistributionService {
    */
   static async schedulePrizeDistribution(tournamentId: string): Promise<void> {
     const tournament = await Tournament.findById(tournamentId);
-    
+
     if (!tournament || tournament.status !== 'completed') {
       throw new Error('Tournament not found or not completed');
     }
@@ -28,7 +28,7 @@ export class PrizeDistributionService {
 
     // Schedule distribution for 48 hours from now
     const distributionTime = new Date(Date.now() + 48 * 60 * 60 * 1000);
-    
+
     await scheduler.scheduleJob(
       `prize-distribution-${tournamentId}`,
       distributionTime,
@@ -45,7 +45,7 @@ export class PrizeDistributionService {
    */
   static async distributePrizes(tournamentId: string): Promise<void> {
     const tournament = await Tournament.findById(tournamentId);
-    
+
     if (!tournament) {
       throw new Error('Tournament not found');
     }
@@ -90,9 +90,9 @@ export class PrizeDistributionService {
         const position = i + 1;
 
         if (tournament.type === 'team') {
-          await this.distributeTeamPrize(winner.teamId, prize, tournamentId, position);
+          await this.distributeTeamPrize(winner.teamId as string, prize, tournamentId, position);
         } else {
-          await this.distributePlayerPrize(winner.playerId, prize, tournamentId, position);
+          await this.distributePlayerPrize(winner.playerId as string, prize, tournamentId, position);
         }
       }
 
@@ -111,10 +111,10 @@ export class PrizeDistributionService {
   /**
    * Get top 3 teams/players from tournament results
    */
-  private static async getTournamentWinners(tournament: any): Promise<Array<{teamId?: string, playerId?: string, position: number}>> {
+  private static async getTournamentWinners(tournament: any): Promise<Array<{ teamId?: string, playerId?: string, position: number }>> {
     // This would typically be determined from tournament bracket/results
     // For now, we'll return placeholder data that should be replaced with actual tournament logic
-    
+
     if (tournament.type === 'team') {
       // Get top 3 teams from tournament results
       const teams = await Team.find({ _id: { $in: tournament.registeredTeams } })
@@ -123,7 +123,7 @@ export class PrizeDistributionService {
         .select('_id name players');
 
       return teams.map((team, index) => ({
-        teamId: team._id.toString(),
+        teamId: (team as any)._id.toString(),
         position: index + 1
       }));
     } else {
@@ -144,25 +144,25 @@ export class PrizeDistributionService {
    * Distribute prize to team members equally
    */
   private static async distributeTeamPrize(
-    teamId: string, 
-    totalPrize: number, 
+    teamId: string,
+    totalPrize: number,
     tournamentId: string,
     position: number
   ): Promise<void> {
     const team = await Team.findById(teamId).populate('players');
-    
+
     if (!team || !team.players || team.players.length === 0) {
       console.warn(`No players found for team ${teamId}`);
       return;
     }
 
     const prizePerPlayer = totalPrize / team.players.length;
-    
+
     for (const player of team.players) {
       await this.distributePlayerPrize(
-        (player as any)._id, 
-        prizePerPlayer, 
-        tournamentId, 
+        (player as any)._id,
+        prizePerPlayer,
+        tournamentId,
         position
       );
     }
@@ -174,13 +174,13 @@ export class PrizeDistributionService {
    * Distribute prize to individual player
    */
   private static async distributePlayerPrize(
-    playerId: string, 
-    amount: number, 
+    playerId: string,
+    amount: number,
     tournamentId: string,
     position: number
   ): Promise<void> {
     const user = await User.findById(playerId);
-    
+
     if (!user) {
       console.warn(`User not found: ${playerId}`);
       return;
@@ -188,7 +188,7 @@ export class PrizeDistributionService {
 
     // Add to wallet balance
     user.wallet.balance += amount;
-    
+
     // Add transaction record
     user.wallet.transactions.push({
       type: 'prize' as any,
@@ -245,8 +245,8 @@ export class PrizeDistributionService {
       status: 'completed',
       prizeStatus: 'pending'
     })
-    .select('name prizePool endDate prizeStatus')
-    .sort({ endDate: 1 });
+      .select('name prizePool endDate prizeStatus')
+      .sort({ endDate: 1 });
 
     return tournaments;
   }

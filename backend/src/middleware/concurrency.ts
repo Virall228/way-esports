@@ -95,7 +95,7 @@ export const handleTournamentConcurrency = async (req: Request, res: Response, n
       ).select('maxParticipants currentParticipants status registeredTeams');
 
       // Double-check after increment
-      if (updatedTournament && updatedTournament.currentParticipants > (updatedTournament.maxParticipants || 100)) {
+      if (updatedTournament && (updatedTournament.currentParticipants || 0) > (updatedTournament.maxParticipants || 100)) {
         // Rollback if overbooked
         await Tournament.findByIdAndUpdate(
           tournamentId,

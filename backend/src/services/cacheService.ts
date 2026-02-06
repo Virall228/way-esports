@@ -14,9 +14,8 @@ class CacheService {
 
   constructor() {
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-    
+
     this.redis = new Redis(redisUrl, {
-      retryDelayOnFailover: 100,
       maxRetriesPerRequest: 3,
       lazyConnect: true
     });
@@ -53,8 +52,8 @@ class CacheService {
    * Get cached data or fetch and cache it
    */
   async getOrSet<T>(
-    key: string, 
-    fetchFn: () => Promise<T>, 
+    key: string,
+    fetchFn: () => Promise<T>,
     options: CacheOptions = { ttl: 300, key }
   ): Promise<T | null> {
     if (!this.isConnected) {
@@ -78,7 +77,7 @@ class CacheService {
       // Cache miss - fetch data
       logInfo('cache_miss', { key });
       const data = await fetchFn();
-      
+
       if (data !== null && data !== undefined) {
         // Cache the data
         await this.redis.setex(key, options.ttl || 300, JSON.stringify(data));
@@ -103,15 +102,15 @@ class CacheService {
    */
   async getTournaments(filters: any = {}): Promise<any[]> {
     const cacheKey = `tournaments:${JSON.stringify(filters)}`;
-    
+
     return this.getOrSet(
       cacheKey,
       async () => {
         const query: any = {};
-        
+
         if (filters.game) query.game = filters.game;
         if (filters.status) query.status = filters.status;
-        
+
         const tournaments = await Tournament.find(query)
           .populate('registeredTeams', 'name tag logo members')
           .populate('matches', 'team1 team2 status startTime')
@@ -143,7 +142,7 @@ class CacheService {
    */
   async getTournamentById(tournamentId: string): Promise<any | null> {
     const cacheKey = `tournament:${tournamentId}`;
-    
+
     return this.getOrSet(
       cacheKey,
       async () => {
@@ -178,7 +177,7 @@ class CacheService {
    */
   async getUserReferralStats(userId: string): Promise<any | null> {
     const cacheKey = `user_referral_stats:${userId}`;
-    
+
     return this.getOrSet(
       cacheKey,
       async () => {
@@ -196,9 +195,9 @@ class CacheService {
 
         const stats = {
           totalReferrals: referrals.length,
-          pendingReferrals: referrals.filter(r => r.status === 'pending').length,
-          completedReferrals: referrals.filter(r => r.status === 'completed').length,
-          totalEarned: referrals.filter(r => r.rewardType === 'free_entry').length
+          pendingReferrals: referrals.filter((r: any) => r.status === 'pending').length,
+          completedReferrals: referrals.filter((r: any) => r.status === 'completed').length,
+          totalEarned: referrals.filter((r: any) => r.rewardType === 'free_entry').length
         };
 
         return {
@@ -219,7 +218,7 @@ class CacheService {
    */
   async getReferralSettings(): Promise<any | null> {
     const cacheKey = 'referral_settings';
-    
+
     return this.getOrSet(
       cacheKey,
       async () => {
@@ -300,7 +299,7 @@ class CacheService {
     try {
       const info = await this.redis.info('memory');
       const keyspace = await this.redis.info('keyspace');
-      
+
       return {
         connected: true,
         memory: this.parseRedisInfo(info),
@@ -315,7 +314,7 @@ class CacheService {
   private parseRedisInfo(info: string): Record<string, any> {
     const lines = info.split('\r\n');
     const result: Record<string, any> = {};
-    
+
     for (const line of lines) {
       if (line && !line.startsWith('#')) {
         const [key, value] = line.split(':');
@@ -324,7 +323,7 @@ class CacheService {
         }
       }
     }
-    
+
     return result;
   }
 

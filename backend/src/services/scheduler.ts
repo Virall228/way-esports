@@ -34,9 +34,9 @@ async function completeFinishedTournaments() {
     // Schedule prize distribution for 48 hours from now
     if (tournament.prizePool > 0) {
       try {
-        await PrizeDistributionService.schedulePrizeDistribution(tournament._id.toString());
+        await PrizeDistributionService.schedulePrizeDistribution((tournament as any)._id.toString());
       } catch (error) {
-        console.error(`Failed to schedule prize distribution for tournament ${tournament._id}:`, error);
+        console.error(`Failed to schedule prize distribution for tournament ${(tournament as any)._id}:`, error);
       }
     }
   }

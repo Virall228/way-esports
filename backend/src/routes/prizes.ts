@@ -89,7 +89,7 @@ router.get('/user/history', authenticateJWT, async (req, res) => {
 router.get('/leaderboard', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 10;
-    
+
     const topEarners = await User.aggregate([
       {
         $match: {
@@ -147,7 +147,7 @@ router.get('/leaderboard', async (req, res) => {
 router.get('/tournament/:id/winners', async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const tournament = await Tournament.findById(id)
       .populate({
         path: 'registeredTeams',
@@ -167,7 +167,7 @@ router.get('/tournament/:id/winners', async (req, res) => {
     }
 
     const winners = await PrizeDistributionService['getTournamentWinners'](tournament);
-    
+
     res.json({
       tournament: {
         name: tournament.name,
@@ -178,9 +178,9 @@ router.get('/tournament/:id/winners', async (req, res) => {
         prizeDistribution: tournament.prizeDistribution
       },
       winners: winners.map((winner, index) => ({
+        ...winner,
         position: index + 1,
-        prize: tournament.prizeDistribution?.[Object.keys(tournament.prizeDistribution)[index]] || 0,
-        ...winner
+        prize: tournament.prizeDistribution?.[Object.keys(tournament.prizeDistribution)[index]] || 0
       }))
     });
   } catch (error: any) {
