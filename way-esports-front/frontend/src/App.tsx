@@ -1,9 +1,9 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
+import styled, { ThemeProvider } from 'styled-components';
 
 import GlobalStyle from './styles/GlobalStyle';
-import theme from './styles/theme';
+import eslTheme from './styles/theme';
 
 // Import pages
 import Home from './pages/Home';
@@ -21,6 +21,7 @@ import { AppProvider } from './contexts/AppContext';
 import { AuthProvider } from './contexts/AuthContext';
 
 // Styled components for clean black/white/gray design
+// (Keeping existing styled components)
 const AppContainer = styled.div`
   min-height: 100vh;
   background: ${eslTheme.colors.bg.primary};
