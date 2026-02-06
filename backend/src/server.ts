@@ -4,7 +4,6 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
-import fs from 'fs';
 import swaggerUi from 'swagger-ui-express';
 import { config } from './config';
 import { errorHandler } from './middleware/errorHandler';
@@ -43,8 +42,8 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    const allowedOrigins = config.cors.origin === '*' 
-      ? true 
+    const allowedOrigins = config.cors.origin === '*'
+      ? true
       : config.cors.origin.split(',').map(o => o.trim());
 
     // Allow all origins if configured as '*'
@@ -117,9 +116,9 @@ if (process.env.NODE_ENV !== 'production') {
     path.join(process.cwd(), 'src', 'docs', 'openapi.json'),
     path.join(process.cwd(), 'docs', 'openapi.json')
   ];
-  
+
   let openapiSpec: any = { openapi: '3.0.3', info: { title: 'WAY-Esports API', version: '1.0.0' } };
-  
+
   for (const candidate of openapiCandidates) {
     if (fs.existsSync(candidate)) {
       try {
@@ -184,9 +183,9 @@ async function start() {
     // Handle server errors
     server.on('error', (error: NodeJS.ErrnoException) => {
       if (error.syscall !== 'listen') throw error;
-      
+
       const bind = 'Port ' + PORT_NUMBER;
-      
+
       switch (error.code) {
         case 'EACCES':
           console.error(bind + ' requires elevated privileges');
@@ -204,11 +203,11 @@ async function start() {
     // Handle graceful shutdown
     const shutdown = async () => {
       console.log('🛑 Received shutdown signal. Gracefully shutting down...');
-      
+
       // Give time for current requests to complete
       server.close(async () => {
         console.log('🔌 Server closed');
-        
+
         try {
           await disconnectDB();
           console.log('✅ MongoDB connection closed');
