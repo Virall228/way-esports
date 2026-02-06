@@ -380,7 +380,7 @@ const ModalActions = styled.div`
 `;
 
 const AdminPage: React.FC = () => {
-  const { isAuthenticated, isLoading: authLoading, login } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, login } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [users, setUsers] = useState<User[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -1344,8 +1344,15 @@ const AdminPage: React.FC = () => {
       )}
 
       {error && (
-        <div style={{ marginBottom: '16px', color: '#ff4757' }}>
+        <div style={{ marginBottom: '16px', color: '#ff4757', padding: '12px', background: 'rgba(255, 71, 87, 0.1)', border: '1px solid #ff4757', borderRadius: '8px' }}>
           {error}
+        </div>
+      )}
+
+      {isAuthenticated && user?.role !== 'admin' && user?.role !== 'developer' && (
+        <div style={{ marginBottom: '16px', color: '#ff6b00', padding: '12px', background: 'rgba(255, 107, 0, 0.1)', border: '1px solid #ff6b00', borderRadius: '8px' }}>
+          <strong>Access Restricted:</strong> You are logged in with role "{user?.role}".
+          To activate Admin rights, please open this app inside Telegram on your phone at least once.
         </div>
       )}
 
