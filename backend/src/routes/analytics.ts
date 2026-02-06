@@ -1,6 +1,7 @@
 import express from 'express';
 import User from '../models/User';
 import Tournament from '../models/Tournament';
+import AnalyticsEvent from '../models/AnalyticsEvent';
 
 // Временные заглушки
 const logInfo = (event: string, data: any) => {
@@ -140,9 +141,19 @@ router.get('/tournaments', async (req, res) => {
 /**
  * Store analytics event in database
  */
+// Store analytics event in database
 async function storeAnalyticsEvent(eventData: any) {
-  // In a real implementation, this would store in a dedicated analytics collection
-  // For now, we'll just log it
+  const analyticsEvent = new AnalyticsEvent({
+    event: eventData.event,
+    userId: eventData.userId,
+    data: eventData.data,
+    sessionId: eventData.sessionId,
+    source: eventData.source,
+    timestamp: eventData.timestamp || new Date(),
+    ip: eventData.ip,
+    userAgent: eventData.userAgent
+  });
+  await analyticsEvent.save();
   logInfo('analytics_event_stored', eventData);
 }
 
@@ -160,21 +171,21 @@ async function updateFunnelMetrics(event: string, userId: string, data: any) {
     case 'page_view':
       funnelProgress.firstVisit = funnelProgress.firstVisit || new Date();
       break;
-    
+
     case 'referral_link_click':
       funnelProgress.referralClick = new Date();
       funnelProgress.referralSource = data.referralCode;
       break;
-    
+
     case 'registration_complete':
       funnelProgress.registrationComplete = new Date();
       break;
-    
+
     case 'subscription_complete':
       funnelProgress.subscriptionComplete = new Date();
       funnelProgress.subscriptionValue = data.amount;
       break;
-    
+
     case 'tournament_registration_complete':
       funnelProgress.firstTournamentRegistration = new Date();
       break;
@@ -262,16 +273,16 @@ async function getReferralMetrics(timeframe: string) {
 
   // Calculate top referrers
   const referrerStats = new Map<string, { count: number; completed: number; username: string }>();
-  
+
   referrals.forEach(referral => {
     const referrerId = (referral.referrer as any)._id.toString();
     const existing = referrerStats.get(referrerId) || { count: 0, completed: 0, username: (referral.referrer as any).username };
-    
+
     existing.count++;
     if (referral.status === 'completed') {
       existing.completed++;
     }
-    
+
     referrerStats.set(referrerId, existing);
   });
 
@@ -354,11 +365,11 @@ async function getTournamentMetrics(timeframe: string) {
   tournaments.forEach(tournament => {
     const registrations = tournament.registeredTeams?.length || 0;
     metrics.totalRegistrations += registrations;
-    
+
     // Track by game
     const game = tournament.game || 'unknown';
     metrics.tournamentByGame[game] = (metrics.tournamentByGame[game] || 0) + 1;
-    
+
     // Track unique participants
     tournament.registeredTeams?.forEach((participant: any) => {
       metrics.uniqueParticipants.add(participant.toString());

@@ -8,6 +8,8 @@ export interface ITournament extends Document {
   prizePool: number;
   maxTeams: number;
   maxPlayers?: number;
+  maxParticipants?: number; // Added for compatibility
+  skillLevel?: string; // Added
   registeredTeams: mongoose.Types.ObjectId[];
   registeredPlayers: mongoose.Types.ObjectId[];
   status: 'upcoming' | 'ongoing' | 'completed';
@@ -30,7 +32,7 @@ export interface ITournament extends Document {
   prizeStatus?: 'pending' | 'processing' | 'distributed';
   createdAt: Date;
   updatedAt: Date;
-  
+
   // Methods
   canStart(): boolean;
   generateBracket(): void;
@@ -39,8 +41,8 @@ export interface ITournament extends Document {
 
 const tournamentSchema = new Schema<ITournament>({
   name: { type: String, required: true },
-  game: { 
-    type: String, 
+  game: {
+    type: String,
     required: true,
     trim: true
   },
@@ -49,7 +51,10 @@ const tournamentSchema = new Schema<ITournament>({
   prizePool: { type: Number, required: true },
   maxTeams: { type: Number, required: true },
   maxPlayers: { type: Number },
+  maxParticipants: { type: Number }, // Added
+  skillLevel: { type: String }, // Added
   registeredTeams: [{
+
     type: Schema.Types.ObjectId,
     ref: 'Team'
   }],
@@ -114,13 +119,13 @@ const tournamentSchema = new Schema<ITournament>({
 });
 
 // Methods
-tournamentSchema.methods.canStart = function(): boolean {
-  return this.status === 'upcoming' && 
-         ((this.type === 'team' && this.registeredTeams.length >= 2) ||
-          (this.type === 'solo' && this.registeredPlayers.length >= 2));
+tournamentSchema.methods.canStart = function (): boolean {
+  return this.status === 'upcoming' &&
+    ((this.type === 'team' && this.registeredTeams.length >= 2) ||
+      (this.type === 'solo' && this.registeredPlayers.length >= 2));
 };
 
-tournamentSchema.methods.generateBracket = function(): void {
+tournamentSchema.methods.generateBracket = function (): void {
   // Simple bracket generation logic
   if (this.type === 'team') {
     // Generate team bracket
@@ -131,7 +136,7 @@ tournamentSchema.methods.generateBracket = function(): void {
   }
 };
 
-tournamentSchema.methods.distributePrizes = async function(): Promise<void> {
+tournamentSchema.methods.distributePrizes = async function (): Promise<void> {
   if (this.status !== 'completed' || this.prizeStatus !== 'pending') {
     return;
   }
@@ -165,10 +170,10 @@ tournamentSchema.methods.distributePrizes = async function(): Promise<void> {
         // Distribute to team members equally
         const Team = mongoose.model('Team');
         const team = await Team.findById(winnerId).populate('players');
-        
+
         if (team && team.players && team.players.length > 0) {
           const prizePerPlayer = prize / team.players.length;
-          
+
           for (const player of team.players) {
             await distributePrizeToPlayer(player, prizePerPlayer, this._id, i + 1);
           }
@@ -190,19 +195,19 @@ tournamentSchema.methods.distributePrizes = async function(): Promise<void> {
 
 // Helper function to distribute prize to individual player
 async function distributePrizeToPlayer(
-  playerId: mongoose.Types.ObjectId, 
-  amount: number, 
+  playerId: mongoose.Types.ObjectId,
+  amount: number,
   tournamentId: mongoose.Types.ObjectId,
   position: number
 ): Promise<void> {
   const User = mongoose.model('User');
   const user = await User.findById(playerId);
-  
+
   if (!user) return;
 
   // Add to wallet balance
   user.wallet.balance += amount;
-  
+
   // Add transaction record
   user.wallet.transactions.push({
     type: 'prize',

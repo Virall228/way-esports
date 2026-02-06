@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
-import { AuthProvider } from './contexts/AuthContext';
+
 import GlobalStyle from './styles/GlobalStyle';
 import theme from './styles/theme';
 
@@ -263,7 +263,7 @@ const BottomNav = styled.nav`
   }
 `;
 
-const BottomNavItem = styled(Link)<{ $active?: boolean }>`
+const BottomNavItem = styled(Link) <{ $active?: boolean }>`
   flex: 1;
   min-height: 44px;
   border-radius: ${eslTheme.borderRadius.md};
@@ -285,7 +285,7 @@ const BottomNavIcon = styled.span`
   line-height: 1;
 `;
 
-const GlobalStyle = createGlobalStyle`${GlobalStyles}`;
+
 
 const MobileShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
@@ -401,7 +401,7 @@ const App: React.FC = () => {
                     <Link to="/admin" onClick={closeMobileMenu}><NavButton as="span">Admin</NavButton></Link>
                   </MobileMenuPanel>
                 </MobileMenuOverlay>
-                
+
                 <MobileShell>
                   <MainContent>
                     <Routes>
@@ -417,7 +417,7 @@ const App: React.FC = () => {
                     </Routes>
                   </MainContent>
                 </MobileShell>
-                
+
                 <Footer>
                   <p>© 2024 WAY ESPORTS. All rights reserved.</p>
                   <p>Powered by Professional Gaming Technology</p>

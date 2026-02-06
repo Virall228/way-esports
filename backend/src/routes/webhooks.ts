@@ -1,11 +1,41 @@
 import express from 'express';
 import crypto from 'crypto';
 import User from '../models/User';
+import notificationService from '../services/notificationService';
 
-// Временные заглушки для сервисов
+// Referral Service Implementation (or import from separate service file if exists, but implementing here for now as per plan)
 const ReferralService = {
   checkAndAwardReferrerBonus: async (userId: string) => {
-    console.log(`Would check and award bonus for ${userId}`);
+    try {
+      const user: any = await User.findById(userId);
+      if (!user || !user.referredBy) return;
+
+      // Find referrer
+      const referrer: any = await User.findOne({ referralCode: user.referredBy });
+      if (!referrer) return;
+
+      // Check if already awarded (simple check via existing transactions)
+      const alreadyAwarded = referrer.wallet.transactions.some((t: any) =>
+        t.type === 'referral' && t.description.includes(user.username)
+      );
+
+      if (alreadyAwarded) return;
+
+      // Award bonus (e.g., 1 free entry or small cash amount)
+      await referrer.addFreeEntry(1);
+
+      // Notify referrer
+      await notificationService.sendToUser(
+        referrer,
+        'Referral Bonus!',
+        `Your friend ${user.username} just subscribed! You received 1 free tournament entry.`
+      );
+
+      // Notify referee? Maybe just referrer.
+
+    } catch (error) {
+      console.error('Error awarding referral bonus:', error);
+    }
   }
 };
 
@@ -49,23 +79,23 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
       case 'customer.subscription.created':
         await handleSubscriptionCreated(event.data.object);
         break;
-      
+
       case 'customer.subscription.updated':
         await handleSubscriptionUpdated(event.data.object);
         break;
-      
+
       case 'customer.subscription.deleted':
         await handleSubscriptionCancelled(event.data.object);
         break;
-      
+
       case 'invoice.payment_succeeded':
         await handlePaymentSucceeded(event.data.object);
         break;
-      
+
       case 'invoice.payment_failed':
         await handlePaymentFailed(event.data.object);
         break;
-      
+
       default:
         console.log(`Unhandled event type: ${event.type}`);
     }
@@ -102,20 +132,20 @@ router.post('/cloudpayments', async (req, res) => {
 
   try {
     const data = JSON.parse(Data);
-    
+
     switch (data.Type) {
       case 'Subscription.OnSuccess':
         await handleCloudPaymentSuccess(data);
         break;
-      
+
       case 'Subscription.OnFail':
         await handleCloudPaymentFail(data);
         break;
-      
+
       case 'Subscription.OnCancel':
         await handleCloudPaymentCancel(data);
         break;
-      
+
       default:
         console.log(`Unhandled CloudPayments event: ${data.Type}`);
     }
@@ -127,161 +157,99 @@ router.post('/cloudpayments', async (req, res) => {
   }
 });
 
-/**
- * Handle successful subscription creation
- */
+// Handlers implementation
+
 async function handleSubscriptionCreated(subscription: any) {
   const customerId = subscription.customer;
   const userId = extractUserIdFromCustomerId(customerId);
-  
-  if (!userId) {
-    logError(`Cannot extract user ID from customer ID: ${customerId}`);
-    return;
-  }
-
-  const user = await User.findById(userId);
-  if (!user) {
-    logError(`User not found for subscription: ${userId}`);
-    return;
-  }
-
-  // Update user subscription
-  user.isSubscribed = true;
-  user.subscriptionExpiresAt = new Date(subscription.current_period_end * 1000);
-  
-  // Add transaction record
-  user.wallet.transactions.push({
-    type: 'subscription',
-    amount: subscription.plan.amount / 100,
-    description: 'Subscription activated',
-    date: new Date()
-  });
-
-  await user.save();
-
-  logPaymentEvent('subscription_created', {
-    userId,
-    subscriptionId: subscription.id,
-    amount: subscription.plan.amount / 100
-  });
-
-  // Send notification
-  await sendNotification(user, 'subscription_activated', {
-    amount: subscription.plan.amount / 100,
-    nextBilling: new Date(subscription.current_period_end * 1000)
-  });
-}
-
-/**
- * Handle successful payment
- */
-async function handlePaymentSucceeded(invoice: any) {
-  const customerId = invoice.customer;
-  const userId = extractUserIdFromCustomerId(customerId);
-  
-  if (!userId) return;
-
-  logPaymentEvent('payment_succeeded', {
-    userId,
-    amount: invoice.amount_paid / 100,
-    invoiceId: invoice.id
-  });
-
-  const user = await User.findById(userId);
-  if (user) {
-    await sendNotification(user, 'payment_successful', {
-      amount: invoice.amount_paid / 100,
-      date: new Date(invoice.created * 1000)
-    });
-  }
-}
-
-/**
- * Handle failed payment
- */
-async function handlePaymentFailed(invoice: any) {
-  const customerId = invoice.customer;
-  const userId = extractUserIdFromCustomerId(customerId);
-  
-  if (!userId) return;
-
-  logPaymentEvent('payment_failed', {
-    userId,
-    amount: invoice.amount_due / 100,
-    invoiceId: invoice.id
-  });
-
-  const user = await User.findById(userId);
-  if (user) {
-    await sendNotification(user, 'payment_failed', {
-      amount: invoice.amount_due / 100,
-      nextRetry: new Date(invoice.next_payment_attempt * 1000)
-    });
-  }
-}
-
-/**
- * Handle subscription cancellation
- */
-async function handleSubscriptionCancelled(subscription: any) {
-  const customerId = subscription.customer;
-  const userId = extractUserIdFromCustomerId(customerId);
-  
   if (!userId) return;
 
   const user = await User.findById(userId);
   if (!user) return;
 
-  user.isSubscribed = false;
+  // Subscribe user
+  user.isSubscribed = true;
+  user.subscriptionExpiresAt = new Date(subscription.current_period_end * 1000);
   await user.save();
 
-  logPaymentEvent('subscription_cancelled', {
-    userId,
-    subscriptionId: subscription.id
-  });
+  // Check referral
+  await ReferralService.checkAndAwardReferrerBonus(userId);
 
-  await sendNotification(user, 'subscription_cancelled', {
-    endDate: new Date(subscription.current_period_end * 1000)
+  await notificationService.sendToUser(user, 'Subscription Activated', `Your subscription is now active! Expires: ${user.subscriptionExpiresAt}`);
+
+  logPaymentEvent('subscription_created', { userId, subId: subscription.id });
+}
+
+async function handleSubscriptionUpdated(subscription: any) {
+  // Similar to created, update expiry
+  const userId = extractUserIdFromCustomerId(subscription.customer);
+  if (!userId) return;
+
+  // Logic to update expiry
+  await User.findByIdAndUpdate(userId, {
+    subscriptionExpiresAt: new Date(subscription.current_period_end * 1000)
   });
 }
 
-/**
- * CloudPayments success handler
- */
+async function handleSubscriptionCancelled(subscription: any) {
+  const userId = extractUserIdFromCustomerId(subscription.customer);
+  if (!userId) return;
+
+  await User.findByIdAndUpdate(userId, { isSubscribed: false });
+  const user = await User.findById(userId);
+  if (user) {
+    await notificationService.sendToUser(user, 'Subscription Cancelled', 'Your subscription has been cancelled.');
+  }
+}
+
+async function handlePaymentSucceeded(invoice: any) {
+  const userId = extractUserIdFromCustomerId(invoice.customer);
+  if (!userId) return;
+  // Send invoice email/notification
+  const user = await User.findById(userId);
+  if (user) {
+    await notificationService.sendToUser(user, 'Payment Successful', `Payment of ${(invoice.amount_paid / 100)} ${invoice.currency} was successful.`);
+  }
+}
+
+async function handlePaymentFailed(invoice: any) {
+  const userId = extractUserIdFromCustomerId(invoice.customer);
+  if (!userId) return;
+  // Notify user to update payment method
+  const user = await User.findById(userId);
+  if (user) {
+    await notificationService.sendToUser(user, 'Payment Failed', `Payment of ${(invoice.amount_due / 100)} ${invoice.currency} failed. Please update your payment method.`);
+  }
+}
+
 async function handleCloudPaymentSuccess(data: any) {
   const userId = data.AccountId;
   const user = await User.findById(userId);
-  
   if (!user) return;
 
   user.isSubscribed = true;
-  user.subscriptionExpiresAt = new Date(data.NextTransactionDate);
-  
-  user.wallet.transactions.push({
-    type: 'subscription',
-    amount: data.Price,
-    description: 'Subscription activated',
-    date: new Date()
-  });
-
+  user.subscriptionExpiresAt = new Date(data.NextTransactionDate); // ISO string usually works for Date constructor
   await user.save();
 
-  logPaymentEvent('cloudpayment_success', {
-    userId,
-    amount: data.Price,
-    transactionId: data.TransactionId
-  });
+  await ReferralService.checkAndAwardReferrerBonus(userId);
 
-  await sendNotification(user, 'subscription_activated', {
-    amount: data.Price,
-    nextBilling: new Date(data.NextTransactionDate)
-  });
+  await notificationService.sendToUser(user, 'Subscription Activated', `Your subscription is now active via CloudPayments!`);
 }
 
-/**
- * Extract user ID from Stripe customer ID
- * Assumes customer ID format: user_${userId}
- */
+async function handleCloudPaymentFail(data: any) {
+  const userId = data.AccountId;
+  const user = await User.findById(userId);
+  if (user) {
+    await notificationService.sendToUser(user, 'Payment Failed', `CloudPayments transaction failed.`);
+  }
+}
+
+async function handleCloudPaymentCancel(data: any) {
+  const userId = data.AccountId;
+  await User.findByIdAndUpdate(userId, { isSubscribed: false });
+}
+
+
 function extractUserIdFromCustomerId(customerId: string): string | null {
   if (customerId.startsWith('user_')) {
     return customerId.replace('user_', '');
@@ -289,25 +257,5 @@ function extractUserIdFromCustomerId(customerId: string): string | null {
   return null;
 }
 
-/**
- * Send notification to user
- */
-async function sendNotification(user: any, type: string, data: any) {
-  try {
-    // Email notification
-    if (process.env.EMAIL_SERVICE_ENABLED === 'true') {
-      // TODO: Implement email service
-      console.log(`Email notification sent to ${user.username}: ${type}`, data);
-    }
-
-    // Telegram notification
-    if (process.env.TELEGRAM_BOT_TOKEN && user.telegramId) {
-      // TODO: Implement telegram notification
-      console.log(`Telegram notification sent to ${user.telegramId}: ${type}`, data);
-    }
-  } catch (error) {
-    logError(`Notification failed for user ${user._id}: ${(error as Error).message}`);
-  }
-}
-
 export default router;
+
