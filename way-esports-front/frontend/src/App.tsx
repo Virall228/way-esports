@@ -382,6 +382,7 @@ const App: React.FC = () => {
                     <Link to="/teams"><NavButton as="span">Teams</NavButton></Link>
                     <Link to="/news"><NavButton as="span">News</NavButton></Link>
                     <Link to="/profile"><NavButton as="span">Profile</NavButton></Link>
+                    <Link to="/admin"><NavButton as="span">Admin</NavButton></Link>
                   </Navigation>
                 </Header>
 
