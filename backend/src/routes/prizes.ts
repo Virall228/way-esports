@@ -180,7 +180,7 @@ router.get('/tournament/:id/winners', async (req, res) => {
       winners: winners.map((winner, index) => ({
         ...winner,
         position: index + 1,
-        prize: tournament.prizeDistribution?.[Object.keys(tournament.prizeDistribution)[index]] || 0
+        prize: (tournament.prizeDistribution as any)?.[Object.keys(tournament.prizeDistribution || {})[index]] || 0
       }))
     });
   } catch (error: any) {

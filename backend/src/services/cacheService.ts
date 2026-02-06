@@ -103,7 +103,7 @@ class CacheService {
   async getTournaments(filters: any = {}): Promise<any[]> {
     const cacheKey = `tournaments:${JSON.stringify(filters)}`;
 
-    return this.getOrSet(
+    const result = await this.getOrSet(
       cacheKey,
       async () => {
         const query: any = {};
@@ -135,6 +135,7 @@ class CacheService {
       },
       { ttl: 60, key: cacheKey } // Cache for 1 minute
     );
+    return result || [];
   }
 
   /**
@@ -162,8 +163,8 @@ class CacheService {
           startDate: tournament.startDate,
           date: tournament.startDate ? new Date(tournament.startDate).toLocaleDateString() : 'TBD',
           prizePool: Number(tournament.prizePool || 0),
-          participants: Number(tournament.participants ?? tournament.currentParticipants ?? 0),
-          maxParticipants: Number(tournament.maxParticipants ?? tournament.maxTeams ?? 0),
+          participants: Number((tournament as any).participants ?? tournament.currentParticipants ?? 0),
+          maxParticipants: Number(tournament.maxParticipants ?? (tournament as any).maxTeams ?? 0),
           skillLevel: tournament.skillLevel || 'All Levels',
           registeredTeams: tournament.registeredTeams || []
         };

@@ -18,19 +18,26 @@ export interface IUser extends Document {
   teams: mongoose.Types.ObjectId[];
   role: 'user' | 'admin' | 'developer';
   isBanned: boolean;
-  
+
   // Subscription fields
   isSubscribed: boolean;
   subscriptionExpiresAt?: Date;
   freeEntriesCount: number;
   referralCode?: string;
   referredBy?: string;
-  
+
   stats: {
     wins: number;
     losses: number;
     tournamentsPlayed: number;
     tournamentsWon: number;
+  };
+  funnelProgress?: {
+    step: string;
+    lastActive: Date;
+    completedSteps: string[];
+    referralSource?: string;
+    subscriptionValue?: number;
   };
   achievements: string[];
   tokens: IToken[];
@@ -64,7 +71,7 @@ export interface IUser extends Document {
   }[];
   createdAt: Date;
   updatedAt: Date;
-  
+
   // Methods
   generateAuthToken(): Promise<string>;
   getTeam(): Promise<any>;
@@ -118,7 +125,7 @@ const userSchema = new Schema<IUser>({
     type: Boolean,
     default: false
   },
-  
+
   // Subscription fields
   isSubscribed: {
     type: Boolean,
@@ -230,7 +237,7 @@ userSchema.index({ referralCode: 1 }, { unique: true, sparse: true });
 userSchema.index({ isSubscribed: 1 });
 
 // Pre-save middleware to generate referral code
-userSchema.pre('save', function(next) {
+userSchema.pre('save', function (next) {
   if (this.isNew && !this.referralCode) {
     this.referralCode = this.generateReferralCode();
   }
@@ -238,16 +245,16 @@ userSchema.pre('save', function(next) {
 });
 
 // Methods
-userSchema.methods.generateAuthToken = async function(): Promise<string> {
+userSchema.methods.generateAuthToken = async function (): Promise<string> {
   // Simple token generation - in real app, use JWT
   return `token_${this._id}_${Date.now()}`;
 };
 
-userSchema.methods.getTeam = async function(): Promise<any> {
+userSchema.methods.getTeam = async function (): Promise<any> {
   return this.teams.length > 0 ? this.teams[0] : null;
 };
 
-userSchema.methods.addAchievement = async function(achievementId: string): Promise<boolean> {
+userSchema.methods.addAchievement = async function (achievementId: string): Promise<boolean> {
   if (!this.achievements.includes(achievementId)) {
     this.achievements.push(achievementId);
     return true;
@@ -255,21 +262,21 @@ userSchema.methods.addAchievement = async function(achievementId: string): Promi
   return false;
 };
 
-userSchema.methods.hasActiveSubscription = function(): boolean {
+userSchema.methods.hasActiveSubscription = function (): boolean {
   if (!this.isSubscribed) return false;
   if (!this.subscriptionExpiresAt) return true; // Lifetime subscription
   return this.subscriptionExpiresAt > new Date();
 };
 
-userSchema.methods.canJoinTournament = function(): boolean {
+userSchema.methods.canJoinTournament = function (): boolean {
   return this.hasActiveSubscription() || this.freeEntriesCount > 0;
 };
 
-userSchema.methods.useFreeEntry = async function(): Promise<boolean> {
+userSchema.methods.useFreeEntry = async function (): Promise<boolean> {
   if (this.freeEntriesCount <= 0) return false;
-  
+
   this.freeEntriesCount -= 1;
-  
+
   // Add transaction record
   this.wallet.transactions.push({
     type: 'referral',
@@ -277,14 +284,14 @@ userSchema.methods.useFreeEntry = async function(): Promise<boolean> {
     description: 'Used free tournament entry',
     date: new Date()
   });
-  
+
   await this.save();
   return true;
 };
 
-userSchema.methods.addFreeEntry = async function(count: number): Promise<void> {
+userSchema.methods.addFreeEntry = async function (count: number): Promise<void> {
   this.freeEntriesCount += count;
-  
+
   // Add transaction record
   this.wallet.transactions.push({
     type: 'referral',
@@ -292,11 +299,11 @@ userSchema.methods.addFreeEntry = async function(count: number): Promise<void> {
     description: `Received ${count} free tournament entr${count > 1 ? 'ies' : 'y'}`,
     date: new Date()
   });
-  
+
   await this.save();
 };
 
-userSchema.methods.generateReferralCode = function(): string {
+userSchema.methods.generateReferralCode = function (): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let code = '';
   for (let i = 0; i < 6; i++) {

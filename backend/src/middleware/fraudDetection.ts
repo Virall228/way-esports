@@ -298,10 +298,15 @@ async function checkReferralCompletionCriteria(refereeUser: any, referrerUser: a
   }
 
   // Criteria 4: No suspicious activity
-  const recentSecurityEvents = await getService('../models/SecurityEvent').countDocuments({
-    userId: refereeUser._id,
-    createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
-  });
+  const securityService = getService('../models/SecurityEvent');
+  let recentSecurityEvents = 0;
+
+  if (securityService) {
+    recentSecurityEvents = await (securityService as any).countDocuments({
+      userId: refereeUser._id,
+      createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+    });
+  }
 
   if (recentSecurityEvents > 0) {
     return false;

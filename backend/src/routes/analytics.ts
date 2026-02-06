@@ -2,11 +2,6 @@ import express from 'express';
 import User from '../models/User';
 import Tournament from '../models/Tournament';
 import AnalyticsEvent from '../models/AnalyticsEvent';
-
-import express from 'express';
-import User from '../models/User';
-import Tournament from '../models/Tournament';
-import AnalyticsEvent from '../models/AnalyticsEvent';
 import Referral from '../models/Referral';
 
 const logInfo = (event: string, data: any) => {
@@ -268,8 +263,8 @@ async function getReferralMetrics(timeframe: string) {
   const referrerStats = new Map<string, { count: number; completed: number; username: string }>();
 
   referrals.forEach(referral => {
-    const referrerId = (referral.referrer as any)._id.toString();
-    const existing = referrerStats.get(referrerId) || { count: 0, completed: 0, username: (referral.referrer as any).username };
+    const referrerId = ((referral as any).referrer as any)._id.toString();
+    const existing = referrerStats.get(referrerId) || { count: 0, completed: 0, username: ((referral as any).referrer as any).username };
 
     existing.count++;
     if (referral.status === 'completed') {
@@ -285,7 +280,7 @@ async function getReferralMetrics(timeframe: string) {
     .slice(0, 10);
 
   // Calculate referral value (based on subscription revenue from referred users)
-  const referredUsers = referrals.map(r => (r.referee as any)._id.toString());
+  const referredUsers = referrals.map(r => ((r as any).referee as any)._id.toString());
   const referredUserSubscriptions = await User.find({
     _id: { $in: referredUsers },
     isSubscribed: true

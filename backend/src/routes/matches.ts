@@ -335,7 +335,7 @@ router.put('/:id/score', async (req, res) => {
 
     const nowCompleted = match.status === 'completed';
     if (!wasCompleted && nowCompleted) {
-      await handleMatchCompleted(match._id.toString(), match.winner?.toString());
+      await handleMatchCompleted((match as any)._id.toString(), match.winner?.toString());
     }
 
     // Transform response

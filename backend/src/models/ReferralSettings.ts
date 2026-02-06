@@ -44,8 +44,9 @@ const referralSettingsSchema = new Schema<IReferralSettings>({
 });
 
 // Ensure only one settings document exists
-referralSettingsSchema.pre('save', async function(next) {
-  const count = await this.constructor.countDocuments();
+referralSettingsSchema.pre('save', async function (next) {
+  const model = this.constructor as mongoose.Model<IReferralSettings>;
+  const count = await model.countDocuments();
   if (count > 0 && this.isNew) {
     throw new Error('Only one referral settings document can exist');
   }

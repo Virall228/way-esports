@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import mongoose from 'mongoose';
 import User from '../models/User';
 import Tournament from '../models/Tournament';
 
@@ -9,18 +10,18 @@ import Tournament from '../models/Tournament';
 export const checkTournamentAccess = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = (req.user as any)?._id?.toString() || (req.user as any)?.id;
-    
+
     if (!userId) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         error: 'Authentication required',
         redirectTo: '/auth'
       });
     }
 
     const user = await User.findById(userId);
-    
+
     if (!user) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         error: 'User not found',
         redirectTo: '/auth'
       });
@@ -28,7 +29,7 @@ export const checkTournamentAccess = async (req: Request, res: Response, next: N
 
     // Check if user is banned
     if (user.isBanned) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: 'Account banned',
         redirectTo: '/banned'
       });
@@ -36,9 +37,9 @@ export const checkTournamentAccess = async (req: Request, res: Response, next: N
 
     // Main access control logic
     const canJoinTournament = user.canJoinTournament();
-    
+
     if (!canJoinTournament) {
-      return res.status(402).json({ 
+      return res.status(402).json({
         error: 'Subscription required',
         message: 'You need an active subscription or free entries to join tournaments',
         redirectTo: '/billing',
@@ -51,7 +52,7 @@ export const checkTournamentAccess = async (req: Request, res: Response, next: N
 
     // Add user info to request for downstream use
     (req as any).tournamentUser = user;
-    
+
     next();
   } catch (error) {
     console.error('Tournament access check error:', error);
@@ -73,22 +74,22 @@ export const checkTournamentRegistration = async (req: Request, res: Response, n
     }
 
     const tournament = await Tournament.findById(tournamentId);
-    
+
     if (!tournament) {
       return res.status(404).json({ error: 'Tournament not found' });
     }
 
     // Check if registration is open
     if (!tournament.isRegistrationOpen) {
-      return res.status(400).json({ 
-        error: 'Registration is closed for this tournament' 
+      return res.status(400).json({
+        error: 'Registration is closed for this tournament'
       });
     }
 
     // Check if tournament hasn't started yet
     if (tournament.startDate <= new Date()) {
-      return res.status(400).json({ 
-        error: 'Tournament has already started' 
+      return res.status(400).json({
+        error: 'Tournament has already started'
       });
     }
 
@@ -98,21 +99,21 @@ export const checkTournamentRegistration = async (req: Request, res: Response, n
     );
 
     if (isAlreadyRegistered) {
-      return res.status(400).json({ 
-        error: 'Already registered for this tournament' 
+      return res.status(400).json({
+        error: 'Already registered for this tournament'
       });
     }
 
     // Check tournament capacity
-    if (tournament.registeredPlayers.length >= tournament.maxPlayers) {
-      return res.status(400).json({ 
-        error: 'Tournament is full' 
+    if (tournament.registeredPlayers.length >= (tournament.maxPlayers || 64)) {
+      return res.status(400).json({
+        error: 'Tournament is full'
       });
     }
 
     // Add tournament to request for downstream use
     (req as any).tournament = tournament;
-    
+
     next();
   } catch (error) {
     console.error('Tournament registration check error:', error);
@@ -130,9 +131,9 @@ export const consumeFreeEntry = async (req: Request, res: Response, next: NextFu
     if (!user.hasActiveSubscription() && user.freeEntriesCount > 0) {
       // Use free entry
       const success = await user.useFreeEntry();
-      
+
       if (!success) {
-        return res.status(402).json({ 
+        return res.status(402).json({
           error: 'No free entries available',
           redirectTo: '/billing'
         });
