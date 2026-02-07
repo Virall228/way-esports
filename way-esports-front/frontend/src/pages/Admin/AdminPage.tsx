@@ -605,908 +605,905 @@ const AdminPage: React.FC = () => {
     );
   };
 
-    );
+  const buildInitialModalData = (type: string, item: any | null) => {
+    if (type === 'tournament') {
+      const now = new Date();
+      const start = item?.startDate ? new Date(item.startDate) : now;
+      const end = item?.endDate ? new Date(item.endDate) : new Date(now.getTime() + 2 * 60 * 60 * 1000);
+      return {
+        name: item?.name || '',
+        game: item?.game || 'CS2',
+        prizePool: item?.prizePool ?? 0,
+        maxTeams: item?.maxTeams ?? item?.maxParticipants ?? 16,
+        status: item?.status || 'upcoming',
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        format: item?.format || 'single_elimination',
+        type: item?.type || 'team',
+        description: item?.description || 'TBD',
+        rules: item?.rules || 'TBD'
+      };
+    }
+
+    if (type === 'news') {
+      const content = item?.content || '';
+      return {
+        title: item?.title || '',
+        content,
+        summary: item?.summary || content.slice(0, 200),
+        category: item?.category || 'announcement',
+        status: item?.status || 'published'
+      };
+    }
+
+    if (type === 'achievement') {
+      return {
+        key: item?.key || '',
+        name: item?.name || '',
+        description: item?.description || '',
+        icon: item?.icon || '',
+        isActive: item?.isActive ?? true,
+        criteriaType: item?.criteriaType || item?.criteria?.type || 'wins_gte',
+        criteriaValue: item?.criteriaValue ?? item?.criteria?.value ?? 1
+      };
+    }
+
+    return item || {};
   };
 
-const buildInitialModalData = (type: string, item: any | null) => {
-  if (type === 'tournament') {
-    const now = new Date();
-    const start = item?.startDate ? new Date(item.startDate) : now;
-    const end = item?.endDate ? new Date(item.endDate) : new Date(now.getTime() + 2 * 60 * 60 * 1000);
-    return {
-      name: item?.name || '',
-      game: item?.game || 'CS2',
-      prizePool: item?.prizePool ?? 0,
-      maxTeams: item?.maxTeams ?? item?.maxParticipants ?? 16,
-      status: item?.status || 'upcoming',
-      startDate: start.toISOString(),
-      endDate: end.toISOString(),
-      format: item?.format || 'single_elimination',
-      type: item?.type || 'team',
-      description: item?.description || 'TBD',
-      rules: item?.rules || 'TBD'
-    };
-  }
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: string = 'coverImage') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  if (type === 'news') {
-    const content = item?.content || '';
-    return {
-      title: item?.title || '',
-      content,
-      summary: item?.summary || content.slice(0, 200),
-      category: item?.category || 'announcement',
-      status: item?.status || 'published'
-    };
-  }
+    try {
+      setIsUploading(true);
+      const result = await api.uploadImage(file);
+      setField(fieldName, result.url);
+    } catch (e: any) {
+      setError(formatApiError(e, 'Image upload failed'));
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
-  if (type === 'achievement') {
-    return {
-      key: item?.key || '',
-      name: item?.name || '',
-      description: item?.description || '',
-      icon: item?.icon || '',
-      isActive: item?.isActive ?? true,
-      criteriaType: item?.criteriaType || item?.criteria?.type || 'wins_gte',
-      criteriaValue: item?.criteriaValue ?? item?.criteria?.value ?? 1
-    };
-  }
+  const handleCreate = (type: 'user' | 'tournament' | 'news' | 'reward' | 'achievement' | 'team') => {
+    setModalType(type);
+    setEditingItem(null);
+    setModalData(buildInitialModalData(type, null));
+    setIsModalOpen(true);
+  };
 
-  return item || {};
-};
+  const handleEdit = (item: any, type: 'user' | 'tournament' | 'news' | 'reward' | 'achievement' | 'team') => {
+    setModalType(type);
+    setEditingItem(item);
+    setModalData(buildInitialModalData(type, item));
+    setIsModalOpen(true);
+  };
 
-const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: string = 'coverImage') => {
-  const file = e.target.files?.[0];
-  if (!file) return;
+  const handleDelete = async (id: string, type: string) => {
+    if (window.confirm(`Are you sure you want to delete this ${type}?`)) {
+      try {
+        setError(null);
+        const entityMap: Record<string, string> = {
+          'tournament': 'tournaments',
+          'news': 'news',
+          'achievement': 'achievements',
+          'user': 'users',
+          'team': 'teams'
+        };
 
-  try {
-    setIsUploading(true);
-    const result = await api.uploadImage(file);
-    setField(fieldName, result.url);
-  } catch (e: any) {
-    setError(formatApiError(e, 'Image upload failed'));
-  } finally {
-    setIsUploading(false);
-  }
-};
+        const entity = entityMap[type] || type;
+        await api.delete(`/api/admin/${entity}/${id}`);
 
-const handleCreate = (type: 'user' | 'tournament' | 'news' | 'reward' | 'achievement' | 'team') => {
-  setModalType(type);
-  setEditingItem(null);
-  setModalData(buildInitialModalData(type, null));
-  setIsModalOpen(true);
-};
+        // Refresh based on type
+        if (type === 'tournament') await fetchTournaments();
+        if (type === 'news') await fetchNews();
+        if (type === 'achievement') await fetchAchievements();
+        if (type === 'user') await fetchUsers();
+        if (type === 'team') await load(); // Full refresh for teams/others
 
-const handleEdit = (item: any, type: 'user' | 'tournament' | 'news' | 'reward' | 'achievement' | 'team') => {
-  setModalType(type);
-  setEditingItem(item);
-  setModalData(buildInitialModalData(type, item));
-  setIsModalOpen(true);
-};
+        toast.success(`${type} deleted successfully`);
+      } catch (e: any) {
+        setError(formatApiError(e, 'Delete failed'));
+        toast.error('Delete failed');
+      }
+    }
+  };
 
-const handleDelete = async (id: string, type: string) => {
-  if (window.confirm(`Are you sure you want to delete this ${type}?`)) {
+  const handleSave = async () => {
     try {
       setError(null);
-      const entityMap: Record<string, string> = {
-        'tournament': 'tournaments',
-        'news': 'news',
-        'achievement': 'achievements',
-        'user': 'users',
-        'team': 'teams'
-      };
+      if (modalType === 'tournament') {
+        const statusMap: Record<string, string> = {
+          in_progress: 'ongoing',
+          ongoing: 'ongoing',
+          upcoming: 'upcoming',
+          completed: 'completed'
+        };
 
-      const entity = entityMap[type] || type;
-      await api.delete(`/api/admin/${entity}/${id}`);
+        const now = new Date();
+        const parsedStart = modalData.startDate ? new Date(modalData.startDate) : now;
+        const startDate = Number.isFinite(parsedStart.getTime()) ? parsedStart : now;
+        const parsedEnd = modalData.endDate
+          ? new Date(modalData.endDate)
+          : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+        const endDate = Number.isFinite(parsedEnd.getTime())
+          ? parsedEnd
+          : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
 
-      // Refresh based on type
-      if (type === 'tournament') await fetchTournaments();
-      if (type === 'news') await fetchNews();
-      if (type === 'achievement') await fetchAchievements();
-      if (type === 'user') await fetchUsers();
-      if (type === 'team') await load(); // Full refresh for teams/others
+        const payload: any = {
+          name: modalData.name,
+          game: modalData.game,
+          prizePool: Number(modalData.prizePool || 0),
+          maxTeams: Number(modalData.maxTeams || 0),
+          status: statusMap[modalData.status] || modalData.status || 'upcoming',
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          format: modalData.format,
+          type: modalData.type,
+          description: modalData.description,
+          rules: modalData.rules
+        };
 
-      toast.success(`${type} deleted successfully`);
-    } catch (e: any) {
-      setError(formatApiError(e, 'Delete failed'));
-      toast.error('Delete failed');
-    }
-  }
-};
-
-const handleSave = async () => {
-  try {
-    setError(null);
-    if (modalType === 'tournament') {
-      const statusMap: Record<string, string> = {
-        in_progress: 'ongoing',
-        ongoing: 'ongoing',
-        upcoming: 'upcoming',
-        completed: 'completed'
-      };
-
-      const now = new Date();
-      const parsedStart = modalData.startDate ? new Date(modalData.startDate) : now;
-      const startDate = Number.isFinite(parsedStart.getTime()) ? parsedStart : now;
-      const parsedEnd = modalData.endDate
-        ? new Date(modalData.endDate)
-        : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
-      const endDate = Number.isFinite(parsedEnd.getTime())
-        ? parsedEnd
-        : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
-
-      const payload: any = {
-        name: modalData.name,
-        game: modalData.game,
-        prizePool: Number(modalData.prizePool || 0),
-        maxTeams: Number(modalData.maxTeams || 0),
-        status: statusMap[modalData.status] || modalData.status || 'upcoming',
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        format: modalData.format,
-        type: modalData.type,
-        description: modalData.description,
-        rules: modalData.rules
-      };
-
-      if (editingItem?.id) {
-        await api.put(`/api/tournaments/${editingItem.id}`, payload);
-      } else {
-        await api.post('/api/tournaments', payload);
-      }
-      await fetchTournaments();
-      setIsModalOpen(false);
-      return;
-    }
-
-    if (modalType === 'news') {
-      const payload: any = {
-        title: modalData.title,
-        content: modalData.content,
-        summary: modalData.summary || (modalData.content || '').slice(0, 200),
-        category: modalData.category,
-        status: modalData.status,
-        coverImage: modalData.coverImage
-      };
-
-      if (payload.status === 'published') {
-        payload.publishDate = new Date().toISOString();
-      }
-
-      if (editingItem?.id) {
-        await api.put(`/api/news/${editingItem.id}`, payload);
-      } else {
-        await api.post('/api/news', payload);
-      }
-      await fetchNews();
-      setIsModalOpen(false);
-      return;
-    }
-
-    if (modalType === 'achievement') {
-      const payload: any = {
-        key: modalData.key,
-        name: modalData.name,
-        description: modalData.description,
-        icon: modalData.icon,
-        isActive: !!modalData.isActive,
-        criteria: {
-          type: modalData.criteriaType,
-          value: Number(modalData.criteriaValue || 0)
+        if (editingItem?.id) {
+          await api.put(`/api/tournaments/${editingItem.id}`, payload);
+        } else {
+          await api.post('/api/tournaments', payload);
         }
-      };
-
-      if (editingItem?.id) {
-        await api.put(`/api/achievements/admin/${editingItem.id}`, payload);
-      } else {
-        await api.post('/api/achievements/admin', payload);
-      }
-      await fetchAchievements();
-      setIsModalOpen(false);
-      return;
-    }
-
-    if (modalType === 'user') {
-      const payload: any = {
-        username: modalData.username,
-        firstName: modalData.firstName,
-        lastName: modalData.lastName,
-        role: modalData.role,
-        bio: modalData.bio,
-        balance: Number(modalData.balance || 0),
-        freeEntriesCount: Number(modalData.freeEntriesCount || 0),
-        isBanned: !!modalData.isBanned
-      };
-      if (editingItem?.id) {
-        await api.patch(`/api/admin/users/${editingItem.id}`, payload);
-        await fetchUsers();
+        await fetchTournaments();
         setIsModalOpen(false);
-        toast.success('User updated successfully');
         return;
       }
-    }
 
-    if (modalType === 'team') {
-      const payload: any = {
-        name: modalData.name,
-        tag: modalData.tag,
-        game: modalData.game,
-        logo: modalData.logo,
-        status: modalData.status
-      };
-      if (editingItem?.id) {
-        await api.patch(`/api/admin/teams/${editingItem.id}`, payload);
-      } else {
-        await api.post('/api/teams', payload);
+      if (modalType === 'news') {
+        const payload: any = {
+          title: modalData.title,
+          content: modalData.content,
+          summary: modalData.summary || (modalData.content || '').slice(0, 200),
+          category: modalData.category,
+          status: modalData.status,
+          coverImage: modalData.coverImage
+        };
+
+        if (payload.status === 'published') {
+          payload.publishDate = new Date().toISOString();
+        }
+
+        if (editingItem?.id) {
+          await api.put(`/api/news/${editingItem.id}`, payload);
+        } else {
+          await api.post('/api/news', payload);
+        }
+        await fetchNews();
+        setIsModalOpen(false);
+        return;
       }
-      await load();
+
+      if (modalType === 'achievement') {
+        const payload: any = {
+          key: modalData.key,
+          name: modalData.name,
+          description: modalData.description,
+          icon: modalData.icon,
+          isActive: !!modalData.isActive,
+          criteria: {
+            type: modalData.criteriaType,
+            value: Number(modalData.criteriaValue || 0)
+          }
+        };
+
+        if (editingItem?.id) {
+          await api.put(`/api/achievements/admin/${editingItem.id}`, payload);
+        } else {
+          await api.post('/api/achievements/admin', payload);
+        }
+        await fetchAchievements();
+        setIsModalOpen(false);
+        return;
+      }
+
+      if (modalType === 'user') {
+        const payload: any = {
+          username: modalData.username,
+          firstName: modalData.firstName,
+          lastName: modalData.lastName,
+          role: modalData.role,
+          bio: modalData.bio,
+          balance: Number(modalData.balance || 0),
+          freeEntriesCount: Number(modalData.freeEntriesCount || 0),
+          isBanned: !!modalData.isBanned
+        };
+        if (editingItem?.id) {
+          await api.patch(`/api/admin/users/${editingItem.id}`, payload);
+          await fetchUsers();
+          setIsModalOpen(false);
+          toast.success('User updated successfully');
+          return;
+        }
+      }
+
+      if (modalType === 'team') {
+        const payload: any = {
+          name: modalData.name,
+          tag: modalData.tag,
+          game: modalData.game,
+          logo: modalData.logo,
+          status: modalData.status
+        };
+        if (editingItem?.id) {
+          await api.patch(`/api/admin/teams/${editingItem.id}`, payload);
+        } else {
+          await api.post('/api/teams', payload);
+        }
+        await load();
+        setIsModalOpen(false);
+        toast.success(`Team ${editingItem ? 'updated' : 'created'} successfully`);
+        return;
+      }
+
       setIsModalOpen(false);
-      toast.success(`Team ${editingItem ? 'updated' : 'created'} successfully`);
-      return;
+    } catch (e: any) {
+      setError(formatApiError(e, 'Save failed'));
+      toast.error('Save failed');
     }
-
-    setIsModalOpen(false);
-  } catch (e: any) {
-    setError(formatApiError(e, 'Save failed'));
-    toast.error('Save failed');
-  }
-};
-
-function renderDashboard() {
-  const stats = dashboardStats || {
-    totalUsers: users.length,
-    activeTournaments: tournaments.filter(t => t.status === 'ongoing' || t.status === 'in_progress').length,
-    newsArticles: news.length,
-    prizePoolSummary: [{ total: tournaments.reduce((acc, t) => acc + (t.prizePool || 0), 0) }]
   };
 
-  return (
-    <div>
-      <StatsGrid>
-        <StatCard>
-          <StatValue>{stats.totalUsers}</StatValue>
-          <StatLabel>Total Users</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>{stats.activeTournaments}</StatValue>
-          <StatLabel>Active Tournaments</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>{stats.newsArticles}</StatValue>
-          <StatLabel>News Articles</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>${stats.prizePoolSummary?.[0]?.total || 0}</StatValue>
-          <StatLabel>Total Prize Pool</StatLabel>
-        </StatCard>
-      </StatsGrid>
+  function renderDashboard() {
+    const stats = dashboardStats || {
+      totalUsers: users.length,
+      activeTournaments: tournaments.filter(t => t.status === 'ongoing' || t.status === 'in_progress').length,
+      newsArticles: news.length,
+      prizePoolSummary: [{ total: tournaments.reduce((acc, t) => acc + (t.prizePool || 0), 0) }]
+    };
 
-      {analytics && (
-        <div style={{ marginTop: '30px' }}>
-          <h3>Analytics Summary</h3>
-          <StatsGrid>
-            <StatCard>
-              <StatValue>{analytics.activeSubscriptions}</StatValue>
-              <StatLabel>Active Subscriptions</StatLabel>
-            </StatCard>
-            <StatCard>
-              <StatValue>{analytics.userGrowth?.length || 0}</StatValue>
-              <StatLabel>Growth Data Points</StatLabel>
-            </StatCard>
-          </StatsGrid>
+    return (
+      <div>
+        <StatsGrid>
+          <StatCard>
+            <StatValue>{stats.totalUsers}</StatValue>
+            <StatLabel>Total Users</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>{stats.activeTournaments}</StatValue>
+            <StatLabel>Active Tournaments</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>{stats.newsArticles}</StatValue>
+            <StatLabel>News Articles</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>${stats.prizePoolSummary?.[0]?.total || 0}</StatValue>
+            <StatLabel>Total Prize Pool</StatLabel>
+          </StatCard>
+        </StatsGrid>
+
+        {analytics && (
+          <div style={{ marginTop: '30px' }}>
+            <h3>Analytics Summary</h3>
+            <StatsGrid>
+              <StatCard>
+                <StatValue>{analytics.activeSubscriptions}</StatValue>
+                <StatLabel>Active Subscriptions</StatLabel>
+              </StatCard>
+              <StatCard>
+                <StatValue>{analytics.userGrowth?.length || 0}</StatValue>
+                <StatLabel>Growth Data Points</StatLabel>
+              </StatCard>
+            </StatsGrid>
+          </div>
+        )}
+
+        <h3 style={{ marginTop: '30px' }}>Recent Activity</h3>
+        <div style={{ color: '#cccccc' }}>
+          <p>• Dashboard operational</p>
+          <p>• Data synced with MongoDB Atlas</p>
         </div>
-      )}
-
-      <h3 style={{ marginTop: '30px' }}>Recent Activity</h3>
-      <div style={{ color: '#cccccc' }}>
-        <p>• Dashboard operational</p>
-        <p>• Data synced with MongoDB Atlas</p>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-function renderAchievements() {
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
-        <h3>Achievements</h3>
-        <ActionButton onClick={() => handleCreate('achievement')}>Create Achievement</ActionButton>
-      </div>
+  function renderAchievements() {
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+          <h3>Achievements</h3>
+          <ActionButton onClick={() => handleCreate('achievement')}>Create Achievement</ActionButton>
+        </div>
 
-      <TableWrap>
-        <Table>
-          <thead>
-            <tr>
-              <Th>Key</Th>
-              <Th>Name</Th>
-              <Th>Active</Th>
-              <Th>Criteria</Th>
-              <Th>Actions</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {achievements.map((a) => (
-              <tr key={a.id}>
-                <Td>{a.key}</Td>
-                <Td>{a.icon ? `${a.icon} ` : ''}{a.name}</Td>
-                <Td>{a.isActive ? 'yes' : 'no'}</Td>
-                <Td>{a.criteriaType}:{a.criteriaValue}</Td>
-                <Td>
-                  <ActionsCell>
-                    <ActionButton onClick={() => handleEdit(a, 'achievement')}>Edit</ActionButton>
-                    <ActionButton $variant="danger" onClick={() => handleDelete(a.id, 'achievement')}>Delete</ActionButton>
-                  </ActionsCell>
-                </Td>
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Key</Th>
+                <Th>Name</Th>
+                <Th>Active</Th>
+                <Th>Criteria</Th>
+                <Th>Actions</Th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
-      </TableWrap>
-    </div>
-  );
-}
-
-function renderUsers() {
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
-        <h3>User Management</h3>
-        <ActionButton onClick={() => handleCreate('user')}>Add User</ActionButton>
+            </thead>
+            <tbody>
+              {achievements.map((a) => (
+                <tr key={a.id}>
+                  <Td>{a.key}</Td>
+                  <Td>{a.icon ? `${a.icon} ` : ''}{a.name}</Td>
+                  <Td>{a.isActive ? 'yes' : 'no'}</Td>
+                  <Td>{a.criteriaType}:{a.criteriaValue}</Td>
+                  <Td>
+                    <ActionsCell>
+                      <ActionButton onClick={() => handleEdit(a, 'achievement')}>Edit</ActionButton>
+                      <ActionButton $variant="danger" onClick={() => handleDelete(a.id, 'achievement')}>Delete</ActionButton>
+                    </ActionsCell>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
       </div>
+    );
+  }
 
-      <TableWrap>
-        <Table>
-          <thead>
-            <tr>
-              <Th>Username</Th>
-              <Th>Role</Th>
-              <Th>Subscription</Th>
-              <Th>Balance</Th>
-              <Th>Status</Th>
-              <Th>Actions</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map(user => (
-              <tr key={user.id}>
-                <Td>{user.username}</Td>
-                <Td>{user.role}</Td>
-                <Td>{user.isSubscribed ? '✅ Active' : '❌ None'} {user.freeEntriesCount > 0 ? `(${user.freeEntriesCount} free)` : ''}</Td>
-                <Td>${user.balance}</Td>
-                <Td>{user.isBanned ? '🚫 Banned' : '🟢 Active'}</Td>
-                <Td>
-                  <ActionsCell>
-                    <ActionButton onClick={() => handleEdit(user, 'user')}>Edit</ActionButton>
-                  </ActionsCell>
-                </Td>
+  function renderUsers() {
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+          <h3>User Management</h3>
+          <ActionButton onClick={() => handleCreate('user')}>Add User</ActionButton>
+        </div>
+
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Username</Th>
+                <Th>Role</Th>
+                <Th>Subscription</Th>
+                <Th>Balance</Th>
+                <Th>Status</Th>
+                <Th>Actions</Th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
-      </TableWrap>
-    </div>
-  );
-}
-
-function renderReferrals() {
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3>Referral Logs</h3>
+            </thead>
+            <tbody>
+              {users.map(user => (
+                <tr key={user.id}>
+                  <Td>{user.username}</Td>
+                  <Td>{user.role}</Td>
+                  <Td>{user.isSubscribed ? '✅ Active' : '❌ None'} {user.freeEntriesCount > 0 ? `(${user.freeEntriesCount} free)` : ''}</Td>
+                  <Td>${user.balance}</Td>
+                  <Td>{user.isBanned ? '🚫 Banned' : '🟢 Active'}</Td>
+                  <Td>
+                    <ActionsCell>
+                      <ActionButton onClick={() => handleEdit(user, 'user')}>Edit</ActionButton>
+                    </ActionsCell>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
       </div>
+    );
+  }
 
-      <TableWrap>
-        <Table>
-          <thead>
-            <tr>
-              <Th>Referrer</Th>
-              <Th>Referred User</Th>
-              <Th>Reward</Th>
-              <Th>Status</Th>
-              <Th>Date</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {referrals.map(r => (
-              <tr key={r.id}>
-                <Td>{r.referrer}</Td>
-                <Td>{r.referred}</Td>
-                <Td>{r.reward} entries</Td>
-                <Td>{r.status}</Td>
-                <Td>{r.date}</Td>
+  function renderReferrals() {
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h3>Referral Logs</h3>
+        </div>
+
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Referrer</Th>
+                <Th>Referred User</Th>
+                <Th>Reward</Th>
+                <Th>Status</Th>
+                <Th>Date</Th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
-      </TableWrap>
-    </div>
-  );
-}
-
-function renderTournaments() {
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
-        <h3>Tournament Management</h3>
-        <ActionButton onClick={() => handleCreate('tournament')}>Create Tournament</ActionButton>
+            </thead>
+            <tbody>
+              {referrals.map(r => (
+                <tr key={r.id}>
+                  <Td>{r.referrer}</Td>
+                  <Td>{r.referred}</Td>
+                  <Td>{r.reward} entries</Td>
+                  <Td>{r.status}</Td>
+                  <Td>{r.date}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
       </div>
+    );
+  }
 
-      <TableWrap>
-        <Table>
-          <thead>
-            <tr>
-              <Th>Name</Th>
-              <Th>Game</Th>
-              <Th>Status</Th>
-              <Th>Participants</Th>
-              <Th>Prize Pool</Th>
-              <Th>Actions</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {tournaments.map(tournament => (
-              <tr key={tournament.id}>
-                <Td>{tournament.name}</Td>
-                <Td>{tournament.game}</Td>
-                <Td>{tournament.status}</Td>
-                <Td>{tournament.participants}</Td>
-                <Td>${tournament.prizePool}</Td>
-                <Td>
-                  <ActionsCell>
-                    <ActionButton onClick={() => handleEdit(tournament, 'tournament')}>Edit</ActionButton>
-                    <ActionButton $variant="danger" onClick={() => handleDelete(tournament.id, 'tournament')}>Delete</ActionButton>
-                  </ActionsCell>
-                </Td>
+  function renderTournaments() {
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+          <h3>Tournament Management</h3>
+          <ActionButton onClick={() => handleCreate('tournament')}>Create Tournament</ActionButton>
+        </div>
+
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Name</Th>
+                <Th>Game</Th>
+                <Th>Status</Th>
+                <Th>Participants</Th>
+                <Th>Prize Pool</Th>
+                <Th>Actions</Th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
-      </TableWrap>
-    </div>
-  );
-}
-
-function renderNews() {
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
-        <h3>News Management</h3>
-        <ActionButton onClick={() => handleCreate('news')}>Create Article</ActionButton>
+            </thead>
+            <tbody>
+              {tournaments.map(tournament => (
+                <tr key={tournament.id}>
+                  <Td>{tournament.name}</Td>
+                  <Td>{tournament.game}</Td>
+                  <Td>{tournament.status}</Td>
+                  <Td>{tournament.participants}</Td>
+                  <Td>${tournament.prizePool}</Td>
+                  <Td>
+                    <ActionsCell>
+                      <ActionButton onClick={() => handleEdit(tournament, 'tournament')}>Edit</ActionButton>
+                      <ActionButton $variant="danger" onClick={() => handleDelete(tournament.id, 'tournament')}>Delete</ActionButton>
+                    </ActionsCell>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
       </div>
+    );
+  }
 
-      <TableWrap>
-        <Table>
-          <thead>
-            <tr>
-              <Th>Title</Th>
-              <Th>Author</Th>
-              <Th>Status</Th>
-              <Th>Created</Th>
-              <Th>Actions</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {news.map(article => (
-              <tr key={article.id}>
-                <Td>{article.title}</Td>
-                <Td>{article.author}</Td>
-                <Td>{article.status}</Td>
-                <Td>{article.createdAt}</Td>
-                <Td>
-                  <ActionsCell>
-                    <ActionButton onClick={() => handleEdit(article, 'news')}>Edit</ActionButton>
-                    <ActionButton $variant="danger" onClick={() => handleDelete(article.id, 'news')}>Delete</ActionButton>
-                  </ActionsCell>
-                </Td>
+  function renderNews() {
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+          <h3>News Management</h3>
+          <ActionButton onClick={() => handleCreate('news')}>Create Article</ActionButton>
+        </div>
+
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Title</Th>
+                <Th>Author</Th>
+                <Th>Status</Th>
+                <Th>Created</Th>
+                <Th>Actions</Th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
-      </TableWrap>
-    </div>
-  );
-}
-
-function renderTeams() {
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
-        <h3>Team Management</h3>
-        <ActionButton onClick={() => handleCreate('team')}>Create Team</ActionButton>
+            </thead>
+            <tbody>
+              {news.map(article => (
+                <tr key={article.id}>
+                  <Td>{article.title}</Td>
+                  <Td>{article.author}</Td>
+                  <Td>{article.status}</Td>
+                  <Td>{article.createdAt}</Td>
+                  <Td>
+                    <ActionsCell>
+                      <ActionButton onClick={() => handleEdit(article, 'news')}>Edit</ActionButton>
+                      <ActionButton $variant="danger" onClick={() => handleDelete(article.id, 'news')}>Delete</ActionButton>
+                    </ActionsCell>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
       </div>
+    );
+  }
 
-      <TableWrap>
-        <Table>
-          <thead>
-            <tr>
-              <Th>Name</Th>
-              <Th>Tag</Th>
-              <Th>Game</Th>
-              <Th>Members</Th>
-              <Th>Actions</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {teams.map(team => (
-              <tr key={team.id}>
-                <Td>{team.name}</Td>
-                <Td>{team.tag}</Td>
-                <Td>{team.game}</Td>
-                <Td>{team.members?.length || 0}</Td>
-                <Td>
-                  <ActionsCell>
-                    <ActionButton onClick={() => handleEdit(team, 'team')}>Edit</ActionButton>
-                    <ActionButton $variant="danger" onClick={() => handleDelete(team.id, 'team')}>Delete</ActionButton>
-                  </ActionsCell>
-                </Td>
+  function renderTeams() {
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+          <h3>Team Management</h3>
+          <ActionButton onClick={() => handleCreate('team')}>Create Team</ActionButton>
+        </div>
+
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Name</Th>
+                <Th>Tag</Th>
+                <Th>Game</Th>
+                <Th>Members</Th>
+                <Th>Actions</Th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
-      </TableWrap>
-    </div>
-  );
-}
-
-function renderRewards() {
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3>Rewards Management</h3>
-        <ActionButton onClick={() => handleCreate('reward')}>Create Reward</ActionButton>
+            </thead>
+            <tbody>
+              {teams.map(team => (
+                <tr key={team.id}>
+                  <Td>{team.name}</Td>
+                  <Td>{team.tag}</Td>
+                  <Td>{team.game}</Td>
+                  <Td>{team.members?.length || 0}</Td>
+                  <Td>
+                    <ActionsCell>
+                      <ActionButton onClick={() => handleEdit(team, 'team')}>Edit</ActionButton>
+                      <ActionButton $variant="danger" onClick={() => handleDelete(team.id, 'team')}>Delete</ActionButton>
+                    </ActionsCell>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
       </div>
+    );
+  }
 
-      <div style={{ color: '#cccccc', textAlign: 'center', padding: '40px' }}>
-        <h4>Rewards System</h4>
-        <p>Manage player rewards, achievements, and incentives</p>
-        <p>Coming soon...</p>
+  function renderRewards() {
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h3>Rewards Management</h3>
+          <ActionButton onClick={() => handleCreate('reward')}>Create Reward</ActionButton>
+        </div>
+
+        <div style={{ color: '#cccccc', textAlign: 'center', padding: '40px' }}>
+          <h4>Rewards System</h4>
+          <p>Manage player rewards, achievements, and incentives</p>
+          <p>Coming soon...</p>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-function renderAnalytics() {
-  return (
-    <div>
-      <h3>Analytics Dashboard</h3>
-      <div style={{ color: '#cccccc', textAlign: 'center', padding: '40px' }}>
-        <h4>Detailed Analytics</h4>
-        <p>User engagement, tournament performance, revenue metrics</p>
-        <p>Coming soon...</p>
+  function renderAnalytics() {
+    return (
+      <div>
+        <h3>Analytics Dashboard</h3>
+        <div style={{ color: '#cccccc', textAlign: 'center', padding: '40px' }}>
+          <h4>Detailed Analytics</h4>
+          <p>User engagement, tournament performance, revenue metrics</p>
+          <p>Coming soon...</p>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-function renderModal() {
-  if (!isModalOpen) return null;
+  function renderModal() {
+    if (!isModalOpen) return null;
 
-  function renderForm() {
-    switch (modalType) {
-      case 'user':
-        return (
-          <Form>
-            <Input
-              placeholder="Username"
-              value={modalData.username || ''}
-              onChange={(e) => setField('username', e.target.value)}
-            />
-            <Input
-              placeholder="First Name"
-              value={modalData.firstName || ''}
-              onChange={(e) => setField('firstName', e.target.value)}
-            />
-            <Input
-              placeholder="Last Name"
-              value={modalData.lastName || ''}
-              onChange={(e) => setField('lastName', e.target.value)}
-            />
-            <Input
-              placeholder="Email"
-              type="email"
-              value={modalData.email || ''}
-              onChange={(e) => setField('email', e.target.value)}
-            />
-            <Select
-              value={modalData.role || 'user'}
-              onChange={(e) => setField('role', e.target.value)}
-            >
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
-              <option value="moderator">Moderator</option>
-            </Select>
-            <Select
-              value={modalData.isBanned ? 'banned' : 'active'}
-              onChange={(e) => setField('isBanned', e.target.value === 'banned')}
-            >
-              <option value="active">Active</option>
-              <option value="banned">Banned</option>
-            </Select>
-            <div style={{ padding: '12px', background: 'rgba(255, 107, 0, 0.05)', border: '1px solid rgba(255, 107, 0, 0.2)', borderRadius: '8px' }}>
-              <label style={{ color: '#ff6b00', fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '12px' }}>WALLET & SUBSCRIPTION</label>
-              <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+    function renderForm() {
+      switch (modalType) {
+        case 'user':
+          return (
+            <Form>
+              <Input
+                placeholder="Username"
+                value={modalData.username || ''}
+                onChange={(e) => setField('username', e.target.value)}
+              />
+              <Input
+                placeholder="First Name"
+                value={modalData.firstName || ''}
+                onChange={(e) => setField('firstName', e.target.value)}
+              />
+              <Input
+                placeholder="Last Name"
+                value={modalData.lastName || ''}
+                onChange={(e) => setField('lastName', e.target.value)}
+              />
+              <Input
+                placeholder="Email"
+                type="email"
+                value={modalData.email || ''}
+                onChange={(e) => setField('email', e.target.value)}
+              />
+              <Select
+                value={modalData.role || 'user'}
+                onChange={(e) => setField('role', e.target.value)}
+              >
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+                <option value="moderator">Moderator</option>
+              </Select>
+              <Select
+                value={modalData.isBanned ? 'banned' : 'active'}
+                onChange={(e) => setField('isBanned', e.target.value === 'banned')}
+              >
+                <option value="active">Active</option>
+                <option value="banned">Banned</option>
+              </Select>
+              <div style={{ padding: '12px', background: 'rgba(255, 107, 0, 0.05)', border: '1px solid rgba(255, 107, 0, 0.2)', borderRadius: '8px' }}>
+                <label style={{ color: '#ff6b00', fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '12px' }}>WALLET & SUBSCRIPTION</label>
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ color: '#ccc', fontSize: '11px', display: 'block', marginBottom: '4px' }}>Balance ($)</label>
+                    <Input
+                      placeholder="Balance"
+                      type="number"
+                      style={{ width: '100%' }}
+                      value={modalData.balance ?? 0}
+                      onChange={(e) => setField('balance', Number(e.target.value))}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ color: '#ccc', fontSize: '11px', display: 'block', marginBottom: '4px' }}>Free Entries</label>
+                    <Input
+                      placeholder="Free Entries"
+                      type="number"
+                      style={{ width: '100%' }}
+                      value={modalData.freeEntriesCount ?? 0}
+                      onChange={(e) => setField('freeEntriesCount', Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+                <div style={{ padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px' }}>
+                  <label style={{ color: '#fff', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      style={{ width: '18px', height: '18px' }}
+                      checked={!!modalData.isSubscribed}
+                      onChange={(e) => setField('isSubscribed', e.target.checked)}
+                    />
+                    Active Subscription
+                  </label>
+                  {modalData.isSubscribed && (
+                    <div style={{ marginTop: '10px' }}>
+                      <label style={{ color: '#ccc', fontSize: '11px', display: 'block', marginBottom: '4px' }}>Expires At</label>
+                      <Input
+                        type="datetime-local"
+                        style={{ width: '100%' }}
+                        value={formatDateForInput(modalData.subscriptionExpiresAt)}
+                        onChange={(e) => setField('subscriptionExpiresAt', e.target.value)}
+                      />
+                    </div>
+                  )}
+                </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ color: '#ccc', fontSize: '11px', display: 'block', marginBottom: '4px' }}>Balance ($)</label>
+                  <label style={{ color: '#ccc', fontSize: '12px' }}>Role</label>
+                  <Select
+                    value={modalData.role || 'user'}
+                    onChange={(e) => setField('role', e.target.value)}
+                  >
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                    <option value="developer">Developer</option>
+                  </Select>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ color: '#ccc', fontSize: '12px' }}>Wallet Balance</label>
                   <Input
-                    placeholder="Balance"
                     type="number"
-                    style={{ width: '100%' }}
                     value={modalData.balance ?? 0}
                     onChange={(e) => setField('balance', Number(e.target.value))}
                   />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ color: '#ccc', fontSize: '11px', display: 'block', marginBottom: '4px' }}>Free Entries</label>
+                  <label style={{ color: '#ccc', fontSize: '12px' }}>Free Entries</label>
                   <Input
-                    placeholder="Free Entries"
                     type="number"
-                    style={{ width: '100%' }}
                     value={modalData.freeEntriesCount ?? 0}
                     onChange={(e) => setField('freeEntriesCount', Number(e.target.value))}
                   />
                 </div>
               </div>
-              <div style={{ padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px' }}>
-                <label style={{ color: '#fff', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    style={{ width: '18px', height: '18px' }}
-                    checked={!!modalData.isSubscribed}
-                    onChange={(e) => setField('isSubscribed', e.target.checked)}
+              <TextArea
+                placeholder="Bio"
+                value={modalData.bio || ''}
+                onChange={(e) => setField('bio', e.target.value)}
+              />
+            </Form>
+          );
+        case 'tournament':
+          return (
+            <Form>
+              <Input
+                placeholder="Tournament Name"
+                value={modalData.name || ''}
+                onChange={(e) => setField('name', e.target.value)}
+              />
+              <Select
+                value={modalData.game || 'CS2'}
+                onChange={(e) => setField('game', e.target.value)}
+              >
+                <option value="CS2">CS2</option>
+                <option value="Valorant">Valorant</option>
+                <option value="Critical Ops">Critical Ops</option>
+                <option value="PUBG Mobile">PUBG Mobile</option>
+              </Select>
+              <Input
+                placeholder="Prize Pool"
+                type="number"
+                value={modalData.prizePool ?? 0}
+                onChange={(e) => setField('prizePool', Number(e.target.value))}
+              />
+              <Input
+                placeholder="Max Teams"
+                type="number"
+                value={modalData.maxTeams ?? 16}
+                onChange={(e) => setField('maxTeams', Number(e.target.value))}
+              />
+              <Select
+                value={modalData.status || 'upcoming'}
+                onChange={(e) => setField('status', e.target.value)}
+              >
+                <option value="upcoming">Upcoming</option>
+                <option value="ongoing">Ongoing</option>
+                <option value="completed">Completed</option>
+              </Select>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ color: '#ccc', fontSize: '12px' }}>Start Date</label>
+                  <Input
+                    type="datetime-local"
+                    value={formatDateForInput(modalData.startDate)}
+                    onChange={(e) => setField('startDate', e.target.value)}
                   />
-                  Active Subscription
-                </label>
-                {modalData.isSubscribed && (
-                  <div style={{ marginTop: '10px' }}>
-                    <label style={{ color: '#ccc', fontSize: '11px', display: 'block', marginBottom: '4px' }}>Expires At</label>
-                    <Input
-                      type="datetime-local"
-                      style={{ width: '100%' }}
-                      value={formatDateForInput(modalData.subscriptionExpiresAt)}
-                      onChange={(e) => setField('subscriptionExpiresAt', e.target.value)}
-                    />
-                  </div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ color: '#ccc', fontSize: '12px' }}>End Date</label>
+                  <Input
+                    type="datetime-local"
+                    value={formatDateForInput(modalData.endDate)}
+                    onChange={(e) => setField('endDate', e.target.value)}
+                  />
+                </div>
+              </div>
+              <Select
+                value={modalData.format || 'single_elimination'}
+                onChange={(e) => setField('format', e.target.value)}
+              >
+                <option value="single_elimination">Single Elimination</option>
+                <option value="double_elimination">Double Elimination</option>
+                <option value="round_robin">Round Robin</option>
+                <option value="swiss">Swiss</option>
+              </Select>
+              <Select
+                value={modalData.type || 'team'}
+                onChange={(e) => setField('type', e.target.value)}
+              >
+                <option value="team">Team</option>
+                <option value="solo">Solo</option>
+              </Select>
+              <TextArea
+                placeholder="Description"
+                value={modalData.description || ''}
+                onChange={(e) => setField('description', e.target.value)}
+              />
+              <TextArea
+                placeholder="Rules"
+                value={modalData.rules || ''}
+                onChange={(e) => setField('rules', e.target.value)}
+              />
+              <div style={{ marginTop: '10px' }}>
+                <label style={{ color: '#ccc', fontSize: '12px', display: 'block', marginBottom: '8px' }}>Tournament Image</label>
+                {modalData.image && (
+                  <img
+                    src={modalData.image}
+                    alt="Tournament Preview"
+                    style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '8px', marginBottom: '10px' }}
+                  />
                 )}
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ color: '#ccc', fontSize: '12px' }}>Role</label>
-                <Select
-                  value={modalData.role || 'user'}
-                  onChange={(e) => setField('role', e.target.value)}
+                <input
+                  type="file"
+                  ref={tournamentImageRef}
+                  style={{ display: 'none' }}
+                  accept="image/*"
+                  onChange={(e) => handleImageUpload(e, 'image')}
+                />
+                <ActionButton
+                  type="button"
+                  onClick={() => tournamentImageRef.current?.click()}
+                  disabled={isUploading}
                 >
-                  <option value="user">User</option>
-                  <option value="admin">Admin</option>
-                  <option value="developer">Developer</option>
-                </Select>
+                  {isUploading ? 'Uploading...' : modalData.image ? 'Change Image' : 'Upload Image'}
+                </ActionButton>
               </div>
-            </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ color: '#ccc', fontSize: '12px' }}>Wallet Balance</label>
-                <Input
-                  type="number"
-                  value={modalData.balance ?? 0}
-                  onChange={(e) => setField('balance', Number(e.target.value))}
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ color: '#ccc', fontSize: '12px' }}>Free Entries</label>
-                <Input
-                  type="number"
-                  value={modalData.freeEntriesCount ?? 0}
-                  onChange={(e) => setField('freeEntriesCount', Number(e.target.value))}
-                />
-              </div>
-            </div>
-            <TextArea
-              placeholder="Bio"
-              value={modalData.bio || ''}
-              onChange={(e) => setField('bio', e.target.value)}
-            />
-          </Form>
-        );
-      case 'tournament':
-        return (
-          <Form>
-            <Input
-              placeholder="Tournament Name"
-              value={modalData.name || ''}
-              onChange={(e) => setField('name', e.target.value)}
-            />
-            <Select
-              value={modalData.game || 'CS2'}
-              onChange={(e) => setField('game', e.target.value)}
-            >
-              <option value="CS2">CS2</option>
-              <option value="Valorant">Valorant</option>
-              <option value="Critical Ops">Critical Ops</option>
-              <option value="PUBG Mobile">PUBG Mobile</option>
-            </Select>
-            <Input
-              placeholder="Prize Pool"
-              type="number"
-              value={modalData.prizePool ?? 0}
-              onChange={(e) => setField('prizePool', Number(e.target.value))}
-            />
-            <Input
-              placeholder="Max Teams"
-              type="number"
-              value={modalData.maxTeams ?? 16}
-              onChange={(e) => setField('maxTeams', Number(e.target.value))}
-            />
-            <Select
-              value={modalData.status || 'upcoming'}
-              onChange={(e) => setField('status', e.target.value)}
-            >
-              <option value="upcoming">Upcoming</option>
-              <option value="ongoing">Ongoing</option>
-              <option value="completed">Completed</option>
-            </Select>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ color: '#ccc', fontSize: '12px' }}>Start Date</label>
-                <Input
-                  type="datetime-local"
-                  value={formatDateForInput(modalData.startDate)}
-                  onChange={(e) => setField('startDate', e.target.value)}
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ color: '#ccc', fontSize: '12px' }}>End Date</label>
-                <Input
-                  type="datetime-local"
-                  value={formatDateForInput(modalData.endDate)}
-                  onChange={(e) => setField('endDate', e.target.value)}
-                />
-              </div>
-            </div>
-            <Select
-              value={modalData.format || 'single_elimination'}
-              onChange={(e) => setField('format', e.target.value)}
-            >
-              <option value="single_elimination">Single Elimination</option>
-              <option value="double_elimination">Double Elimination</option>
-              <option value="round_robin">Round Robin</option>
-              <option value="swiss">Swiss</option>
-            </Select>
-            <Select
-              value={modalData.type || 'team'}
-              onChange={(e) => setField('type', e.target.value)}
-            >
-              <option value="team">Team</option>
-              <option value="solo">Solo</option>
-            </Select>
-            <TextArea
-              placeholder="Description"
-              value={modalData.description || ''}
-              onChange={(e) => setField('description', e.target.value)}
-            />
-            <TextArea
-              placeholder="Rules"
-              value={modalData.rules || ''}
-              onChange={(e) => setField('rules', e.target.value)}
-            />
-            <div style={{ marginTop: '10px' }}>
-              <label style={{ color: '#ccc', fontSize: '12px', display: 'block', marginBottom: '8px' }}>Tournament Image</label>
-              {modalData.image && (
-                <img
-                  src={modalData.image}
-                  alt="Tournament Preview"
-                  style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '8px', marginBottom: '10px' }}
-                />
-              )}
-              <input
-                type="file"
-                ref={tournamentImageRef}
-                style={{ display: 'none' }}
-                accept="image/*"
-                onChange={(e) => handleImageUpload(e, 'image')}
+            </Form>
+          );
+        case 'news':
+          return (
+            <Form>
+              <Input
+                placeholder="Title"
+                value={modalData.title || ''}
+                onChange={(e) => setField('title', e.target.value)}
               />
-              <ActionButton
-                type="button"
-                onClick={() => tournamentImageRef.current?.click()}
-                disabled={isUploading}
-              >
-                {isUploading ? 'Uploading...' : modalData.image ? 'Change Image' : 'Upload Image'}
-              </ActionButton>
-            </div>
-          </Form>
-        );
-      case 'news':
-        return (
-          <Form>
-            <Input
-              placeholder="Title"
-              value={modalData.title || ''}
-              onChange={(e) => setField('title', e.target.value)}
-            />
-            <TextArea
-              placeholder="Content"
-              value={modalData.content || ''}
-              onChange={(e) => setField('content', e.target.value)}
-            />
-            <Select
-              value={modalData.status || 'draft'}
-              onChange={(e) => setField('status', e.target.value)}
-            >
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-              <option value="archived">Archived</option>
-            </Select>
-            <div style={{ marginTop: '10px' }}>
-              <label style={{ color: '#ccc', fontSize: '12px', display: 'block', marginBottom: '8px' }}>Cover Image</label>
-              {modalData.coverImage && (
-                <img
-                  src={modalData.coverImage}
-                  alt="Cover Preview"
-                  style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '8px', marginBottom: '10px' }}
-                />
-              )}
-              <input
-                type="file"
-                ref={newsImageRef}
-                style={{ display: 'none' }}
-                accept="image/*"
-                onChange={handleImageUpload}
+              <TextArea
+                placeholder="Content"
+                value={modalData.content || ''}
+                onChange={(e) => setField('content', e.target.value)}
               />
-              <ActionButton
-                type="button"
-                onClick={() => newsImageRef.current?.click()}
-                disabled={isUploading}
+              <Select
+                value={modalData.status || 'draft'}
+                onChange={(e) => setField('status', e.target.value)}
               >
-                {isUploading ? 'Uploading...' : modalData.coverImage ? 'Change Image' : 'Upload Cover Image'}
-              </ActionButton>
-            </div>
-          </Form>
-        );
-      case 'achievement':
-        return (
-          <Form>
-            <Input
-              placeholder="Key"
-              value={modalData.key || ''}
-              onChange={(e) => setField('key', e.target.value)}
-            />
-            <Input
-              placeholder="Name"
-              value={modalData.name || ''}
-              onChange={(e) => setField('name', e.target.value)}
-            />
-            <Input
-              placeholder="Icon"
-              value={modalData.icon || ''}
-              onChange={(e) => setField('icon', e.target.value)}
-            />
-            <TextArea
-              placeholder="Description"
-              value={modalData.description || ''}
-              onChange={(e) => setField('description', e.target.value)}
-            />
-            <Select
-              value={(modalData.isActive ? 'true' : 'false')}
-              onChange={(e) => setField('isActive', e.target.value === 'true')}
-            >
-              <option value="true">Active</option>
-              <option value="false">Inactive</option>
-            </Select>
-            <Select
-              value={modalData.criteriaType || 'wins_gte'}
-              onChange={(e) => setField('criteriaType', e.target.value)}
-            >
-              <option value="wins_gte">wins_gte</option>
-              <option value="matches_played_gte">matches_played_gte</option>
-              <option value="tournaments_played_gte">tournaments_played_gte</option>
-            </Select>
-            <Input
-              placeholder="Criteria Value"
-              type="number"
-              value={modalData.criteriaValue ?? 1}
-              onChange={(e) => setField('criteriaValue', e.target.value)}
-            />
-          </Form>
-        );
-      case 'team':
-        return (
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+                <option value="archived">Archived</option>
+              </Select>
+              <div style={{ marginTop: '10px' }}>
+                <label style={{ color: '#ccc', fontSize: '12px', display: 'block', marginBottom: '8px' }}>Cover Image</label>
+                {modalData.coverImage && (
+                  <img
+                    src={modalData.coverImage}
+                    alt="Cover Preview"
+                    style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '8px', marginBottom: '10px' }}
+                  />
+                )}
+                <input
+                  type="file"
+                  ref={newsImageRef}
+                  style={{ display: 'none' }}
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                />
+                <ActionButton
+                  type="button"
+                  onClick={() => newsImageRef.current?.click()}
+                  disabled={isUploading}
+                >
+                  {isUploading ? 'Uploading...' : modalData.coverImage ? 'Change Image' : 'Upload Cover Image'}
+                </ActionButton>
+              </div>
+            </Form>
+          );
+        case 'achievement':
+          return (
+            <Form>
+              <Input
+                placeholder="Key"
+                value={modalData.key || ''}
+                onChange={(e) => setField('key', e.target.value)}
+              />
+              <Input
+                placeholder="Name"
+                value={modalData.name || ''}
+                onChange={(e) => setField('name', e.target.value)}
+              />
+              <Input
+                placeholder="Icon"
+                value={modalData.icon || ''}
+                onChange={(e) => setField('icon', e.target.value)}
+              />
+              <TextArea
+                placeholder="Description"
+                value={modalData.description || ''}
+                onChange={(e) => setField('description', e.target.value)}
+              />
+              <Select
+                value={(modalData.isActive ? 'true' : 'false')}
+                onChange={(e) => setField('isActive', e.target.value === 'true')}
+              >
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+              </Select>
+              <Select
+                value={modalData.criteriaType || 'wins_gte'}
+                onChange={(e) => setField('criteriaType', e.target.value)}
+              >
+                <option value="wins_gte">wins_gte</option>
+                <option value="matches_played_gte">matches_played_gte</option>
+                <option value="tournaments_played_gte">tournaments_played_gte</option>
+              </Select>
+              <Input
+                placeholder="Criteria Value"
+                type="number"
+                value={modalData.criteriaValue ?? 1}
+                onChange={(e) => setField('criteriaValue', e.target.value)}
+              />
+            </Form>
+          );
+        case 'team':
+          return (
           <Form>
             <Input
               placeholder="Team Name"
@@ -1561,36 +1558,36 @@ function renderModal() {
           </Form >
         );
       case 'reward':
-        return (
-          <Form>
-            <Input placeholder="Reward Name" />
-            <Input placeholder="Points Required" type="number" />
-            <Select>
-              <option value="currency">Currency</option>
-              <option value="badge">Badge</option>
-              <option value="item">Item</option>
-            </Select>
-            <TextArea placeholder="Description" />
-          </Form>
-        );
+return (
+  <Form>
+    <Input placeholder="Reward Name" />
+    <Input placeholder="Points Required" type="number" />
+    <Select>
+      <option value="currency">Currency</option>
+      <option value="badge">Badge</option>
+      <option value="item">Item</option>
+    </Select>
+    <TextArea placeholder="Description" />
+  </Form>
+);
       default:
-        return null;
+return null;
     }
   }
 
-  return (
-    <Modal $isOpen={isModalOpen} onClick={() => setIsModalOpen(false)}>
-      <ModalContent onClick={(e) => e.stopPropagation()}>
-        <CloseButton onClick={() => setIsModalOpen(false)} aria-label="Close">×</CloseButton>
-        <h3>{editingItem ? 'Edit' : 'Create'} {modalType}</h3>
-        {renderForm()}
-        <ModalActions>
-          <ActionButton onClick={() => setIsModalOpen(false)}>Cancel</ActionButton>
-          <ActionButton $variant="success" onClick={handleSave}>Save</ActionButton>
-        </ModalActions>
-      </ModalContent>
-    </Modal>
-  );
+return (
+  <Modal $isOpen={isModalOpen} onClick={() => setIsModalOpen(false)}>
+    <ModalContent onClick={(e) => e.stopPropagation()}>
+      <CloseButton onClick={() => setIsModalOpen(false)} aria-label="Close">×</CloseButton>
+      <h3>{editingItem ? 'Edit' : 'Create'} {modalType}</h3>
+      {renderForm()}
+      <ModalActions>
+        <ActionButton onClick={() => setIsModalOpen(false)}>Cancel</ActionButton>
+        <ActionButton $variant="success" onClick={handleSave}>Save</ActionButton>
+      </ModalActions>
+    </ModalContent>
+  </Modal>
+);
 }
 
 function renderContent() {
