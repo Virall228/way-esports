@@ -91,16 +91,12 @@ export interface IUser extends Document {
 const userSchema = new Schema<IUser>({
   telegramId: {
     type: Number,
-    required: false,
-    unique: true,
-    sparse: true
+    required: false
   },
   email: {
     type: String,
     trim: true,
-    lowercase: true,
-    unique: true,
-    sparse: true
+    lowercase: true
   },
   newsletter_subscriber: {
     type: Boolean,
@@ -144,9 +140,7 @@ const userSchema = new Schema<IUser>({
     default: 0
   },
   referralCode: {
-    type: String,
-    unique: true,
-    sparse: true
+    type: String
   },
   referredBy: {
     type: String,

@@ -121,29 +121,27 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Swagger UI (serves /api-docs) - only in development
-if (process.env.NODE_ENV !== 'production') {
-  const openapiCandidates = [
-    path.join(__dirname, 'docs', 'openapi.json'),
-    path.join(process.cwd(), 'dist', 'src', 'docs', 'openapi.json'),
-    path.join(process.cwd(), 'src', 'docs', 'openapi.json'),
-    path.join(process.cwd(), 'docs', 'openapi.json')
-  ];
+// Swagger UI (serves /api-docs)
+const openapiCandidates = [
+  path.join(__dirname, 'docs', 'openapi.json'),
+  path.join(process.cwd(), 'dist', 'src', 'docs', 'openapi.json'),
+  path.join(process.cwd(), 'src', 'docs', 'openapi.json'),
+  path.join(process.cwd(), 'docs', 'openapi.json')
+];
 
-  let openapiSpec: any = { openapi: '3.0.3', info: { title: 'WAY-Esports API', version: '1.0.0' } };
+let openapiSpec: any = { openapi: '3.0.3', info: { title: 'WAY-Esports API', version: '1.0.0' } };
 
-  for (const candidate of openapiCandidates) {
-    if (fs.existsSync(candidate)) {
-      try {
-        openapiSpec = JSON.parse(fs.readFileSync(candidate, 'utf-8'));
-        break;
-      } catch (err) {
-        console.error('Failed to read OpenAPI spec:', err);
-      }
+for (const candidate of openapiCandidates) {
+  if (fs.existsSync(candidate)) {
+    try {
+      openapiSpec = JSON.parse(fs.readFileSync(candidate, 'utf-8'));
+      break;
+    } catch (err) {
+      console.error('Failed to read OpenAPI spec:', err);
     }
   }
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapiSpec));
 }
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapiSpec));
 
 // Logging
 if (process.env.NODE_ENV === 'development') {
