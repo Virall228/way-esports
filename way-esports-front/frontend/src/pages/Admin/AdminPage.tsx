@@ -1504,198 +1504,200 @@ const AdminPage: React.FC = () => {
           );
         case 'team':
           return (
-          <Form>
-            <Input
-              placeholder="Team Name"
-              value={modalData.name || ''}
-              onChange={(e) => setField('name', e.target.value)}
-            />
-            <Input
-              placeholder="Team Tag"
-              value={modalData.tag || ''}
-              onChange={(e) => setField('tag', e.target.value)}
-            />
-              onChange={(e) => setField('game', e.target.value)}
-            >
-              <option value="CS2">CS2</option>
-              <option value="Dota 2">Dota 2</option>
-              <option value="Valorant">Valorant</option>
-              <option value="Critical Ops">Critical Ops</option>
-              <option value="PUBG Mobile">PUBG Mobile</option>
-            </Select>
-            <div style={{ marginTop: '10px' }}>
-              <label style={{ color: '#ccc', fontSize: '12px', display: 'block', marginBottom: '8px' }}>Team Logo</label>
-              {modalData.logo && (
-                <img
-                  src={modalData.logo}
-                  alt="Logo Preview"
-                  style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '50%', marginBottom: '10px' }}
-                />
-              )}
-              <input
-                type="file"
-                ref={teamImageRef}
-                style={{ display: 'none' }}
-                accept="image/*"
-                onChange={(e) => handleImageUpload(e, 'logo')}
+            <Form>
+              <Input
+                placeholder="Team Name"
+                value={modalData.name || ''}
+                onChange={(e) => setField('name', e.target.value)}
               />
-              <ActionButton
-                type="button"
-                onClick={() => teamImageRef.current?.click()}
-                disabled={isUploading}
+              <Input
+                placeholder="Team Tag"
+                value={modalData.tag || ''}
+                onChange={(e) => setField('tag', e.target.value)}
+              />
+              <Select
+                value={modalData.game || 'CS2'}
+                onChange={(e) => setField('game', e.target.value)}
               >
-                {isUploading ? 'Uploading...' : modalData.logo ? 'Change Logo' : 'Upload Logo'}
-              </ActionButton>
-            </div>
-            <Select
-              value={modalData.status || 'active'}
-              onChange={(e) => setField('status', e.target.value)}
-            >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="disbanded">Disbanded</option>
-            </Select>
-          </Form >
-        );
-      case 'reward':
-return (
-  <Form>
-    <Input placeholder="Reward Name" />
-    <Input placeholder="Points Required" type="number" />
-    <Select>
-      <option value="currency">Currency</option>
-      <option value="badge">Badge</option>
-      <option value="item">Item</option>
-    </Select>
-    <TextArea placeholder="Description" />
-  </Form>
-);
+                <option value="CS2">CS2</option>
+                <option value="Dota 2">Dota 2</option>
+                <option value="Valorant">Valorant</option>
+                <option value="Critical Ops">Critical Ops</option>
+                <option value="PUBG Mobile">PUBG Mobile</option>
+              </Select>
+              <div style={{ marginTop: '10px' }}>
+                <label style={{ color: '#ccc', fontSize: '12px', display: 'block', marginBottom: '8px' }}>Team Logo</label>
+                {modalData.logo && (
+                  <img
+                    src={modalData.logo}
+                    alt="Logo Preview"
+                    style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '50%', marginBottom: '10px' }}
+                  />
+                )}
+                <input
+                  type="file"
+                  ref={teamImageRef}
+                  style={{ display: 'none' }}
+                  accept="image/*"
+                  onChange={(e) => handleImageUpload(e, 'logo')}
+                />
+                <ActionButton
+                  type="button"
+                  onClick={() => teamImageRef.current?.click()}
+                  disabled={isUploading}
+                >
+                  {isUploading ? 'Uploading...' : modalData.logo ? 'Change Logo' : 'Upload Logo'}
+                </ActionButton>
+              </div>
+              <Select
+                value={modalData.status || 'active'}
+                onChange={(e) => setField('status', e.target.value)}
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="disbanded">Disbanded</option>
+              </Select>
+            </Form >
+          );
+        case 'reward':
+          return (
+            <Form>
+              <Input placeholder="Reward Name" />
+              <Input placeholder="Points Required" type="number" />
+              <Select>
+                <option value="currency">Currency</option>
+                <option value="badge">Badge</option>
+                <option value="item">Item</option>
+              </Select>
+              <TextArea placeholder="Description" />
+            </Form>
+          );
+        default:
+          return null;
+      }
+    }
+
+    return (
+      <Modal $isOpen={isModalOpen} onClick={() => setIsModalOpen(false)}>
+        <ModalContent onClick={(e) => e.stopPropagation()}>
+          <CloseButton onClick={() => setIsModalOpen(false)} aria-label="Close">×</CloseButton>
+          <h3>{editingItem ? 'Edit' : 'Create'} {modalType}</h3>
+          {renderForm()}
+          <ModalActions>
+            <ActionButton onClick={() => setIsModalOpen(false)}>Cancel</ActionButton>
+            <ActionButton $variant="success" onClick={handleSave}>Save</ActionButton>
+          </ModalActions>
+        </ModalContent>
+      </Modal>
+    );
+  }
+
+  function renderContent() {
+    switch (activeTab) {
+      case 'dashboard':
+        return renderDashboard();
+      case 'users':
+        return renderUsers();
+      case 'tournaments':
+        return renderTournaments();
+      case 'news':
+        return renderNews();
+      case 'achievements':
+        return renderAchievements();
+      case 'rewards':
+        return renderRewards();
+      case 'analytics':
+        return renderAnalytics();
+      case 'referrals':
+        return renderReferrals();
+      case 'teams':
+        return renderTeams();
       default:
-return null;
+        return renderDashboard();
     }
   }
 
-return (
-  <Modal $isOpen={isModalOpen} onClick={() => setIsModalOpen(false)}>
-    <ModalContent onClick={(e) => e.stopPropagation()}>
-      <CloseButton onClick={() => setIsModalOpen(false)} aria-label="Close">×</CloseButton>
-      <h3>{editingItem ? 'Edit' : 'Create'} {modalType}</h3>
-      {renderForm()}
-      <ModalActions>
-        <ActionButton onClick={() => setIsModalOpen(false)}>Cancel</ActionButton>
-        <ActionButton $variant="success" onClick={handleSave}>Save</ActionButton>
-      </ModalActions>
-    </ModalContent>
-  </Modal>
-);
-}
-
-function renderContent() {
-  switch (activeTab) {
-    case 'dashboard':
-      return renderDashboard();
-    case 'users':
-      return renderUsers();
-    case 'tournaments':
-      return renderTournaments();
-    case 'news':
-      return renderNews();
-    case 'achievements':
-      return renderAchievements();
-    case 'rewards':
-      return renderRewards();
-    case 'analytics':
-      return renderAnalytics();
-    case 'referrals':
-      return renderReferrals();
-    case 'teams':
-      return renderTeams();
-    default:
-      return renderDashboard();
-  }
-}
-
-return (
-  <Container>
-    <Header>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <Title>Admin Panel</Title>
-          <p style={{ color: '#cccccc', margin: '8px 0 0 0' }}>
-            Manage users, tournaments, news, and system settings
-          </p>
+  return (
+    <Container>
+      <Header>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <Title>Admin Panel</Title>
+            <p style={{ color: '#cccccc', margin: '8px 0 0 0' }}>
+              Manage users, tournaments, news, and system settings
+            </p>
+          </div>
+          <ActionButton onClick={() => load()}>
+            {loading ? '...' : 'Refresh'}
+          </ActionButton>
         </div>
-        <ActionButton onClick={() => load()}>
-          {loading ? '...' : 'Refresh'}
-        </ActionButton>
-      </div>
-    </Header>
+      </Header>
 
-    {!isAuthenticated && (
-      <div style={{ marginBottom: '20px', color: '#cccccc' }}>
-        <p>Authentication required.</p>
-        <ActionButton onClick={() => login()}>
-          {authLoading ? 'Loading...' : 'Login (Telegram)'}
-        </ActionButton>
-      </div>
-    )}
+      {!isAuthenticated && (
+        <div style={{ marginBottom: '20px', color: '#cccccc' }}>
+          <p>Authentication required.</p>
+          <ActionButton onClick={() => login()}>
+            {authLoading ? 'Loading...' : 'Login (Telegram)'}
+          </ActionButton>
+        </div>
+      )}
 
-    {error && (
-      <div style={{ marginBottom: '16px', color: '#ff4757', padding: '12px', background: 'rgba(255, 71, 87, 0.1)', border: '1px solid #ff4757', borderRadius: '8px' }}>
-        {error}
-      </div>
-    )}
+      {error && (
+        <div style={{ marginBottom: '16px', color: '#ff4757', padding: '12px', background: 'rgba(255, 71, 87, 0.1)', border: '1px solid #ff4757', borderRadius: '8px' }}>
+          {error}
+        </div>
+      )}
 
-    {isAuthenticated && user?.role !== 'admin' && user?.role !== 'developer' && (
-      <div style={{ marginBottom: '16px', color: '#ff6b00', padding: '12px', background: 'rgba(255, 107, 0, 0.1)', border: '1px solid #ff6b00', borderRadius: '8px' }}>
-        <strong>Access Restricted:</strong> You are logged in with role "{user?.role}".
-        To activate Admin rights, please open this app inside Telegram on your phone at least once.
-      </div>
-    )}
+      {isAuthenticated && user?.role !== 'admin' && user?.role !== 'developer' && (
+        <div style={{ marginBottom: '16px', color: '#ff6b00', padding: '12px', background: 'rgba(255, 107, 0, 0.1)', border: '1px solid #ff6b00', borderRadius: '8px' }}>
+          <strong>Access Restricted:</strong> You are logged in with role "{user?.role}".
+          To activate Admin rights, please open this app inside Telegram on your phone at least once.
+        </div>
+      )}
 
-    {loading && (
-      <div style={{ marginBottom: '16px', color: '#cccccc' }}>
-        Loading...
-      </div>
-    )}
+      {loading && (
+        <div style={{ marginBottom: '16px', color: '#cccccc' }}>
+          Loading...
+        </div>
+      )}
 
-    <TabContainer>
-      <Tab $active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')}>
-        Dashboard
-      </Tab>
-      <Tab $active={activeTab === 'users'} onClick={() => setActiveTab('users')}>
-        Users
-      </Tab>
-      <Tab $active={activeTab === 'tournaments'} onClick={() => setActiveTab('tournaments')}>
-        Tournaments
-      </Tab>
-      <Tab $active={activeTab === 'news'} onClick={() => setActiveTab('news')}>
-        News
-      </Tab>
-      <Tab $active={activeTab === 'achievements'} onClick={() => setActiveTab('achievements')}>
-        Achievements
-      </Tab>
-      <Tab $active={activeTab === 'rewards'} onClick={() => setActiveTab('rewards')}>
-        Rewards
-      </Tab>
-      <Tab $active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')}>
-        Analytics
-      </Tab>
-      <Tab $active={activeTab === 'referrals'} onClick={() => setActiveTab('referrals')}>
-        Referrals
-      </Tab>
-      <Tab $active={activeTab === 'teams'} onClick={() => setActiveTab('teams')}>
-        Teams
-      </Tab>
-    </TabContainer>
+      <TabContainer>
+        <Tab $active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')}>
+          Dashboard
+        </Tab>
+        <Tab $active={activeTab === 'users'} onClick={() => setActiveTab('users')}>
+          Users
+        </Tab>
+        <Tab $active={activeTab === 'tournaments'} onClick={() => setActiveTab('tournaments')}>
+          Tournaments
+        </Tab>
+        <Tab $active={activeTab === 'news'} onClick={() => setActiveTab('news')}>
+          News
+        </Tab>
+        <Tab $active={activeTab === 'achievements'} onClick={() => setActiveTab('achievements')}>
+          Achievements
+        </Tab>
+        <Tab $active={activeTab === 'rewards'} onClick={() => setActiveTab('rewards')}>
+          Rewards
+        </Tab>
+        <Tab $active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')}>
+          Analytics
+        </Tab>
+        <Tab $active={activeTab === 'referrals'} onClick={() => setActiveTab('referrals')}>
+          Referrals
+        </Tab>
+        <Tab $active={activeTab === 'teams'} onClick={() => setActiveTab('teams')}>
+          Teams
+        </Tab>
+      </TabContainer>
 
-    <ContentArea>
-      {isAuthenticated ? renderContent() : null}
-    </ContentArea>
+      <ContentArea>
+        {isAuthenticated ? renderContent() : null}
+      </ContentArea>
 
-    {renderModal()}
-  </Container>
-);
+      {renderModal()}
+    </Container>
+  );
 };
 
 export default AdminPage; 
