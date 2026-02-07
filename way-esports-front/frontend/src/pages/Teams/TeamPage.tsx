@@ -6,7 +6,7 @@ import Card from '../../components/UI/Card';
 
 const Container = styled.div`
   padding: 2rem 1rem;
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
   color: #fff;
 `;
@@ -26,6 +26,19 @@ const Logo = styled.img`
   border-radius: 16px;
   border: 2px solid #ff6b00;
   object-fit: cover;
+`;
+
+const LogoPlaceholder = styled.div`
+  width: 120px;
+  height: 120px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #ff6b00, #ff9500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  font-weight: bold;
+  color: white;
 `;
 
 const TeamTitle = styled.h1`
@@ -54,6 +67,32 @@ const SectionTitle = styled.h2`
   margin-bottom: 1.5rem;
 `;
 
+const StatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+`;
+
+const StatCard = styled(Card) <{ $color: string }>`
+  padding: 1.5rem;
+  text-align: center;
+  background: ${({ $color }) => `rgba(${$color}, 0.1)`};
+  border-left: 4px solid ${({ $color }) => `rgb(${$color})`};
+`;
+
+const StatValue = styled.h3<{ $color: string }>`
+  color: ${({ $color }) => `rgb(${$color})`};
+  font-size: 2.5rem;
+  margin: 0 0 0.5rem 0;
+`;
+
+const StatLabel = styled.p`
+  margin: 0;
+  opacity: 0.8;
+  font-size: 0.9rem;
+`;
+
 const MemberList = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -68,7 +107,7 @@ const MemberCard = styled(Link)`
   gap: 1rem;
   padding: 1rem;
   background: rgba(255,255,255,0.05);
-  border-radius: 12px;
+  border-radius:12px;
   border: 1px solid transparent;
   transition: all 0.3s ease;
 
@@ -86,6 +125,32 @@ const MemberAvatar = styled.img`
   object-fit: cover;
 `;
 
+const AvatarPlaceholder = styled.div`
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  display: flex;
+  align-items: center;
+  justifycontent: center;
+  font-weight: bold;
+  color: white;
+`;
+
+const AchievementCard = styled(Card)`
+  padding: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.1);
+  
+  &:hover {
+    border-color: #ff6b00;
+    background: rgba(255,107,0,0.05);
+  }
+`;
+
 const TeamPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const [team, setTeam] = useState<any>(null);
@@ -101,64 +166,110 @@ const TeamPage: React.FC = () => {
                     setTeam(res.data);
                 }
             } catch (err: any) {
-                setError(err.message || 'Failed to load team');
+                setError(err?.message || 'Failed to load team');
             } finally {
                 setLoading(false);
             }
         };
-        fetchTeam();
+
+        if (id) fetchTeam();
     }, [id]);
 
-    if (loading) return <Container>Loading team...</Container>;
-    if (error || !team) return <Container>Error: {error || 'Not found'}</Container>;
+    if (loading) return <Container><div style={{ textAlign: 'center', padding: '3rem' }}>Loading team details...</div></Container>;
+    if (error || !team) return <Container><div style={{ textAlign: 'center', padding: '3rem', color: '#ff6b6b' }}>{error || 'Team not found'}</div></Container>;
+
+    const totalPrizeMoney = team.stats?.totalPrizeMoney || 0;
+    const wins = team.stats?.wins || 0;
+    const losses = team.stats?.losses || 0;
+    const winRate = team.stats?.winRate || 0;
 
     return (
         <Container>
             <TeamHeader>
-                <Logo src={team.logo || '/images/default-team.png'} alt={team.name} />
+                {team.logo ? (
+                    <Logo src={team.logo} alt={team.name} />
+                ) : (
+                    <LogoPlaceholder>
+                        {team.tag?.replace('#', '') || team.name?.charAt(0)}
+                    </LogoPlaceholder>
+                )}
                 <div>
                     <TeamTitle>
                         {team.name}
                         <TeamTag>{team.tag}</TeamTag>
                     </TeamTitle>
-                    <div style={{ marginTop: '0.5rem', color: '#aaa' }}>Game: {team.game}</div>
+                    <p style={{ margin: '0.5rem 0', opacity: 0.8 }}>{team.game}</p>
                 </div>
             </TeamHeader>
 
+            {/* Stats Section */}
             <Section>
-                <SectionTitle>Members</SectionTitle>
+                <SectionTitle>Team Statistics</SectionTitle>
+                <StatsGrid>
+                    <StatCard $color="76, 175, 80">
+                        <StatValue $color="76, 175, 80">{wins}</StatValue>
+                        <StatLabel>Wins</StatLabel>
+                    </StatCard>
+                    <StatCard $color="244, 67, 54">
+                        <StatValue $color="244, 67, 54">{losses}</StatValue>
+                        <StatLabel>Losses</StatLabel>
+                    </StatCard>
+                    <StatCard $color="255, 152, 0">
+                        <StatValue $color="255, 152, 0">{winRate.toFixed(1)}%</StatValue>
+                        <StatLabel>Win Rate</StatLabel>
+                    </StatCard>
+                    <StatCard $color="255, 215, 0">
+                        <StatValue $color="255, 215, 0">${totalPrizeMoney.toLocaleString()}</StatValue>
+                        <StatLabel>Total Prize Money</StatLabel>
+                    </StatCard>
+                </StatsGrid>
+            </Section>
+
+            {/* Team Members */}
+            <Section>
+                <SectionTitle>Team Roster ({team.members?.length || 0}/5)</SectionTitle>
                 <MemberList>
-                    {(team.members || []).map((member: any) => (
-                        <MemberCard key={member.id} to={`/profile/${member.id}`}>
-                            <MemberAvatar src={member.profileLogo || '/images/default-avatar.png'} />
+                    {(team.members || []).map((member: any, index: number) => (
+                        <MemberCard key={index} to={`/profile/${member.id}`}>
+                            {member.profileLogo ? (
+                                <MemberAvatar src={member.profileLogo} alt={member.username} />
+                            ) : (
+                                <AvatarPlaceholder>
+                                    {member.username?.charAt(0)?.toUpperCase() || '?'}
+                                </AvatarPlaceholder>
+                            )}
                             <div>
-                                <div style={{ fontWeight: 'bold' }}>{member.username}</div>
-                                <div style={{ fontSize: '0.8rem', color: '#aaa' }}>
-                                    {team.captain?.id === member.id ? '👑 Captain' : 'Player'}
-                                </div>
+                                <h4 style={{ margin: '0 0 4px 0' }}>{member.username || 'Unknown'}</h4>
+                                <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.7 }}>
+                                    {member.id === team.captain?.id ? '👑 Captain' : 'Player'}
+                                </p>
                             </div>
                         </MemberCard>
                     ))}
                 </MemberList>
             </Section>
 
-            <Section>
-                <SectionTitle>Team Stats</SectionTitle>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
-                    <Card style={{ textAlign: 'center', padding: '1rem' }}>
-                        <div style={{ fontSize: '1.5rem', color: '#ff6b00' }}>{team.stats?.wins || 0}</div>
-                        <div style={{ color: '#aaa' }}>Wins</div>
-                    </Card>
-                    <Card style={{ textAlign: 'center', padding: '1rem' }}>
-                        <div style={{ fontSize: '1.5rem', color: '#ff6b00' }}>{team.stats?.losses || 0}</div>
-                        <div style={{ color: '#aaa' }}>Losses</div>
-                    </Card>
-                    <Card style={{ textAlign: 'center', padding: '1rem' }}>
-                        <div style={{ fontSize: '1.5rem', color: '#ff6b00' }}>{team.stats?.winRate?.toFixed(1) || 0}%</div>
-                        <div style={{ color: '#aaa' }}>Win Rate</div>
-                    </Card>
-                </div>
-            </Section>
+            {/* Achievements / Tournaments */}
+            {team.achievements && team.achievements.length > 0 && (
+                <Section>
+                    <SectionTitle>Tournament Achievements</SectionTitle>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        {team.achievements.map((ach: any, index: number) => (
+                            <AchievementCard key={index}>
+                                <div>
+                                    <h4 style={{ margin: '0 0 0.5rem 0', color: '#ff6b00' }}>{ach.tournamentName || 'Tournament'}</h4>
+                                    <p style={{ margin: 0, opacity: 0.8 }}>
+                                        Position: {ach.position} • Prize: ${ach.prize?.toLocaleString() || 0}
+                                    </p>
+                                </div>
+                                <div style={{ font Size: '2rem' }}>
+                                    {ach.position === 1 ? '🥇' : ach.position === 2 ? '🥈' : ach.position === 3 ? '🥉' : '🏆'}
+                                </div>
+                            </AchievementCard>
+                        ))}
+                    </div>
+                </Section>
+            )}
         </Container>
     );
 };

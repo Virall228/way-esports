@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
+import { Link } from 'react-router-dom';
 import CreateTeamModal from '../../components/Teams/CreateTeamModal';
 import { api } from '../../services/api';
 
@@ -305,7 +306,7 @@ const ActionButton = styled.button<{ $variant: 'primary' | 'secondary' | 'danger
     switch ($variant) {
       case 'primary':
         return `
-          background: linear-gradient(135deg, ${'${({ theme }) => theme.colors.gray[700]}'}, ${'${({ theme }) => theme.colors.gray[900]}' });
+          background: linear-gradient(135deg, ${'${({ theme }) => theme.colors.gray[700]}'}, ${'${({ theme }) => theme.colors.gray[900]}'});
           color: white;
           border: none;
           
@@ -440,9 +441,8 @@ const TeamsPage: React.FC = () => {
     // Handle team join logic
   };
 
-  const handleViewDetails = (teamId: string) => {
-    console.log('Viewing team details:', teamId);
-    // Handle view details logic
+  const handleViewDetails = (teamId: string) =& gt; {
+    window.location.href = `/team/${teamId}`;
   };
 
   const handleEditTeam = (teamId: string) => {
@@ -469,21 +469,21 @@ const TeamsPage: React.FC = () => {
 
       <FilterSection>
         <FilterTabs>
-          <FilterTab 
-            $active={activeFilter === 'teams'} 
+          <FilterTab
+            $active={activeFilter === 'teams'}
             onClick={() => setActiveFilter('teams')}
           >
             Teams
           </FilterTab>
-          <FilterTab 
-            $active={activeFilter === 'rankings'} 
+          <FilterTab
+            $active={activeFilter === 'rankings'}
             onClick={() => setActiveFilter('rankings')}
           >
             Rankings
           </FilterTab>
         </FilterTabs>
-        <FilterDropdown 
-          value={selectedGame} 
+        <FilterDropdown
+          value={selectedGame}
           onChange={(e) => setSelectedGame(e.target.value)}
         >
           <option value="all">All Teams</option>
@@ -515,69 +515,69 @@ const TeamsPage: React.FC = () => {
               {teams
                 .filter((team) => selectedGame === 'all' ? true : team.game.toLowerCase().includes(selectedGame.replace('-', ' ')))
                 .map(team => (
-            <TeamCard key={team.id}>
-              <TeamHeader>
-                <TeamAvatar>{team.tag.replace('#', '')}</TeamAvatar>
-                <TeamInfo>
-                  <TeamName>{team.name}</TeamName>
-                  <TeamTag>{team.tag}</TeamTag>
-                </TeamInfo>
-              </TeamHeader>
+                  <TeamCard key={team.id}>
+                    <TeamHeader>
+                      <TeamAvatar>{team.tag.replace('#', '')}</TeamAvatar>
+                      <TeamInfo>
+                        <TeamName>{team.name}</TeamName>
+                        <TeamTag>{team.tag}</TeamTag>
+                      </TeamInfo>
+                    </TeamHeader>
 
-              <TeamDescription>{team.description}</TeamDescription>
+                    <TeamDescription>{team.description}</TeamDescription>
 
-              <TeamStats>
-                <StatItem>
-                  <StatValue>{team.tournaments}</StatValue>
-                  <StatLabel>Tournaments</StatLabel>
-                </StatItem>
-                <StatItem>
-                  <StatValue>{team.wins}</StatValue>
-                  <StatLabel>Wins</StatLabel>
-                </StatItem>
-                <StatItem>
-                  <StatValue>{team.winRate}%</StatValue>
-                  <StatLabel>Win Rate</StatLabel>
-                </StatItem>
-              </TeamStats>
+                    <TeamStats>
+                      <StatItem>
+                        <StatValue>{team.tournaments}</StatValue>
+                        <StatLabel>Tournaments</StatLabel>
+                      </StatItem>
+                      <StatItem>
+                        <StatValue>{team.wins}</StatValue>
+                        <StatLabel>Wins</StatLabel>
+                      </StatItem>
+                      <StatItem>
+                        <StatValue>{team.winRate}%</StatValue>
+                        <StatLabel>Win Rate</StatLabel>
+                      </StatItem>
+                    </TeamStats>
 
-              <MembersList>
-                <MembersTitle>Members ({team.members.length}/5)</MembersTitle>
-                <Members>
-                  {team.members.map((member, index) => (
-                    <MemberTag key={index} $role={member.role}>
-                      {member.name}
-                    </MemberTag>
-                  ))}
-                </Members>
-              </MembersList>
+                    <MembersList>
+                      <MembersTitle>Members ({team.members.length}/5)</MembersTitle>
+                      <Members>
+                        {team.members.map((member, index) => (
+                          <MemberTag key={index} $role={member.role}>
+                            {member.name}
+                          </MemberTag>
+                        ))}
+                      </Members>
+                    </MembersList>
 
-              <ActionButtons>
-                {team.isOwner ? (
-                  <>
-                    <ActionButton $variant="secondary" onClick={() => handleEditTeam(team.id)}>
-                      Edit
-                    </ActionButton>
-                    <ActionButton $variant="primary" onClick={() => handleViewDetails(team.id)}>
-                      View Details
-                    </ActionButton>
-                    <ActionButton $variant="danger" onClick={() => handleDeleteTeam(team.id)}>
-                      Delete
-                    </ActionButton>
-                  </>
-                ) : (
-                  <>
-                    <ActionButton $variant="secondary" onClick={() => handleViewDetails(team.id)}>
-                      View Details
-                    </ActionButton>
-                    <ActionButton $variant="primary" onClick={() => handleJoinTeam(team.id)}>
-                      Join Team
-                    </ActionButton>
-                  </>
-                )}
-              </ActionButtons>
-            </TeamCard>
-              ))}
+                    <ActionButtons>
+                      {team.isOwner ? (
+                        <>
+                          <ActionButton $variant="secondary" onClick={() => handleEditTeam(team.id)}>
+                            Edit
+                          </ActionButton>
+                          <ActionButton $variant="primary" onClick={() => handleViewDetails(team.id)}>
+                            View Details
+                          </ActionButton>
+                          <ActionButton $variant="danger" onClick={() => handleDeleteTeam(team.id)}>
+                            Delete
+                          </ActionButton>
+                        </>
+                      ) : (
+                        <>
+                          <ActionButton $variant="secondary" onClick={() => handleViewDetails(team.id)}>
+                            View Details
+                          </ActionButton>
+                          <ActionButton $variant="primary" onClick={() => handleJoinTeam(team.id)}>
+                            Join Team
+                          </ActionButton>
+                        </>
+                      )}
+                    </ActionButtons>
+                  </TeamCard>
+                ))}
             </TeamsGrid>
           )}
         </>
