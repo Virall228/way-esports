@@ -441,7 +441,7 @@ const TeamsPage: React.FC = () => {
     // Handle team join logic
   };
 
-  const handleViewDetails = (teamId: string) =& gt; {
+  const handleViewDetails = (teamId: string) => {
     window.location.href = `/team/${teamId}`;
   };
 
