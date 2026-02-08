@@ -51,16 +51,16 @@ const HeaderLogo = styled.h1<{ $isHomePage: boolean }>`
   font-size: 1.5rem;
   font-weight: 700;
   margin: 0;
-  background: ${({ $isHomePage }) => 
-    $isHomePage 
+  background: ${({ $isHomePage }) =>
+    $isHomePage
       ? 'linear-gradient(135deg, #ff6b00 0%, #ff4757 25%, #808080 50%, #ff6b00 75%, #ff4757 100%)'
       : 'linear-gradient(135deg, #ff6b00 0%, #ff4757 25%, #808080 50%, #ff6b00 75%, #ff4757 100%)'
   };
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-shadow: ${({ $isHomePage }) => 
-    $isHomePage 
+  text-shadow: ${({ $isHomePage }) =>
+    $isHomePage
       ? '0 0 15px rgba(255, 107, 0, 0.5), 0 0 30px rgba(255, 71, 87, 0.3)'
       : '0 0 15px rgba(255, 107, 0, 0.5), 0 0 30px rgba(255, 71, 87, 0.3)'
   };
@@ -157,6 +157,12 @@ const Navigation = styled.nav<{ $isVisible: boolean }>`
   box-shadow: 0 -4px 20px rgba(255, 107, 0, 0.3), 0 0 40px rgba(255, 71, 87, 0.2);
   position: relative;
   
+  /* Десктоп: всегда показывать навигацию */
+  @media (min-width: 769px) {
+    transform: translateY(0) !important;
+    opacity: 1 !important;
+  }
+  
   &::before {
     content: '';
     position: absolute;
@@ -184,12 +190,12 @@ const Navigation = styled.nav<{ $isVisible: boolean }>`
 `;
 
 const NavButton = styled.button<{ $active?: boolean }>`
-  background: ${({ $active }) => $active 
-    ? 'linear-gradient(135deg, rgba(255, 107, 0, 0.2), rgba(255, 71, 87, 0.2))' 
+  background: ${({ $active }) => $active
+    ? 'linear-gradient(135deg, rgba(255, 107, 0, 0.2), rgba(255, 71, 87, 0.2))'
     : 'transparent'
   };
-  border: 1px solid ${({ $active }) => $active 
-    ? 'rgba(255, 215, 0, 0.5)' 
+  border: 1px solid ${({ $active }) => $active
+    ? 'rgba(255, 215, 0, 0.5)'
     : 'transparent'
   };
   border-radius: 8px;
@@ -319,16 +325,16 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Выносим handleScroll из useEffect
   const handleScroll = useCallback(() => {
     const currentScrollY = window.scrollY;
-    
+
     // Показываем навигацию при прокрутке вверх или в самом верху
     if (currentScrollY < lastScrollY || currentScrollY < 100) {
       setIsNavVisible(true);
-    } 
+    }
     // Скрываем навигацию при прокрутке вниз (после 100px от верха)
     else if (currentScrollY > lastScrollY && currentScrollY > 100) {
       setIsNavVisible(false);
     }
-    
+
     setLastScrollY(currentScrollY);
   }, [lastScrollY]);
 
@@ -352,7 +358,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     }
 
     window.addEventListener('scroll', throttledHandleScroll, { passive: true });
-    
+
     return () => {
       window.removeEventListener('scroll', throttledHandleScroll);
     };
@@ -404,38 +410,38 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           {children}
         </Content>
         <Navigation $isVisible={isNavVisible}>
-          <NavButtonMemo 
-            $active={location.pathname === '/'} 
+          <NavButtonMemo
+            $active={location.pathname === '/'}
             onClick={() => handleNavigation('/')}
           >
             🏠 Home
           </NavButtonMemo>
-          <NavButtonMemo 
-            $active={location.pathname === '/tournaments'} 
+          <NavButtonMemo
+            $active={location.pathname === '/tournaments'}
             onClick={() => handleNavigation('/tournaments')}
           >
             🏆 Tournaments
           </NavButtonMemo>
-          <NavButtonMemo 
-            $active={location.pathname === '/teams'} 
+          <NavButtonMemo
+            $active={location.pathname === '/teams'}
             onClick={() => handleNavigation('/teams')}
           >
             👥 WAY Ranked
           </NavButtonMemo>
-          <NavButtonMemo 
-            $active={location.pathname === '/news'} 
+          <NavButtonMemo
+            $active={location.pathname === '/news'}
             onClick={() => handleNavigation('/news')}
           >
             📰 News
           </NavButtonMemo>
-          <NavButtonMemo 
-            $active={location.pathname === '/rewards'} 
+          <NavButtonMemo
+            $active={location.pathname === '/rewards'}
             onClick={() => handleNavigation('/rewards')}
           >
             🎖️ Rewards
           </NavButtonMemo>
-          <NavButtonMemo 
-            $active={location.pathname === '/profile'} 
+          <NavButtonMemo
+            $active={location.pathname === '/profile'}
             onClick={() => handleNavigation('/profile')}
           >
             👤 Profile
@@ -443,7 +449,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </Navigation>
         <SearchOverlay $isVisible={isSearchOpen} onClick={() => setIsSearchOpen(false)}>
           <SearchContainer onClick={(e) => e.stopPropagation()}>
-            <SearchComponent 
+            <SearchComponent
               onResultSelect={handleSearchResult}
               placeholder="Search players, teams, tournaments..."
             />
