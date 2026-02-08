@@ -152,126 +152,126 @@ const AchievementCard = styled(Card)`
 `;
 
 const TeamPage: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
-    const [team, setTeam] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+  const { id } = useParams<{ id: string }>();
+  const [team, setTeam] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchTeam = async () => {
-            try {
-                setLoading(true);
-                const res: any = await api.get(`/api/teams/${id}`);
-                if (res.success) {
-                    setTeam(res.data);
-                }
-            } catch (err: any) {
-                setError(err?.message || 'Failed to load team');
-            } finally {
-                setLoading(false);
-            }
-        };
+  useEffect(() => {
+    const fetchTeam = async () => {
+      try {
+        setLoading(true);
+        const res: any = await api.get(`/api/teams/${id}`);
+        if (res.success) {
+          setTeam(res.data);
+        }
+      } catch (err: any) {
+        setError(err?.message || 'Failed to load team');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-        if (id) fetchTeam();
-    }, [id]);
+    if (id) fetchTeam();
+  }, [id]);
 
-    if (loading) return <Container><div style={{ textAlign: 'center', padding: '3rem' }}>Loading team details...</div></Container>;
-    if (error || !team) return <Container><div style={{ textAlign: 'center', padding: '3rem', color: '#ff6b6b' }}>{error || 'Team not found'}</div></Container>;
+  if (loading) return <Container><div style={{ textAlign: 'center', padding: '3rem' }}>Loading team details...</div></Container>;
+  if (error || !team) return <Container><div style={{ textAlign: 'center', padding: '3rem', color: '#ff6b6b' }}>{error || 'Team not found'}</div></Container>;
 
-    const totalPrizeMoney = team.stats?.totalPrizeMoney || 0;
-    const wins = team.stats?.wins || 0;
-    const losses = team.stats?.losses || 0;
-    const winRate = team.stats?.winRate || 0;
+  const totalPrizeMoney = team.stats?.totalPrizeMoney || 0;
+  const wins = team.stats?.wins || 0;
+  const losses = team.stats?.losses || 0;
+  const winRate = team.stats?.winRate || 0;
 
-    return (
-        <Container>
-            <TeamHeader>
-                {team.logo ? (
-                    <Logo src={team.logo} alt={team.name} />
-                ) : (
-                    <LogoPlaceholder>
-                        {team.tag?.replace('#', '') || team.name?.charAt(0)}
-                    </LogoPlaceholder>
-                )}
+  return (
+    <Container>
+      <TeamHeader>
+        {team.logo ? (
+          <Logo src={team.logo} alt={team.name} />
+        ) : (
+          <LogoPlaceholder>
+            {team.tag?.replace('#', '') || team.name?.charAt(0)}
+          </LogoPlaceholder>
+        )}
+        <div>
+          <TeamTitle>
+            {team.name}
+            <TeamTag>{team.tag}</TeamTag>
+          </TeamTitle>
+          <p style={{ margin: '0.5rem 0', opacity: 0.8 }}>{team.game}</p>
+        </div>
+      </TeamHeader>
+
+      {/* Stats Section */}
+      <Section>
+        <SectionTitle>Team Statistics</SectionTitle>
+        <StatsGrid>
+          <StatCard $color="76, 175, 80">
+            <StatValue $color="76, 175, 80">{wins}</StatValue>
+            <StatLabel>Wins</StatLabel>
+          </StatCard>
+          <StatCard $color="244, 67, 54">
+            <StatValue $color="244, 67, 54">{losses}</StatValue>
+            <StatLabel>Losses</StatLabel>
+          </StatCard>
+          <StatCard $color="255, 152, 0">
+            <StatValue $color="255, 152, 0">{winRate.toFixed(1)}%</StatValue>
+            <StatLabel>Win Rate</StatLabel>
+          </StatCard>
+          <StatCard $color="255, 215, 0">
+            <StatValue $color="255, 215, 0">${totalPrizeMoney.toLocaleString()}</StatValue>
+            <StatLabel>Total Prize Money</StatLabel>
+          </StatCard>
+        </StatsGrid>
+      </Section>
+
+      {/* Team Members */}
+      <Section>
+        <SectionTitle>Team Roster ({team.members?.length || 0}/5)</SectionTitle>
+        <MemberList>
+          {(team.members || []).map((member: any, index: number) => (
+            <MemberCard key={index} to={`/profile/${member.id}`}>
+              {member.profileLogo ? (
+                <MemberAvatar src={member.profileLogo} alt={member.username} />
+              ) : (
+                <AvatarPlaceholder>
+                  {member.username?.charAt(0)?.toUpperCase() || '?'}
+                </AvatarPlaceholder>
+              )}
+              <div>
+                <h4 style={{ margin: '0 0 4px 0' }}>{member.username || 'Unknown'}</h4>
+                <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.7 }}>
+                  {member.id === team.captain?.id ? '👑 Captain' : 'Player'}
+                </p>
+              </div>
+            </MemberCard>
+          ))}
+        </MemberList>
+      </Section>
+
+      {/* Achievements / Tournaments */}
+      {team.achievements && team.achievements.length > 0 && (
+        <Section>
+          <SectionTitle>Tournament Achievements</SectionTitle>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {team.achievements.map((ach: any, index: number) => (
+              <AchievementCard key={index}>
                 <div>
-                    <TeamTitle>
-                        {team.name}
-                        <TeamTag>{team.tag}</TeamTag>
-                    </TeamTitle>
-                    <p style={{ margin: '0.5rem 0', opacity: 0.8 }}>{team.game}</p>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: '#ff6b00' }}>{ach.tournamentName || 'Tournament'}</h4>
+                  <p style={{ margin: 0, opacity: 0.8 }}>
+                    Position: {ach.position} • Prize: ${ach.prize?.toLocaleString() || 0}
+                  </p>
                 </div>
-            </TeamHeader>
-
-            {/* Stats Section */}
-            <Section>
-                <SectionTitle>Team Statistics</SectionTitle>
-                <StatsGrid>
-                    <StatCard $color="76, 175, 80">
-                        <StatValue $color="76, 175, 80">{wins}</StatValue>
-                        <StatLabel>Wins</StatLabel>
-                    </StatCard>
-                    <StatCard $color="244, 67, 54">
-                        <StatValue $color="244, 67, 54">{losses}</StatValue>
-                        <StatLabel>Losses</StatLabel>
-                    </StatCard>
-                    <StatCard $color="255, 152, 0">
-                        <StatValue $color="255, 152, 0">{winRate.toFixed(1)}%</StatValue>
-                        <StatLabel>Win Rate</StatLabel>
-                    </StatCard>
-                    <StatCard $color="255, 215, 0">
-                        <StatValue $color="255, 215, 0">${totalPrizeMoney.toLocaleString()}</StatValue>
-                        <StatLabel>Total Prize Money</StatLabel>
-                    </StatCard>
-                </StatsGrid>
-            </Section>
-
-            {/* Team Members */}
-            <Section>
-                <SectionTitle>Team Roster ({team.members?.length || 0}/5)</SectionTitle>
-                <MemberList>
-                    {(team.members || []).map((member: any, index: number) => (
-                        <MemberCard key={index} to={`/profile/${member.id}`}>
-                            {member.profileLogo ? (
-                                <MemberAvatar src={member.profileLogo} alt={member.username} />
-                            ) : (
-                                <AvatarPlaceholder>
-                                    {member.username?.charAt(0)?.toUpperCase() || '?'}
-                                </AvatarPlaceholder>
-                            )}
-                            <div>
-                                <h4 style={{ margin: '0 0 4px 0' }}>{member.username || 'Unknown'}</h4>
-                                <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.7 }}>
-                                    {member.id === team.captain?.id ? '👑 Captain' : 'Player'}
-                                </p>
-                            </div>
-                        </MemberCard>
-                    ))}
-                </MemberList>
-            </Section>
-
-            {/* Achievements / Tournaments */}
-            {team.achievements && team.achievements.length > 0 && (
-                <Section>
-                    <SectionTitle>Tournament Achievements</SectionTitle>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        {team.achievements.map((ach: any, index: number) => (
-                            <AchievementCard key={index}>
-                                <div>
-                                    <h4 style={{ margin: '0 0 0.5rem 0', color: '#ff6b00' }}>{ach.tournamentName || 'Tournament'}</h4>
-                                    <p style={{ margin: 0, opacity: 0.8 }}>
-                                        Position: {ach.position} • Prize: ${ach.prize?.toLocaleString() || 0}
-                                    </p>
-                                </div>
-                                <div style={{ font Size: '2rem' }}>
-                                    {ach.position === 1 ? '🥇' : ach.position === 2 ? '🥈' : ach.position === 3 ? '🥉' : '🏆'}
-                                </div>
-                            </AchievementCard>
-                        ))}
-                    </div>
-                </Section>
-            )}
-        </Container>
-    );
+                <div style={{ fontSize: '2rem' }}>
+                  {ach.position === 1 ? '🥇' : ach.position === 2 ? '🥈' : ach.position === 3 ? '🥉' : '🏆'}
+                </div>
+              </AchievementCard>
+            ))}
+          </div>
+        </Section>
+      )}
+    </Container>
+  );
 };
 
 export default TeamPage;
