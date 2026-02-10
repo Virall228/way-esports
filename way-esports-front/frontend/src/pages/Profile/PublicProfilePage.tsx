@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useParams } from 'react-router-dom';
 import styled from 'styled-components';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../../services/api';
 import Card from '../../components/UI/Card';
 
@@ -81,31 +82,25 @@ const StatLabel = styled.div`
 
 const PublicProfilePage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
-    const [profile, setProfile] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        const fetchProfile = async () => {
-            try {
-                setLoading(true);
-                const res: any = await api.get(`/api/profile/${id}/public`);
-                if (res.success) {
-                    setProfile(res.data);
-                } else {
-                    setError('Profile not found');
-                }
-            } catch (err: any) {
-                setError(err.message || 'Failed to load profile');
-            } finally {
-                setLoading(false);
+    const { data: profile, isLoading, error } = useQuery({
+        queryKey: ['profile', id],
+        queryFn: async () => {
+            const res: any = await api.get(`/api/profile/${id}/public`);
+            if (res?.success === false) {
+                throw new Error('Profile not found');
             }
-        };
-        fetchProfile();
-    }, [id]);
+            return res?.data || res;
+        },
+        enabled: Boolean(id),
+        staleTime: 30000,
+        refetchOnWindowFocus: false
+    });
 
-    if (loading) return <Container>Loading profile...</Container>;
-    if (error || !profile) return <Container>Error: {error || 'Not found'}</Container>;
+    if (isLoading) return <Container>Loading profile...</Container>;
+    if (error || !profile) {
+        const message = (error as Error | undefined)?.message || 'Not found';
+        return <Container>Error: {message}</Container>;
+    }
 
     return (
         <Container>

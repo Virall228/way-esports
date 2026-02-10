@@ -1,7 +1,20 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { useParams } from 'react-router-dom';
-import { api } from '../../services/api';
+import { useQuery } from '@tanstack/react-query';
+import { tournamentService } from '../../services/tournamentService';
+
+type MatchItem = {
+  id?: string;
+  team1?: any;
+  team2?: any;
+  round?: string;
+  map?: string;
+  startTime?: string;
+  endTime?: string;
+  status?: string;
+  score?: { team1?: number; team2?: number };
+};
 
 const Container = styled.div`
   padding: 1rem;
@@ -143,51 +156,40 @@ const Banner = styled.div<{ $src?: string }>`
 const TournamentDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [tab, setTab] = useState<'schedule' | 'live' | 'results' | 'bracket'>('schedule');
-  const [tournament, setTournament] = useState<any | null>(null);
-  const [matches, setMatches] = useState<MatchItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { data: tournament, isLoading: isTournamentLoading, error: tournamentError } = useQuery({
+    queryKey: ['tournament', id],
+    queryFn: async () => {
+      if (!id) return null;
+      const res: any = await tournamentService.getById(id);
+      return res?.data || res;
+    },
+    enabled: Boolean(id),
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
 
-  useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      if (!id) return;
-      try {
-        setLoading(true);
-        setError(null);
-
-        const tRes: any = await api.get(`/api/tournaments/${id}`);
-        const t = (tRes && tRes.data) || null;
-
-        let m: any[] = [];
-        if (tab === 'schedule') {
-          const mRes = await api.get(`/api/tournaments/${id}/schedule`);
-          m = (mRes && mRes.data) || [];
-        } else if (tab === 'live') {
-          const mRes = await api.get(`/api/tournaments/${id}/live`);
-          m = (mRes && mRes.data) || [];
-        } else {
-          const mRes = await api.get(`/api/matches?tournament=${id}`);
-          m = (mRes && mRes.data) || [];
-        }
-
-        if (!mounted) return;
-        setTournament(t);
-        setMatches(m);
-      } catch (e: any) {
-        if (!mounted) return;
-        setError(e?.message || 'Failed to load tournament');
-      } finally {
-        if (!mounted) return;
-        setLoading(false);
+  const { data: matches = [], isLoading: isMatchesLoading, error: matchesError } = useQuery({
+    queryKey: ['tournament', id, 'matches', tab],
+    queryFn: async () => {
+      if (!id) return [];
+      if (tab === 'schedule') {
+        const res: any = await tournamentService.getSchedule(id);
+        return res?.data || res || [];
       }
-    };
+      if (tab === 'live') {
+        const res: any = await tournamentService.getLive(id);
+        return res?.data || res || [];
+      }
+      const res: any = await tournamentService.getMatches(id);
+      return res?.data || res || [];
+    },
+    enabled: Boolean(id),
+    staleTime: 15000,
+    refetchOnWindowFocus: false
+  });
 
-    load();
-    return () => {
-      mounted = false;
-    };
-  }, [id, tab]);
+  const loading = isTournamentLoading || isMatchesLoading;
+  const error = (tournamentError as Error | null)?.message || (matchesError as Error | null)?.message || null;
 
   const title = tournament?.title || tournament?.name || 'Tournament';
 

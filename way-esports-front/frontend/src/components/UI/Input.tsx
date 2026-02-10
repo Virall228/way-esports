@@ -47,35 +47,35 @@ const Label = styled.label`
 `;
 
 const StyledInput = styled.input<InputProps>`
-  background: ${({ theme }) => theme.colors.surface};
+  background: rgba(255, 255, 255, 0.04);
   color: ${({ theme }) => theme.colors.text.primary};
-  border: 1px solid ${({ theme }) => theme.colors.text.disabled};
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: ${({ theme }) => theme.borderRadius.medium};
   outline: none;
   transition: all ${({ theme }) => theme.transitions.fast};
   width: 100%;
+  backdrop-filter: blur(12px);
 
   ${({ size }) => getInputSize(size)}
 
   ${({ variant, theme }) =>
     variant === 'filled' &&
     css`
-      background: ${theme.colors.background};
-      border: none;
-      border-bottom: 2px solid ${theme.colors.text.disabled};
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: ${theme.borderRadius.small} ${theme.borderRadius.small} 0 0;
 
       &:focus {
-        border-bottom-color: ${theme.colors.accent};
-        background: ${`${theme.colors.background}cc`};
+        border-color: ${theme.colors.accent};
+        background: rgba(255, 255, 255, 0.12);
       }
     `}
 
   ${({ variant, theme }) =>
     variant === 'outlined' &&
     css`
-      background: transparent;
-      border: 2px solid ${theme.colors.text.disabled};
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.2);
 
       &:focus {
         border-color: ${theme.colors.accent};

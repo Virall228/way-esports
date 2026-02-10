@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import styled from 'styled-components';
-import { Link } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import CreateTeamModal from '../../components/Teams/CreateTeamModal';
-import { api } from '../../services/api';
+import { teamsService } from '../../services/teamsService';
+import { tournamentService } from '../../services/tournamentService';
 
 const Container = styled.div`
   padding: 1rem;
@@ -365,84 +366,100 @@ const TeamsPage: React.FC = () => {
   const [selectedGame, setSelectedGame] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [tournaments, setTournaments] = useState<Array<{ id: string; name: string; status?: string }>>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchTeams = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const { data: teamsRaw = [], isLoading: loading, error: queryError } = useQuery({
+    queryKey: ['teams'],
+    queryFn: async () => {
+      const res: any = await teamsService.list();
+      return (res && (res.data || res.teams)) || [];
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
 
-      const res: any = await api.get('/api/teams');
-      const items: any[] = (res && (res.data || res.teams)) || [];
+  const { data: tournamentsRaw = [] } = useQuery({
+    queryKey: ['tournaments'],
+    queryFn: async () => {
+      const res: any = await tournamentService.list();
+      return (res && (res.tournaments || res.data || [])) || [];
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
 
-      const mapped: Team[] = items.map((t: any) => {
-        const captainId = t.captain?.id?.toString?.() || t.captain?.toString?.() || '';
-        const membersRaw: any[] = Array.isArray(t.members) ? t.members : [];
+  const teams = useMemo(() => {
+    const items: any[] = Array.isArray(teamsRaw) ? teamsRaw : [];
+    return items.map((t: any) => {
+      const captainId = t.captain?.id?.toString?.() || t.captain?.toString?.() || '';
+      const membersRaw: any[] = Array.isArray(t.members) ? t.members : [];
 
-        const members: Array<{ name: string; role: 'captain' | 'player' }> = membersRaw.map((m: any) => {
-          const id = (m?.id || m?._id || '').toString();
-          const label = (m?.username || m?.firstName || m?.lastName || id || 'Member').toString();
-          const role: 'captain' | 'player' = captainId && id === captainId ? 'captain' : 'player';
-          return { name: label, role };
-        });
-
-        if (t.captain && captainId && !members.some((m: any) => m.role === 'captain')) {
-          const captainName = (t.captain.username || t.captain.firstName || t.captain.lastName || 'Captain').toString();
-          members.unshift({ name: captainName, role: 'captain' });
-        }
-
-        return {
-          id: (t.id || t._id || '').toString(),
-          name: t.name || '',
-          tag: t.tag || '',
-          game: t.game || '',
-          tournamentId: t.tournamentId || null,
-          description: t.description || '',
-          members,
-          tournaments: Number(t.tournaments) || 0,
-          wins: Number(t.stats?.wins) || Number(t.wins) || 0,
-          winRate: Number(t.stats?.winRate) || Number(t.winRate) || 0,
-          isOwner: false
-        };
+      const members: Array<{ name: string; role: 'captain' | 'player' }> = membersRaw.map((m: any) => {
+        const id = (m?.id || m?._id || '').toString();
+        const label = (m?.username || m?.firstName || m?.lastName || id || 'Member').toString();
+        const role: 'captain' | 'player' = captainId && id === captainId ? 'captain' : 'player';
+        return { name: label, role };
       });
 
-      setTeams(mapped);
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load teams');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTeams();
-    const fetchTournaments = async () => {
-      try {
-        const res: any = await api.get('/api/tournaments');
-        const items: any[] = (res && (res.tournaments || res.data || [])) || [];
-        const mapped = items
-          .filter((item: any) => item?.id || item?._id)
-          .map((item: any) => ({
-            id: String(item.id || item._id),
-            name: String(item.name || item.title || 'Tournament'),
-            status: item.status
-          }));
-        setTournaments(mapped);
-      } catch {
-        setTournaments([]);
+      if (t.captain && captainId && !members.some((m: any) => m.role === 'captain')) {
+        const captainName = (t.captain.username || t.captain.firstName || t.captain.lastName || 'Captain').toString();
+        members.unshift({ name: captainName, role: 'captain' });
       }
-    };
-    fetchTournaments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
+      return {
+        id: (t.id || t._id || '').toString(),
+        name: t.name || '',
+        tag: t.tag || '',
+        game: t.game || '',
+        tournamentId: t.tournamentId || null,
+        description: t.description || '',
+        members,
+        tournaments: Number(t.tournaments) || 0,
+        wins: Number(t.stats?.wins) || Number(t.wins) || 0,
+        winRate: Number(t.stats?.winRate) || Number(t.winRate) || 0,
+        isOwner: false
+      } as Team;
+    });
+  }, [teamsRaw]);
+
+  const tournaments = useMemo(() => {
+    const items: any[] = Array.isArray(tournamentsRaw) ? tournamentsRaw : [];
+    return items
+      .filter((item: any) => item?.id || item?._id)
+      .map((item: any) => ({
+        id: String(item.id || item._id),
+        name: String(item.name || item.title || 'Tournament'),
+        status: item.status
+      }));
+  }, [tournamentsRaw]);
+
+  const createTeamMutation = useMutation({
+    mutationFn: (payload: any) => teamsService.create(payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['teams'] });
+    },
+    onError: (e: any) => {
+      setActionError(e?.message || 'Failed to create team');
+    }
+  });
+
+  const joinTeamMutation = useMutation({
+    mutationFn: (payload: any) => teamsService.join(payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['teams'] });
+    },
+    onError: (e: any) => {
+      setActionError(e?.message || 'Failed to join team');
+    }
+  });
+
+  const error = actionError || (queryError as Error | null)?.message || null;
 
   const handleCreateTeam = async (teamData: any) => {
     try {
-      setError(null);
-      await api.post('/api/teams/create', {
+      setActionError(null);
+      await createTeamMutation.mutateAsync({
         name: teamData?.name,
         tag: teamData?.tag,
         game: teamData?.game,
@@ -451,9 +468,7 @@ const TeamsPage: React.FC = () => {
         isPrivate: Boolean(teamData?.isPrivate),
         requiresApproval: Boolean(teamData?.requiresApproval)
       });
-      await fetchTeams();
     } catch (e: any) {
-      setError(e?.message || 'Failed to create team');
       throw e;
     }
   };
@@ -461,17 +476,16 @@ const TeamsPage: React.FC = () => {
   const handleJoinTeam = async (team: Team) => {
     try {
       if (!team.tournamentId) {
-        setError('This team is not linked to a tournament');
+        setActionError('This team is not linked to a tournament');
         return;
       }
-      setError(null);
-      await api.post('/api/teams/join', {
+      setActionError(null);
+      await joinTeamMutation.mutateAsync({
         teamId: team.id,
         tournamentId: team.tournamentId
       });
-      await fetchTeams();
     } catch (e: any) {
-      setError(e?.message || 'Failed to join team');
+      setActionError(e?.message || 'Failed to join team');
     }
   };
 
@@ -547,7 +561,11 @@ const TeamsPage: React.FC = () => {
           {!loading && !error && (
             <TeamsGrid>
               {teams
-                .filter((team) => selectedGame === 'all' ? true : team.game.toLowerCase().includes(selectedGame.replace('-', ' ')))
+                .filter((team) => {
+                  if (selectedGame === 'all') return true;
+                  const safeGame = (team.game || '').toLowerCase();
+                  return safeGame.includes(selectedGame.replace('-', ' '));
+                })
                 .map(team => (
                   <TeamCard key={team.id}>
                     <TeamHeader>

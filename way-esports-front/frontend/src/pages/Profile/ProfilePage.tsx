@@ -9,6 +9,7 @@ import SubscriptionCard from '../../components/Subscription/SubscriptionCard';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 import { Link } from 'react-router-dom';
+import { useProfileQuery } from '../../hooks/useProfileQuery';
 
 const Bio = styled.p`
   line-height: 1.6;
@@ -241,7 +242,9 @@ const AchievementDescription = styled.div`
 `;
 
 const ProfilePage: React.FC = () => {
-  const { user, fetchProfile } = useAuth();
+  const { user } = useAuth();
+  const { data: profileData, refetch: refetchProfile } = useProfileQuery();
+  const profile = profileData || user;
   const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [isSubscriptionOpen, setIsSubscriptionOpen] = useState(false);
   const [isPhotoUploadOpen, setIsPhotoUploadOpen] = useState(false);
@@ -251,16 +254,16 @@ const ProfilePage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (user?.bio) {
-      setNewBio(user.bio);
+    if (profile?.bio) {
+      setNewBio(profile.bio);
     }
-  }, [user]);
+  }, [profile]);
 
   const handleSaveBio = async () => {
     try {
       setIsSaving(true);
       await api.patch('/api/profile', { bio: newBio });
-      await fetchProfile();
+      await refetchProfile();
       setIsEditingBio(false);
     } catch (error) {
       console.error('Error saving bio:', error);
@@ -278,7 +281,7 @@ const ProfilePage: React.FC = () => {
       await api.post('/api/profile/upload-logo', { logoUrl: url });
 
       // Refresh profile to get updated data
-      await fetchProfile();
+      await refetchProfile();
     } catch (error) {
       console.error('Error in photo upload:', error);
     } finally {
@@ -297,49 +300,49 @@ const ProfilePage: React.FC = () => {
     <Container>
       <ProfileHeader>
         <Avatar
-          $hasImage={!!user?.profileLogo}
-          $imageUrl={user?.profileLogo}
+          $hasImage={!!profile?.profileLogo}
+          $imageUrl={profile?.profileLogo}
           onClick={() => setIsPhotoUploadOpen(true)}
         >
-          {user?.profileLogo ? (
-            <AvatarImage src={getFullAvatarUrl(user.profileLogo) || ''} alt="Profile" />
+          {profile?.profileLogo ? (
+            <AvatarImage src={getFullAvatarUrl(profile.profileLogo) || ''} alt="Profile" />
           ) : (
-            user?.username?.charAt(0).toUpperCase() || '👤'
+            profile?.username?.charAt(0).toUpperCase() || '👤'
           )}
         </Avatar>
         <ProfileInfo>
           <ProfileTop>
             <div>
-              <Username>{user?.username || 'Gamer'}</Username>
-              <UserOrg>{user?.email || 'WAY Esports Member'}</UserOrg>
-              <Link to={`/profile/${user?.id}`} style={{ color: '#ff6b00', fontSize: '0.9rem', textDecoration: 'none' }}>
+              <Username>{profile?.username || 'Gamer'}</Username>
+              <UserOrg>{profile?.email || 'WAY Esports Member'}</UserOrg>
+              <Link to={`/profile/${profile?.id || user?.id}`} style={{ color: '#ff6b00', fontSize: '0.9rem', textDecoration: 'none' }}>
                 🔗 View Public Profile
               </Link>
             </div>
             <div>
               <SubscriptionButton onClick={() => setIsSubscriptionOpen(true)}>
-                {user?.isSubscribed ? 'MANAGE SUBSCRIPTION' : 'GET SUBSCRIPTION'}
+                {profile?.isSubscribed ? 'MANAGE SUBSCRIPTION' : 'GET SUBSCRIPTION'}
               </SubscriptionButton>
               <WalletButton onClick={() => setIsWalletOpen(true)}>
-                💰 {user?.balance?.toFixed(2) || '0.00'}
+                💰 {profile?.balance?.toFixed(2) || '0.00'}
               </WalletButton>
             </div>
           </ProfileTop>
           <UserStats>
             <StatItem>
-              <StatValue>{user?.stats?.matches || 0}</StatValue>
+              <StatValue>{profile?.stats?.matches || 0}</StatValue>
               <StatLabel>Matches</StatLabel>
             </StatItem>
             <StatItem>
-              <StatValue>{user?.stats?.wins || 0}</StatValue>
+              <StatValue>{profile?.stats?.wins || 0}</StatValue>
               <StatLabel>Wins</StatLabel>
             </StatItem>
             <StatItem>
-              <StatValue>{user?.stats?.mvps || 0}</StatValue>
+              <StatValue>{profile?.stats?.mvps || 0}</StatValue>
               <StatLabel>MVPs</StatLabel>
             </StatItem>
             <StatItem>
-              <StatValue>{user?.stats?.kdRatio || '0.00'}</StatValue>
+              <StatValue>{profile?.stats?.kdRatio || '0.00'}</StatValue>
               <StatLabel>K/D Ratio</StatLabel>
             </StatItem>
           </UserStats>
@@ -380,7 +383,7 @@ const ProfilePage: React.FC = () => {
                 placeholder="Tell the world about yourself..."
               />
             ) : (
-              <Bio style={{ marginTop: 0 }}>{user?.bio || "No bio set yet. Tell people who you are!"}</Bio>
+              <Bio style={{ marginTop: 0 }}>{profile?.bio || "No bio set yet. Tell people who you are!"}</Bio>
             )}
           </div>
         </ProfileInfo>

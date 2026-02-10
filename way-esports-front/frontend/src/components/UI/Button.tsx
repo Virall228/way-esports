@@ -16,12 +16,12 @@ const getButtonStyles = (variant: ButtonVariant = 'primary') => {
   switch (variant) {
     case 'primary':
       return css`
-        background: linear-gradient(180deg, ${({ theme }) => theme.colors.gray[800]} 0%, ${({ theme }) => theme.colors.gray[900]} 100%);
-        color: ${({ theme }) => theme.colors.white};
-        border: 1px solid ${({ theme }) => theme.colors.border.medium};
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), ${({ theme }) => theme.shadows.sm};
+        background: rgba(255, 255, 255, 0.08);
+        color: ${({ theme }) => theme.colors.text.primary};
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
         &:hover:not(:disabled) {
-          background: linear-gradient(180deg, ${({ theme }) => theme.colors.gray[700]} 0%, ${({ theme }) => theme.colors.gray[800]} 100%);
+          background: rgba(255, 255, 255, 0.14);
           border-color: ${({ theme }) => theme.colors.border.strong};
         }
         &:active {
@@ -30,19 +30,21 @@ const getButtonStyles = (variant: ButtonVariant = 'primary') => {
       `;
     case 'secondary':
       return css`
-        background: ${({ theme }) => theme.colors.secondary};
-        color: ${({ theme }) => theme.colors.white};
+        background: rgba(255, 255, 255, 0.05);
+        color: ${({ theme }) => theme.colors.text.secondary};
+        border: 1px solid rgba(255, 255, 255, 0.12);
         &:hover:not(:disabled) {
-          filter: brightness(110%);
+          color: ${({ theme }) => theme.colors.text.primary};
+          background: rgba(255, 255, 255, 0.1);
         }
       `;
     case 'outline':
       return css`
         background: transparent;
         color: ${({ theme }) => theme.colors.text.primary};
-        border: 1px solid ${({ theme }) => theme.colors.border.medium};
+        border: 1px solid rgba(255, 255, 255, 0.2);
         &:hover:not(:disabled) {
-          background: ${({ theme }) => theme.colors.bg.elevated};
+          background: rgba(255, 255, 255, 0.06);
         }
       `;
     case 'text':
@@ -89,6 +91,8 @@ const StyledButton = styled.button<ButtonProps>`
   cursor: pointer;
   transition: all ${({ theme }) => theme.transitions.fast};
   width: ${({ fullWidth }) => fullWidth ? '100%' : 'auto'};
+  min-height: 44px;
+  backdrop-filter: blur(12px);
 
   ${({ variant }) => getButtonStyles(variant)}
   ${({ size }) => getButtonSize(size)}

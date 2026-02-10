@@ -24,57 +24,151 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NotificationProvider, useNotifications } from './contexts/NotificationContext';
 import { api } from './services/api';
 
-// Styled components for clean black/white/gray design
-// (Keeping existing styled components)
-const AppContainer = styled.div`
+type NavItem = {
+  label: string;
+  to: string;
+  icon: string;
+  adminOnly?: boolean;
+};
+
+const AppShell = styled.div`
   min-height: 100vh;
-  background: ${eslTheme.colors.bg.primary};
+  background:
+    radial-gradient(900px 600px at 10% -10%, rgba(255, 255, 255, 0.06), transparent 60%),
+    radial-gradient(800px 500px at 90% -20%, rgba(255, 255, 255, 0.04), transparent 60%),
+    ${eslTheme.colors.bg.primary};
   color: ${eslTheme.colors.text.primary};
   font-family: ${eslTheme.fonts.primary};
+  display: flex;
+  width: 100%;
 `;
 
-const Header = styled.header`
-  background: linear-gradient(180deg, ${eslTheme.colors.bg.secondary} 0%, ${eslTheme.colors.bg.tertiary} 100%);
-  border-bottom: 1px solid ${eslTheme.colors.border.medium};
-  padding: 0.75rem 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+const Sidebar = styled.aside`
+  display: none;
+  width: 260px;
+  min-width: 240px;
+  padding: 1.5rem 1rem;
+  background: rgba(17, 17, 17, 0.7);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
   position: sticky;
   top: 0;
-  z-index: 100;
-  backdrop-filter: saturate(140%) blur(8px);
-
-  @media (max-width: ${eslTheme.breakpoints.tablet}) {
-    display: none;
-  }
+  height: 100vh;
 
   @media (min-width: ${eslTheme.breakpoints.tablet}) {
-    padding: 0.75rem 1.5rem;
-  }
-
-  @media (min-width: ${eslTheme.breakpoints.desktop}) {
-    padding: 0.75rem 2rem;
-  }
-`;
-
-const Logo = styled.h1`
-  font-family: ${eslTheme.fonts.accent};
-  font-size: 1.5rem;
-  font-weight: ${eslTheme.fontWeights.bold};
-  color: ${eslTheme.colors.white};
-  text-transform: uppercase;
-  letter-spacing: 2px;
-`;
-
-const Navigation = styled.nav`
-  display: none;
-  gap: 1rem;
-  align-items: center;
-
-  @media (min-width: ${eslTheme.breakpoints.desktop}) {
     display: flex;
+    flex-direction: column;
   }
+`;
+
+const SidebarBrand = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const Logo = styled.div`
+  font-family: ${eslTheme.fonts.title};
+  font-size: 1.2rem;
+  font-weight: ${eslTheme.fontWeights.bold};
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: ${eslTheme.colors.white};
+`;
+
+const BrandSub = styled.div`
+  font-size: 0.75rem;
+  color: ${eslTheme.colors.text.secondary};
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+`;
+
+const SidebarNav = styled.nav`
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+`;
+
+const NavItemLink = styled(Link) <{ $active?: boolean; $compact?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: ${({ $compact }) => ($compact ? '0.6rem 0.75rem' : '0.75rem 0.9rem')};
+  border-radius: 12px;
+  text-decoration: none;
+  color: ${({ $active }) => ($active ? eslTheme.colors.text.primary : eslTheme.colors.text.secondary)};
+  background: ${({ $active }) => ($active ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.03)')};
+  border: 1px solid ${({ $active }) => ($active ? eslTheme.colors.border.strong : 'rgba(255, 255, 255, 0.08)')};
+  transition: all ${eslTheme.transitions.fast};
+  backdrop-filter: blur(12px);
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: ${eslTheme.colors.text.primary};
+      border-color: ${eslTheme.colors.border.strong};
+      transform: translateY(-1px);
+    }
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+`;
+
+const NavItemIcon = styled.span`
+  font-size: 1rem;
+  line-height: 1;
+`;
+
+const NavItemLabel = styled.span`
+  font-family: ${eslTheme.fonts.accent};
+  font-size: 0.85rem;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+`;
+
+const ContentColumn = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+`;
+
+const TopBar = styled.header`
+  position: sticky;
+  top: 0;
+  z-index: 140;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(12, 12, 12, 0.8);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+
+  @media (min-width: ${eslTheme.breakpoints.tablet}) {
+    padding: 0.9rem 1.5rem;
+  }
+
+  @media (min-width: ${eslTheme.breakpoints.desktop}) {
+    padding: 1rem 2rem;
+  }
+`;
+
+const TopBarTitle = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+
+const TopBarBadge = styled.span`
+  font-size: 0.7rem;
+  color: ${eslTheme.colors.text.secondary};
+  text-transform: uppercase;
+  letter-spacing: 1px;
 `;
 
 const BurgerButton = styled.button`
@@ -83,22 +177,18 @@ const BurgerButton = styled.button`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: ${eslTheme.borderRadius.md};
-  border: 1px solid ${eslTheme.colors.border.medium};
-  background: linear-gradient(180deg, ${eslTheme.colors.gray[800]} 0%, ${eslTheme.colors.gray[900]} 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
   color: ${eslTheme.colors.text.primary};
 
-  @media (min-width: ${eslTheme.breakpoints.desktop}) {
-    display: none;
-  }
-
-  @media (max-width: ${eslTheme.breakpoints.tablet}) {
+  @media (min-width: ${eslTheme.breakpoints.tablet}) {
     display: none;
   }
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      background: ${eslTheme.colors.bg.elevated};
+      background: rgba(255, 255, 255, 0.12);
       border-color: ${eslTheme.colors.border.strong};
     }
   }
@@ -106,6 +196,83 @@ const BurgerButton = styled.button`
   &:active {
     transform: translateY(1px);
   }
+`;
+
+const MainContent = styled.main`
+  flex: 1;
+  padding: 1rem 1rem calc(88px + var(--sab, 0px));
+
+  @media (min-width: ${eslTheme.breakpoints.tablet}) {
+    padding: 1.5rem 2rem 2rem;
+  }
+
+  @media (min-width: ${eslTheme.breakpoints.desktop}) {
+    padding: 2rem 2.5rem 2.5rem;
+  }
+`;
+
+const ContentInner = styled.div`
+  width: min(100%, 1200px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+`;
+
+const Footer = styled.footer`
+  background: rgba(10, 10, 10, 0.8);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 1.5rem 1rem;
+  text-align: center;
+  color: ${eslTheme.colors.text.secondary};
+  font-size: 0.875rem;
+
+  @media (max-width: ${eslTheme.breakpoints.tablet}) {
+    display: none;
+  }
+`;
+
+const BottomNav = styled.nav`
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 150;
+  display: flex;
+  gap: 6px;
+  padding: 10px 10px calc(10px + var(--sab, 0px));
+  background: rgba(12, 12, 12, 0.85);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  overflow-x: auto;
+
+  @media (min-width: ${eslTheme.breakpoints.tablet}) {
+    display: none;
+  }
+`;
+
+const BottomNavItem = styled(Link) <{ $active?: boolean }>`
+  flex: 0 0 auto;
+  min-width: 68px;
+  min-height: 48px;
+  border-radius: 12px;
+  border: 1px solid ${({ $active }) => ($active ? eslTheme.colors.border.strong : 'transparent')};
+  background: ${({ $active }) => ($active ? 'rgba(255, 255, 255, 0.1)' : 'transparent')};
+  color: ${({ $active }) => ($active ? eslTheme.colors.text.primary : eslTheme.colors.text.secondary)};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  text-decoration: none;
+`;
+
+const BottomNavIcon = styled.span`
+  font-size: 16px;
+  line-height: 1;
 `;
 
 const MobileMenuOverlay = styled.div<{ $open: boolean }>`
@@ -116,7 +283,7 @@ const MobileMenuOverlay = styled.div<{ $open: boolean }>`
   z-index: 200;
   display: ${({ $open }) => ($open ? 'block' : 'none')};
 
-  @media (min-width: ${eslTheme.breakpoints.desktop}) {
+  @media (min-width: ${eslTheme.breakpoints.tablet}) {
     display: none;
   }
 `;
@@ -124,11 +291,11 @@ const MobileMenuOverlay = styled.div<{ $open: boolean }>`
 const MobileMenuPanel = styled.div`
   position: absolute;
   top: 0;
-  right: 0;
+  left: 0;
   height: 100%;
   width: min(86vw, 360px);
-  background: ${eslTheme.colors.bg.secondary};
-  border-left: 1px solid ${eslTheme.colors.border.medium};
+  background: rgba(15, 15, 15, 0.92);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -154,14 +321,14 @@ const CloseButton = styled.button`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: ${eslTheme.borderRadius.md};
-  border: 1px solid ${eslTheme.colors.border.medium};
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   background: transparent;
   color: ${eslTheme.colors.text.primary};
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      background: ${eslTheme.colors.bg.elevated};
+      background: rgba(255, 255, 255, 0.12);
       border-color: ${eslTheme.colors.border.strong};
     }
   }
@@ -170,174 +337,35 @@ const CloseButton = styled.button`
     transform: translateY(1px);
   }
 `;
-
-const NavButton = styled.button`
-  font-family: ${eslTheme.fonts.accent};
-  font-size: 0.85rem;
-  font-weight: ${eslTheme.fontWeights.medium};
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  border-radius: ${eslTheme.borderRadius.sm};
-  transition: all ${eslTheme.transitions.fast};
-  cursor: pointer;
-  padding: 0.55rem 0.9rem;
-  min-height: 44px;
-  background: linear-gradient(180deg, ${eslTheme.colors.gray[800]} 0%, ${eslTheme.colors.gray[900]} 100%);
-  color: ${eslTheme.colors.text.secondary};
-  border: 1px solid ${eslTheme.colors.border.medium};
-
-  @media (hover: hover) and (pointer: fine) {
-    &:hover {
-      background: ${eslTheme.colors.bg.elevated};
-      color: ${eslTheme.colors.text.primary};
-      border-color: ${eslTheme.colors.border.strong};
-    }
-  }
-  
-  &:active {
-    transform: translateY(1px);
-  }
-`;
-
-const MainContent = styled.main`
-  padding: 1rem;
-  width: 100%;
-  margin: 0 auto;
-  min-height: calc(var(--app-height, 100vh) - 56px - var(--sab, 0px));
-  padding-bottom: calc(80px + var(--sab, 0px)); /* Increased for bottom nav */
-  display: flex;
-  flex-direction: column;
-
-  @media (max-width: ${eslTheme.breakpoints.tablet}) {
-    padding-top: calc(0.5rem + var(--sat, 0px));
-    padding-left: 1rem;
-    padding-right: 1rem;
-    padding-bottom: calc(90px + var(--sab, 0px));
-  }
-
-  @media (min-width: ${eslTheme.breakpoints.tablet}) {
-    padding-bottom: 2rem;
-    min-height: calc(100vh - 80px); /* Adjust for header */
-    padding: 1.5rem;
-    width: min(100% - 3rem, 1200px);
-  }
-
-  @media (min-width: ${eslTheme.breakpoints.desktop}) {
-    padding: 2rem;
-    width: min(100% - 4rem, 1200px);
-  }
-`;
-
-const Footer = styled.footer`
-  background: ${eslTheme.colors.bg.secondary};
-  border-top: 1px solid ${eslTheme.colors.border.medium};
-  padding: 1.5rem 1rem;
-  text-align: center;
-  color: ${eslTheme.colors.text.secondary};
-  font-size: 0.875rem;
-
-  @media (min-width: ${eslTheme.breakpoints.tablet}) {
-    padding: 2rem 1.5rem;
-  }
-
-  @media (min-width: ${eslTheme.breakpoints.desktop}) {
-    padding: 2rem;
-  }
-
-  @media (max-width: ${eslTheme.breakpoints.tablet}) {
-    display: none;
-  }
-`;
-
-const BottomNav = styled.nav`
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 150;
-  display: flex;
-  justify-content: space-around;
-  gap: 6px;
-  padding: 10px 10px calc(10px + var(--sab, 0px));
-  background: rgba(17, 17, 17, 0.92);
-  border-top: 1px solid ${eslTheme.colors.border.medium};
-  backdrop-filter: blur(10px);
-
-  @media (min-width: ${eslTheme.breakpoints.tablet}) {
-    display: none;
-  }
-`;
-
-const BottomNavItem = styled(Link) <{ $active?: boolean }>`
-  flex: 1;
-  min-height: 44px;
-  border-radius: ${eslTheme.borderRadius.md};
-  border: 1px solid ${({ $active }) => ($active ? eslTheme.colors.border.strong : 'transparent')};
-  background: ${({ $active }) => ($active ? eslTheme.colors.bg.elevated : 'transparent')};
-  color: ${({ $active }) => ($active ? eslTheme.colors.text.primary : eslTheme.colors.text.secondary)};
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-`;
-
-const BottomNavIcon = styled.span`
-  font-size: 16px;
-  line-height: 1;
-`;
-
-
-
-const MobileShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const location = useLocation();
-  const { user } = useAuth();
-
-  return (
-    <>
-      {children}
-      <BottomNav>
-        <BottomNavItem to="/" $active={location.pathname === '/'}>
-          <BottomNavIcon>🏠</BottomNavIcon>
-          Home
-        </BottomNavItem>
-        <BottomNavItem to="/tournaments" $active={location.pathname.startsWith('/tournaments')}>
-          <BottomNavIcon>🏆</BottomNavIcon>
-          Tours
-        </BottomNavItem>
-        <BottomNavItem to="/teams" $active={location.pathname.startsWith('/teams')}>
-          <BottomNavIcon>👥</BottomNavIcon>
-          Teams
-        </BottomNavItem>
-        <BottomNavItem to="/news" $active={location.pathname.startsWith('/news')}>
-          <BottomNavIcon>📰</BottomNavIcon>
-          News
-        </BottomNavItem>
-        {(user?.role === 'admin' || user?.role === 'developer') ? (
-          <BottomNavItem to="/admin" $active={location.pathname.startsWith('/admin')}>
-            <BottomNavIcon>⚙️</BottomNavIcon>
-            Admin
-          </BottomNavItem>
-        ) : (
-          <BottomNavItem to="/profile" $active={location.pathname.startsWith('/profile')}>
-            <BottomNavIcon>👤</BottomNavIcon>
-            Profile
-          </BottomNavItem>
-        )}
-      </BottomNav>
-    </>
-  );
-};
 
 const AppContent: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const { addNotification } = useNotifications();
   const { user } = useAuth();
+  const location = useLocation();
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
+
+  const navItems = React.useMemo<NavItem[]>(() => {
+    const items: NavItem[] = [
+      { label: 'Home', to: '/', icon: '🏠' },
+      { label: 'Tournaments', to: '/tournaments', icon: '🏆' },
+      { label: 'Teams', to: '/teams', icon: '👥' },
+      { label: 'News', to: '/news', icon: '📰' },
+      { label: 'Profile', to: '/profile', icon: '👤' }
+    ];
+
+    if (user?.role === 'admin' || user?.role === 'developer') {
+      items.push({ label: 'Admin', to: '/admin', icon: '⚙️', adminOnly: true });
+    }
+
+    return items;
+  }, [user]);
+
+  const isActive = (path: string) => {
+    if (path === '/') return location.pathname === '/';
+    return location.pathname.startsWith(path);
+  };
 
   React.useEffect(() => {
     // Initialize API notification handler
@@ -385,23 +413,56 @@ const AppContent: React.FC = () => {
   }, []);
 
   return (
-    <AppContainer>
-      <Header>
-        <Logo>WAY ESPORTS</Logo>
-        <BurgerButton type="button" onClick={() => setMobileMenuOpen(true)} aria-label="Open menu">
-          ☰
-        </BurgerButton>
-        <Navigation>
-          <Link to="/"><NavButton as="span">Home</NavButton></Link>
-          <Link to="/tournaments"><NavButton as="span">Tournaments</NavButton></Link>
-          <Link to="/teams"><NavButton as="span">Teams</NavButton></Link>
-          <Link to="/news"><NavButton as="span">News</NavButton></Link>
-          <Link to="/profile"><NavButton as="span">Profile</NavButton></Link>
-          {(user?.role === 'admin' || user?.role === 'developer') && (
-            <Link to="/admin"><NavButton as="span">Admin</NavButton></Link>
-          )}
-        </Navigation>
-      </Header>
+    <AppShell>
+      <Sidebar>
+        <SidebarBrand>
+          <Logo>WAY ESPORTS</Logo>
+          <BrandSub>Unified Arena</BrandSub>
+        </SidebarBrand>
+        <SidebarNav>
+          {navItems.map((item) => (
+            <NavItemLink key={item.to} to={item.to} $active={isActive(item.to)}>
+              <NavItemIcon>{item.icon}</NavItemIcon>
+              <NavItemLabel>{item.label}</NavItemLabel>
+            </NavItemLink>
+          ))}
+        </SidebarNav>
+      </Sidebar>
+
+      <ContentColumn>
+        <TopBar>
+          <TopBarTitle>
+            <Logo>WAY ESPORTS</Logo>
+            <TopBarBadge>One Platform · One UI</TopBarBadge>
+          </TopBarTitle>
+          <BurgerButton type="button" onClick={() => setMobileMenuOpen(true)} aria-label="Open menu">
+            ☰
+          </BurgerButton>
+        </TopBar>
+
+        <MainContent>
+          <ContentInner>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/tournaments" element={<Tournaments />} />
+              <Route path="/tournaments/:id" element={<TournamentDetailsPage />} />
+              <Route path="/teams" element={<Teams />} />
+              <Route path="/news" element={<News />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/profile/:id" element={<PublicProfilePage />} />
+              <Route path="/team/:id" element={<TeamPage />} />
+              <Route path="/billing" element={<BillingPage />} />
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </ContentInner>
+        </MainContent>
+
+        <Footer>
+          <p>© 2024 WAY ESPORTS. All rights reserved.</p>
+          <p>Powered by Professional Gaming Technology</p>
+        </Footer>
+      </ContentColumn>
 
       <MobileMenuOverlay $open={mobileMenuOpen} onClick={closeMobileMenu}>
         <MobileMenuPanel onClick={(e) => e.stopPropagation()}>
@@ -412,40 +473,30 @@ const AppContent: React.FC = () => {
             </CloseButton>
           </MobileMenuHeader>
 
-          <Link to="/" onClick={closeMobileMenu}><NavButton as="span">Home</NavButton></Link>
-          <Link to="/tournaments" onClick={closeMobileMenu}><NavButton as="span">Tournaments</NavButton></Link>
-          <Link to="/teams" onClick={closeMobileMenu}><NavButton as="span">Teams</NavButton></Link>
-          <Link to="/news" onClick={closeMobileMenu}><NavButton as="span">News</NavButton></Link>
-          <Link to="/profile" onClick={closeMobileMenu}><NavButton as="span">Profile</NavButton></Link>
-          {(user?.role === 'admin' || user?.role === 'developer') && (
-            <Link to="/admin" onClick={closeMobileMenu}><NavButton as="span">Admin</NavButton></Link>
-          )}
+          {navItems.map((item) => (
+            <NavItemLink
+              key={item.to}
+              to={item.to}
+              $active={isActive(item.to)}
+              $compact
+              onClick={closeMobileMenu}
+            >
+              <NavItemIcon>{item.icon}</NavItemIcon>
+              <NavItemLabel>{item.label}</NavItemLabel>
+            </NavItemLink>
+          ))}
         </MobileMenuPanel>
       </MobileMenuOverlay>
 
-      <MobileShell>
-        <MainContent>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/tournaments" element={<Tournaments />} />
-            <Route path="/tournaments/:id" element={<TournamentDetailsPage />} />
-            <Route path="/teams" element={<Teams />} />
-            <Route path="/news" element={<News />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/profile/:id" element={<PublicProfilePage />} />
-            <Route path="/team/:id" element={<TeamPage />} />
-            <Route path="/billing" element={<BillingPage />} />
-            <Route path="/admin" element={<AdminPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </MainContent>
-      </MobileShell>
-
-      <Footer>
-        <p>© 2024 WAY ESPORTS. All rights reserved.</p>
-        <p>Powered by Professional Gaming Technology</p>
-      </Footer>
-    </AppContainer>
+      <BottomNav>
+        {navItems.map((item) => (
+          <BottomNavItem key={item.to} to={item.to} $active={isActive(item.to)}>
+            <BottomNavIcon>{item.icon}</BottomNavIcon>
+            {item.label}
+          </BottomNavItem>
+        ))}
+      </BottomNav>
+    </AppShell>
   );
 };
 

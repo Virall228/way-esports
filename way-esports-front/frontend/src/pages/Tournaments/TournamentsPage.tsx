@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import styled from 'styled-components';
-import { api } from '../../services/api';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTournamentAccess } from '../../hooks/useTournamentAccess';
 import TournamentRegistrationGuard from '../../components/Tournament/TournamentRegistrationGuard';
 import navigationService from '../../services/NavigationService';
-import CreateTeamModal from '../../components/Teams/CreateTeamModal';
+import { tournamentService } from '../../services/tournamentService';
 
 const Container = styled.div`
   padding: 1rem;
@@ -259,59 +259,47 @@ interface Tournament {
 const TournamentsPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState('all');
   const [activeGame, setActiveGame] = useState('all');
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [showGuard, setShowGuard] = useState(false);
   const [pendingTournamentId, setPendingTournamentId] = useState<string | null>(null);
 
   const { joinTournament } = useTournamentAccess();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const res: any = await api.get('/api/tournaments');
-        const items: any[] = (res && (res.data || res.tournaments)) || [];
+  const { data: tournamentsRaw = [], isLoading: loading, error } = useQuery({
+    queryKey: ['tournaments'],
+    queryFn: async () => {
+      const res: any = await tournamentService.list();
+      return (res && (res.data || res.tournaments)) || [];
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
 
-        const mapped: Tournament[] = items.map((t: any) => {
-          const rawStatus = (t.status || '').toString();
-          let status: Tournament['status'] = 'upcoming';
-          if (rawStatus === 'completed') status = 'completed';
-          else if (['in_progress', 'ongoing', 'live'].includes(rawStatus)) status = 'live';
-          else if (!rawStatus) status = 'comingSoon';
+  const tournaments = useMemo(() => {
+    const items: any[] = Array.isArray(tournamentsRaw) ? tournamentsRaw : [];
+    return items.map((t: any) => {
+      const rawStatus = (t.status || '').toString();
+      let status: Tournament['status'] = 'upcoming';
+      if (rawStatus === 'completed') status = 'completed';
+      else if (['in_progress', 'ongoing', 'live'].includes(rawStatus)) status = 'live';
+      else if (!rawStatus) status = 'comingSoon';
 
-          const prize = Number(t.prizePool || 0);
+      const prize = Number(t.prizePool || 0);
 
-          return {
-            id: (t.id || t._id || '').toString(),
-            title: t.title || t.name || '',
-            game: t.game || 'Unknown',
-            status,
-            prizePool: prize ? `$${prize.toLocaleString()}` : 'TBD',
-            participants: Number(t.participants ?? t.currentParticipants ?? 0),
-            maxParticipants: Number(t.maxParticipants ?? t.maxTeams ?? 0),
-            date: t.startDate ? new Date(t.startDate).toLocaleDateString() : 'TBD',
-            format: t.format || 'Standard'
-          };
-        });
-
-        if (!mounted) return;
-        setTournaments(mapped);
-      } catch (e: any) {
-        if (!mounted) return;
-        setError(e?.message || 'Failed to load tournaments');
-      } finally {
-        if (!mounted) return;
-        setLoading(false);
-      }
-    };
-    load();
-    return () => { mounted = false; };
-  }, []);
+      return {
+        id: (t.id || t._id || '').toString(),
+        title: t.title || t.name || '',
+        game: t.game || 'Unknown',
+        status,
+        prizePool: prize ? `$${prize.toLocaleString()}` : 'TBD',
+        participants: Number(t.participants ?? t.currentParticipants ?? 0),
+        maxParticipants: Number(t.maxParticipants ?? t.maxTeams ?? 0),
+        date: t.startDate ? new Date(t.startDate).toLocaleDateString() : 'TBD',
+        format: t.format || 'Standard'
+      } as Tournament;
+    });
+  }, [tournamentsRaw]);
 
   const filteredTournaments = useMemo(() => {
     return tournaments.filter(t => {
@@ -341,7 +329,7 @@ const TournamentsPage: React.FC = () => {
     if (!pendingTournamentId) return;
     try {
       await joinTournament(pendingTournamentId);
-      window.location.reload();
+      await queryClient.invalidateQueries({ queryKey: ['tournaments'] });
     } catch (e) {
       console.error('Join failed', e);
     } finally {

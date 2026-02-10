@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import styled from 'styled-components';
-import { api } from '../../services/api';
+import { useQuery } from '@tanstack/react-query';
 import Card from '../../components/UI/Card';
+import { teamsService } from '../../services/teamsService';
 
 const Container = styled.div`
   padding: 2rem 1rem;
@@ -132,7 +133,7 @@ const AvatarPlaceholder = styled.div`
   background: linear-gradient(135deg, #667eea, #764ba2);
   display: flex;
   align-items: center;
-  justifycontent: center;
+  justify-content: center;
   font-weight: bold;
   color: white;
 `;
@@ -153,30 +154,26 @@ const AchievementCard = styled(Card)`
 
 const TeamPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [team, setTeam] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchTeam = async () => {
-      try {
-        setLoading(true);
-        const res: any = await api.get(`/api/teams/${id}`);
-        if (res.success) {
-          setTeam(res.data);
-        }
-      } catch (err: any) {
-        setError(err?.message || 'Failed to load team');
-      } finally {
-        setLoading(false);
+  const { data: team, isLoading, error } = useQuery({
+    queryKey: ['team', id],
+    queryFn: async () => {
+      if (!id) return null;
+      const res: any = await teamsService.getById(id);
+      if (res?.success === false) {
+        throw new Error(res?.error || 'Team not found');
       }
-    };
+      return res?.data || res;
+    },
+    enabled: Boolean(id),
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
 
-    if (id) fetchTeam();
-  }, [id]);
-
-  if (loading) return <Container><div style={{ textAlign: 'center', padding: '3rem' }}>Loading team details...</div></Container>;
-  if (error || !team) return <Container><div style={{ textAlign: 'center', padding: '3rem', color: '#ff6b6b' }}>{error || 'Team not found'}</div></Container>;
+  if (isLoading) return <Container><div style={{ textAlign: 'center', padding: '3rem' }}>Loading team details...</div></Container>;
+  if (error || !team) {
+    const message = (error as Error | undefined)?.message || 'Team not found';
+    return <Container><div style={{ textAlign: 'center', padding: '3rem', color: '#ff6b6b' }}>{message}</div></Container>;
+  }
 
   const totalPrizeMoney = team.stats?.totalPrizeMoney || 0;
   const wins = team.stats?.wins || 0;

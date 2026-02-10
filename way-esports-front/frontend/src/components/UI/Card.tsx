@@ -16,18 +16,23 @@ const getCardStyles = (variant: CardVariant = 'default') => {
   switch (variant) {
     case 'default':
       return css`
-        background: ${({ theme }) => theme.colors.surface};
-        box-shadow: ${({ theme }) => theme.shadows.small};
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 16px 30px rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(16px);
       `;
     case 'outlined':
       return css`
-        background: transparent;
-        border: 1px solid ${({ theme }) => theme.colors.text.disabled};
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        backdrop-filter: blur(12px);
       `;
     case 'elevated':
       return css`
-        background: ${({ theme }) => theme.colors.surface};
-        box-shadow: ${({ theme }) => theme.shadows.large};
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        box-shadow: 0 24px 40px rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(20px);
       `;
   }
 };
