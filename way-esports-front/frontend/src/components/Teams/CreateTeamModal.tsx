@@ -203,14 +203,16 @@ const ErrorMessage = styled.div`
 interface CreateTeamModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateTeam: (teamData: any) => void;
+  onCreateTeam: (teamData: any) => Promise<void> | void;
+  tournaments: Array<{ id: string; name: string; status?: string }>;
 }
 
-const CreateTeamModal: React.FC<CreateTeamModalProps> = ({ isOpen, onClose, onCreateTeam }) => {
+const CreateTeamModal: React.FC<CreateTeamModalProps> = ({ isOpen, onClose, onCreateTeam, tournaments }) => {
   const [formData, setFormData] = useState({
     name: '',
     tag: '',
     game: '',
+    tournamentId: '',
     description: '',
     isPrivate: false,
     requiresApproval: true
@@ -251,25 +253,34 @@ const CreateTeamModal: React.FC<CreateTeamModalProps> = ({ isOpen, onClose, onCr
       newErrors.game = 'Please select a game';
     }
 
+    if (!formData.tournamentId) {
+      newErrors.tournamentId = 'Please select a tournament';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (validateForm()) {
-      onCreateTeam(formData);
-      onClose();
-      // Reset form
-      setFormData({
-        name: '',
-        tag: '',
-        game: '',
-        description: '',
-        isPrivate: false,
-        requiresApproval: true
-      });
+      try {
+        await onCreateTeam(formData);
+        onClose();
+        // Reset form
+        setFormData({
+          name: '',
+          tag: '',
+          game: '',
+          tournamentId: '',
+          description: '',
+          isPrivate: false,
+          requiresApproval: true
+        });
+      } catch {
+        // Keep modal open to show error on page
+      }
     }
   };
 
@@ -327,6 +338,24 @@ const CreateTeamModal: React.FC<CreateTeamModalProps> = ({ isOpen, onClose, onCr
               <option value="rainbow-six">Rainbow Six Siege</option>
             </Select>
             {errors.game && <ErrorMessage>{errors.game}</ErrorMessage>}
+          </FormGroup>
+
+          <FormGroup>
+            <Label htmlFor="tournamentId">Tournament *</Label>
+            <Select
+              id="tournamentId"
+              name="tournamentId"
+              value={formData.tournamentId}
+              onChange={handleInputChange}
+            >
+              <option value="">Select a tournament</option>
+              {tournaments.map((tournament) => (
+                <option key={tournament.id} value={tournament.id}>
+                  {tournament.name}
+                </option>
+              ))}
+            </Select>
+            {errors.tournamentId && <ErrorMessage>{errors.tournamentId}</ErrorMessage>}
           </FormGroup>
 
           <FormGroup>

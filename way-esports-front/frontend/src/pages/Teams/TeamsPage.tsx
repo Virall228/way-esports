@@ -351,6 +351,7 @@ interface Team {
   name: string;
   tag: string;
   game: string;
+  tournamentId?: string | null;
   description: string;
   members: Array<{ name: string; role: 'captain' | 'player' }>;
   tournaments: number;
@@ -365,6 +366,7 @@ const TeamsPage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const [teams, setTeams] = useState<Team[]>([]);
+  const [tournaments, setTournaments] = useState<Array<{ id: string; name: string; status?: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -397,6 +399,7 @@ const TeamsPage: React.FC = () => {
           name: t.name || '',
           tag: t.tag || '',
           game: t.game || '',
+          tournamentId: t.tournamentId || null,
           description: t.description || '',
           members,
           tournaments: Number(t.tournaments) || 0,
@@ -416,16 +419,34 @@ const TeamsPage: React.FC = () => {
 
   useEffect(() => {
     fetchTeams();
+    const fetchTournaments = async () => {
+      try {
+        const res: any = await api.get('/api/tournaments');
+        const items: any[] = (res && (res.tournaments || res.data || [])) || [];
+        const mapped = items
+          .filter((item: any) => item?.id || item?._id)
+          .map((item: any) => ({
+            id: String(item.id || item._id),
+            name: String(item.name || item.title || 'Tournament'),
+            status: item.status
+          }));
+        setTournaments(mapped);
+      } catch {
+        setTournaments([]);
+      }
+    };
+    fetchTournaments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCreateTeam = async (teamData: any) => {
     try {
       setError(null);
-      await api.post('/api/teams', {
+      await api.post('/api/teams/create', {
         name: teamData?.name,
         tag: teamData?.tag,
         game: teamData?.game,
+        tournamentId: teamData?.tournamentId,
         description: teamData?.description,
         isPrivate: Boolean(teamData?.isPrivate),
         requiresApproval: Boolean(teamData?.requiresApproval)
@@ -433,12 +454,25 @@ const TeamsPage: React.FC = () => {
       await fetchTeams();
     } catch (e: any) {
       setError(e?.message || 'Failed to create team');
+      throw e;
     }
   };
 
-  const handleJoinTeam = (teamId: string) => {
-    console.log('Joining team:', teamId);
-    // Handle team join logic
+  const handleJoinTeam = async (team: Team) => {
+    try {
+      if (!team.tournamentId) {
+        setError('This team is not linked to a tournament');
+        return;
+      }
+      setError(null);
+      await api.post('/api/teams/join', {
+        teamId: team.id,
+        tournamentId: team.tournamentId
+      });
+      await fetchTeams();
+    } catch (e: any) {
+      setError(e?.message || 'Failed to join team');
+    }
   };
 
   const handleViewDetails = (teamId: string) => {
@@ -570,7 +604,7 @@ const TeamsPage: React.FC = () => {
                           <ActionButton $variant="secondary" onClick={() => handleViewDetails(team.id)}>
                             View Details
                           </ActionButton>
-                          <ActionButton $variant="primary" onClick={() => handleJoinTeam(team.id)}>
+                          <ActionButton $variant="primary" onClick={() => handleJoinTeam(team)}>
                             Join Team
                           </ActionButton>
                         </>
@@ -587,6 +621,7 @@ const TeamsPage: React.FC = () => {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onCreateTeam={handleCreateTeam}
+        tournaments={tournaments}
       />
     </Container>
   );

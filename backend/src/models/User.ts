@@ -24,8 +24,10 @@ export interface IUser extends Document {
   isSubscribed: boolean;
   subscriptionExpiresAt?: Date;
   freeEntriesCount: number;
+  bonusEntries: number;
   referralCode?: string;
   referredBy?: string;
+  participatingTournaments: mongoose.Types.ObjectId[];
 
   stats: {
     wins: number;
@@ -139,6 +141,10 @@ const userSchema = new Schema<IUser>({
     type: Number,
     default: 0
   },
+  bonusEntries: {
+    type: Number,
+    default: 0
+  },
   referralCode: {
     type: String
   },
@@ -146,6 +152,10 @@ const userSchema = new Schema<IUser>({
     type: String,
     trim: true
   },
+  participatingTournaments: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Tournament'
+  }],
   bio: {
     type: String,
     trim: true,
@@ -246,6 +256,7 @@ userSchema.index({ username: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ referralCode: 1 }, { unique: true, sparse: true });
 userSchema.index({ isSubscribed: 1 });
+userSchema.index({ participatingTournaments: 1 });
 
 // Pre-save middleware to generate referral code
 userSchema.pre('save', function (next) {
@@ -280,19 +291,23 @@ userSchema.methods.hasActiveSubscription = function (): boolean {
 };
 
 userSchema.methods.canJoinTournament = function (): boolean {
-  return this.hasActiveSubscription() || this.freeEntriesCount > 0;
+  return this.hasActiveSubscription() || this.freeEntriesCount > 0 || this.bonusEntries > 0;
 };
 
 userSchema.methods.useFreeEntry = async function (): Promise<boolean> {
-  if (this.freeEntriesCount <= 0) return false;
+  if (this.freeEntriesCount <= 0 && this.bonusEntries <= 0) return false;
 
-  this.freeEntriesCount -= 1;
+  if (this.freeEntriesCount > 0) {
+    this.freeEntriesCount -= 1;
+  } else {
+    this.bonusEntries -= 1;
+  }
 
   // Add transaction record
   this.wallet.transactions.push({
     type: 'referral',
     amount: 0,
-    description: 'Used free tournament entry',
+    description: 'Used tournament entry',
     date: new Date()
   });
 

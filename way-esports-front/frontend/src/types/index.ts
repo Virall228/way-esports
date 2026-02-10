@@ -3,9 +3,28 @@ export interface User {
   username: string;
   telegramId: number;
   email?: string;
+  firstName?: string;
+  lastName?: string;
+  bio?: string;
+  profileLogo?: string;
   role: 'user' | 'admin' | 'developer';
   avatar?: string;
   teamId?: string;
+  teams?: string[];
+  participatingTournaments?: string[];
+  isSubscribed?: boolean;
+  freeEntriesCount?: number;
+  bonusEntries?: number;
+  balance?: number;
+  stats?: {
+    wins?: number;
+    losses?: number;
+    tournamentsPlayed?: number;
+    tournamentsWon?: number;
+    matches?: number;
+    mvps?: number;
+    kdRatio?: number;
+  };
   createdAt: Date;
 }
 

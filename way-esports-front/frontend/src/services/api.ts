@@ -85,6 +85,7 @@ export const api = {
   get: async (endpoint: string, includeTelegramData = false) => requestJson(endpoint, 'GET', undefined, includeTelegramData),
   post: async (endpoint: string, data: any, includeTelegramData = false) => requestJson(endpoint, 'POST', data, includeTelegramData),
   put: async (endpoint: string, data: any, includeTelegramData = false) => requestJson(endpoint, 'PUT', data, includeTelegramData),
+  patch: async (endpoint: string, data: any, includeTelegramData = false) => requestJson(endpoint, 'PATCH', data, includeTelegramData),
   delete: async (endpoint: string, includeTelegramData = false) => requestJson(endpoint, 'DELETE', undefined, includeTelegramData),
   request: async (endpoint: string, data?: any, method?: string, includeTelegramData = false) => {
     const httpMethod = (method || (data ? 'POST' : 'GET')).toUpperCase() as HttpMethod;

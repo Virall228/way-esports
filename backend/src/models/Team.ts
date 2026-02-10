@@ -5,6 +5,10 @@ export interface ITeam extends Document {
   tag: string;
   logo?: string;
   game: string;
+  description?: string;
+  isPrivate?: boolean;
+  requiresApproval?: boolean;
+  tournamentId?: mongoose.Types.ObjectId;
   captain?: mongoose.Types.ObjectId;
   members: mongoose.Types.ObjectId[];
   players?: mongoose.Types.ObjectId[]; // Alias for members for compatibility
@@ -45,6 +49,24 @@ const teamSchema = new Schema<ITeam>({
     type: String,
     required: true,
     trim: true
+  },
+  description: {
+    type: String,
+    trim: true,
+    maxlength: 500
+  },
+  isPrivate: {
+    type: Boolean,
+    default: false
+  },
+  requiresApproval: {
+    type: Boolean,
+    default: true
+  },
+  tournamentId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Tournament',
+    required: false
   },
   captain: {
     type: Schema.Types.ObjectId,
@@ -103,6 +125,7 @@ const teamSchema = new Schema<ITeam>({
 teamSchema.index({ game: 1, status: 1 });
 teamSchema.index({ name: 1 }, { unique: true });
 teamSchema.index({ tag: 1 }, { unique: true });
+teamSchema.index({ tournamentId: 1, status: 1 });
 
 // Pre-save middleware to calculate win rate
 teamSchema.pre('save', function(next) {

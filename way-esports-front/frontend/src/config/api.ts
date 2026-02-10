@@ -37,7 +37,8 @@ export const API_CONFIG = {
     TEAMS: {
       LIST: '/api/teams',
       GET: (id: string) => `/api/teams/${id}`,
-      CREATE: '/api/teams',
+      CREATE: '/api/teams/create',
+      JOIN: '/api/teams/join',
       UPDATE: (id: string) => `/api/teams/${id}`,
       DELETE: (id: string) => `/api/teams/${id}`,
     },

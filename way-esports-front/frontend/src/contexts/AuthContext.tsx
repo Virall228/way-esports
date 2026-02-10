@@ -8,6 +8,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: () => Promise<void>;
   logout: () => void;
+  fetchProfile: () => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,16 +18,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(false);
 
   const normalizeUser = (raw: any): User => {
-    const id = raw?.id || raw?._id || '';
+    const source = raw?.data || raw?.user || raw || {};
+    const wallet = source?.wallet || {};
+    const stats = source?.stats || {};
+
     return {
-      id: String(id),
-      username: raw?.username || 'User',
-      telegramId: Number(raw?.telegramId ?? raw?.telegram_id ?? 0),
-      email: raw?.email,
-      role: raw?.role || 'user',
-      avatar: raw?.photoUrl || raw?.photo_url || raw?.profileLogo || raw?.avatar,
-      teamId: raw?.teamId,
-      createdAt: raw?.createdAt ? new Date(raw.createdAt) : new Date()
+      id: String(source?.id || source?._id || ''),
+      username: source?.username || 'User',
+      telegramId: Number(source?.telegramId ?? source?.telegram_id ?? 0),
+      email: source?.email,
+      firstName: source?.firstName,
+      lastName: source?.lastName,
+      bio: source?.bio,
+      profileLogo: source?.profileLogo || source?.photoUrl || source?.photo_url || source?.avatar,
+      role: source?.role || 'user',
+      avatar: source?.photoUrl || source?.photo_url || source?.profileLogo || source?.avatar,
+      teamId: source?.teamId,
+      teams: Array.isArray(source?.teams)
+        ? source.teams.map((team: any) => String(team?.id || team?._id || team))
+        : [],
+      participatingTournaments: Array.isArray(source?.participatingTournaments)
+        ? source.participatingTournaments.map((item: any) => String(item?.id || item?._id || item))
+        : [],
+      isSubscribed: Boolean(source?.isSubscribed),
+      freeEntriesCount: Number(source?.freeEntriesCount || 0),
+      bonusEntries: Number(source?.bonusEntries || 0),
+      balance: Number(source?.balance ?? wallet?.balance ?? 0),
+      stats: {
+        ...stats,
+        matches: Number(stats?.matches ?? stats?.tournamentsPlayed ?? 0),
+        mvps: Number(stats?.mvps ?? 0),
+        kdRatio: Number(stats?.kdRatio ?? 0)
+      },
+      createdAt: source?.createdAt ? new Date(source.createdAt) : new Date()
     };
   };
 
@@ -38,6 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       localStorage.setItem('auth_token', token);
     } catch {
+      // ignore
     }
   };
 
@@ -51,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchProfile = async (): Promise<User | null> => {
     try {
-      const profile = await api.get('/api/auth/profile');
+      const profile = await api.get('/api/profile');
       const normalized = normalizeUser(profile);
       setUser(normalized);
       return normalized;
@@ -59,40 +84,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
   };
-
-  useEffect(() => {
-    const bootstrap = async () => {
-      const token = getToken();
-
-      // If we have no token but are in Telegram, try auto-login
-      if (!token && typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initData) {
-        setIsLoading(true);
-        try {
-          await login();
-          return; // login already handles setIsLoading(false)
-        } catch (e) {
-          console.error('Auto-login failed:', e);
-        } finally {
-          setIsLoading(false);
-        }
-      }
-
-      if (!token) return;
-
-      setIsLoading(true);
-      try {
-        const ok = await fetchProfile();
-        if (!ok) {
-          setToken(null);
-          setUser(null);
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    bootstrap();
-  }, []);
 
   const login = async () => {
     setIsLoading(true);
@@ -102,7 +93,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const initData = (window as any).Telegram.WebApp.initData;
 
         if (initData) {
-          // Use new Telegram authentication endpoint
           try {
             const result: any = await api.post('/api/auth/telegram', { initData }, true);
             if (result?.success && result?.token && result?.user) {
@@ -144,17 +134,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  useEffect(() => {
+    const bootstrap = async () => {
+      const token = getToken();
+
+      if (!token && typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initData) {
+        setIsLoading(true);
+        try {
+          await login();
+          return;
+        } catch (e) {
+          console.error('Auto-login failed:', e);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+
+      if (!token) return;
+
+      setIsLoading(true);
+      try {
+        const ok = await fetchProfile();
+        if (!ok) {
+          setToken(null);
+          setUser(null);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    bootstrap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const logout = () => {
     setToken(null);
     setUser(null);
   };
 
-  const value = {
+  const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
     isLoading,
     login,
-    logout
+    logout,
+    fetchProfile
   };
 
   return (
@@ -170,4 +195,4 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}; 
+};

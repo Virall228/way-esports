@@ -6,13 +6,20 @@ import { validateRequest } from '../middleware/validate';
 
 const router = express.Router();
 
+const getUserFilter = (req: any): { _id: any } | null => {
+  const userId = req.user?._id || req.user?.id;
+  if (!userId) return null;
+  return { _id: userId };
+};
+
 // Get user profile
 router.get('/', async (req, res) => {
   try {
-    if (!req.user) {
+    const userFilter = getUserFilter(req);
+    if (!userFilter) {
       return res.status(401).json({ message: 'User not authenticated' });
     }
-    const user = await User.findOne({ telegramId: req.user.id })
+    const user = await User.findOne(userFilter)
       .populate('teams')
       .select('-wallet.transactions');
 
@@ -42,57 +49,75 @@ router.get('/', async (req, res) => {
     });
   }
 });
-// Update user profile
-router.patch('/',
+const updateProfileValidators = [
   body('username').optional().isLength({ min: 3 }).withMessage('Username must be at least 3 characters'),
   body('firstName').optional().notEmpty().withMessage('First name cannot be empty'),
+  body('lastName').optional().notEmpty().withMessage('Last name cannot be empty'),
   body('bio').optional().isLength({ max: 500 }).withMessage('Bio cannot exceed 500 characters'),
-  validateRequest,
-  async (req: any, res: any) => {
-    try {
-      if (!req.user) {
-        return res.status(401).json({ message: 'User not authenticated' });
-      }
+  body('photoUrl').optional().isString().withMessage('Photo URL must be a string'),
+  body('profileLogo').optional().isString().withMessage('Profile logo must be a string'),
+  body('email').optional().isEmail().withMessage('Invalid email format')
+];
 
-      const allowedUpdates = ['username', 'firstName', 'lastName', 'bio', 'gameProfiles', 'profileLogo'];
-      const updates = Object.keys(req.body);
-      const isValidOperation = updates.every(update => allowedUpdates.includes(update));
+const updateProfileHandler = async (req: any, res: any) => {
+  try {
+    const userFilter = getUserFilter(req);
+    if (!userFilter) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
 
-      if (!isValidOperation) {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid updates'
-        });
-      }
+    const allowedUpdates = [
+      'username',
+      'firstName',
+      'lastName',
+      'bio',
+      'gameProfiles',
+      'profileLogo',
+      'photoUrl',
+      'email'
+    ];
+    const updates = Object.keys(req.body || {});
+    const isValidOperation = updates.every(update => allowedUpdates.includes(update));
 
-      const user = await User.findOneAndUpdate(
-        { telegramId: req.user.id },
-        { $set: req.body },
-        { new: true, runValidators: true }
-      ).populate('teams');
-
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          error: 'User not found'
-        });
-      }
-
-      res.json({
-        success: true,
-        data: user
-      });
-    } catch (error: any) {
-      console.error('Error updating profile:', error);
-      if (error.code === 11000) {
-        return res.status(400).json({ success: false, error: 'Username already taken' });
-      }
-      res.status(500).json({
+    if (!isValidOperation) {
+      return res.status(400).json({
         success: false,
-        error: 'Failed to update profile'
+        error: 'Invalid updates'
       });
     }
-  });
+
+    const user = await User.findOneAndUpdate(
+      userFilter,
+      { $set: req.body },
+      { new: true, runValidators: true }
+    ).populate('teams');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user
+    });
+  } catch (error: any) {
+    console.error('Error updating profile:', error);
+    if (error.code === 11000) {
+      return res.status(400).json({ success: false, error: 'Username already taken' });
+    }
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update profile'
+    });
+  }
+};
+
+// Update user profile (PATCH/PUT)
+router.patch('/', updateProfileValidators, validateRequest, updateProfileHandler);
+router.put('/', updateProfileValidators, validateRequest, updateProfileHandler);
 
 // Get public user profile by ID or username
 router.get('/:identifier/public', async (req, res) => {
@@ -129,7 +154,8 @@ router.get('/:identifier/public', async (req, res) => {
 // Upload profile logo
 router.post('/upload-logo', async (req, res) => {
   try {
-    if (!req.user) {
+    const userFilter = getUserFilter(req);
+    if (!userFilter) {
       return res.status(401).json({ message: 'User not authenticated' });
     }
     const { logoUrl } = req.body;
@@ -142,8 +168,8 @@ router.post('/upload-logo', async (req, res) => {
     }
 
     const user = await User.findOneAndUpdate(
-      { telegramId: req.user.id },
-      { profileLogo: logoUrl },
+      userFilter,
+      { profileLogo: logoUrl, photoUrl: logoUrl },
       { new: true }
     ).populate('teams');
 
@@ -170,10 +196,11 @@ router.post('/upload-logo', async (req, res) => {
 // Get user notifications
 router.get('/notifications', async (req, res) => {
   try {
-    if (!req.user) {
+    const userFilter = getUserFilter(req);
+    if (!userFilter) {
       return res.status(401).json({ message: 'User not authenticated' });
     }
-    const user = await User.findOne({ telegramId: req.user.id })
+    const user = await User.findOne(userFilter)
       .select('notifications')
       .sort({ 'notifications.date': -1 });
 
@@ -200,12 +227,13 @@ router.get('/notifications', async (req, res) => {
 // Mark notification as read
 router.put('/notifications/:id', async (req, res) => {
   try {
-    if (!req.user) {
+    const userFilter = getUserFilter(req);
+    if (!userFilter) {
       return res.status(401).json({ message: 'User not authenticated' });
     }
     const user = await User.findOneAndUpdate(
       {
-        telegramId: req.user.id,
+        ...userFilter,
         'notifications._id': req.params.id
       },
       {
@@ -239,10 +267,11 @@ router.put('/notifications/:id', async (req, res) => {
 // Get user game profiles
 router.get('/game-profiles', async (req, res) => {
   try {
-    if (!req.user) {
+    const userFilter = getUserFilter(req);
+    if (!userFilter) {
       return res.status(401).json({ message: 'User not authenticated' });
     }
-    const user = await User.findOne({ telegramId: req.user.id })
+    const user = await User.findOne(userFilter)
       .select('gameProfiles');
 
     if (!user) {
@@ -268,10 +297,11 @@ router.get('/game-profiles', async (req, res) => {
 // Update game profile
 router.put('/game-profiles/:game', async (req, res) => {
   try {
-    if (!req.user) {
+    const userFilter = getUserFilter(req);
+    if (!userFilter) {
       return res.status(401).json({ message: 'User not authenticated' });
     }
-    const user = await User.findOne({ telegramId: req.user.id });
+    const user = await User.findOne(userFilter);
 
     if (!user) {
       return res.status(404).json({
@@ -314,10 +344,11 @@ router.put('/game-profiles/:game', async (req, res) => {
 // Get user achievements
 router.get('/achievements', async (req, res) => {
   try {
-    if (!req.user) {
+    const userFilter = getUserFilter(req);
+    if (!userFilter) {
       return res.status(401).json({ message: 'User not authenticated' });
     }
-    const user = await User.findOne({ telegramId: req.user.id })
+    const user = await User.findOne(userFilter)
       .select('achievements');
 
     if (!user) {
@@ -343,7 +374,8 @@ router.get('/achievements', async (req, res) => {
 // Add achievement to user
 router.post('/achievements', async (req, res) => {
   try {
-    if (!req.user) {
+    const userFilter = getUserFilter(req);
+    if (!userFilter) {
       return res.status(401).json({ message: 'User not authenticated' });
     }
     const { achievement } = req.body;
@@ -356,7 +388,7 @@ router.post('/achievements', async (req, res) => {
     }
 
     const user = await User.findOneAndUpdate(
-      { telegramId: req.user.id },
+      userFilter,
       { $addToSet: { achievements: achievement } },
       { new: true }
     ).select('achievements');

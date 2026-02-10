@@ -275,7 +275,7 @@ const ProfilePage: React.FC = () => {
       const { url } = await api.uploadImage(file);
 
       // Update user profile with new logo URL
-      await api.put('/api/auth/profile', { profileLogo: url });
+      await api.post('/api/profile/upload-logo', { logoUrl: url });
 
       // Refresh profile to get updated data
       await fetchProfile();

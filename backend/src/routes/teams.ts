@@ -1,10 +1,44 @@
 import express from 'express';
 import Team, { ITeam } from '../models/Team';
 import User from '../models/User';
+import Tournament from '../models/Tournament';
+import TournamentRegistration from '../models/TournamentRegistration';
 import { body } from 'express-validator';
 import { validateRequest } from '../middleware/validate';
+import { authenticateJWT } from '../middleware/auth';
+import { checkTournamentAccess } from '../middleware/tournamentAccess';
 
 const router = express.Router();
+
+const getUserId = (req: any): string | null => {
+  const value = req.user?._id || req.user?.id;
+  return value ? value.toString() : null;
+};
+
+const getTournamentParticipationTeamId = async (
+  userId: string,
+  tournamentId: string
+): Promise<string | null> => {
+  const activeRegistration: any = await TournamentRegistration.findOne({
+    userId,
+    tournamentId,
+    status: 'active'
+  }).select('teamId').lean();
+
+  if (activeRegistration?.teamId) {
+    return activeRegistration.teamId.toString();
+  }
+
+  const legacyTeam: any = await Team.findOne({
+    tournamentId,
+    $or: [
+      { captain: userId },
+      { members: userId }
+    ]
+  }).select('_id').lean();
+
+  return legacyTeam?._id ? legacyTeam._id.toString() : null;
+};
 
 // Get all teams
 router.get('/', async (req, res) => {
@@ -29,6 +63,10 @@ router.get('/', async (req, res) => {
       tag: team.tag || '',
       logo: team.logo || '',
       game: team.game,
+      description: team.description || '',
+      isPrivate: !!team.isPrivate,
+      requiresApproval: team.requiresApproval !== false,
+      tournamentId: team.tournamentId?.toString?.() || team.tournamentId || null,
       status: team.status || 'active',
       captain: team.captain ? {
         id: team.captain._id?.toString() || '',
@@ -76,6 +114,230 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Create team for a specific tournament (strict one-team-per-tournament rule)
+router.post('/create',
+  authenticateJWT,
+  checkTournamentAccess,
+  body('name').notEmpty().withMessage('Team name is required'),
+  body('tag').isLength({ min: 2, max: 5 }).withMessage('Tag must be 2-5 characters'),
+  body('game').notEmpty().withMessage('Game is required'),
+  body('tournamentId').isMongoId().withMessage('Tournament ID is required'),
+  validateRequest,
+  async (req: any, res: any) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'Authentication required' });
+      }
+
+      const tournamentId = req.body.tournamentId;
+      const tournament = await Tournament.findById(tournamentId).select('_id isRegistrationOpen status');
+
+      if (!tournament) {
+        return res.status(404).json({ success: false, error: 'Tournament not found' });
+      }
+
+      if (tournament.isRegistrationOpen === false || tournament.status !== 'upcoming') {
+        return res.status(400).json({ success: false, error: 'Tournament registration is closed' });
+      }
+
+      const participationTeamId = await getTournamentParticipationTeamId(userId, tournamentId);
+      if (participationTeamId) {
+        return res.status(409).json({
+          success: false,
+          error: 'You are already participating in this tournament'
+        });
+      }
+
+      const existingTeam = await Team.findOne({
+        $or: [
+          { name: req.body.name },
+          { tag: req.body.tag }
+        ]
+      }).select('_id');
+
+      if (existingTeam) {
+        return res.status(400).json({ success: false, error: 'Team name or tag already exists' });
+      }
+
+      const team = new Team({
+        ...req.body,
+        tournamentId,
+        captain: userId,
+        members: [userId],
+        players: [userId]
+      });
+      await team.save();
+
+      try {
+        await TournamentRegistration.create({
+          userId,
+          teamId: team._id,
+          tournamentId,
+          role: 'owner',
+          status: 'active'
+        });
+      } catch (registrationError: any) {
+        await Team.findByIdAndDelete(team._id);
+        if (registrationError?.code === 11000) {
+          return res.status(409).json({
+            success: false,
+            error: 'You are already participating in this tournament'
+          });
+        }
+        throw registrationError;
+      }
+
+      await User.findByIdAndUpdate(userId, {
+        $addToSet: {
+          teams: team._id,
+          participatingTournaments: tournamentId
+        }
+      });
+
+      await Tournament.findByIdAndUpdate(tournamentId, {
+        $addToSet: { registeredTeams: team._id }
+      });
+
+      return res.status(201).json({
+        success: true,
+        data: {
+          id: String(team._id),
+          name: team.name,
+          tag: team.tag || '',
+          logo: team.logo || '',
+          game: team.game,
+          description: team.description || '',
+          tournamentId: team.tournamentId?.toString() || null,
+          status: team.status || 'active',
+          members: team.members.map((member: any) => member.toString())
+        }
+      });
+    } catch (error: any) {
+      console.error('Error creating tournament team:', error);
+      if (error?.code === 11000) {
+        return res.status(409).json({
+          success: false,
+          error: 'You are already participating in this tournament'
+        });
+      }
+      return res.status(500).json({ success: false, error: 'Failed to create team' });
+    }
+  }
+);
+
+// Join an existing team for a specific tournament
+router.post('/join',
+  authenticateJWT,
+  checkTournamentAccess,
+  body('teamId').isMongoId().withMessage('Team ID is required'),
+  body('tournamentId').optional().isMongoId().withMessage('Invalid tournament ID'),
+  validateRequest,
+  async (req: any, res: any) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'Authentication required' });
+      }
+
+      const { teamId } = req.body;
+      const team = await Team.findById(teamId);
+      if (!team) {
+        return res.status(404).json({ success: false, error: 'Team not found' });
+      }
+
+      const resolvedTournamentId = req.body.tournamentId || team.tournamentId?.toString();
+      if (!resolvedTournamentId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Team is not linked to a tournament'
+        });
+      }
+
+      if (team.tournamentId && team.tournamentId.toString() !== resolvedTournamentId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Tournament mismatch for selected team'
+        });
+      }
+
+      const tournament = await Tournament.findById(resolvedTournamentId).select('_id isRegistrationOpen status');
+      if (!tournament) {
+        return res.status(404).json({ success: false, error: 'Tournament not found' });
+      }
+
+      if (tournament.isRegistrationOpen === false || tournament.status !== 'upcoming') {
+        return res.status(400).json({ success: false, error: 'Tournament registration is closed' });
+      }
+
+      const participationTeamId = await getTournamentParticipationTeamId(userId, resolvedTournamentId);
+      if (participationTeamId && participationTeamId !== team._id.toString()) {
+        return res.status(409).json({
+          success: false,
+          error: 'You are already participating in this tournament'
+        });
+      }
+
+      if (team.members.some((member: any) => member.toString() === userId)) {
+        return res.status(400).json({ success: false, error: 'User is already a team member' });
+      }
+
+      team.members.push(userId as any);
+      if (!Array.isArray(team.players)) {
+        team.players = [];
+      }
+      if (!team.players.some((player: any) => player.toString() === userId)) {
+        team.players.push(userId as any);
+      }
+      await team.save();
+
+      await TournamentRegistration.findOneAndUpdate(
+        { userId, tournamentId: resolvedTournamentId },
+        {
+          $set: {
+            teamId: team._id,
+            role: 'member',
+            status: 'active'
+          }
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+
+      await User.findByIdAndUpdate(userId, {
+        $addToSet: {
+          teams: team._id,
+          participatingTournaments: resolvedTournamentId
+        }
+      });
+
+      await Tournament.findByIdAndUpdate(resolvedTournamentId, {
+        $addToSet: { registeredTeams: team._id }
+      });
+
+      return res.json({
+        success: true,
+        data: {
+          id: String(team._id),
+          name: team.name,
+          tag: team.tag || '',
+          game: team.game,
+          tournamentId: resolvedTournamentId,
+          members: team.members.map((member: any) => member.toString())
+        }
+      });
+    } catch (error: any) {
+      console.error('Error joining tournament team:', error);
+      if (error?.code === 11000) {
+        return res.status(409).json({
+          success: false,
+          error: 'You are already participating in this tournament'
+        });
+      }
+      return res.status(500).json({ success: false, error: 'Failed to join team' });
+    }
+  }
+);
+
 // Get team by ID
 router.get('/:id', async (req, res) => {
   try {
@@ -99,6 +361,10 @@ router.get('/:id', async (req, res) => {
       tag: team.tag || '',
       logo: team.logo || '',
       game: team.game,
+      description: team.description || '',
+      isPrivate: !!team.isPrivate,
+      requiresApproval: team.requiresApproval !== false,
+      tournamentId: team.tournamentId?.toString?.() || team.tournamentId || null,
       status: team.status || 'active',
       captain: team.captain ? {
         id: team.captain._id?.toString() || '',
@@ -197,6 +463,10 @@ router.post('/',
         tag: team.tag || '',
         logo: team.logo || '',
         game: team.game,
+        description: team.description || '',
+        isPrivate: !!team.isPrivate,
+        requiresApproval: team.requiresApproval !== false,
+        tournamentId: team.tournamentId?.toString() || null,
         status: team.status || 'active',
         captain: team.captain ? {
           id: team.captain.toString(),
@@ -320,6 +590,10 @@ router.put('/:id',
         tag: updatedTeam.tag || '',
         logo: updatedTeam.logo || '',
         game: updatedTeam.game,
+        description: updatedTeam.description || '',
+        isPrivate: !!updatedTeam.isPrivate,
+        requiresApproval: updatedTeam.requiresApproval !== false,
+        tournamentId: updatedTeam.tournamentId?.toString?.() || updatedTeam.tournamentId || null,
         status: updatedTeam.status || 'active',
         captain: updatedTeam.captain ? {
           id: updatedTeam.captain._id?.toString() || '',
@@ -369,10 +643,36 @@ router.post('/:id/members', async (req, res) => {
       });
     }
 
-    if (team.members.includes(userId)) {
+    if (team.members.some((member: any) => member.toString() === userId)) {
       return res.status(400).json({
         success: false,
         error: 'User is already a team member'
+      });
+    }
+
+    if (team.tournamentId) {
+      const participationTeamId = await getTournamentParticipationTeamId(userId, team.tournamentId.toString());
+      if (participationTeamId && participationTeamId !== team._id.toString()) {
+        return res.status(409).json({
+          success: false,
+          error: 'You are already participating in this tournament'
+        });
+      }
+
+      await TournamentRegistration.findOneAndUpdate(
+        { userId, tournamentId: team.tournamentId },
+        {
+          $set: {
+            teamId: team._id,
+            role: 'member',
+            status: 'active'
+          }
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+
+      await User.findByIdAndUpdate(userId, {
+        $addToSet: { participatingTournaments: team.tournamentId }
       });
     }
 
@@ -381,7 +681,7 @@ router.post('/:id/members', async (req, res) => {
 
     // Add team to user's teams
     await User.findByIdAndUpdate(userId, {
-      $push: { teams: team._id }
+      $addToSet: { teams: team._id }
     });
 
     res.json({
@@ -433,6 +733,21 @@ router.delete('/:id/members/:userId', async (req, res) => {
       $pull: { teams: team._id }
     });
 
+    if (team.tournamentId) {
+      await TournamentRegistration.findOneAndUpdate(
+        {
+          userId: req.params.userId,
+          teamId: team._id,
+          tournamentId: team.tournamentId
+        },
+        { $set: { status: 'left' } }
+      );
+
+      await User.findByIdAndUpdate(req.params.userId, {
+        $pull: { participatingTournaments: team.tournamentId }
+      });
+    }
+
     // Transform response
     const transformed: any = {
       id: String(team._id),
@@ -440,6 +755,8 @@ router.delete('/:id/members/:userId', async (req, res) => {
       tag: team.tag || '',
       logo: team.logo || '',
       game: team.game,
+      description: team.description || '',
+      tournamentId: team.tournamentId?.toString() || null,
       status: team.status || 'active',
       members: team.members.map((m: any) => m.toString())
     };
@@ -477,6 +794,41 @@ router.delete('/:id', async (req, res) => {
     }
 
     await Team.findByIdAndDelete(req.params.id);
+
+    if (team.tournamentId) {
+      const registrations = await TournamentRegistration.find({
+        teamId: team._id,
+        tournamentId: team.tournamentId
+      }).select('userId').lean();
+
+      const affectedUserIds = registrations.map((registration: any) => registration.userId);
+
+      if (affectedUserIds.length) {
+        await User.updateMany(
+          { _id: { $in: affectedUserIds } },
+          {
+            $pull: {
+              teams: team._id,
+              participatingTournaments: team.tournamentId
+            }
+          }
+        );
+      }
+
+      await TournamentRegistration.deleteMany({
+        teamId: team._id,
+        tournamentId: team.tournamentId
+      });
+
+      await Tournament.findByIdAndUpdate(team.tournamentId, {
+        $pull: { registeredTeams: team._id }
+      });
+    } else {
+      await User.updateMany(
+        { teams: team._id },
+        { $pull: { teams: team._id } }
+      );
+    }
 
     res.json({
       success: true,

@@ -1,13 +1,13 @@
 import { profileService } from '../services/profileService';
 
-// Mock apiService
+const apiMock = {
+  get: jest.fn(),
+  patch: jest.fn(),
+  post: jest.fn()
+};
+
 jest.mock('../services/api', () => ({
-  __esModule: true,
-  default: {
-    getUserProfile: jest.fn(),
-    updateProfile: jest.fn(),
-    request: jest.fn(),
-  },
+  api: apiMock
 }));
 
 describe('ProfileService', () => {
@@ -15,77 +15,45 @@ describe('ProfileService', () => {
     jest.clearAllMocks();
   });
 
-  describe('getProfile', () => {
-    it('should call getUserProfile from apiService', async () => {
-      const mockResponse = { success: true, data: { username: 'test' } };
-      const apiService = require('../services/api').default;
-      apiService.getUserProfile.mockResolvedValue(mockResponse);
+  it('getProfile calls /api/profile', async () => {
+    const mockResponse = { success: true };
+    apiMock.get.mockResolvedValue(mockResponse);
 
-      const result = await profileService.getProfile();
+    const result = await profileService.getProfile();
 
-      expect(apiService.getUserProfile).toHaveBeenCalledTimes(1);
-      expect(result).toEqual(mockResponse);
-    });
+    expect(apiMock.get).toHaveBeenCalledWith('/api/profile');
+    expect(result).toBe(mockResponse);
   });
 
-  describe('updateProfile', () => {
-    it('should call updateProfile from apiService', async () => {
-      const mockData = { profileLogo: 'test.jpg' };
-      const mockResponse = { success: true, data: mockData };
-      const apiService = require('../services/api').default;
-      apiService.updateProfile.mockResolvedValue(mockResponse);
+  it('updateProfile uses PATCH /api/profile', async () => {
+    const payload = { bio: 'hello' };
+    const mockResponse = { success: true, data: payload };
+    apiMock.patch.mockResolvedValue(mockResponse);
 
-      const result = await profileService.updateProfile(mockData);
+    const result = await profileService.updateProfile(payload);
 
-      expect(apiService.updateProfile).toHaveBeenCalledWith(mockData);
-      expect(result).toEqual(mockResponse);
-    });
+    expect(apiMock.patch).toHaveBeenCalledWith('/api/profile', payload);
+    expect(result).toBe(mockResponse);
   });
 
-  describe('uploadProfileLogo', () => {
-    it('should call request with correct parameters', async () => {
-      const logoUrl = 'data:image/jpeg;base64,test';
-      const mockResponse = { success: true, data: { profileLogo: logoUrl } };
-      const apiService = require('../services/api').default;
-      apiService.request.mockResolvedValue(mockResponse);
+  it('getStats calls /api/profile/stats', async () => {
+    const mockResponse = { success: true };
+    apiMock.get.mockResolvedValue(mockResponse);
 
-      const result = await profileService.uploadProfileLogo(logoUrl);
+    const result = await profileService.getStats();
 
-      expect(apiService.request).toHaveBeenCalledWith('/api/profile/upload-logo', {
-        method: 'POST',
-        body: JSON.stringify({ logoUrl }),
-      });
-      expect(result).toEqual(mockResponse);
-    });
+    expect(apiMock.get).toHaveBeenCalledWith('/api/profile/stats');
+    expect(result).toBe(mockResponse);
   });
 
-  describe('getAchievements', () => {
-    it('should call request for achievements', async () => {
-      const mockResponse = { success: true, data: ['achievement1', 'achievement2'] };
-      const apiService = require('../services/api').default;
-      apiService.request.mockResolvedValue(mockResponse);
+  it('addAchievement posts to /api/profile/achievements', async () => {
+    const achievementName = 'Winner';
+    const mockResponse = { success: true };
+    apiMock.post.mockResolvedValue(mockResponse);
 
-      const result = await profileService.getAchievements();
+    const result = await profileService.addAchievement(achievementName);
 
-      expect(apiService.request).toHaveBeenCalledWith('/api/profile/achievements');
-      expect(result).toEqual(mockResponse);
-    });
+    expect(apiMock.post).toHaveBeenCalledWith('/api/profile/achievements', { name: achievementName });
+    expect(result).toBe(mockResponse);
   });
-
-  describe('addAchievement', () => {
-    it('should call request to add achievement', async () => {
-      const achievement = 'New Achievement';
-      const mockResponse = { success: true, data: [achievement] };
-      const apiService = require('../services/api').default;
-      apiService.request.mockResolvedValue(mockResponse);
-
-      const result = await profileService.addAchievement(achievement);
-
-      expect(apiService.request).toHaveBeenCalledWith('/api/profile/achievements', {
-        method: 'POST',
-        body: JSON.stringify({ achievement }),
-      });
-      expect(result).toEqual(mockResponse);
-    });
-  });
-}); 
+});
