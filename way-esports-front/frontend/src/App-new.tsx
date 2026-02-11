@@ -120,11 +120,11 @@ const AppNavigation: React.FC = () => {
   const navigate = useNavigate();
 
   const navItems = [
-    { path: '/', label: 'Home', icon: '🏠' },
-    { path: '/tournaments', label: 'Tournaments', icon: '🏆' },
-    { path: '/teams', label: 'Teams', icon: '👥' },
-    { path: '/news', label: 'News', icon: '📰' },
-    { path: '/profile', label: 'Profile', icon: '👤' },
+    { path: '/', label: 'Home', icon: '\u{1F3E0}' },
+    { path: '/tournaments', label: 'Tournaments', icon: '\u{1F3C6}' },
+    { path: '/teams', label: 'Teams', icon: '\u{1F465}' },
+    { path: '/news', label: 'News', icon: '\u{1F4F0}' },
+    { path: '/profile', label: 'Profile', icon: '\u{1F464}' },
   ];
 
   return (
@@ -211,7 +211,7 @@ const App: React.FC = () => {
               </MainContent>
               
               <Footer>
-                <p>© 2024 WAY ESPORTS. All rights reserved.</p>
+                <p>{'\u00A9'} 2024 WAY ESPORTS. All rights reserved.</p>
                 <p>Powered by Cyberpunk Technology</p>
               </Footer>
             </AppContainer>

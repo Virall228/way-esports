@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export interface IUserAgreement extends Document {
+export interface IUserAgreement extends Document<mongoose.Types.ObjectId> {
   userId: mongoose.Types.ObjectId;
   termsVersion: string;
   ipAddress: string;

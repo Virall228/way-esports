@@ -77,7 +77,7 @@ const ActionCard = styled(Card)<{ completed?: boolean }>`
   ${({ completed, theme }) => completed && `
     border-color: ${theme.colors.success};
     &::after {
-      content: '✓';
+      content: '\\2713';
       color: ${theme.colors.success};
       font-size: 1.5rem;
       margin-left: auto;

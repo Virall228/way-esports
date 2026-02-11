@@ -202,7 +202,7 @@ const SubscriptionCard: React.FC = () => {
   return (
     <Container>
       <Header>
-        <Icon>💎</Icon>
+        <Icon>{'\u{1F48E}'}</Icon>
         <Title>Subscription</Title>
         <StatusBadge $active={subscription.isSubscribed && !isExpired}>
           {subscription.isSubscribed && !isExpired ? 'Active' : 'Inactive'}
@@ -245,19 +245,19 @@ const SubscriptionCard: React.FC = () => {
           
           <BenefitsList>
             <BenefitItem>
-              <CheckIcon>✓</CheckIcon>
+              <CheckIcon>{'\u2713'}</CheckIcon>
               Unlimited tournament registrations
             </BenefitItem>
             <BenefitItem>
-              <CheckIcon>✓</CheckIcon>
+              <CheckIcon>{'\u2713'}</CheckIcon>
               Priority support
             </BenefitItem>
             <BenefitItem>
-              <CheckIcon>✓</CheckIcon>
+              <CheckIcon>{'\u2713'}</CheckIcon>
               Exclusive tournaments
             </BenefitItem>
             <BenefitItem>
-              <CheckIcon>✓</CheckIcon>
+              <CheckIcon>{'\u2713'}</CheckIcon>
               Advanced statistics tracking
             </BenefitItem>
           </BenefitsList>
@@ -270,11 +270,11 @@ const SubscriptionCard: React.FC = () => {
           
           <BenefitsList>
             <BenefitItem>
-              <CheckIcon>✓</CheckIcon>
+              <CheckIcon>{'\u2713'}</CheckIcon>
               Unlimited tournament access
             </BenefitItem>
             <BenefitItem>
-              <CheckIcon>✓</CheckIcon>
+              <CheckIcon>{'\u2713'}</CheckIcon>
               {subscription.freeEntriesCount} free entries available
             </BenefitItem>
           </BenefitsList>

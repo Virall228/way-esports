@@ -141,7 +141,7 @@ const Feature = styled.li`
   gap: 10px;
 
   &::before {
-    content: '✓';
+    content: '\\2713';
     color: #4CAF50;
     font-weight: bold;
   }
@@ -232,7 +232,9 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }
   return (
     <ModalOverlay onClick={onClose}>
       <ModalContent onClick={(e) => e.stopPropagation()}>
-        <CloseButton onClick={onClose}>×</CloseButton>
+        <CloseButton onClick={onClose}>
+          {'\u2715'}
+        </CloseButton>
         
         <Header>
           <Title>Subscription Plans</Title>
@@ -291,7 +293,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }
         {selectedPlan && (
           <PaymentSection>
             <PaymentTitle>
-              💰 USDT TRC20
+              {'\u{1F4B0}'} USDT TRC20
             </PaymentTitle>
             <CryptoAddress>
               TAoLXyWNA2oXCkYu4iEuk6N6jUhDyXHU

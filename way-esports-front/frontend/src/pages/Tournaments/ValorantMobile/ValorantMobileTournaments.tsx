@@ -377,32 +377,32 @@ const TimeLabel = styled.div<{ $themeName: ThemeName }>`
 
 const features = [
   {
-    icon: '🎮',
+    icon: '\u{1F3AE}',
     title: 'Mobile-First Experience',
     description: 'Tournaments optimized for mobile gameplay with custom lobbies and spectator mode'
   },
   {
-    icon: '🏆',
+    icon: '\u{1F3C6}',
     title: 'Exclusive Rewards',
     description: 'Win Valorant Points, exclusive skins, and real money prizes'
   },
   {
-    icon: '🏆',
+    icon: '\u{1F3C6}',
     title: 'Ranked Divisions',
     description: 'Compete in tournaments matched to your skill level'
   },
   {
-    icon: '🌟',
+    icon: '\u{1F31F}',
     title: 'Pro Path',
     description: 'Path to pro system with official Riot Games support'
   },
   {
-    icon: '🤝',
+    icon: '\u{1F91D}',
     title: 'Team Formation',
     description: 'Find teammates or compete with your existing squad'
   },
   {
-    icon: '📊',
+    icon: '\u{1F4CA}',
     title: 'Stats & Analytics',
     description: 'Detailed performance tracking and improvement insights'
   }

@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export interface ITournament extends Document {
+export interface ITournament extends Document<mongoose.Types.ObjectId> {
   name: string;
   game: string;
   startDate: Date;

@@ -62,7 +62,7 @@ const PrizePool = styled.div`
   color: ${({ theme }) => theme.colors.accent};
   
   &::before {
-    content: '🏆';
+    content: '\\1F3C6';
   }
 `;
 
@@ -130,13 +130,13 @@ const StatusBadge = styled.div<{ status: TournamentCardProps['status'] }>`
 const getStatusText = (status: TournamentCardProps['status']) => {
   switch (status) {
     case 'upcoming':
-      return '⏳ Coming Soon';
+      return '\u23F3 Coming Soon';
     case 'registration':
-      return '📝 Registration Open';
+      return '\u{1F4DD} Registration Open';
     case 'inProgress':
-      return '🎮 In Progress';
+      return '\u{1F3AE} In Progress';
     case 'completed':
-      return '🏆 Completed';
+      return '\u{1F3C6} Completed';
   }
 };
 

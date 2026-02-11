@@ -125,7 +125,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   return (
     <Container>
       <WelcomeCard>
-        <IconContainer>✨</IconContainer>
+        <IconContainer>{'\u2728'}</IconContainer>
         <Title>Welcome Aboard, {username}!</Title>
         <Message>
           Your WAY Esports profile is ready. Get ready to compete in {game} and climb

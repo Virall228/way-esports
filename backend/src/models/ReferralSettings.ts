@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export interface IReferralSettings extends Document {
+export interface IReferralSettings extends Document<mongoose.Types.ObjectId> {
   referralsNeededForBonus: number;
   bonusType: 'free_entry' | 'discount';
   bonusValue: number;

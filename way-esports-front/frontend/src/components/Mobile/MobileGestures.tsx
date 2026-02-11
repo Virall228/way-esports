@@ -30,10 +30,10 @@ const SwipeIndicator = styled.div<{ $direction: 'left' | 'right' | 'up' | 'down'
 
   &::before {
     content: '${({ $direction }) => 
-      $direction === 'left' ? '←' :
-      $direction === 'right' ? '→' :
-      $direction === 'up' ? '↑' :
-      $direction === 'down' ? '↓' : ''}';
+      $direction === 'left' ? '\\2190' :
+      $direction === 'right' ? '\\2192' :
+      $direction === 'up' ? '\\2191' :
+      $direction === 'down' ? '\\2193' : ''}';
     margin-right: 10px;
     font-size: 24px;
   }
@@ -59,7 +59,7 @@ const PullToRefreshIndicator = styled.div<{ $isVisible: boolean; $progress: numb
   border-bottom: 2px solid rgba(255, 215, 0, 0.3);
 
   &::before {
-    content: '${({ $progress }) => $progress > 0.8 ? '🔄' : '⬇️'}';
+    content: '${({ $progress }) => $progress > 0.8 ? '\\1F504' : '\\2B07'}';
     margin-right: 10px;
     font-size: 20px;
     animation: ${({ $progress }) => $progress > 0.8 ? 'spin 1s linear infinite' : 'none'};

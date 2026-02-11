@@ -172,7 +172,7 @@ const TournamentMatch: React.FC<TournamentMatchProps> = ({
                 <TeamSection>
                     <TeamName>[{team1.tag}] {team1.name}</TeamName>
                     <TeamMembers>
-                        {team1.members.join(' • ')}
+                        {team1.members.join(' \u2022 ')}
                     </TeamMembers>
                 </TeamSection>
 
@@ -181,7 +181,7 @@ const TournamentMatch: React.FC<TournamentMatchProps> = ({
                 <TeamSection>
                     <TeamName>[{team2.tag}] {team2.name}</TeamName>
                     <TeamMembers>
-                        {team2.members.join(' • ')}
+                        {team2.members.join(' \u2022 ')}
                     </TeamMembers>
                 </TeamSection>
             </MatchHeader>

@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export interface IMatch extends Document {
+export interface IMatch extends Document<mongoose.Types.ObjectId> {
   tournament: mongoose.Types.ObjectId;
   team1: mongoose.Types.ObjectId;
   team2: mongoose.Types.ObjectId;

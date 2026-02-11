@@ -59,6 +59,13 @@ const requestJson = async <T = any>(endpoint: string, method: HttpMethod, data?:
           ? payload
           : (payload as any)?.error || (payload as any)?.message || 'Request failed';
 
+      if (response.status === 402) {
+        const redirectTo = (payload as any)?.redirectTo;
+        if (redirectTo && typeof window !== 'undefined') {
+          window.location.href = redirectTo;
+        }
+      }
+
       if (notifyHandler && response.status !== 401) {
         notifyHandler('error', 'Error', message);
       }

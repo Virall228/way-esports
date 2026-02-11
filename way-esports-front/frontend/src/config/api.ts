@@ -1,12 +1,12 @@
 // API Configuration
 export const API_CONFIG = {
-  // Базовый URL API
+// Base API URL
   BASE_URL: getApiUrl(),
   
-  // Таймауты
+  // Timeouts
   TIMEOUT: 10000,
   
-  // Заголовки по умолчанию
+  // Default headers
   DEFAULT_HEADERS: {
     'Content-Type': 'application/json',
   },
@@ -54,7 +54,7 @@ export const API_CONFIG = {
   },
 };
 
-// Функция для получения URL API
+// Get API URL
 function getApiUrl(): string {
   const normalize = (rawUrl: string): string => {
     const trimmed = rawUrl.trim();
@@ -63,7 +63,7 @@ function getApiUrl(): string {
     return noTrailingSlash.replace(/\/api$/i, '');
   };
 
-  // Проверяем различные способы получения переменных окружения
+  // Check multiple environment variable sources
   if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) {
     return normalize(import.meta.env.VITE_API_URL);
   }
@@ -79,7 +79,7 @@ function getApiUrl(): string {
   return '';
 }
 
-// Функция для проверки доступности API
+// Check API health
 export async function checkApiHealth(): Promise<boolean> {
   try {
     const response = await fetch(`${API_CONFIG.BASE_URL}/api/health`, {
@@ -93,7 +93,7 @@ export async function checkApiHealth(): Promise<boolean> {
   }
 }
 
-// Функция для получения полного URL
+// Get full URL
 export function getFullUrl(endpoint: string): string {
   return `${API_CONFIG.BASE_URL}${endpoint}`;
 } 

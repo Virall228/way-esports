@@ -3,6 +3,7 @@ import Wallet from '../models/Wallet';
 import express from 'express';
 import { body } from 'express-validator';
 import { validateRequest } from '../middleware/validate';
+import { authenticateJWT } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -13,7 +14,7 @@ const getUserFilter = (req: any): { _id: any } | null => {
 };
 
 // Get user profile
-router.get('/', async (req, res) => {
+router.get('/', authenticateJWT, async (req, res) => {
   try {
     const userFilter = getUserFilter(req);
     if (!userFilter) {
@@ -116,8 +117,8 @@ const updateProfileHandler = async (req: any, res: any) => {
 };
 
 // Update user profile (PATCH/PUT)
-router.patch('/', updateProfileValidators, validateRequest, updateProfileHandler);
-router.put('/', updateProfileValidators, validateRequest, updateProfileHandler);
+router.patch('/', authenticateJWT, updateProfileValidators, validateRequest, updateProfileHandler);
+router.put('/', authenticateJWT, updateProfileValidators, validateRequest, updateProfileHandler);
 
 // Get public user profile by ID or username
 router.get('/:identifier/public', async (req, res) => {
@@ -152,7 +153,7 @@ router.get('/:identifier/public', async (req, res) => {
 });
 
 // Upload profile logo
-router.post('/upload-logo', async (req, res) => {
+router.post('/upload-logo', authenticateJWT, async (req, res) => {
   try {
     const userFilter = getUserFilter(req);
     if (!userFilter) {
@@ -194,7 +195,7 @@ router.post('/upload-logo', async (req, res) => {
 });
 
 // Get user notifications
-router.get('/notifications', async (req, res) => {
+router.get('/notifications', authenticateJWT, async (req, res) => {
   try {
     const userFilter = getUserFilter(req);
     if (!userFilter) {
@@ -225,7 +226,7 @@ router.get('/notifications', async (req, res) => {
 });
 
 // Mark notification as read
-router.put('/notifications/:id', async (req, res) => {
+router.put('/notifications/:id', authenticateJWT, async (req, res) => {
   try {
     const userFilter = getUserFilter(req);
     if (!userFilter) {
@@ -265,7 +266,7 @@ router.put('/notifications/:id', async (req, res) => {
 });
 
 // Get user game profiles
-router.get('/game-profiles', async (req, res) => {
+router.get('/game-profiles', authenticateJWT, async (req, res) => {
   try {
     const userFilter = getUserFilter(req);
     if (!userFilter) {
@@ -295,7 +296,7 @@ router.get('/game-profiles', async (req, res) => {
 });
 
 // Update game profile
-router.put('/game-profiles/:game', async (req, res) => {
+router.put('/game-profiles/:game', authenticateJWT, async (req, res) => {
   try {
     const userFilter = getUserFilter(req);
     if (!userFilter) {
@@ -342,7 +343,7 @@ router.put('/game-profiles/:game', async (req, res) => {
 });
 
 // Get user achievements
-router.get('/achievements', async (req, res) => {
+router.get('/achievements', authenticateJWT, async (req, res) => {
   try {
     const userFilter = getUserFilter(req);
     if (!userFilter) {
@@ -372,7 +373,7 @@ router.get('/achievements', async (req, res) => {
 });
 
 // Add achievement to user
-router.post('/achievements', async (req, res) => {
+router.post('/achievements', authenticateJWT, async (req, res) => {
   try {
     const userFilter = getUserFilter(req);
     if (!userFilter) {

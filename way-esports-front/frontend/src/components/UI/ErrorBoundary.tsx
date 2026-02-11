@@ -197,7 +197,7 @@ class ErrorBoundary extends Component<Props, State> {
 
       return (
         <ErrorContainer>
-          <ErrorIcon>⚠️</ErrorIcon>
+          <ErrorIcon>{'\u26A0'}</ErrorIcon>
           <ErrorTitle>Something went wrong</ErrorTitle>
           <ErrorMessage>
             We're sorry, but something unexpected happened. Our team has been notified and is working to fix this issue.
@@ -213,13 +213,13 @@ class ErrorBoundary extends Component<Props, State> {
 
           <ButtonGroup>
             <Button onClick={this.handleReload}>
-              🔄 Reload Page
+              {'\u{1F504}'} Reload Page
             </Button>
             <Button variant="secondary" onClick={this.handleGoHome}>
-              🏠 Go Home
+              {'\u{1F3E0}'} Go Home
             </Button>
             <Button variant="secondary" onClick={this.handleClearCache}>
-              🗑️ Clear Cache
+              {'\u{1F5D1}'} Clear Cache
             </Button>
           </ButtonGroup>
         </ErrorContainer>

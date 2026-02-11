@@ -309,7 +309,9 @@ const TournamentsPage: React.FC = () => {
           <Title>Tournaments</Title>
           <Subtitle>Compete in tournaments, win prizes, and prove your skills</Subtitle>
         </HeaderContent>
-        <RulesButton onClick={() => setIsRulesModalOpen(true)}>📋 Rules</RulesButton>
+        <RulesButton onClick={() => setIsRulesModalOpen(true)}>
+          {'\u{1F4CB}'} Rules
+        </RulesButton>
       </Header>
 
       <FilterSection>

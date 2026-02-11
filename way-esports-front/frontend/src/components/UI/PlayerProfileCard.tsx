@@ -176,9 +176,9 @@ const PlayerProfileCard: React.FC<PlayerProfileCardProps> = ({
         )}
 
         <PlayerMeta>
-          <MetaItem>🎮 {game}</MetaItem>
-          {role && <MetaItem>👥 {role}</MetaItem>}
-          {country && <MetaItem>🌍 {country}</MetaItem>}
+          <MetaItem>{'\u{1F3AE}'} {game}</MetaItem>
+          {role && <MetaItem>{'\u{1F465}'} {role}</MetaItem>}
+          {country && <MetaItem>{'\u{1F30D}'} {country}</MetaItem>}
         </PlayerMeta>
 
         <StatsGrid>

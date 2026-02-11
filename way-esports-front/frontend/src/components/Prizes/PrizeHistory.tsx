@@ -173,7 +173,7 @@ const PrizeHistory: React.FC = () => {
   return (
     <Container>
       <Header>
-        <PrizeIcon>🏆</PrizeIcon>
+        <PrizeIcon>{'\u{1F3C6}'}</PrizeIcon>
         <Title>Prize History</Title>
       </Header>
 

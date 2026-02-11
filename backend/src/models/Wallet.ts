@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export interface IWallet extends Document {
+export interface IWallet extends Document<mongoose.Types.ObjectId> {
   user: mongoose.Types.ObjectId;
   balance: number;
   transactions: {

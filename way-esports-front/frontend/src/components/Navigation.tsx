@@ -5,10 +5,10 @@ const Navigation: React.FC = () => {
   const location = useLocation();
 
   const navItems = [
-    { path: '/', label: 'Главная' },
-    { path: '/tournaments', label: 'Турниры' },
-    { path: '/profile', label: 'Профиль' },
-    { path: '/news', label: 'Новости' }
+    { path: '/', label: 'Home' },
+    { path: '/tournaments', label: 'Tournaments' },
+    { path: '/profile', label: 'Profile' },
+    { path: '/news', label: 'News' }
   ];
 
   return (

@@ -124,7 +124,9 @@ const AchievementsSection: React.FC = () => {
               </>
             )}
             {a.earned && (
-              <ProgressText style={{ color: '#4caf50' }}>✓ Earned</ProgressText>
+              <ProgressText style={{ color: '#4caf50' }}>
+                {'\u2713'} Earned
+              </ProgressText>
             )}
           </Card>
         ))}

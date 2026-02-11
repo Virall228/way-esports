@@ -45,6 +45,21 @@ const getTournamentParticipationTeamId = async (
   return legacyTeam?._id ? legacyTeam._id.toString() : null;
 };
 
+const consumeTournamentEntry = async (req: any) => {
+  const user: any = (req as any).tournamentUser || req.user;
+  if (!user || typeof user.hasActiveSubscription !== 'function' || typeof user.useFreeEntry !== 'function') {
+    return;
+  }
+
+  if (user.hasActiveSubscription()) return;
+
+  try {
+    await user.useFreeEntry();
+  } catch (error) {
+    console.error('Failed to consume tournament entry:', error);
+  }
+};
+
 // Get all teams
 router.get('/', async (req, res) => {
   try {
@@ -175,21 +190,19 @@ router.post('/create',
       await team.save();
 
       try {
-        await TournamentRegistration.create({
-          userId,
-          teamId: team._id,
-          tournamentId,
-          role: 'owner',
-          status: 'active'
-        });
+        await TournamentRegistration.findOneAndUpdate(
+          { userId, tournamentId },
+          {
+            $set: {
+              teamId: team._id,
+              role: 'owner',
+              status: 'active'
+            }
+          },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
       } catch (registrationError: any) {
         await Team.findByIdAndDelete(team._id);
-        if (registrationError?.code === 11000) {
-          return res.status(409).json({
-            success: false,
-            error: 'You are already participating in this tournament'
-          });
-        }
         throw registrationError;
       }
 
@@ -203,6 +216,8 @@ router.post('/create',
       await Tournament.findByIdAndUpdate(tournamentId, {
         $addToSet: { registeredTeams: team._id }
       });
+
+      await consumeTournamentEntry(req);
 
       return res.status(201).json({
         success: true,
@@ -318,6 +333,8 @@ router.post('/join',
       await Tournament.findByIdAndUpdate(resolvedTournamentId, {
         $addToSet: { registeredTeams: team._id }
       });
+
+      await consumeTournamentEntry(req);
 
       return res.json({
         success: true,
@@ -644,6 +661,9 @@ router.post('/:id/members', authenticateJWT, async (req, res) => {
     if (!requesterId) {
       return res.status(401).json({ success: false, error: 'Authentication required' });
     }
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'User ID is required' });
+    }
     const team = await Team.findById(req.params.id);
 
     if (!team) {
@@ -667,7 +687,38 @@ router.post('/:id/members', authenticateJWT, async (req, res) => {
       });
     }
 
+    let targetUser: any = null;
     if (team.tournamentId) {
+      const tournament = await Tournament.findById(team.tournamentId).select('_id isRegistrationOpen status');
+      if (!tournament) {
+        return res.status(404).json({ success: false, error: 'Tournament not found' });
+      }
+
+      if (tournament.isRegistrationOpen === false || tournament.status !== 'upcoming') {
+        return res.status(400).json({ success: false, error: 'Tournament registration is closed' });
+      }
+
+      targetUser = await User.findById(userId);
+      if (!targetUser) {
+        return res.status(404).json({ success: false, error: 'User not found' });
+      }
+
+      if (targetUser.isBanned) {
+        return res.status(403).json({ success: false, error: 'User account is banned' });
+      }
+
+      if (!targetUser.canJoinTournament()) {
+        return res.status(402).json({
+          error: 'Subscription required',
+          message: 'You need an active subscription or free entries to join tournaments',
+          redirectTo: '/billing',
+          requiresSubscription: true,
+          freeEntriesCount: targetUser.freeEntriesCount,
+          isSubscribed: targetUser.isSubscribed,
+          subscriptionExpiresAt: targetUser.subscriptionExpiresAt
+        });
+      }
+
       const participationTeamId = await getTournamentParticipationTeamId(userId, team.tournamentId.toString());
       if (participationTeamId && participationTeamId !== String(team._id)) {
         return res.status(409).json({
@@ -694,12 +745,26 @@ router.post('/:id/members', authenticateJWT, async (req, res) => {
     }
 
     team.members.push(userId);
+    if (!Array.isArray(team.players)) {
+      team.players = [];
+    }
+    if (!team.players.some((player: any) => player.toString() === userId)) {
+      team.players.push(userId as any);
+    }
     await team.save();
 
     // Add team to user's teams
     await User.findByIdAndUpdate(userId, {
       $addToSet: { teams: team._id }
     });
+
+    if (team.tournamentId && targetUser && !targetUser.hasActiveSubscription()) {
+      try {
+        await targetUser.useFreeEntry();
+      } catch (entryError) {
+        console.error('Failed to consume tournament entry:', entryError);
+      }
+    }
 
     res.json({
       success: true,
@@ -747,6 +812,11 @@ router.delete('/:id/members/:userId', authenticateJWT, async (req, res) => {
     team.members = team.members.filter(
       member => member.toString() !== req.params.userId
     );
+    if (Array.isArray(team.players)) {
+      team.players = team.players.filter(
+        (player: any) => player.toString() !== req.params.userId
+      );
+    }
     await team.save();
 
     // Remove team from user's teams

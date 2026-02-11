@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export interface ITermsAndConditions extends Document {
+export interface ITermsAndConditions extends Document<mongoose.Types.ObjectId> {
   version: string;
   title: string;
   content: string;

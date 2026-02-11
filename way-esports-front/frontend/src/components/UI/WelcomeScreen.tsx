@@ -116,22 +116,22 @@ const ButtonContainer = styled.div`
 
 const features = [
   {
-    icon: '🎮',
+    icon: '\u{1F3AE}',
     title: 'Join Tournaments',
     description: 'Compete in daily tournaments across multiple games and win prizes'
   },
   {
-    icon: '👥',
+    icon: '\u{1F465}',
     title: 'Find Your Team',
     description: 'Connect with players, form teams, and climb the rankings together'
   },
   {
-    icon: '🏆',
+    icon: '\u{1F3C6}',
     title: 'Track Progress',
     description: 'Monitor your performance, stats, and achievements in real-time'
   },
   {
-    icon: '🏆',
+    icon: '\u{1F3C6}',
     title: 'Win Rewards',
     description: 'Earn rewards, prizes, and exclusive perks as you compete'
   }
@@ -212,7 +212,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onComplete }) => {
   return (
     <Container>
       <WelcomeCard>
-        <Logo>🏆</Logo>
+        <Logo>{'\u{1F3C6}'}</Logo>
         <Title>{steps[currentStep].title}</Title>
         <Subtitle>{steps[currentStep].subtitle}</Subtitle>
 

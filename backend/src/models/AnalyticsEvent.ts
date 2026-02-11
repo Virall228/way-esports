@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export interface IAnalyticsEvent extends Document {
+export interface IAnalyticsEvent extends Document<mongoose.Types.ObjectId> {
     event: string;
     userId: mongoose.Types.ObjectId;
     data: any;

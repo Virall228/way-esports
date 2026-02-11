@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export interface IReferral extends Document {
+export interface IReferral extends Document<mongoose.Types.ObjectId> {
   referrerId: mongoose.Types.ObjectId;
   refereeId: mongoose.Types.ObjectId;
   referralCode: string;

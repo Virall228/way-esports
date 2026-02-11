@@ -103,7 +103,7 @@ const Header: React.FC = () => {
       </Navigation>
       
       <RightSection>
-        <SearchButton>🔍</SearchButton>
+        <SearchButton>{'\u{1F50D}'}</SearchButton>
       </RightSection>
     </HeaderContainer>
   );

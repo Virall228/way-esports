@@ -231,10 +231,12 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => {
   return (
     <ModalOverlay onClick={onClose}>
       <ModalContent onClick={(e) => e.stopPropagation()}>
-        <CloseButton onClick={onClose}>×</CloseButton>
+        <CloseButton onClick={onClose}>
+          {'\u2715'}
+        </CloseButton>
         
         <WalletHeader>
-          <WalletIcon>💰</WalletIcon>
+          <WalletIcon>{'\u{1F4B0}'}</WalletIcon>
           <WalletTitle>Wallet</WalletTitle>
         </WalletHeader>
 

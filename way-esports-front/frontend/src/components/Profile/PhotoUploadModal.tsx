@@ -211,7 +211,9 @@ const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({ isOpen, onClose, on
   return (
     <ModalOverlay onClick={handleClose}>
       <ModalContent onClick={(e) => e.stopPropagation()}>
-        <CloseButton onClick={handleClose}>×</CloseButton>
+        <CloseButton onClick={handleClose}>
+          {'\u2715'}
+        </CloseButton>
         
         <Title>Upload Profile Photo</Title>
 
@@ -223,7 +225,7 @@ const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({ isOpen, onClose, on
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
           >
-            <UploadIcon>📷</UploadIcon>
+            <UploadIcon>{'\u{1F4F7}'}</UploadIcon>
             <UploadText>Click to upload or drag and drop</UploadText>
             <UploadSubtext>PNG, JPG, GIF up to 10MB</UploadSubtext>
           </UploadArea>

@@ -157,7 +157,7 @@ const Navigation = styled.nav<{ $isVisible: boolean }>`
   box-shadow: 0 -4px 20px rgba(255, 107, 0, 0.3), 0 0 40px rgba(255, 71, 87, 0.2);
   position: relative;
   
-  /* Десктоп: всегда показывать навигацию */
+  /* Desktop: always show navigation */
   @media (min-width: 769px) {
     transform: translateY(0) !important;
     opacity: 1 !important;
@@ -322,15 +322,15 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isHomePage = useMemo(() => location.pathname === '/', [location.pathname]);
   const isTournamentsPage = useMemo(() => location.pathname.startsWith('/tournaments'), [location.pathname]);
 
-  // Выносим handleScroll из useEffect
+  // Extract handleScroll for stable reference
   const handleScroll = useCallback(() => {
     const currentScrollY = window.scrollY;
 
-    // Показываем навигацию при прокрутке вверх или в самом верху
+    // Show navigation when scrolling up or near the top
     if (currentScrollY < lastScrollY || currentScrollY < 100) {
       setIsNavVisible(true);
     }
-    // Скрываем навигацию при прокрутке вниз (после 100px от верха)
+    // Hide navigation when scrolling down (after 100px)
     else if (currentScrollY > lastScrollY && currentScrollY > 100) {
       setIsNavVisible(false);
     }
@@ -339,7 +339,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }, [lastScrollY]);
 
   useEffect(() => {
-    // Улучшенный throttling для оптимизации производительности
+    // Throttling for better performance
     let ticking = false;
     const throttledHandleScroll = () => {
       if (!ticking) {
@@ -351,7 +351,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       }
     };
 
-    // Инициализация при загрузке страницы
+    // Initialize on page load
     const initialScrollY = window.scrollY;
     if (initialScrollY > 100) {
       setIsNavVisible(false);
@@ -364,14 +364,14 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     };
   }, [handleScroll]);
 
-  // Прокрутка вверх при изменении маршрута
+  // Scroll to top on route change
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
   const handleNavigation = useCallback((path: string) => {
     console.log('Navigating to:', path);
-    // Вибрация для профиля и кошелька
+    // Vibrate on profile and wallet
     if (path === '/profile' || path === '/wallet') {
       if (navigator.vibrate) {
         navigator.vibrate(100);
@@ -403,7 +403,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             WAY&nbsp;Esports
           </HeaderLogo>
           <SearchToggle onClick={() => setIsSearchOpen(true)} className="touch-target">
-            🔍
+            {'\u{1F50D}'}
           </SearchToggle>
         </Header>
         <Content>
@@ -414,37 +414,37 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             $active={location.pathname === '/'}
             onClick={() => handleNavigation('/')}
           >
-            🏠 Home
+            {'\u{1F3E0}'} Home
           </NavButtonMemo>
           <NavButtonMemo
             $active={location.pathname === '/tournaments'}
             onClick={() => handleNavigation('/tournaments')}
           >
-            🏆 Tournaments
+            {'\u{1F3C6}'} Tournaments
           </NavButtonMemo>
           <NavButtonMemo
             $active={location.pathname === '/teams'}
             onClick={() => handleNavigation('/teams')}
           >
-            👥 WAY Ranked
+            {'\u{1F465}'} WAY Ranked
           </NavButtonMemo>
           <NavButtonMemo
             $active={location.pathname === '/news'}
             onClick={() => handleNavigation('/news')}
           >
-            📰 News
+            {'\u{1F4F0}'} News
           </NavButtonMemo>
           <NavButtonMemo
             $active={location.pathname === '/rewards'}
             onClick={() => handleNavigation('/rewards')}
           >
-            🎖️ Rewards
+            {'\u{1F3C5}'} Rewards
           </NavButtonMemo>
           <NavButtonMemo
             $active={location.pathname === '/profile'}
             onClick={() => handleNavigation('/profile')}
           >
-            👤 Profile
+            {'\u{1F464}'} Profile
           </NavButtonMemo>
         </Navigation>
         <SearchOverlay $isVisible={isSearchOpen} onClick={() => setIsSearchOpen(false)}>

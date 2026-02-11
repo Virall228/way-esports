@@ -8,7 +8,7 @@ export interface IRewardRequirements {
   value: number;
 }
 
-export interface IReward extends Document {
+export interface IReward extends Document<mongoose.Types.ObjectId> {
   name: string;
   description: string;
   type: RewardType;

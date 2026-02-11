@@ -97,7 +97,7 @@ const TournamentRegistrationGuard: React.FC<TournamentRegistrationGuardProps> = 
     return (
       <Overlay>
         <Modal>
-          <Icon>🔒</Icon>
+          <Icon>{'\u{1F512}'}</Icon>
           <Title>Subscription Required</Title>
           <Message>
             You need an active subscription or free entries to join tournaments.

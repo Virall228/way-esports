@@ -52,7 +52,7 @@ const BackButton = styled.button`
     }
 
     &::before {
-        content: '←';
+        content: '\\2190';
         font-size: 1.2rem;
     }
 `;

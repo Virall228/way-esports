@@ -10,7 +10,10 @@ const router = express.Router();
  */
 router.get('/stats', authenticateJWT, async (req, res) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user?._id?.toString?.() || (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
     const stats = await ReferralService.getReferralStats(userId);
     res.json(stats);
   } catch (error: any) {

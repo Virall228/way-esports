@@ -59,7 +59,7 @@ const Avatar = styled.div<{ $hasImage?: boolean; $imageUrl?: string | null }>`
   &:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(0,0,0,0.35); }
 
   &:hover::after {
-    content: '📷';
+    content: '\\1F4F7';
     position: absolute;
     top: 0;
     left: 0;
@@ -307,7 +307,7 @@ const ProfilePage: React.FC = () => {
           {profile?.profileLogo ? (
             <AvatarImage src={getFullAvatarUrl(profile.profileLogo) || ''} alt="Profile" />
           ) : (
-            profile?.username?.charAt(0).toUpperCase() || '👤'
+            profile?.username?.charAt(0).toUpperCase() || '\u{1F464}'
           )}
         </Avatar>
         <ProfileInfo>
@@ -316,7 +316,7 @@ const ProfilePage: React.FC = () => {
               <Username>{profile?.username || 'Gamer'}</Username>
               <UserOrg>{profile?.email || 'WAY Esports Member'}</UserOrg>
               <Link to={`/profile/${profile?.id || user?.id}`} style={{ color: '#ff6b00', fontSize: '0.9rem', textDecoration: 'none' }}>
-                🔗 View Public Profile
+                {'\u{1F517}'} View Public Profile
               </Link>
             </div>
             <div>
@@ -324,7 +324,7 @@ const ProfilePage: React.FC = () => {
                 {profile?.isSubscribed ? 'MANAGE SUBSCRIPTION' : 'GET SUBSCRIPTION'}
               </SubscriptionButton>
               <WalletButton onClick={() => setIsWalletOpen(true)}>
-                💰 {profile?.balance?.toFixed(2) || '0.00'}
+                {'\u{1F4B0}'} {profile?.balance?.toFixed(2) || '0.00'}
               </WalletButton>
             </div>
           </ProfileTop>
@@ -407,7 +407,7 @@ const ProfilePage: React.FC = () => {
 
       <StatsCard>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-          <span style={{ fontSize: '1.5rem' }}>📊</span>
+          <span style={{ fontSize: '1.5rem' }}>{'\u{1F4CA}'}</span>
           <CardTitle style={{ margin: 0 }}>Match Statistics</CardTitle>
         </div>
 

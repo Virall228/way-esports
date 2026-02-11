@@ -17,7 +17,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
             prizePoolSummary
         ] = await Promise.all([
             User.countDocuments(),
-            Tournament.countDocuments({ status: 'active' }),
+            Tournament.countDocuments({ status: { $in: ['upcoming', 'ongoing'] } }),
             News.countDocuments(),
             Tournament.aggregate([
                 { $match: { prizePool: { $exists: true } } },
@@ -61,9 +61,14 @@ export const getAnalytics = async (req: Request, res: Response) => {
         ]);
 
         // Subscriptions count
+        const now = new Date();
         const activeSubscriptions = await User.countDocuments({
             isSubscribed: true,
-            subscriptionExpiresAt: { $gt: new Date() }
+            $or: [
+                { subscriptionExpiresAt: { $exists: false } },
+                { subscriptionExpiresAt: null },
+                { subscriptionExpiresAt: { $gt: now } }
+            ]
         });
 
         res.json({

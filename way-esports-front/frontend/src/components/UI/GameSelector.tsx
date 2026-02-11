@@ -20,21 +20,21 @@ const GAMES: Game[] = [
     id: 'CS2',
     name: 'Counter-Strike 2',
     description: 'Premier tactical shooter with competitive 5v5 matches',
-    icon: '🎯',
+    icon: '\u{1F3AF}',
     playerCount: '1M+ active players'
   },
   {
     id: 'CriticalOps',
     name: 'Critical Ops',
     description: 'Mobile tactical FPS with fast-paced action',
-    icon: '📱',
+    icon: '\u{1F4F1}',
     playerCount: '500K+ active players'
   },
   {
     id: 'PUBG',
     name: 'PUBG',
     description: 'Battle Royale with intense survival gameplay',
-    icon: '🪂',
+    icon: '\u{1FA82}',
     playerCount: '750K+ active players'
   }
 ];
@@ -108,7 +108,7 @@ const PlayerCount = styled.div`
   font-size: ${({ theme }) => theme.typography.body2.fontSize};
   
   &::before {
-    content: '👥';
+    content: '\\1F465';
   }
 `;
 
@@ -124,7 +124,7 @@ const SelectIndicator = styled.div<{ selected?: boolean }>`
   transition: opacity ${({ theme }) => theme.transitions.fast};
   
   &::before {
-    content: '✓';
+    content: '\\2713';
   }
 `;
 

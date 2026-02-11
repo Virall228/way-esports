@@ -238,7 +238,7 @@ const TeamPage: React.FC = () => {
               <div>
                 <h4 style={{ margin: '0 0 4px 0' }}>{member.username || 'Unknown'}</h4>
                 <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.7 }}>
-                  {member.id === team.captain?.id ? '👑 Captain' : 'Player'}
+                  {member.id === team.captain?.id ? '\u{1F451} Captain' : 'Player'}
                 </p>
               </div>
             </MemberCard>
@@ -256,11 +256,17 @@ const TeamPage: React.FC = () => {
                 <div>
                   <h4 style={{ margin: '0 0 0.5rem 0', color: '#ff6b00' }}>{ach.tournamentName || 'Tournament'}</h4>
                   <p style={{ margin: 0, opacity: 0.8 }}>
-                    Position: {ach.position} • Prize: ${ach.prize?.toLocaleString() || 0}
+                    Position: {ach.position} {'\u2022'} Prize: ${ach.prize?.toLocaleString() || 0}
                   </p>
                 </div>
                 <div style={{ fontSize: '2rem' }}>
-                  {ach.position === 1 ? '🥇' : ach.position === 2 ? '🥈' : ach.position === 3 ? '🥉' : '🏆'}
+                  {ach.position === 1
+                    ? '\u{1F947}'
+                    : ach.position === 2
+                      ? '\u{1F948}'
+                      : ach.position === 3
+                        ? '\u{1F949}'
+                        : '\u{1F3C6}'}
                 </div>
               </AchievementCard>
             ))}

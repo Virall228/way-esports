@@ -77,19 +77,19 @@ const PreferenceDescription = styled.p`
 const teamPreferences = [
   {
     id: 'solo',
-    icon: '🎮',
+    icon: '\u{1F3AE}',
     title: 'Play Solo',
     description: 'Compete individually in tournaments'
   },
   {
     id: 'findTeam',
-    icon: '🔍',
+    icon: '\u{1F50D}',
     title: 'Find a Team',
     description: 'Join an existing team'
   },
   {
     id: 'createTeam',
-    icon: '👥',
+    icon: '\u{1F465}',
     title: 'Create Team',
     description: 'Start your own team'
   }

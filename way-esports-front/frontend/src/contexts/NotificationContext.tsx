@@ -389,7 +389,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 e.stopPropagation();
                 removeNotification(notification.id);
               }}>
-                ×
+                {'\u2715'}
               </CloseButton>
             </NotificationHeader>
             <NotificationTime>
@@ -402,7 +402,9 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       <NotificationPanel $isOpen={isPanelOpen}>
         <PanelHeader>
           <PanelTitle>Notifications ({unreadCount})</PanelTitle>
-          <PanelCloseButton onClick={() => setIsPanelOpen(false)}>×</PanelCloseButton>
+          <PanelCloseButton onClick={() => setIsPanelOpen(false)}>
+            {'\u2715'}
+          </PanelCloseButton>
         </PanelHeader>
         
         <NotificationList>

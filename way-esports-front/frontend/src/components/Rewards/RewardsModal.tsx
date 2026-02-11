@@ -304,7 +304,7 @@ const RewardsModal: React.FC<RewardsModalProps> = ({ isOpen, onClose }) => {
             description: r.description || '',
             rarity: (rarity === 'LEGENDARY' ? 'LEGENDARY' : rarity === 'EPIC' ? 'EPIC' : rarity === 'RARE' ? 'RARE' : 'COMMON'),
             value: valueNum === 0 ? 'Free Tournament Entry' : `$${valueNum}`,
-            icon: r.icon || '🏆',
+            icon: r.icon || '\u{1F3C6}',
             locked: !claimedIds.has(id)
           };
         });
@@ -352,7 +352,9 @@ const RewardsModal: React.FC<RewardsModalProps> = ({ isOpen, onClose }) => {
   return (
     <ModalOverlay onClick={onClose}>
       <ModalContent onClick={(e) => e.stopPropagation()}>
-        <CloseButton onClick={onClose}>×</CloseButton>
+        <CloseButton onClick={onClose}>
+          {'\u2715'}
+        </CloseButton>
         
         <Header>
           <Title>Rewards & Achievements</Title>
@@ -369,7 +371,7 @@ const RewardsModal: React.FC<RewardsModalProps> = ({ isOpen, onClose }) => {
             <StatLabel>Total Rewards</StatLabel>
           </StatCard>
           <StatCard>
-            <StatNumber>—</StatNumber>
+            <StatNumber>{'\u2014'}</StatNumber>
             <StatLabel>Total Value</StatLabel>
           </StatCard>
           <StatCard>

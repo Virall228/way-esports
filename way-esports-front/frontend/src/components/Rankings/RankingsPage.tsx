@@ -214,7 +214,7 @@ const RankingsPage: React.FC = () => {
             <Header>
                 <Title>Rankings</Title>
                 <UpdateInfo>
-                    Week {currentPeriod.weekNumber} • Updated {new Date().toLocaleDateString()}
+                    Week {currentPeriod.weekNumber} {'\u2022'} Updated {new Date().toLocaleDateString()}
                 </UpdateInfo>
             </Header>
 

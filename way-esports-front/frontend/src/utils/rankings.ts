@@ -80,7 +80,7 @@ export const calculateRankChange = (currentRank: number, previousRank: number): 
 };
 
 export const formatRankChange = (change: number): string => {
-    if (change > 0) return `↑${change}`;
-    if (change < 0) return `↓${Math.abs(change)}`;
-    return '−';
-}; 
+    if (change > 0) return `\u2191${change}`;
+    if (change < 0) return `\u2193${Math.abs(change)}`;
+    return '-';
+};

@@ -970,8 +970,8 @@ const AdminPage: React.FC = () => {
 
         <h3 style={{ marginTop: '30px' }}>Recent Activity</h3>
         <div style={{ color: '#cccccc' }}>
-          <p>• Dashboard operational</p>
-          <p>• Data synced with MongoDB Atlas</p>
+          <p>{'\u2022'} Dashboard operational</p>
+          <p>{'\u2022'} Data synced with MongoDB Atlas</p>
         </div>
       </div>
     );
@@ -1043,9 +1043,9 @@ const AdminPage: React.FC = () => {
                 <tr key={user.id}>
                   <Td>{user.username}</Td>
                   <Td>{user.role}</Td>
-                  <Td>{user.isSubscribed ? '✅ Active' : '❌ None'} {user.freeEntriesCount > 0 ? `(${user.freeEntriesCount} free)` : ''}</Td>
+                  <Td>{user.isSubscribed ? '\u2705 Active' : '\u274C None'} {user.freeEntriesCount > 0 ? `(${user.freeEntriesCount} free)` : ''}</Td>
                   <Td>${user.balance}</Td>
-                  <Td>{user.isBanned ? '🚫 Banned' : '🟢 Active'}</Td>
+                  <Td>{user.isBanned ? '\u26D4 Banned' : '\u{1F7E2} Active'}</Td>
                   <Td>
                     <ActionsCell>
                       <ActionButton onClick={() => handleEdit(user, 'user')}>Edit</ActionButton>
@@ -1672,7 +1672,9 @@ const AdminPage: React.FC = () => {
     return (
       <Modal $isOpen={isModalOpen} onClick={() => setIsModalOpen(false)}>
         <ModalContent onClick={(e) => e.stopPropagation()}>
-          <CloseButton onClick={() => setIsModalOpen(false)} aria-label="Close">×</CloseButton>
+          <CloseButton onClick={() => setIsModalOpen(false)} aria-label="Close">
+            {'\u2715'}
+          </CloseButton>
           <h3>{editingItem ? 'Edit' : 'Create'} {modalType}</h3>
           {renderForm()}
           <ModalActions>

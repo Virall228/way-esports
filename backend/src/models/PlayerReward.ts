@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export type PlayerRewardStatus = 'earned' | 'claimed' | 'expired';
 
-export interface IPlayerReward extends Document {
+export interface IPlayerReward extends Document<mongoose.Types.ObjectId> {
   userId: mongoose.Types.ObjectId;
   rewardId: mongoose.Types.ObjectId;
   gameId?: string;

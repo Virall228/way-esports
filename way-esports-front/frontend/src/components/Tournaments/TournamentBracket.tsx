@@ -216,7 +216,7 @@ interface TournamentBracketProps {
 const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tournamentName }) => {
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
 
-  // Пример данных турнирной сетки
+  // Example tournament bracket data
   const bracketData = {
     quarterfinals: [
       {
@@ -225,7 +225,7 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tou
         team1: {
           id: 1,
           name: "WAY Tigers",
-          logo: "🐯",
+          logo: "\u{1F42F}",
           score: 16,
           players: [
             { id: 1, name: "Tiger_Pro", kills: 25, deaths: 12, assists: 8, kdRatio: 2.08 },
@@ -238,7 +238,7 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tou
         team2: {
           id: 2,
           name: "Elite Warriors",
-          logo: "⚔️",
+          logo: "\u2694",
           score: 14,
           players: [
             { id: 6, name: "Warrior_Elite", kills: 19, deaths: 16, assists: 9, kdRatio: 1.19 },
@@ -249,7 +249,7 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tou
           ]
         },
         status: "completed" as const,
-        winner: { id: 1, name: "WAY Tigers", logo: "🐯", score: 16, players: [] },
+        winner: { id: 1, name: "WAY Tigers", logo: "\u{1F42F}", score: 16, players: [] },
         date: "March 15, 2024",
         duration: "45:32"
       },
@@ -259,7 +259,7 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tou
         team1: {
           id: 3,
           name: "Phoenix Rising",
-          logo: "🔥",
+          logo: "\u{1F525}",
           score: 16,
           players: [
             { id: 11, name: "Phoenix_Flame", kills: 28, deaths: 10, assists: 5, kdRatio: 2.8 },
@@ -272,7 +272,7 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tou
         team2: {
           id: 4,
           name: "Shadow Hunters",
-          logo: "🌙",
+          logo: "\u{1F319}",
           score: 12,
           players: [
             { id: 16, name: "Shadow_Stalker", kills: 21, deaths: 15, assists: 8, kdRatio: 1.4 },
@@ -283,7 +283,7 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tou
           ]
         },
         status: "completed" as const,
-        winner: { id: 3, name: "Phoenix Rising", logo: "🔥", score: 16, players: [] },
+        winner: { id: 3, name: "Phoenix Rising", logo: "\u{1F525}", score: 16, players: [] },
         date: "March 15, 2024",
         duration: "38:45"
       }
@@ -295,7 +295,7 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tou
         team1: {
           id: 1,
           name: "WAY Tigers",
-          logo: "🐯",
+          logo: "\u{1F42F}",
           score: 16,
           players: [
             { id: 1, name: "Tiger_Pro", kills: 30, deaths: 8, assists: 6, kdRatio: 3.75 },
@@ -308,7 +308,7 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tou
         team2: {
           id: 5,
           name: "Thunder Storm",
-          logo: "⚡",
+          logo: "\u26A1",
           score: 14,
           players: [
             { id: 21, name: "Thunder_Bolt", kills: 26, deaths: 12, assists: 7, kdRatio: 2.17 },
@@ -319,7 +319,7 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tou
           ]
         },
         status: "completed" as const,
-        winner: { id: 1, name: "WAY Tigers", logo: "🐯", score: 16, players: [] },
+        winner: { id: 1, name: "WAY Tigers", logo: "\u{1F42F}", score: 16, players: [] },
         date: "March 16, 2024",
         duration: "52:18"
       }
@@ -331,7 +331,7 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tou
         team1: {
           id: 1,
           name: "WAY Tigers",
-          logo: "🐯",
+          logo: "\u{1F42F}",
           score: 16,
           players: [
             { id: 1, name: "Tiger_Pro", kills: 35, deaths: 6, assists: 4, kdRatio: 5.83 },
@@ -344,7 +344,7 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tou
         team2: {
           id: 3,
           name: "Phoenix Rising",
-          logo: "🔥",
+          logo: "\u{1F525}",
           score: 13,
           players: [
             { id: 11, name: "Phoenix_Flame", kills: 32, deaths: 8, assists: 3, kdRatio: 4.0 },
@@ -355,7 +355,7 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tou
           ]
         },
         status: "completed" as const,
-        winner: { id: 1, name: "WAY Tigers", logo: "🐯", score: 16, players: [] },
+        winner: { id: 1, name: "WAY Tigers", logo: "\u{1F42F}", score: 16, players: [] },
         date: "March 17, 2024",
         duration: "1:05:42"
       }
@@ -449,20 +449,20 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tou
     <BracketContainer>
       <BracketHeader>
         <BracketTitle>{tournamentName} - Tournament Bracket</BracketTitle>
-        <BracketStage>Champion: WAY Tigers 🏆</BracketStage>
+        <BracketStage>Champion: WAY Tigers {'\u{1F3C6}'}</BracketStage>
       </BracketHeader>
 
-      <RoundTitle>🏆 Finals</RoundTitle>
+      <RoundTitle>{'\u{1F3C6}'} Finals</RoundTitle>
       <BracketGrid>
         {bracketData.finals.map(renderMatch)}
       </BracketGrid>
 
-      <RoundTitle>🥈 Semifinals</RoundTitle>
+      <RoundTitle>{'\u{1F948}'} Semifinals</RoundTitle>
       <BracketGrid>
         {bracketData.semifinals.map(renderMatch)}
       </BracketGrid>
 
-      <RoundTitle>🥉 Quarterfinals</RoundTitle>
+      <RoundTitle>{'\u{1F949}'} Quarterfinals</RoundTitle>
       <BracketGrid>
         {bracketData.quarterfinals.map(renderMatch)}
       </BracketGrid>

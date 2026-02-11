@@ -250,7 +250,7 @@ const HomePage: React.FC = () => {
 
       <FeaturesGrid>
         <FeatureCard>
-          <FeatureIcon>🏆</FeatureIcon>
+          <FeatureIcon>{'\u{1F3C6}'}</FeatureIcon>
           <FeatureTitle>Professional Tournaments</FeatureTitle>
           <FeatureDescription>
             Compete in high-stakes tournaments with substantial prize pools and professional organization.
@@ -258,7 +258,7 @@ const HomePage: React.FC = () => {
         </FeatureCard>
 
         <FeatureCard>
-          <FeatureIcon>👥</FeatureIcon>
+          <FeatureIcon>{'\u{1F465}'}</FeatureIcon>
           <FeatureTitle>Team Management</FeatureTitle>
           <FeatureDescription>
             Create, manage, and lead your esports team with advanced tools and analytics.
@@ -266,7 +266,7 @@ const HomePage: React.FC = () => {
         </FeatureCard>
 
         <FeatureCard>
-          <FeatureIcon>🎮</FeatureIcon>
+          <FeatureIcon>{'\u{1F3AE}'}</FeatureIcon>
           <FeatureTitle>Multi-Platform Gaming</FeatureTitle>
           <FeatureDescription>
             Participate in tournaments across various popular esports titles and genres.
@@ -274,7 +274,7 @@ const HomePage: React.FC = () => {
         </FeatureCard>
 
         <FeatureCard>
-          <FeatureIcon>📊</FeatureIcon>
+          <FeatureIcon>{'\u{1F4CA}'}</FeatureIcon>
           <FeatureTitle>Advanced Analytics</FeatureTitle>
           <FeatureDescription>
             Track your performance with detailed statistics and insights to improve your game.
@@ -282,7 +282,7 @@ const HomePage: React.FC = () => {
         </FeatureCard>
 
         <FeatureCard>
-          <FeatureIcon>🏅</FeatureIcon>
+          <FeatureIcon>{'\u{1F3C5}'}</FeatureIcon>
           <FeatureTitle>Rewards System</FeatureTitle>
           <FeatureDescription>
             Earn points, badges, and rewards for your achievements and participation.
@@ -290,7 +290,7 @@ const HomePage: React.FC = () => {
         </FeatureCard>
 
         <FeatureCard>
-          <FeatureIcon>🌐</FeatureIcon>
+          <FeatureIcon>{'\u{1F310}'}</FeatureIcon>
           <FeatureTitle>Global Community</FeatureTitle>
           <FeatureDescription>
             Connect with players from around the world and build lasting friendships.

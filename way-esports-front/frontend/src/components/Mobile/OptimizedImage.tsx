@@ -237,12 +237,12 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
     >
       {!isLoaded && !hasError && <LoadingSpinner />}
       
-      {hasError && (
-        <>
-          <ErrorIcon>🖼️</ErrorIcon>
-          <ErrorText>Failed to load image</ErrorText>
-        </>
-      )}
+        {hasError && (
+          <>
+          <ErrorIcon>{'\u{1F5BC}'}</ErrorIcon>
+            <ErrorText>Failed to load image</ErrorText>
+          </>
+        )}
 
       {currentSrc && (
         <StyledImage

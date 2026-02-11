@@ -4,7 +4,7 @@ export interface IToken {
   token: string;
 }
 
-export interface IUser extends Document {
+export interface IUser extends Document<mongoose.Types.ObjectId> {
   _id: mongoose.Types.ObjectId;
   id: string;
   telegramId?: number;

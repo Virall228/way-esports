@@ -7,7 +7,7 @@ export interface IAchievementCriteria {
   value: number;
 }
 
-export interface IAchievement extends Document {
+export interface IAchievement extends Document<mongoose.Types.ObjectId> {
   key: string;
   name: string;
   description: string;

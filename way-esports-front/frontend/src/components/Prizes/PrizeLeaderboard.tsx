@@ -156,7 +156,7 @@ const PrizeLeaderboard: React.FC = () => {
   return (
     <Container>
       <Header>
-        <TrophyIcon>🏆</TrophyIcon>
+        <TrophyIcon>{'\u{1F3C6}'}</TrophyIcon>
         <Title>Prize Leaderboard</Title>
       </Header>
 
@@ -170,7 +170,7 @@ const PrizeLeaderboard: React.FC = () => {
               <PlayerInfo>
                 <PlayerName>{entry.username}</PlayerName>
                 <PlayerStats>
-                  {entry.stats.tournamentsWon} wins • {entry.prizeCount} prizes
+                  {entry.stats.tournamentsWon} wins {'\u2022'} {entry.prizeCount} prizes
                 </PlayerStats>
               </PlayerInfo>
               <PrizeAmount>${entry.totalPrizes.toFixed(2)}</PrizeAmount>

@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export interface ISession extends Document {
+export interface ISession extends Document<mongoose.Types.ObjectId> {
   user: mongoose.Types.ObjectId;
   tokenHash: string;
   expiresAt: Date;

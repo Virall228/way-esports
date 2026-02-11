@@ -32,8 +32,8 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament, onJoin }) =
         </span>
       </div>
       <div>
-        <p>Участники: {tournament.currentParticipants}/{tournament.maxParticipants}</p>
-        <p>Призовой фонд: ${tournament.prizePool}</p>
+        <p>Participants: {tournament.currentParticipants}/{tournament.maxParticipants}</p>
+        <p>Prize Pool: ${tournament.prizePool}</p>
       </div>
       {onJoin && tournament.status === 'upcoming' && (
         <button 
@@ -48,7 +48,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({ tournament, onJoin }) =
             cursor: 'pointer'
           }}
         >
-          Присоединиться
+          Join
         </button>
       )}
     </div>

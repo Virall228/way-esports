@@ -257,7 +257,7 @@ const ReferralCard: React.FC = () => {
   return (
     <Container>
       <Header>
-        <Icon>🎁</Icon>
+        <Icon>{'\u{1F381}'}</Icon>
         <Title>Referral Program</Title>
       </Header>
 
@@ -266,7 +266,7 @@ const ReferralCard: React.FC = () => {
         <CodeContainer>
           <Code>{stats.referralCode}</Code>
           <CopyButton onClick={copyReferralCode}>
-            {copied ? '✓ Copied' : '📋 Copy'}
+            {copied ? '\u2713 Copied' : '\u{1F4CB} Copy'}
           </CopyButton>
         </CodeContainer>
       </ReferralCodeSection>
@@ -285,7 +285,7 @@ const ReferralCard: React.FC = () => {
           <StatLabel>Bonuses Earned</StatLabel>
         </StatCard>
         <StatCard>
-          <StatValue>{stats.isSubscribed ? '✓' : '✗'}</StatValue>
+          <StatValue>{stats.isSubscribed ? '\u2713' : '\u2717'}</StatValue>
           <StatLabel>Subscribed</StatLabel>
         </StatCard>
       </StatsGrid>
@@ -302,13 +302,13 @@ const ReferralCard: React.FC = () => {
 
       <ShareSection>
         <ShareButton onClick={() => shareReferralLink('copy')}>
-          📋 Copy Link
+          {'\u{1F4CB}'} Copy Link
         </ShareButton>
         <ShareButton onClick={() => shareReferralLink('twitter')}>
-          🐦 Share on Twitter
+          {'\u{1F426}'} Share on Twitter
         </ShareButton>
         <ShareButton onClick={() => shareReferralLink('telegram')}>
-          ✈️ Share on Telegram
+          {'\u2708'} Share on Telegram
         </ShareButton>
       </ShareSection>
     </Container>

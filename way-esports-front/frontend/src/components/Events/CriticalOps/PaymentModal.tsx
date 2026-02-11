@@ -205,7 +205,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     return (
         <ModalOverlay onClick={onClose}>
             <ModalContent onClick={e => e.stopPropagation()}>
-                <CloseButton onClick={onClose}>×</CloseButton>
+                <CloseButton onClick={onClose}>
+                  {'\u2715'}
+                </CloseButton>
 
                 <Title>Tournament Entry Fee</Title>
                 

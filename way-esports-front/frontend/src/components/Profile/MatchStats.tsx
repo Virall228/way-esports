@@ -258,7 +258,7 @@ const MatchStats: React.FC<MatchStatsProps> = ({ username }) => {
   const [activeFilter, setActiveFilter] = useState('all');
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
 
-  // Пример данных матчей пользователя
+  // Example user match data
   const matchHistory: MatchStats[] = [
     {
       id: 1,
@@ -377,7 +377,7 @@ const MatchStats: React.FC<MatchStatsProps> = ({ username }) => {
       <MatchHeader>
         <MatchInfo>
           <MatchTitle>{match.tournament}</MatchTitle>
-          <MatchDate>vs {match.opponent} • {match.date}</MatchDate>
+          <MatchDate>vs {match.opponent} {'\u2022'} {match.date}</MatchDate>
         </MatchInfo>
         <MatchResult $won={match.result === 'win'}>
           <ResultText $won={match.result === 'win'}>
@@ -478,7 +478,7 @@ const MatchStats: React.FC<MatchStatsProps> = ({ username }) => {
   return (
     <StatsContainer>
       <StatsHeader>
-        <StatsTitle>📊 Match Statistics - {username}</StatsTitle>
+        <StatsTitle>{'\u{1F4CA}'} Match Statistics - {username}</StatsTitle>
       </StatsHeader>
 
       <FilterBar>

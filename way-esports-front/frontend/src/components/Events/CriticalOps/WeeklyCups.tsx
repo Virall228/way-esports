@@ -333,7 +333,7 @@ const WeeklyCups: React.FC<WeeklyCupProps> = ({ onRegister }) => {
                                 </InfoItem>
                                 <InfoItem>
                                     <h4>Entry Fee</h4>
-                                    <p>$5 × 5 players = $25 per team</p>
+                                    <p>$5 x 5 players = $25 per team</p>
                                 </InfoItem>
                                 <InfoItem>
                                     <h4>Start Time</h4>

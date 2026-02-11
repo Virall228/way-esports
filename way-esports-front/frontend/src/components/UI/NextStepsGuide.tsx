@@ -139,26 +139,26 @@ const RewardBadge = styled.span`
 
 const categories = {
   tournaments: {
-    icon: '🏆',
+    icon: '\u{1F3C6}',
     title: 'Tournaments',
     actions: [
       {
         id: 'browse_tournaments',
-        icon: '🔍',
+        icon: '\u{1F50D}',
         title: 'Browse Tournaments',
         description: 'Find tournaments matching your skill level',
         reward: '50 XP'
       },
       {
         id: 'join_tournament',
-        icon: '✍️',
+        icon: '\u270D',
         title: 'Join Your First Tournament',
         description: 'Register for an upcoming tournament',
         reward: '100 XP'
       },
       {
         id: 'practice_match',
-        icon: '🎮',
+        icon: '\u{1F3AE}',
         title: 'Play Practice Match',
         description: 'Warm up with a practice match',
         reward: '30 XP'
@@ -166,26 +166,26 @@ const categories = {
     ]
   },
   team: {
-    icon: '👥',
+    icon: '\u{1F465}',
     title: 'Team Building',
     actions: [
       {
         id: 'browse_teams',
-        icon: '🔍',
+        icon: '\u{1F50D}',
         title: 'Browse Teams',
         description: 'Explore teams looking for players',
         reward: '30 XP'
       },
       {
         id: 'create_team',
-        icon: '⭐',
+        icon: '\u2B50',
         title: 'Create Your Team',
         description: 'Start your own competitive team',
         reward: '150 XP'
       },
       {
         id: 'team_practice',
-        icon: '🎯',
+        icon: '\u{1F3AF}',
         title: 'Schedule Team Practice',
         description: 'Set up your first team practice session',
         reward: '50 XP'
@@ -193,26 +193,26 @@ const categories = {
     ]
   },
   profile: {
-    icon: '👤',
+    icon: '\u{1F464}',
     title: 'Profile Setup',
     actions: [
       {
         id: 'upload_avatar',
-        icon: '📷',
+        icon: '\u{1F4F7}',
         title: 'Upload Avatar',
         description: 'Add a profile picture to stand out',
         reward: '20 XP'
       },
       {
         id: 'link_accounts',
-        icon: '🔗',
+        icon: '\u{1F517}',
         title: 'Link Game Accounts',
         description: 'Connect your game accounts for stats tracking',
         reward: '40 XP'
       },
       {
         id: 'set_availability',
-        icon: '📅',
+        icon: '\u{1F4C5}',
         title: 'Set Availability',
         description: 'Add your playing schedule',
         reward: '30 XP'
@@ -220,26 +220,26 @@ const categories = {
     ]
   },
   community: {
-    icon: '🌟',
+    icon: '\u{1F31F}',
     title: 'Community',
     actions: [
       {
         id: 'join_discord',
-        icon: '💬',
+        icon: '\u{1F4AC}',
         title: 'Join Discord',
         description: 'Connect with the WAY Esports community',
         reward: '40 XP'
       },
       {
         id: 'follow_players',
-        icon: '👋',
+        icon: '\u{1F44B}',
         title: 'Follow Players',
         description: 'Follow top players in your game',
         reward: '20 XP'
       },
       {
         id: 'share_profile',
-        icon: '📢',
+        icon: '\u{1F4E2}',
         title: 'Share Your Profile',
         description: 'Let others know you\'ve joined',
         reward: '30 XP'
@@ -302,7 +302,7 @@ const NextStepsGuide: React.FC<NextStepsGuideProps> = ({
                     <ActionDescription>{action.description}</ActionDescription>
                   </ActionContent>
                   <RewardBadge>
-                    ⭐ {action.reward}
+                    {'\u2B50'} {action.reward}
                   </RewardBadge>
                 </ActionItem>
               ))}

@@ -215,10 +215,10 @@ const TournamentDetailsPage: React.FC = () => {
         <div>
           <Title style={{ color: '#fff', marginBottom: '0.25rem' }}>{title}</Title>
           <Subtitle>
-            <span style={{ color: '#ff6b00', fontWeight: 'bold' }}>{tournament?.game || '—'}</span>
-            <span style={{ color: '#fff' }}>• {tournament?.status || '—'}</span>
+            <span style={{ color: '#ff6b00', fontWeight: 'bold' }}>{tournament?.game || '\u2014'}</span>
+            <span style={{ color: '#fff' }}>{'\u2022'} {tournament?.status || '\u2014'}</span>
             <span style={{ color: '#fff' }}>
-              • {tournament?.startDate ? new Date(tournament.startDate).toLocaleDateString() : '—'}
+              {'\u2022'} {tournament?.startDate ? new Date(tournament.startDate).toLocaleDateString() : '\u2014'}
             </span>
           </Subtitle>
         </div>
@@ -244,12 +244,12 @@ const TournamentDetailsPage: React.FC = () => {
           {filteredMatches.map((m) => {
             const t1 = typeof m.team1 === 'string' ? m.team1 : (m.team1?.name || m.team1?.tag || 'TBD');
             const t2 = typeof m.team2 === 'string' ? m.team2 : (m.team2?.name || m.team2?.tag || 'TBD');
-            const score = m.score ? `${m.score.team1 ?? 0}:${m.score.team2 ?? 0}` : '—';
+            const score = m.score ? `${m.score.team1 ?? 0}:${m.score.team2 ?? 0}` : '\u2014';
 
             return (
               <SurfaceCard key={m.id}>
                 <Row>
-                  <Meta>{m.round || '—'}{m.map ? ` • ${m.map}` : ''}</Meta>
+                  <Meta>{m.round || '\u2014'}{m.map ? ` \u2022 ${m.map}` : ''}</Meta>
                   <Meta>{new Date(m.startTime).toLocaleString()}</Meta>
                 </Row>
 
@@ -285,7 +285,7 @@ const TournamentDetailsPage: React.FC = () => {
                 {ms.map((m) => {
                   const t1 = typeof m.team1 === 'string' ? m.team1 : (m.team1?.name || m.team1?.tag || 'TBD');
                   const t2 = typeof m.team2 === 'string' ? m.team2 : (m.team2?.name || m.team2?.tag || 'TBD');
-                  const score = m.score ? `${m.score.team1 ?? 0}:${m.score.team2 ?? 0}` : '—';
+                  const score = m.score ? `${m.score.team1 ?? 0}:${m.score.team2 ?? 0}` : '\u2014';
                   return (
                     <SurfaceCard key={m.id}>
                       <Row>

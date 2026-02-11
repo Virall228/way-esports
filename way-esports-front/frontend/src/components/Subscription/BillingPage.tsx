@@ -273,7 +273,7 @@ const BillingPage: React.FC = () => {
 
       {billing.freeEntriesCount > 0 && (
         <FreeEntriesSection>
-          <FreeEntriesTitle>🎁 You Have Free Entries!</FreeEntriesTitle>
+          <FreeEntriesTitle>{'\u{1F381}'} You Have Free Entries!</FreeEntriesTitle>
           <FreeEntriesText>
             You currently have <strong>{billing.freeEntriesCount}</strong> free tournament entries available. 
             You can use these to join tournaments without an active subscription.
@@ -295,33 +295,33 @@ const BillingPage: React.FC = () => {
           </SubscribeButton>
         ) : (
           <SubscribeButton disabled>
-            ✓ Active Subscription
+            {'\u2713'} Active Subscription
           </SubscribeButton>
         )}
 
         <BenefitsList>
           <BenefitItem>
-            <CheckIcon>✓</CheckIcon>
+            <CheckIcon>{'\u2713'}</CheckIcon>
             Unlimited tournament registrations
           </BenefitItem>
           <BenefitItem>
-            <CheckIcon>✓</CheckIcon>
+            <CheckIcon>{'\u2713'}</CheckIcon>
             Priority tournament access
           </BenefitItem>
           <BenefitItem>
-            <CheckIcon>✓</CheckIcon>
+            <CheckIcon>{'\u2713'}</CheckIcon>
             Exclusive premium tournaments
           </BenefitItem>
           <BenefitItem>
-            <CheckIcon>✓</CheckIcon>
+            <CheckIcon>{'\u2713'}</CheckIcon>
             Advanced statistics and analytics
           </BenefitItem>
           <BenefitItem>
-            <CheckIcon>✓</CheckIcon>
+            <CheckIcon>{'\u2713'}</CheckIcon>
             Priority customer support
           </BenefitItem>
           <BenefitItem>
-            <CheckIcon>✓</CheckIcon>
+            <CheckIcon>{'\u2713'}</CheckIcon>
             Custom profile badges
           </BenefitItem>
         </BenefitsList>
@@ -329,7 +329,7 @@ const BillingPage: React.FC = () => {
 
       <ReferralSection>
         <ReferralText>
-          🎁 Get free tournament entries by referring friends!
+          {'\u{1F381}'} Get free tournament entries by referring friends!
         </ReferralText>
         <ReferralButton onClick={goToReferral}>
           View Referral Program

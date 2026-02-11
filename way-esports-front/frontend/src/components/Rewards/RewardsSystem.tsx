@@ -124,7 +124,7 @@ const RewardsSystem: React.FC = () => {
   const handleClaimReward = async (reward: Reward) => {
     if (!reward.unlocked) {
       try {
-        // Если это достижение, добавляем его в профиль пользователя
+        // If this is an achievement, add it to the user's profile
         if (reward.type === 'achievement') {
           await api.post(`/api/rewards/${reward.id}/claim`, {});
           try {
@@ -135,7 +135,7 @@ const RewardsSystem: React.FC = () => {
           
           let message = `${reward.name} has been added to your profile!`;
           
-          // Специальные сообщения для особых достижений
+          // Special messages for specific achievements
           if (reward.value === 0) {
             message = `${reward.name} unlocked! You now have 1 free tournament entry!`;
           } else if (reward.value > 0) {
@@ -428,7 +428,7 @@ const RewardsSystem: React.FC = () => {
                 <Input
                   name="icon"
                   defaultValue={editingReward?.icon}
-                  placeholder="🏆 or https://..."
+                  placeholder="Trophy or https://..."
                 />
               </FormGroup>
             </div>

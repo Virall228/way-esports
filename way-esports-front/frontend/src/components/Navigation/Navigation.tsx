@@ -83,28 +83,28 @@ const Navigation: React.FC = () => {
       </Logo>
       <NavMenu>
         <NavItem to="/" $active={location.pathname === '/'}>
-          🏠 Home
+          {'\u{1F3E0}'} Home
         </NavItem>
         <NavItem to="/tournaments" $active={location.pathname.includes('/tournaments')}>
-          🏆 Tournaments
+          {'\u{1F3C6}'} Tournaments
         </NavItem>
         <NavItem to="/matches" $active={location.pathname.includes('/matches')}>
-          ⚔️ Matches
+          {'\u2694'} Matches
         </NavItem>
         <NavItem to="/rankings" $active={location.pathname.includes('/rankings')}>
-          📊 Rankings
+          {'\u{1F4CA}'} Rankings
         </NavItem>
         <NavItem to="/teams" $active={location.pathname.includes('/teams')}>
-          👥 Teams
+          {'\u{1F465}'} Teams
         </NavItem>
         <NavItem to="/news" $active={location.pathname.includes('/news')}>
-          📰 News
+          {'\u{1F4F0}'} News
         </NavItem>
         <NavItem to="/wallet" $active={location.pathname.includes('/wallet')}>
-          💳 Wallet
+          {'\u{1F4B3}'} Wallet
         </NavItem>
         <NavItem to="/settings" $active={location.pathname.includes('/settings')}>
-          ⚙️ Settings
+          {'\u2699'} Settings
         </NavItem>
       </NavMenu>
       <UserSection>

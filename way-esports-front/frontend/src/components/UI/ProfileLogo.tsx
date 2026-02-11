@@ -124,7 +124,7 @@ const ProfileLogo: React.FC<ProfileLogoProps> = ({
         </>
       ) : (
         <>
-          👤
+          {'\u{1F464}'}
           {onClick && (
             <LogoOverlay>
               <svg viewBox="0 0 24 24" fill="currentColor">

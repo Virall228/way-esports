@@ -262,7 +262,7 @@ const MatchHistory: React.FC<MatchHistoryProps> = ({ matches, username }) => {
                         <MatchHeader>
                             <GameInfo>
                                 {match.game}
-                                {match.tournament && ` • ${match.tournament}`}
+                                {match.tournament && ` \u2022 ${match.tournament}`}
                                 <br />
                                 {new Date(match.date).toLocaleDateString()}
                             </GameInfo>

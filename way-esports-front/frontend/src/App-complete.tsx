@@ -175,7 +175,7 @@ const App: React.FC = () => {
           </MainContent>
           
           <Footer>
-            <p>© 2024 WAY ESPORTS. All rights reserved.</p>
+            <p>{'\u00A9'} 2024 WAY ESPORTS. All rights reserved.</p>
             <p>Powered by Cyberpunk Technology</p>
           </Footer>
         </AppContainer>

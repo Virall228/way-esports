@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export interface IEmailOtp extends Document {
+export interface IEmailOtp extends Document<mongoose.Types.ObjectId> {
   email: string;
   codeHash: string;
   expiresAt: Date;

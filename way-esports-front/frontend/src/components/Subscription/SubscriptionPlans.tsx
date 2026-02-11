@@ -108,7 +108,7 @@ const FeatureItem = styled.li<{ featured?: boolean }>`
     font-size: 16px;
 
     &:before {
-        content: '✓';
+        content: '\\2713';
         color: ${props => props.featured ? '#e5e5e5' : '#a3a3a3'};
         margin-right: 12px;
         font-weight: bold;

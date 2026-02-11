@@ -394,7 +394,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
 
   return (
     <SearchContainer ref={searchRef} className={className}>
-      <SearchIcon>🔍</SearchIcon>
+      <SearchIcon>{'\u{1F50D}'}</SearchIcon>
 
       <SearchInput
         type="text"

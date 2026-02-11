@@ -148,10 +148,18 @@ const NewsPage: React.FC = () => {
         <h2 style={{ color: '#fff', textAlign: 'center', marginBottom: '0.5rem' }}>Join the Community</h2>
         <p style={{ color: '#ccc', textAlign: 'center', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Follow us for latest updates and tournament news</p>
         <SocialLinksHeader>
-          <SocialLink href="https://www.wayesports.org/" target="_blank">🌐 Website</SocialLink>
-          <SocialLink href="https://t.me/wayesports" target="_blank">✈️ Telegram</SocialLink>
-          <SocialLink href="https://discord.gg/wayesports" target="_blank">💬 Discord</SocialLink>
-          <SocialLink href="https://www.twitch.tv/WAY_Esports" target="_blank">📺 Twitch</SocialLink>
+          <SocialLink href="https://www.wayesports.org/" target="_blank">
+            {'\u{1F310}'} Website
+          </SocialLink>
+          <SocialLink href="https://t.me/wayesports" target="_blank">
+            {'\u2708'} Telegram
+          </SocialLink>
+          <SocialLink href="https://discord.gg/wayesports" target="_blank">
+            {'\u{1F4AC}'} Discord
+          </SocialLink>
+          <SocialLink href="https://www.twitch.tv/WAY_Esports" target="_blank">
+            {'\u{1F4FA}'} Twitch
+          </SocialLink>
         </SocialLinksHeader>
       </NewsHeader>
 

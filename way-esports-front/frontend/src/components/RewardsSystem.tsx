@@ -222,7 +222,7 @@ export const RewardsSystem: React.FC = () => {
         {userRewards.achievements.map(achievement => (
           <AchievementItem key={achievement.id}>
             <AchievementIcon>
-              {achievement.earned ? '✓' : '○'}
+              {achievement.earned ? '\u2713' : '\u25CB'}
             </AchievementIcon>
             <AchievementInfo>
               <AchievementTitle>{achievement.title}</AchievementTitle>
