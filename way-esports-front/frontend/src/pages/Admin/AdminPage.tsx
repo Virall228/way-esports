@@ -1,7 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
+import Card from '../../components/UI/Card';
+import Button from '../../components/UI/Button';
 
 const Container = styled.div`
   padding: 1rem;
@@ -41,7 +45,7 @@ const CloseButton = styled.button`
   }
 `;
 
-const Header = styled.div`
+const Header = styled(Card).attrs({ variant: 'elevated' })`
   background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
   border-radius: 12px;
   padding: 1.25rem;
@@ -80,30 +84,16 @@ const TabContainer = styled.div`
   }
 `;
 
-const Tab = styled.button<{ $active: boolean }>`
-  background: ${({ $active }) =>
-    $active ? 'linear-gradient(135deg, #ff6b00, #ff8533)' : 'rgba(42, 42, 42, 0.8)'};
-  color: ${({ $active }) => $active ? '#000000' : '#ffffff'};
-  border: 1px solid ${({ $active }) => $active ? '#ff6b00' : 'rgba(255, 107, 0, 0.3)'};
+const Tab = styled(Button).attrs<{ $active: boolean }>((props) => ({
+  variant: props.$active ? 'brand' : 'outline',
+  size: 'small'
+}))<{ $active: boolean }>`
   padding: 0.75rem 1.25rem;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
   min-height: 44px;
   white-space: nowrap;
-
-  @media (hover: hover) and (pointer: fine) {
-    &:hover {
-      background: ${({ $active }) =>
-    $active ? 'linear-gradient(135deg, #ff8533, #ff9f66)' : 'rgba(255, 107, 0, 0.1)'};
-      transform: translateY(-2px);
-    }
-  }
 `;
 
-const ContentArea = styled.div`
+const ContentArea = styled(Card).attrs({ variant: 'outlined' })`
   background: rgba(42, 42, 42, 0.9);
   border-radius: 12px;
   padding: 1rem;
@@ -126,7 +116,7 @@ const StatsGrid = styled.div`
   margin-bottom: 24px;
 `;
 
-const StatCard = styled.div`
+const StatCard = styled(Card).attrs({ variant: 'outlined' })`
   background: linear-gradient(145deg, rgba(26, 26, 26, 0.9), rgba(42, 42, 42, 0.9));
   border-radius: 12px;
   padding: 20px;
@@ -179,35 +169,16 @@ const ActionsCell = styled.div`
   gap: 0.5rem;
 `;
 
-const ActionButton = styled.button<{ $variant?: 'primary' | 'danger' | 'success' }>`
-  background: ${({ $variant }) =>
-    $variant === 'danger' ? 'linear-gradient(135deg, #ff4757, #ff6b7a)' :
-      $variant === 'success' ? 'linear-gradient(135deg, #2ed573, #3ddb7f)' :
-        'linear-gradient(135deg, #ff6b00, #ff8533)'};
-  color: #ffffff;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  cursor: pointer;
+const ActionButton = styled(Button).attrs<{ $variant?: 'primary' | 'danger' | 'success' }>((props) => ({
+  variant: props.$variant === 'danger' ? 'danger' : props.$variant === 'success' ? 'success' : 'brand',
+  size: 'small'
+}))<{ $variant?: 'primary' | 'danger' | 'success' }>`
   font-size: 12px;
-  margin-right: 0.5rem;
-  margin-bottom: 0.5rem;
-  transition: all 0.3s ease;
   min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   white-space: nowrap;
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     min-height: 40px;
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
-    }
   }
 `;
 
@@ -329,6 +300,7 @@ interface User {
   isSubscribed: boolean;
   subscriptionExpiresAt?: string;
   freeEntriesCount: number;
+  bonusEntries?: number;
   balance: number;
   createdAt: string;
 }
@@ -392,20 +364,15 @@ const ModalActions = styled.div`
 
 const AdminPage: React.FC = () => {
   const { user, isAuthenticated, isLoading: authLoading, login } = useAuth();
+  const { addNotification } = useNotifications();
+  const hasAdminAccess = isAuthenticated && (user?.role === 'admin' || user?.role === 'developer');
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
-  const [users, setUsers] = useState<User[]>([]);
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [news, setNews] = useState<NewsArticle[]>([]);
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [referrals, setReferrals] = useState<ReferralLog[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'user' | 'tournament' | 'news' | 'reward' | 'achievement' | 'team'>('user');
   const [editingItem, setEditingItem] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dashboardStats, setDashboardStats] = useState<any>(null);
-  const [analytics, setAnalytics] = useState<any>(null);
   const [isUploading, setIsUploading] = useState(false);
   const newsImageRef = useRef<HTMLInputElement>(null);
   const tournamentImageRef = useRef<HTMLInputElement>(null);
@@ -427,6 +394,10 @@ const AdminPage: React.FC = () => {
     return e?.message || fallback;
   };
 
+  const notify = (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string) => {
+    addNotification({ type, title, message });
+  };
+
   const setField = (key: string, value: any) => {
     setModalData((prev: any) => ({
       ...prev,
@@ -435,19 +406,19 @@ const AdminPage: React.FC = () => {
   };
 
   const load = async () => {
-    if (!isAuthenticated) return;
+    if (!hasAdminAccess) return;
     setLoading(true);
     setError(null);
     try {
       await Promise.all([
-        fetchUsers(),
-        fetchTournaments(),
-        fetchNews(),
-        fetchAchievements(),
-        fetchTeams(),
-        fetchReferrals(),
-        fetchDashboardStats(),
-        fetchAnalytics()
+        queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'news'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'achievements'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'teams'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'referrals'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'analytics'] })
       ]);
     } catch (e: any) {
       setError(formatApiError(e, 'Failed to load admin data'));
@@ -458,7 +429,7 @@ const AdminPage: React.FC = () => {
 
   useEffect(() => {
     load();
-  }, [isAuthenticated, activeTab]);
+  }, [hasAdminAccess]);
 
   const formatDateForInput = (value: any) => {
     try {
@@ -487,45 +458,48 @@ const AdminPage: React.FC = () => {
   const fetchDashboardStats = async () => {
     try {
       const result = await api.get('/api/admin/stats');
-      setDashboardStats(result.data);
+      return result?.data ?? result;
     } catch (e) {
       console.error('Failed to fetch dashboard stats:', e);
+      throw e;
     }
   };
 
   const fetchAnalytics = async () => {
     try {
       const result = await api.get('/api/admin/analytics');
-      setAnalytics(result.data);
+      return result?.data ?? result;
     } catch (e) {
       console.error('Failed to fetch analytics:', e);
+      throw e;
     }
   };
 
   const fetchUsers = async () => {
-    const result: any[] = await api.get('/api/auth/users');
-    setUsers(
-      (result || []).map((u: any) => ({
-        id: (u._id || u.id || '').toString(),
-        username: u.username || '',
-        firstName: u.firstName || '',
-        lastName: u.lastName || '',
-        email: u.email || '',
-        role: u.role || 'user',
-        isBanned: !!u.isBanned,
-        isSubscribed: !!u.isSubscribed,
-        subscriptionExpiresAt: u.subscriptionExpiresAt,
-        freeEntriesCount: Number(u.freeEntriesCount || 0),
-        balance: Number(u.wallet?.balance || 0),
-        createdAt: formatDate(u.createdAt)
-      }))
-    );
+    const result: any = await api.get('/api/admin/users');
+    const items: any[] = (result && (result.data || result.users || result)) || [];
+    return items.map((u: any) => ({
+      id: (u._id || u.id || '').toString(),
+      username: u.username || '',
+      firstName: u.firstName || '',
+      lastName: u.lastName || '',
+      email: u.email || '',
+      role: u.role || 'user',
+      isBanned: !!u.isBanned,
+      isSubscribed: !!u.isSubscribed,
+      subscriptionExpiresAt: u.subscriptionExpiresAt,
+      freeEntriesCount: Number(u.freeEntriesCount || 0),
+      bonusEntries: Number(u.bonusEntries || 0),
+      balance: Number(u.wallet?.balance || 0),
+      createdAt: formatDate(u.createdAt)
+    }));
   };
 
   const fetchTeams = async () => {
     try {
       const result: any = await api.get('/api/teams');
-      setTeams((result?.data || []).map((t: any) => ({
+      const items = result?.data || [];
+      return items.map((t: any) => ({
         id: t.id,
         name: t.name,
         tag: t.tag,
@@ -534,76 +508,168 @@ const AdminPage: React.FC = () => {
         captain: t.captain,
         members: t.members,
         stats: t.stats
-      })));
+      }));
     } catch (e) {
       console.error('Failed to fetch teams:', e);
+      throw e;
     }
   };
 
   const fetchReferrals = async () => {
     try {
       const result: any = await api.get('/api/referrals/all');
-      setReferrals(
-        (result || []).map((r: any) => ({
-          id: (r._id || r.id || '').toString(),
-          referrer: r.referrer?.username || r.referrer?.toString() || 'Unknown',
-          referred: r.referred?.username || r.referred?.toString() || 'Unknown',
-          reward: r.rewardAmount || 0,
-          date: formatDate(r.createdAt),
-          status: r.status || 'completed'
-        }))
-      );
+      const items: any[] = Array.isArray(result) ? result : (result?.data || []);
+      return items.map((r: any) => ({
+        id: (r._id || r.id || '').toString(),
+        referrer: r.referrer?.username || r.referrer?.toString() || 'Unknown',
+        referred: r.referred?.username || r.referee?.username || r.referred?.toString() || r.referee?.toString() || 'Unknown',
+        reward: r.rewardAmount || 0,
+        date: formatDate(r.createdAt),
+        status: r.status || 'completed'
+      }));
     } catch (e) {
       console.error('Failed to fetch referrals:', e);
+      throw e;
     }
   };
 
   const fetchTournaments = async () => {
     const result: any = await api.get('/api/tournaments');
     const items: any[] = (result && (result.data || result.tournaments)) || [];
-    setTournaments(
-      items.map((t: any) => ({
-        id: (t.id || t._id || '').toString(),
-        name: t.name || t.title || '',
-        game: t.game || '',
-        status: t.status || 'upcoming',
-        participants: Number(t.participants ?? t.currentParticipants ?? 0),
-        prizePool: Number(t.prizePool ?? 0)
-      }))
-    );
+    return items.map((t: any) => ({
+      id: (t.id || t._id || '').toString(),
+      name: t.name || t.title || '',
+      game: t.game || '',
+      status: t.status || 'upcoming',
+      participants: Number(t.participants ?? t.currentParticipants ?? 0),
+      prizePool: Number(t.prizePool ?? 0)
+    }));
   };
 
   const fetchNews = async () => {
     const result: any = await api.get('/api/news/admin?status=all');
     const items: any[] = (result && result.data) || [];
-    setNews(
-      items.map((n: any) => ({
-        id: (n._id || n.id || '').toString(),
-        title: n.title || '',
-        content: n.content || '',
-        author: n.author?.username || n.author || '',
-        status: n.status || 'draft',
-        createdAt: formatDate(n.createdAt)
-      }))
-    );
+    return items.map((n: any) => ({
+      id: (n._id || n.id || '').toString(),
+      title: n.title || '',
+      content: n.content || '',
+      author: n.author?.username || n.author || '',
+      status: n.status || 'draft',
+      createdAt: formatDate(n.createdAt)
+    }));
   };
 
   const fetchAchievements = async () => {
     const result: any = await api.get('/api/achievements/admin');
     const items: any[] = (result && result.data) || [];
-    setAchievements(
-      items.map((a: any) => ({
-        id: (a._id || a.id || '').toString(),
-        key: a.key || '',
-        name: a.name || '',
-        description: a.description || '',
-        icon: a.icon || '',
-        isActive: !!a.isActive,
-        criteriaType: a.criteria?.type || '',
-        criteriaValue: Number(a.criteria?.value || 0)
-      }))
-    );
+    return items.map((a: any) => ({
+      id: (a._id || a.id || '').toString(),
+      key: a.key || '',
+      name: a.name || '',
+      description: a.description || '',
+      icon: a.icon || '',
+      isActive: !!a.isActive,
+      criteriaType: a.criteria?.type || '',
+      criteriaValue: Number(a.criteria?.value || 0)
+    }));
   };
+
+  const usersQuery = useQuery({
+    queryKey: ['admin', 'users'],
+    queryFn: fetchUsers,
+    enabled: hasAdminAccess,
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
+
+  const tournamentsQuery = useQuery({
+    queryKey: ['admin', 'tournaments'],
+    queryFn: fetchTournaments,
+    enabled: hasAdminAccess,
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
+
+  const newsQuery = useQuery({
+    queryKey: ['admin', 'news'],
+    queryFn: fetchNews,
+    enabled: hasAdminAccess,
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
+
+  const achievementsQuery = useQuery({
+    queryKey: ['admin', 'achievements'],
+    queryFn: fetchAchievements,
+    enabled: hasAdminAccess,
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
+
+  const teamsQuery = useQuery({
+    queryKey: ['admin', 'teams'],
+    queryFn: fetchTeams,
+    enabled: hasAdminAccess,
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
+
+  const referralsQuery = useQuery({
+    queryKey: ['admin', 'referrals'],
+    queryFn: fetchReferrals,
+    enabled: hasAdminAccess,
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
+
+  const statsQuery = useQuery({
+    queryKey: ['admin', 'stats'],
+    queryFn: fetchDashboardStats,
+    enabled: hasAdminAccess,
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
+
+  const analyticsQuery = useQuery({
+    queryKey: ['admin', 'analytics'],
+    queryFn: fetchAnalytics,
+    enabled: hasAdminAccess,
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
+
+  const users = usersQuery.data || [];
+  const tournaments = tournamentsQuery.data || [];
+  const news = newsQuery.data || [];
+  const achievements = achievementsQuery.data || [];
+  const teams = teamsQuery.data || [];
+  const referrals = referralsQuery.data || [];
+  const dashboardStats = statsQuery.data || null;
+  const analytics = analyticsQuery.data || null;
+
+  const queryError =
+    usersQuery.error ||
+    tournamentsQuery.error ||
+    newsQuery.error ||
+    achievementsQuery.error ||
+    teamsQuery.error ||
+    referralsQuery.error ||
+    statsQuery.error ||
+    analyticsQuery.error;
+
+  const isQueryLoading =
+    usersQuery.isFetching ||
+    tournamentsQuery.isFetching ||
+    newsQuery.isFetching ||
+    achievementsQuery.isFetching ||
+    teamsQuery.isFetching ||
+    referralsQuery.isFetching ||
+    statsQuery.isFetching ||
+    analyticsQuery.isFetching;
+
+  const derivedError = queryError ? formatApiError(queryError, 'Failed to load admin data') : null;
+  const effectiveError = error || derivedError;
+  const isBusy = loading || isQueryLoading;
 
   const buildInitialModalData = (type: string, item: any | null) => {
     if (type === 'tournament') {
@@ -696,16 +762,19 @@ const AdminPage: React.FC = () => {
         await api.delete(`/api/admin/${entity}/${id}`);
 
         // Refresh based on type
-        if (type === 'tournament') await fetchTournaments();
-        if (type === 'news') await fetchNews();
-        if (type === 'achievement') await fetchAchievements();
-        if (type === 'user') await fetchUsers();
+        if (type === 'tournament') await queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] });
+        if (type === 'news') await queryClient.invalidateQueries({ queryKey: ['admin', 'news'] });
+        if (type === 'achievement') await queryClient.invalidateQueries({ queryKey: ['admin', 'achievements'] });
+        if (type === 'user') await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
         if (type === 'team') await load(); // Full refresh for teams/others
+        if (type === 'tournament') await queryClient.invalidateQueries({ queryKey: ['tournaments'] });
+        if (type === 'team') await queryClient.invalidateQueries({ queryKey: ['teams'] });
+        if (type === 'news') await queryClient.invalidateQueries({ queryKey: ['news'] });
 
-        toast.success(`${type} deleted successfully`);
+        notify('success', 'Deleted', `${type} deleted successfully`);
       } catch (e: any) {
         setError(formatApiError(e, 'Delete failed'));
-        toast.error('Delete failed');
+        notify('error', 'Delete failed', formatApiError(e, 'Delete failed'));
       }
     }
   };
@@ -750,7 +819,8 @@ const AdminPage: React.FC = () => {
         } else {
           await api.post('/api/tournaments', payload);
         }
-        await fetchTournaments();
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] });
+        await queryClient.invalidateQueries({ queryKey: ['tournaments'] });
         setIsModalOpen(false);
         return;
       }
@@ -774,7 +844,8 @@ const AdminPage: React.FC = () => {
         } else {
           await api.post('/api/news', payload);
         }
-        await fetchNews();
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'news'] });
+        await queryClient.invalidateQueries({ queryKey: ['news'] });
         setIsModalOpen(false);
         return;
       }
@@ -797,7 +868,7 @@ const AdminPage: React.FC = () => {
         } else {
           await api.post('/api/achievements/admin', payload);
         }
-        await fetchAchievements();
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'achievements'] });
         setIsModalOpen(false);
         return;
       }
@@ -811,13 +882,16 @@ const AdminPage: React.FC = () => {
           bio: modalData.bio,
           balance: Number(modalData.balance || 0),
           freeEntriesCount: Number(modalData.freeEntriesCount || 0),
+          bonusEntries: Number(modalData.bonusEntries || 0),
+          isSubscribed: !!modalData.isSubscribed,
+          subscriptionExpiresAt: modalData.isSubscribed ? modalData.subscriptionExpiresAt : null,
           isBanned: !!modalData.isBanned
         };
         if (editingItem?.id) {
           await api.patch(`/api/admin/users/${editingItem.id}`, payload);
-          await fetchUsers();
+          await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
           setIsModalOpen(false);
-          toast.success('User updated successfully');
+          notify('success', 'User updated', 'User updated successfully');
           return;
         }
       }
@@ -836,15 +910,16 @@ const AdminPage: React.FC = () => {
           await api.post('/api/teams', payload);
         }
         await load();
+        await queryClient.invalidateQueries({ queryKey: ['teams'] });
         setIsModalOpen(false);
-        toast.success(`Team ${editingItem ? 'updated' : 'created'} successfully`);
+        notify('success', 'Team saved', `Team ${editingItem ? 'updated' : 'created'} successfully`);
         return;
       }
 
       setIsModalOpen(false);
     } catch (e: any) {
       setError(formatApiError(e, 'Save failed'));
-      toast.error('Save failed');
+      notify('error', 'Save failed', formatApiError(e, 'Save failed'));
     }
   };
 
@@ -1210,7 +1285,6 @@ const AdminPage: React.FC = () => {
               >
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
-                <option value="moderator">Moderator</option>
               </Select>
               <Select
                 value={modalData.isBanned ? 'banned' : 'active'}
@@ -1240,6 +1314,16 @@ const AdminPage: React.FC = () => {
                       style={{ width: '100%' }}
                       value={modalData.freeEntriesCount ?? 0}
                       onChange={(e) => setField('freeEntriesCount', Number(e.target.value))}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ color: '#ccc', fontSize: '11px', display: 'block', marginBottom: '4px' }}>Bonus Entries</label>
+                    <Input
+                      placeholder="Bonus Entries"
+                      type="number"
+                      style={{ width: '100%' }}
+                      value={modalData.bonusEntries ?? 0}
+                      onChange={(e) => setField('bonusEntries', Number(e.target.value))}
                     />
                   </div>
                 </div>
@@ -1292,6 +1376,14 @@ const AdminPage: React.FC = () => {
                     type="number"
                     value={modalData.freeEntriesCount ?? 0}
                     onChange={(e) => setField('freeEntriesCount', Number(e.target.value))}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ color: '#ccc', fontSize: '12px' }}>Bonus Entries</label>
+                  <Input
+                    type="number"
+                    value={modalData.bonusEntries ?? 0}
+                    onChange={(e) => setField('bonusEntries', Number(e.target.value))}
                   />
                 </div>
               </div>
@@ -1628,7 +1720,7 @@ const AdminPage: React.FC = () => {
             </p>
           </div>
           <ActionButton onClick={() => load()}>
-            {loading ? '...' : 'Refresh'}
+            {isBusy ? '...' : 'Refresh'}
           </ActionButton>
         </div>
       </Header>
@@ -1642,9 +1734,9 @@ const AdminPage: React.FC = () => {
         </div>
       )}
 
-      {error && (
+      {effectiveError && (
         <div style={{ marginBottom: '16px', color: '#ff4757', padding: '12px', background: 'rgba(255, 71, 87, 0.1)', border: '1px solid #ff4757', borderRadius: '8px' }}>
-          {error}
+          {effectiveError}
         </div>
       )}
 
@@ -1655,7 +1747,7 @@ const AdminPage: React.FC = () => {
         </div>
       )}
 
-      {loading && (
+      {isBusy && (
         <div style={{ marginBottom: '16px', color: '#cccccc' }}>
           Loading...
         </div>
@@ -1692,7 +1784,7 @@ const AdminPage: React.FC = () => {
       </TabContainer>
 
       <ContentArea>
-        {isAuthenticated ? renderContent() : null}
+        {hasAdminAccess ? renderContent() : null}
       </ContentArea>
 
       {renderModal()}

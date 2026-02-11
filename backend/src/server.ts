@@ -92,7 +92,7 @@ app.use((req, res, next) => {
 // API Routes
 app.use('/api/matches', matchesRouter);
 app.use('/api/teams', teamsRouter);
-app.use('/api/profile', authenticateJWT, profileRouter);
+app.use('/api/profile', profileRouter);
 app.use('/api/wallet', authenticateJWT, walletRouter);
 app.use('/api/tournaments', tournamentsRouter);
 app.use('/api/rankings', rankingsRouter);

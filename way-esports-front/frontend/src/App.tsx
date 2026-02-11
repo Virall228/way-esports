@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import styled, { ThemeProvider } from 'styled-components';
 
@@ -16,6 +16,7 @@ import TournamentDetailsPage from './pages/Tournaments/TournamentDetailsPage';
 import BillingPage from './pages/Billing/BillingPage';
 import PublicProfilePage from './pages/Profile/PublicProfilePage';
 import TeamPage from './pages/Teams/TeamPage';
+import GameHubPage from './pages/Games/GameHubPage';
 
 // Import components
 import TermsGuard from './components/Legal/TermsGuard';
@@ -32,7 +33,8 @@ type NavItem = {
 };
 
 const AppShell = styled.div`
-  min-height: 100vh;
+  height: var(--app-height, 100vh);
+  min-height: var(--app-height, 100vh);
   background:
     radial-gradient(900px 600px at 10% -10%, rgba(255, 255, 255, 0.06), transparent 60%),
     radial-gradient(800px 500px at 90% -20%, rgba(255, 255, 255, 0.04), transparent 60%),
@@ -41,6 +43,9 @@ const AppShell = styled.div`
   font-family: ${eslTheme.fonts.primary};
   display: flex;
   width: 100%;
+  padding-left: var(--sal);
+  padding-right: var(--sar);
+  overflow: hidden;
 `;
 
 const Sidebar = styled.aside`
@@ -53,7 +58,10 @@ const Sidebar = styled.aside`
   backdrop-filter: blur(16px);
   position: sticky;
   top: 0;
-  height: 100vh;
+  height: var(--app-height, 100vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: calc(1.5rem + var(--sab, 0px));
 
   @media (min-width: ${eslTheme.breakpoints.tablet}) {
     display: flex;
@@ -134,13 +142,16 @@ const ContentColumn = styled.div`
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 `;
 
 const TopBar = styled.header`
   position: sticky;
   top: 0;
   z-index: 140;
-  padding: 0.75rem 1rem;
+  padding: calc(0.75rem + var(--sat)) 1rem 0.75rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -199,8 +210,12 @@ const BurgerButton = styled.button`
 `;
 
 const MainContent = styled.main`
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 1rem 1rem calc(88px + var(--sab, 0px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 
   @media (min-width: ${eslTheme.breakpoints.tablet}) {
     padding: 1.5rem 2rem 2rem;
@@ -226,6 +241,7 @@ const Footer = styled.footer`
   text-align: center;
   color: ${eslTheme.colors.text.secondary};
   font-size: 0.875rem;
+  flex: 0 0 auto;
 
   @media (max-width: ${eslTheme.breakpoints.tablet}) {
     display: none;
@@ -240,7 +256,7 @@ const BottomNav = styled.nav`
   z-index: 150;
   display: flex;
   gap: 6px;
-  padding: 10px 10px calc(10px + var(--sab, 0px));
+  padding: 10px calc(10px + var(--sar)) calc(10px + var(--sab, 0px)) calc(10px + var(--sal));
   background: rgba(12, 12, 12, 0.85);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
@@ -348,15 +364,15 @@ const AppContent: React.FC = () => {
 
   const navItems = React.useMemo<NavItem[]>(() => {
     const items: NavItem[] = [
-      { label: 'Home', to: '/', icon: '🏠' },
-      { label: 'Tournaments', to: '/tournaments', icon: '🏆' },
-      { label: 'Teams', to: '/teams', icon: '👥' },
-      { label: 'News', to: '/news', icon: '📰' },
-      { label: 'Profile', to: '/profile', icon: '👤' }
+      { label: 'Home', to: '/', icon: '\\u{1F3E0}' },
+      { label: 'Tournaments', to: '/tournaments', icon: '\\u{1F3C6}' },
+      { label: 'Teams', to: '/teams', icon: '\\u{1F465}' },
+      { label: 'News', to: '/news', icon: '\\u{1F4F0}' },
+      { label: 'Profile', to: '/profile', icon: '\\u{1F464}' }
     ];
 
     if (user?.role === 'admin' || user?.role === 'developer') {
-      items.push({ label: 'Admin', to: '/admin', icon: '⚙️', adminOnly: true });
+      items.push({ label: 'Admin', to: '/admin', icon: '\\u2699\\uFE0F', adminOnly: true });
     }
 
     return items;
@@ -433,10 +449,12 @@ const AppContent: React.FC = () => {
         <TopBar>
           <TopBarTitle>
             <Logo>WAY ESPORTS</Logo>
-            <TopBarBadge>One Platform · One UI</TopBarBadge>
+            <TopBarBadge>
+              One Platform {'\u00B7'} One UI
+            </TopBarBadge>
           </TopBarTitle>
           <BurgerButton type="button" onClick={() => setMobileMenuOpen(true)} aria-label="Open menu">
-            ☰
+            {'\u2630'}
           </BurgerButton>
         </TopBar>
 
@@ -446,11 +464,15 @@ const AppContent: React.FC = () => {
               <Route path="/" element={<Home />} />
               <Route path="/tournaments" element={<Tournaments />} />
               <Route path="/tournaments/:id" element={<TournamentDetailsPage />} />
+              <Route path="/tournament/:id" element={<TournamentDetailsPage />} />
+              <Route path="/games/:game" element={<GameHubPage />} />
               <Route path="/teams" element={<Teams />} />
               <Route path="/news" element={<News />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/profile/:id" element={<PublicProfilePage />} />
+              <Route path="/user/:id" element={<PublicProfilePage />} />
               <Route path="/team/:id" element={<TeamPage />} />
+              <Route path="/teams/:id" element={<TeamPage />} />
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
@@ -459,7 +481,7 @@ const AppContent: React.FC = () => {
         </MainContent>
 
         <Footer>
-          <p>© 2024 WAY ESPORTS. All rights reserved.</p>
+          <p>{'\u00A9'} 2024 WAY ESPORTS. All rights reserved.</p>
           <p>Powered by Professional Gaming Technology</p>
         </Footer>
       </ContentColumn>
@@ -469,7 +491,7 @@ const AppContent: React.FC = () => {
           <MobileMenuHeader>
             <MobileMenuTitle>Menu</MobileMenuTitle>
             <CloseButton type="button" onClick={closeMobileMenu} aria-label="Close menu">
-              ✕
+              {'\u2715'}
             </CloseButton>
           </MobileMenuHeader>
 
@@ -520,3 +542,5 @@ const App: React.FC = () => {
 };
 
 export default App;
+
+

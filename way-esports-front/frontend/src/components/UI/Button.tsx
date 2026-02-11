@@ -1,7 +1,7 @@
 import React from 'react';
 import styled, { css } from 'styled-components';
 
-type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'text';
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'text' | 'brand' | 'danger' | 'success';
 type ButtonSize = 'small' | 'medium' | 'large';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -53,6 +53,38 @@ const getButtonStyles = (variant: ButtonVariant = 'primary') => {
         color: ${({ theme }) => theme.colors.text.primary};
         &:hover:not(:disabled) {
           color: ${({ theme }) => theme.colors.accent};
+        }
+      `;
+    case 'brand':
+      return css`
+        background: #ff6b00;
+        color: #ffffff;
+        border: 1px solid rgba(255, 107, 0, 0.4);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        &:hover:not(:disabled) {
+          background: #ff8533;
+          border-color: rgba(255, 133, 51, 0.6);
+        }
+        &:active {
+          transform: translateY(1px);
+        }
+      `;
+    case 'danger':
+      return css`
+        background: rgba(239, 68, 68, 0.12);
+        color: ${({ theme }) => theme.colors.error};
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        &:hover:not(:disabled) {
+          background: rgba(239, 68, 68, 0.2);
+        }
+      `;
+    case 'success':
+      return css`
+        background: rgba(34, 197, 94, 0.12);
+        color: ${({ theme }) => theme.colors.success};
+        border: 1px solid rgba(34, 197, 94, 0.35);
+        &:hover:not(:disabled) {
+          background: rgba(34, 197, 94, 0.2);
         }
       `;
   }

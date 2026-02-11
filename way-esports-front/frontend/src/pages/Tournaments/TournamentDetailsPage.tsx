@@ -3,6 +3,8 @@ import styled from 'styled-components';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { tournamentService } from '../../services/tournamentService';
+import Card from '../../components/UI/Card';
+import Button from '../../components/UI/Button';
 
 type MatchItem = {
   id?: string;
@@ -31,7 +33,7 @@ const Container = styled.div`
   }
 `;
 
-const Header = styled.div`
+const Header = styled(Card).attrs({ variant: 'elevated' })`
   background: ${({ theme }) => theme.colors.bg.secondary};
   border-radius: 16px;
   padding: 1.25rem;
@@ -60,14 +62,11 @@ const Tabs = styled.div`
   margin-bottom: 1rem;
 `;
 
-const Tab = styled.button<{ $active: boolean }>`
-  background: ${({ $active, theme }) => ($active ? theme.colors.gray[800] : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? theme.colors.white : theme.colors.text.secondary)};
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.border.strong : 'rgba(255, 255, 255, 0.2)')};
+const Tab = styled(Button).attrs<{ $active: boolean }>((props) => ({
+  variant: props.$active ? 'brand' : 'outline',
+  size: 'small'
+}))<{ $active: boolean }>`
   padding: 0.75rem 1.25rem;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
   min-height: 44px;
 `;
 
@@ -76,9 +75,8 @@ const List = styled.div`
   gap: 12px;
 `;
 
-const Card = styled.div`
+const SurfaceCard = styled(Card).attrs({ variant: 'outlined' })`
   background: ${({ theme }) => theme.colors.bg.secondary};
-  border: 1px solid ${({ theme }) => theme.colors.border.light};
   border-radius: 12px;
   padding: 14px;
   display: flex;
@@ -249,7 +247,7 @@ const TournamentDetailsPage: React.FC = () => {
             const score = m.score ? `${m.score.team1 ?? 0}:${m.score.team2 ?? 0}` : '—';
 
             return (
-              <Card key={m.id}>
+              <SurfaceCard key={m.id}>
                 <Row>
                   <Meta>{m.round || '—'}{m.map ? ` • ${m.map}` : ''}</Meta>
                   <Meta>{new Date(m.startTime).toLocaleString()}</Meta>
@@ -265,7 +263,7 @@ const TournamentDetailsPage: React.FC = () => {
                   <Meta>Status: {m.status}</Meta>
                   <Meta>{m.endTime ? `End: ${new Date(m.endTime).toLocaleString()}` : ''}</Meta>
                 </Row>
-              </Card>
+              </SurfaceCard>
             );
           })}
 
@@ -278,7 +276,7 @@ const TournamentDetailsPage: React.FC = () => {
       {!loading && !error && tab === 'bracket' && (
         <List>
           {rounds.map(([roundName, ms]) => (
-            <Card key={roundName}>
+            <SurfaceCard key={roundName}>
               <Row>
                 <TeamName>{roundName}</TeamName>
                 <Meta>{ms.length} matches</Meta>
@@ -289,7 +287,7 @@ const TournamentDetailsPage: React.FC = () => {
                   const t2 = typeof m.team2 === 'string' ? m.team2 : (m.team2?.name || m.team2?.tag || 'TBD');
                   const score = m.score ? `${m.score.team1 ?? 0}:${m.score.team2 ?? 0}` : '—';
                   return (
-                    <Card key={m.id}>
+                    <SurfaceCard key={m.id}>
                       <Row>
                         <Meta>{new Date(m.startTime).toLocaleString()}</Meta>
                         <Meta>{m.status}</Meta>
@@ -299,11 +297,11 @@ const TournamentDetailsPage: React.FC = () => {
                         <Vs>{score}</Vs>
                         <TeamName style={{ textAlign: 'right' }}>{t2}</TeamName>
                       </TeamsRow>
-                    </Card>
+                    </SurfaceCard>
                   );
                 })}
               </List>
-            </Card>
+            </SurfaceCard>
           ))}
 
           {!matches.length && (

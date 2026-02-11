@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import styled from 'styled-components';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../../services/api';
+import Card from '../../components/UI/Card';
 
 const NewsContainer = styled.div`
   width: min(100% - 2rem, 800px);
@@ -27,7 +29,7 @@ const NewsTitle = styled.h1`
   }
 `;
 
-const NewsHeader = styled.div`
+const NewsHeader = styled(Card).attrs({ variant: 'elevated' })`
   background: linear-gradient(135deg, ${({ theme }) => theme.colors.bg.secondary}, ${({ theme }) => theme.colors.bg.tertiary});
   border-radius: 16px;
   padding: 1.5rem;
@@ -48,13 +50,13 @@ const SocialLinksHeader = styled.div`
 
 const SocialLink = styled.a`
   color: ${({ theme }) => theme.colors.text.primary};
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
   text-decoration: none;
   font-size: 0.85rem;
   font-weight: 600;
   padding: 0.75rem 1.5rem;
   border-radius: 50px;
-  border: 1px solid ${({ theme }) => theme.colors.border.medium};
+  border: 1px solid rgba(255, 255, 255, 0.12);
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -62,14 +64,14 @@ const SocialLink = styled.a`
 
   &:hover {
     background: #ff6b00;
-    border-color: #ff6b00;
+    border-color: rgba(255, 107, 0, 0.6);
     color: #ffffff;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(255, 107, 0, 0.4);
   }
 `;
 
-const NewsItem = styled.div`
+const NewsItem = styled(Card).attrs({ variant: 'outlined' })`
   background: linear-gradient(145deg, #1a1a1a, #222222);
   border-radius: 12px;
   margin-bottom: 2rem;
@@ -119,35 +121,26 @@ const NewsItemContent = styled.p`
 `;
 
 const NewsPage: React.FC = () => {
-  const [items, setItems] = useState<Array<{ id: string; title: string; content: string; coverImage?: string; createdAt?: string }>>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { data: newsRaw = [], isLoading, error } = useQuery({
+    queryKey: ['news'],
+    queryFn: async () => {
+      const result: any = await api.get('/api/news');
+      return (result && result.data) || [];
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const result: any = await api.get('/api/news');
-        const data: any[] = (result && result.data) || [];
-        setItems(
-          data.map((n: any) => ({
-            id: (n._id || n.id || '').toString(),
-            title: n.title || '',
-            content: n.summary || n.content || '',
-            coverImage: n.coverImage,
-            createdAt: n.publishDate || n.createdAt
-          }))
-        );
-      } catch (e: any) {
-        setError(e?.message || 'Failed to load news');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    load();
-  }, []);
+  const items = useMemo(() => {
+    const data: any[] = Array.isArray(newsRaw) ? newsRaw : [];
+    return data.map((n: any) => ({
+      id: (n._id || n.id || '').toString(),
+      title: n.title || '',
+      content: n.summary || n.content || '',
+      coverImage: n.coverImage,
+      createdAt: n.publishDate || n.createdAt
+    }));
+  }, [newsRaw]);
 
   return (
     <NewsContainer>
@@ -163,12 +156,12 @@ const NewsPage: React.FC = () => {
       </NewsHeader>
 
       <NewsTitle>Latest News</NewsTitle>
-      {loading && <div style={{ color: '#cccccc', textAlign: 'center', padding: '50px' }}>Loading news...</div>}
-      {error && <div style={{ color: '#ff4757', textAlign: 'center', padding: '20px' }}>{error}</div>}
-      {!loading && !error && items.length === 0 && (
+      {isLoading && <div style={{ color: '#cccccc', textAlign: 'center', padding: '50px' }}>Loading news...</div>}
+      {error && <div style={{ color: '#ff4757', textAlign: 'center', padding: '20px' }}>{(error as Error).message}</div>}
+      {!isLoading && !error && items.length === 0 && (
         <div style={{ color: '#888', textAlign: 'center', padding: '50px' }}>No news published yet.</div>
       )}
-      {!loading && !error && items.map(item => (
+      {!isLoading && !error && items.map(item => (
         <NewsItem key={item.id}>
           {item.coverImage && <NewsItemImage src={item.coverImage} alt={item.title} />}
           <NewsContentWrapper>

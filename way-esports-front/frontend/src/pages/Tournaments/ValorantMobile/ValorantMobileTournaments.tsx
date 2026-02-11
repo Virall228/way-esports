@@ -40,6 +40,8 @@ const themes = {
   }
 };
 
+type ThemeName = keyof typeof themes;
+
 const fadeIn = keyframes`
   from {
     opacity: 0;
@@ -75,20 +77,20 @@ const glowAnimation = keyframes`
   }
 `;
 
-const Container = styled.div<{ theme: string }>`
+const Container = styled.div<{ $themeName: ThemeName }>`
   padding: ${({ theme }) => theme.spacing.xl};
   max-width: 1200px;
   margin: 0 auto;
-  background-color: ${({ theme: themeName }) => themes[themeName].background};
-  min-height: 100vh;
+  background-color: ${({ $themeName }) => themes[$themeName].background};
+  min-height: var(--app-height, 100vh);
 `;
 
-const HeroBanner = styled.div<{ theme: string }>`
+const HeroBanner = styled.div<{ $themeName: ThemeName }>`
   position: relative;
-  height: ${({ theme: themeName }) => themeName === 'minimal' ? '500px' : '400px'};
+  height: ${({ $themeName }) => $themeName === 'minimal' ? '500px' : '400px'};
   margin: -${({ theme }) => theme.spacing.xl};
   margin-bottom: ${({ theme }) => theme.spacing.xxl};
-  background: linear-gradient(${({ theme: themeName }) => themes[themeName].overlay}, ${({ theme: themeName }) => themes[themeName].overlay}),
+  background: linear-gradient(${({ $themeName }) => themes[$themeName].overlay}, ${({ $themeName }) => themes[$themeName].overlay}),
     url('/images/valorant-mobile-banner.jpg') center/cover;
   display: flex;
   align-items: center;
@@ -103,16 +105,16 @@ const HeroBanner = styled.div<{ theme: string }>`
     left: 0;
     right: 0;
     bottom: 0;
-    background: ${({ theme: themeName }) => 
-      themeName === 'gradient' 
-        ? `linear-gradient(45deg, ${themes[themeName].primary}33, ${themes[themeName].secondary}33)`
-        : `linear-gradient(45deg, ${themes[themeName].primary}22, transparent)`
+    background: ${({ $themeName }) => 
+      $themeName === 'gradient' 
+        ? `linear-gradient(45deg, ${themes[$themeName].primary}33, ${themes[$themeName].secondary}33)`
+        : `linear-gradient(45deg, ${themes[$themeName].primary}22, transparent)`
     };
     animation: ${gradientAnimation} 15s ease infinite;
     background-size: 200% 200%;
   }
 
-  ${({ theme: themeName }) => themeName === 'cyber' && css`
+  ${({ $themeName }) => $themeName === 'cyber' && css`
     &::after {
       content: '';
       position: absolute;
@@ -126,34 +128,34 @@ const HeroBanner = styled.div<{ theme: string }>`
   `}
 `;
 
-const HeroContent = styled.div<{ theme: string }>`
+const HeroContent = styled.div<{ $themeName: ThemeName }>`
   position: relative;
   z-index: 1;
   animation: ${fadeIn} 1s ease-out;
   
-  ${({ theme: themeName }) => themeName === 'minimal' && css`
+  ${({ $themeName }) => $themeName === 'minimal' && css`
     border: 2px solid ${themes.minimal.primary};
     padding: 3rem;
     background: rgba(0, 0, 0, 0.7);
   `}
 `;
 
-const Header = styled.div<{ theme: string }>`
+const Header = styled.div<{ $themeName: ThemeName }>`
   text-align: center;
   margin-bottom: ${({ theme }) => theme.spacing.xxl};
   animation: ${fadeIn} 1s ease-out;
 `;
 
-const Title = styled.h1<{ theme: string }>`
-  color: ${({ theme: themeName }) => themes[themeName].primary};
-  font-size: ${({ theme: themeName }) => themeName === 'minimal' ? '5rem' : '4rem'};
+const Title = styled.h1<{ $themeName: ThemeName }>`
+  color: ${({ $themeName }) => themes[$themeName].primary};
+  font-size: ${({ $themeName }) => $themeName === 'minimal' ? '5rem' : '4rem'};
   margin-bottom: ${({ theme }) => theme.spacing.md};
   text-transform: uppercase;
-  letter-spacing: ${({ theme: themeName }) => themeName === 'cyber' ? '4px' : '2px'};
+  letter-spacing: ${({ $themeName }) => $themeName === 'cyber' ? '4px' : '2px'};
   font-weight: 900;
 
-  ${({ theme: themeName }) => {
-    switch (themeName) {
+  ${({ $themeName }) => {
+    switch ($themeName) {
       case 'neon':
         return css`
           text-shadow: 0 0 10px ${themes.neon.primary};
@@ -176,21 +178,21 @@ const Title = styled.h1<{ theme: string }>`
   }}
 `;
 
-const Subtitle = styled.p<{ theme: string }>`
-  color: ${({ theme: themeName }) => themeName === 'minimal' ? themes.minimal.secondary : themes.neon.secondary};
+const Subtitle = styled.p<{ $themeName: ThemeName }>`
+  color: ${({ $themeName }) => $themeName === 'minimal' ? themes.minimal.secondary : themes.neon.secondary};
   font-size: ${({ theme }) => theme.typography.h4.fontSize};
   max-width: 800px;
   margin: 0 auto;
   line-height: 1.6;
 `;
 
-const Grid = styled.div<{ theme: string }>`
+const Grid = styled.div<{ $themeName: ThemeName }>`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: ${({ theme }) => theme.spacing.xl};
   margin-bottom: ${({ theme }) => theme.spacing.xxl};
 
-  ${({ theme: themeName }) => themeName === 'minimal' && css`
+  ${({ $themeName }) => $themeName === 'minimal' && css`
     grid-template-columns: repeat(2, 1fr);
     @media (max-width: 768px) {
       grid-template-columns: 1fr;
@@ -198,13 +200,13 @@ const Grid = styled.div<{ theme: string }>`
   `}
 `;
 
-const FeatureCard = styled(Card)<{ theme: string }>`
+const FeatureCard = styled(Card)<{ $themeName: ThemeName }>`
   padding: ${({ theme }) => theme.spacing.xl};
   text-align: center;
-  background: ${({ theme: themeName }) => themes[themeName].cardBg};
+  background: ${({ $themeName }) => themes[$themeName].cardBg};
   backdrop-filter: blur(10px);
-  border: ${({ theme: themeName }) => {
-    switch (themeName) {
+  border: ${({ $themeName }) => {
+    switch ($themeName) {
       case 'cyber':
         return `1px solid ${themes.cyber.primary}`;
       case 'minimal':
@@ -217,8 +219,8 @@ const FeatureCard = styled(Card)<{ theme: string }>`
   }};
   transition: all 0.3s ease;
 
-  ${({ theme: themeName }) => {
-    switch (themeName) {
+  ${({ $themeName }) => {
+    switch ($themeName) {
       case 'neon':
         return css`
           &:hover {
@@ -262,14 +264,14 @@ const FeatureCard = styled(Card)<{ theme: string }>`
   }}
 `;
 
-const Icon = styled.div<{ theme: string }>`
+const Icon = styled.div<{ $themeName: ThemeName }>`
   font-size: 3.5rem;
   margin-bottom: ${({ theme }) => theme.spacing.md};
-  color: ${({ theme: themeName }) => themes[themeName].accent};
+  color: ${({ $themeName }) => themes[$themeName].accent};
   transition: transform 0.3s ease;
 
-  ${({ theme: themeName }) => {
-    switch (themeName) {
+  ${({ $themeName }) => {
+    switch ($themeName) {
       case 'cyber':
         return css`
           position: relative;
@@ -283,25 +285,25 @@ const Icon = styled.div<{ theme: string }>`
   }}
 `;
 
-const FeatureTitle = styled.h3<{ theme: string }>`
-  color: ${({ theme: themeName }) => themes[themeName].primary};
+const FeatureTitle = styled.h3<{ $themeName: ThemeName }>`
+  color: ${({ $themeName }) => themes[$themeName].primary};
   margin-bottom: ${({ theme }) => theme.spacing.sm};
   font-size: ${({ theme }) => theme.typography.h4.fontSize};
 `;
 
-const FeatureDescription = styled.p<{ theme: string }>`
-  color: ${({ theme: themeName }) => themeName === 'minimal' ? themes.minimal.secondary : themes.neon.secondary};
+const FeatureDescription = styled.p<{ $themeName: ThemeName }>`
+  color: ${({ $themeName }) => $themeName === 'minimal' ? themes.minimal.secondary : themes.neon.secondary};
   font-size: ${({ theme }) => theme.typography.body1.fontSize};
   line-height: 1.6;
 `;
 
-const ComingSoonCard = styled(Card)<{ theme: string }>`
+const ComingSoonCard = styled(Card)<{ $themeName: ThemeName }>`
   padding: ${({ theme }) => theme.spacing.xxl};
   text-align: center;
-  background: ${({ theme: themeName }) => themes[themeName].cardBg};
+  background: ${({ $themeName }) => themes[$themeName].cardBg};
   backdrop-filter: blur(10px);
-  border: ${({ theme: themeName }) => {
-    switch (themeName) {
+  border: ${({ $themeName }) => {
+    switch ($themeName) {
       case 'cyber':
         return `2px solid ${themes.cyber.primary}`;
       case 'minimal':
@@ -315,8 +317,8 @@ const ComingSoonCard = styled(Card)<{ theme: string }>`
   animation: ${fadeIn} 1s ease-out, ${glowAnimation} 3s infinite;
 `;
 
-const ComingSoonTitle = styled.h2<{ theme: string }>`
-  color: ${({ theme: themeName }) => themes[themeName].primary};
+const ComingSoonTitle = styled.h2<{ $themeName: ThemeName }>`
+  color: ${({ $themeName }) => themes[$themeName].primary};
   font-size: 3rem;
   margin-bottom: ${({ theme }) => theme.spacing.lg};
   text-transform: uppercase;
@@ -324,8 +326,8 @@ const ComingSoonTitle = styled.h2<{ theme: string }>`
   font-weight: 900;
 `;
 
-const ComingSoonDescription = styled.p<{ theme: string }>`
-  color: ${({ theme: themeName }) => themeName === 'minimal' ? themes.minimal.secondary : themes.neon.secondary};
+const ComingSoonDescription = styled.p<{ $themeName: ThemeName }>`
+  color: ${({ $themeName }) => $themeName === 'minimal' ? themes.minimal.secondary : themes.neon.secondary};
   font-size: ${({ theme }) => theme.typography.h5.fontSize};
   margin-bottom: ${({ theme }) => theme.spacing.xl};
   max-width: 800px;
@@ -334,7 +336,7 @@ const ComingSoonDescription = styled.p<{ theme: string }>`
   line-height: 1.8;
 `;
 
-const ButtonGroup = styled.div<{ theme: string }>`
+const ButtonGroup = styled.div<{ $themeName: ThemeName }>`
   display: flex;
   gap: ${({ theme }) => theme.spacing.md};
   justify-content: center;
@@ -360,15 +362,15 @@ const TimeUnit = styled.div`
   text-align: center;
 `;
 
-const TimeValue = styled.div<{ theme: string }>`
+const TimeValue = styled.div<{ $themeName: ThemeName }>`
   font-size: 3rem;
   font-weight: bold;
-  color: ${({ theme: themeName }) => themes[themeName].accent};
+  color: ${({ $themeName }) => themes[$themeName].accent};
   margin-bottom: ${({ theme }) => theme.spacing.xs};
 `;
 
-const TimeLabel = styled.div<{ theme: string }>`
-  color: ${({ theme: themeName }) => themeName === 'minimal' ? themes.minimal.secondary : themes.neon.secondary};
+const TimeLabel = styled.div<{ $themeName: ThemeName }>`
+  color: ${({ $themeName }) => $themeName === 'minimal' ? themes.minimal.secondary : themes.neon.secondary};
   text-transform: uppercase;
   letter-spacing: 1px;
 `;
@@ -432,12 +434,12 @@ const ThemeButton = styled.button<{ active: boolean; themeColor: string }>`
 `;
 
 const ValorantMobileTournaments: React.FC = () => {
-  const [currentTheme, setCurrentTheme] = useState('neon');
+  const [currentTheme, setCurrentTheme] = useState<ThemeName>('neon');
+  const launchDate = new Date('2024-07-01T00:00:00Z');
+  const isLaunchPast = Date.now() >= launchDate.getTime();
 
   const calculateTimeLeft = () => {
-    const launchDate = new Date('2024-07-01').getTime();
-    const now = new Date().getTime();
-    const difference = launchDate - now;
+    const difference = Math.max(0, launchDate.getTime() - Date.now());
 
     return {
       days: Math.floor(difference / (1000 * 60 * 60 * 24)),
@@ -446,6 +448,16 @@ const ValorantMobileTournaments: React.FC = () => {
       seconds: Math.floor((difference / 1000) % 60)
     };
   };
+
+  const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(calculateTimeLeft());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   const handlePreRegister = () => {
     // Handle pre-registration logic
@@ -461,77 +473,81 @@ const ValorantMobileTournaments: React.FC = () => {
         {Object.entries(themes).map(([name, theme]) => (
           <ThemeButton
             key={name}
-            active={currentTheme === name}
+            active={currentTheme === (name as ThemeName)}
             themeColor={theme.primary}
-            onClick={() => setCurrentTheme(name)}
+            onClick={() => setCurrentTheme(name as ThemeName)}
           />
         ))}
       </ThemeSelector>
 
-      <HeroBanner theme={currentTheme}>
-        <HeroContent theme={currentTheme}>
-          <Title theme={currentTheme}>Valorant Mobile</Title>
-          <Subtitle theme={currentTheme}>
+      <HeroBanner $themeName={currentTheme}>
+        <HeroContent $themeName={currentTheme}>
+          <Title $themeName={currentTheme}>Valorant Mobile</Title>
+          <Subtitle $themeName={currentTheme}>
             The Next Evolution of Mobile Esports
           </Subtitle>
         </HeroContent>
       </HeroBanner>
 
-      <Container theme={currentTheme}>
-        <Header theme={currentTheme}>
-          <Title theme={currentTheme}>Valorant Mobile Tournaments</Title>
-          <Subtitle theme={currentTheme}>
+      <Container $themeName={currentTheme}>
+        <Header $themeName={currentTheme}>
+          <Title $themeName={currentTheme}>Valorant Mobile Tournaments</Title>
+          <Subtitle $themeName={currentTheme}>
             Get ready for the next evolution of mobile esports. Join the most
             competitive Valorant Mobile tournaments platform.
           </Subtitle>
         </Header>
 
-        <Grid theme={currentTheme}>
+        <Grid $themeName={currentTheme}>
           {features.map((feature, index) => (
-            <FeatureCard key={index} theme={currentTheme}>
-              <Icon theme={currentTheme}>{feature.icon}</Icon>
-              <FeatureTitle theme={currentTheme}>{feature.title}</FeatureTitle>
-              <FeatureDescription theme={currentTheme}>
+            <FeatureCard key={index} $themeName={currentTheme}>
+              <Icon $themeName={currentTheme}>{feature.icon}</Icon>
+              <FeatureTitle $themeName={currentTheme}>{feature.title}</FeatureTitle>
+              <FeatureDescription $themeName={currentTheme}>
                 {feature.description}
               </FeatureDescription>
             </FeatureCard>
           ))}
         </Grid>
 
-        <ComingSoonCard theme={currentTheme}>
-          <ComingSoonTitle theme={currentTheme}>Coming Q3 2024</ComingSoonTitle>
-          <CountdownTimer>
-            <TimeUnit>
-              <TimeValue theme={currentTheme}>{calculateTimeLeft().days}</TimeValue>
-              <TimeLabel theme={currentTheme}>Days</TimeLabel>
-            </TimeUnit>
-            <TimeUnit>
-              <TimeValue theme={currentTheme}>{calculateTimeLeft().hours}</TimeValue>
-              <TimeLabel theme={currentTheme}>Hours</TimeLabel>
-            </TimeUnit>
-            <TimeUnit>
-              <TimeValue theme={currentTheme}>{calculateTimeLeft().minutes}</TimeValue>
-              <TimeLabel theme={currentTheme}>Minutes</TimeLabel>
-            </TimeUnit>
-            <TimeUnit>
-              <TimeValue theme={currentTheme}>{calculateTimeLeft().seconds}</TimeValue>
-              <TimeLabel theme={currentTheme}>Seconds</TimeLabel>
-            </TimeUnit>
-          </CountdownTimer>
-          <ComingSoonDescription theme={currentTheme}>
+        <ComingSoonCard $themeName={currentTheme}>
+          <ComingSoonTitle $themeName={currentTheme}>
+            {isLaunchPast ? 'Launching Soon' : 'Coming Q3 2024'}
+          </ComingSoonTitle>
+          {!isLaunchPast && (
+            <CountdownTimer>
+              <TimeUnit>
+                <TimeValue $themeName={currentTheme}>{timeLeft.days}</TimeValue>
+                <TimeLabel $themeName={currentTheme}>Days</TimeLabel>
+              </TimeUnit>
+              <TimeUnit>
+                <TimeValue $themeName={currentTheme}>{timeLeft.hours}</TimeValue>
+                <TimeLabel $themeName={currentTheme}>Hours</TimeLabel>
+              </TimeUnit>
+              <TimeUnit>
+                <TimeValue $themeName={currentTheme}>{timeLeft.minutes}</TimeValue>
+                <TimeLabel $themeName={currentTheme}>Minutes</TimeLabel>
+              </TimeUnit>
+              <TimeUnit>
+                <TimeValue $themeName={currentTheme}>{timeLeft.seconds}</TimeValue>
+                <TimeLabel $themeName={currentTheme}>Seconds</TimeLabel>
+              </TimeUnit>
+            </CountdownTimer>
+          )}
+          <ComingSoonDescription $themeName={currentTheme}>
             Valorant Mobile tournaments are coming to WAY Esports! Be among the first
             to compete in official tournaments when the game launches. Register now
             for early access and exclusive rewards.
           </ComingSoonDescription>
-          <ButtonGroup theme={currentTheme}>
+          <ButtonGroup $themeName={currentTheme}>
             <Button 
-              variant={currentTheme === 'minimal' ? 'outline' : 'primary'}
+              variant={currentTheme === 'minimal' ? 'outline' : 'brand'}
               onClick={handlePreRegister}
             >
               Pre-Register Now
             </Button>
             <Button 
-              variant={currentTheme === 'minimal' ? 'primary' : 'outline'}
+              variant={currentTheme === 'minimal' ? 'brand' : 'outline'}
               onClick={handleJoinDiscord}
             >
               Join Discord Community

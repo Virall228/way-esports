@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import CreateTeamModal from '../../components/Teams/CreateTeamModal';
 import { teamsService } from '../../services/teamsService';
 import { tournamentService } from '../../services/tournamentService';
+import Card from '../../components/UI/Card';
+import Button from '../../components/UI/Button';
 
 const Container = styled.div`
   padding: 1rem;
@@ -20,7 +22,7 @@ const Container = styled.div`
   }
 `;
 
-const Header = styled.div`
+const Header = styled(Card).attrs({ variant: 'elevated' })`
   background: ${({ theme }) => theme.colors.bg.secondary};
   border-radius: 16px;
   padding: 1.25rem;
@@ -56,16 +58,8 @@ const Subtitle = styled.p`
   max-width: 800px;
 `;
 
-const CreateTeamButton = styled.button`
-  background: ${({ theme }) => theme.colors.gray[800]};
-  color: ${({ theme }) => theme.colors.white};
-  border: none;
+const CreateTeamButton = styled(Button).attrs({ variant: 'brand', size: 'small' })`
   padding: 0.75rem 1.25rem;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-transform: uppercase;
   font-size: 1rem;
   min-height: 44px;
   width: 100%;
@@ -75,13 +69,6 @@ const CreateTeamButton = styled.button`
     width: auto;
   }
 
-  @media (hover: hover) and (pointer: fine) {
-    &:hover {
-      background: ${({ theme }) => theme.colors.gray[700]};
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-    }
-  }
 `;
 
 const FilterSection = styled.div`
@@ -103,24 +90,13 @@ const FilterTabs = styled.div`
   flex-wrap: wrap;
 `;
 
-const FilterTab = styled.button<{ $active: boolean }>`
-  background: ${({ $active, theme }) => $active ? theme.colors.gray[800] : 'transparent'};
-  color: ${({ $active, theme }) => $active ? theme.colors.white : theme.colors.text.secondary};
-  border: 1px solid ${({ $active, theme }) => $active ? theme.colors.border.strong : 'rgba(255, 255, 255, 0.2)'};
+const FilterTab = styled(Button).attrs<{ $active: boolean }>((props) => ({
+  variant: props.$active ? 'brand' : 'outline',
+  size: 'small'
+}))<{ $active: boolean }>`
   padding: 0.75rem 1.25rem;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
   min-height: 44px;
   white-space: nowrap;
-
-  @media (hover: hover) and (pointer: fine) {
-    &:hover {
-      background: ${({ $active, theme }) => $active ? theme.colors.gray[700] : 'rgba(255, 255, 255, 0.1)'};
-      transform: translateY(-2px);
-    }
-  }
 `;
 
 const FilterDropdown = styled.select`
@@ -169,22 +145,12 @@ const TeamsGrid = styled.div`
   }
 `;
 
-const TeamCard = styled.div`
+const TeamCard = styled(Card).attrs({ variant: 'outlined' })`
   background: ${({ theme }) => theme.colors.bg.secondary};
   border-radius: 16px;
   padding: 25px;
-  border: 1px solid ${({ theme }) => theme.colors.border.light};
-  transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
-
-  @media (hover: hover) and (pointer: fine) {
-    &:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
-      border-color: ${({ theme }) => theme.colors.border.medium};
-    }
-  }
 
   &::before {
     content: '';
@@ -293,58 +259,13 @@ const ActionButtons = styled.div`
   gap: 10px;
 `;
 
-const ActionButton = styled.button<{ $variant: 'primary' | 'secondary' | 'danger' }>`
+const ActionButton = styled(Button).attrs<{ $variant: 'brand' | 'secondary' | 'danger' }>((props) => ({
+  variant: props.$variant,
+  size: 'small'
+})) <{ $variant: 'brand' | 'secondary' | 'danger' }>`
   flex: 1;
   padding: 0.75rem;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
   min-height: 44px;
-  
-  ${({ $variant }) => {
-    switch ($variant) {
-      case 'primary':
-        return `
-          background: linear-gradient(135deg, ${'${({ theme }) => theme.colors.gray[700]}'}, ${'${({ theme }) => theme.colors.gray[900]}'});
-          color: white;
-          border: none;
-          
-          @media (hover: hover) and (pointer: fine) {
-            &:hover {
-              transform: translateY(-2px);
-              box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-            }
-          }
-        `;
-      case 'secondary':
-        return `
-          background: rgba(255, 255, 255, 0.1);
-          color: #cccccc;
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          
-          @media (hover: hover) and (pointer: fine) {
-            &:hover {
-              background: rgba(255, 255, 255, 0.2);
-              color: #ffffff;
-            }
-          }
-        `;
-      case 'danger':
-        return `
-          background: rgba(244, 67, 54, 0.08);
-          color: #F44336;
-          border: 1px solid rgba(244, 67, 54, 0.25);
-          
-          @media (hover: hover) and (pointer: fine) {
-            &:hover {
-              background: rgba(244, 67, 54, 0.15);
-            }
-          }
-        `;
-    }
-  }}
 `;
 
 interface Team {
@@ -610,7 +531,7 @@ const TeamsPage: React.FC = () => {
                           <ActionButton $variant="secondary" onClick={() => handleEditTeam(team.id)}>
                             Edit
                           </ActionButton>
-                          <ActionButton $variant="primary" onClick={() => handleViewDetails(team.id)}>
+                          <ActionButton $variant="brand" onClick={() => handleViewDetails(team.id)}>
                             View Details
                           </ActionButton>
                           <ActionButton $variant="danger" onClick={() => handleDeleteTeam(team.id)}>
@@ -622,7 +543,7 @@ const TeamsPage: React.FC = () => {
                           <ActionButton $variant="secondary" onClick={() => handleViewDetails(team.id)}>
                             View Details
                           </ActionButton>
-                          <ActionButton $variant="primary" onClick={() => handleJoinTeam(team)}>
+                          <ActionButton $variant="brand" onClick={() => handleJoinTeam(team)}>
                             Join Team
                           </ActionButton>
                         </>

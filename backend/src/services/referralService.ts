@@ -174,6 +174,7 @@ export class ReferralService {
         totalBonusesEarned,
         referralsUntilNextBonus: referralsUntilNextBonus === referralsNeeded ? 0 : referralsUntilNextBonus,
         freeEntriesCount: user.freeEntriesCount,
+        bonusEntries: user.bonusEntries || 0,
         isSubscribed: user.isSubscribed,
         subscriptionExpiresAt: user.subscriptionExpiresAt
       };
@@ -265,8 +266,8 @@ export class ReferralService {
   static async getAllReferrals(): Promise<any[]> {
     try {
       const referrals = await Referral.find()
-        .populate('referrerId', 'username email')
-        .populate('refereeId', 'username email')
+        .populate('referrer', 'username email')
+        .populate('referee', 'username email')
         .sort({ createdAt: -1 });
 
       return referrals;

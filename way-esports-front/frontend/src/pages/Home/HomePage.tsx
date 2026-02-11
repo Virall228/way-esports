@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import Card from '../../components/UI/Card';
+import Button from '../../components/UI/Button';
+import { api } from '../../services/api';
 
 const Container = styled.div`
   padding: 40px;
@@ -9,7 +12,7 @@ const Container = styled.div`
   color: #ffffff;
 `;
 
-const HeroSection = styled.section`
+const HeroSection = styled(Card).attrs({ variant: 'elevated' })`
   background: ${({ theme }) => theme.colors.bg.secondary};
   border: 1px solid ${({ theme }) => theme.colors.border.medium};
   border-radius: 20px;
@@ -70,20 +73,11 @@ const HeroSubtitle = styled.p`
   line-height: 1.6;
 `;
 
-const CTAButton = styled.button`
-  background: #ffffff;
-  color: #333333;
-  border: none;
+const CTAButton = styled(Button).attrs({ variant: 'brand', size: 'large' })`
   padding: 18px 40px;
   border-radius: 8px;
   font-size: 1.1rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-transform: uppercase;
   letter-spacing: 1px;
-
-  &:hover { transform: translateY(-3px); box-shadow: ${({ theme }) => theme.shadows.lg}; }
 `;
 
 const SectionTitle = styled.h2`
@@ -102,7 +96,7 @@ const FeaturesGrid = styled.div`
   margin-bottom: 80px;
 `;
 
-const FeatureCard = styled.div`
+const FeatureCard = styled(Card).attrs({ variant: 'outlined' })`
   background: #2a2a2a;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
@@ -161,7 +155,7 @@ const StatsGrid = styled.div`
   gap: 40px;
 `;
 
-const StatCard = styled.div`
+const StatCard = styled(Card).attrs({ variant: 'outlined' })`
   text-align: center;
   padding: 30px;
   background: ${({ theme }) => theme.colors.bg.secondary};

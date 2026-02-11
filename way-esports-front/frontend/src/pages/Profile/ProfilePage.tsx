@@ -10,6 +10,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 import { Link } from 'react-router-dom';
 import { useProfileQuery } from '../../hooks/useProfileQuery';
+import Card from '../../components/UI/Card';
+import Button from '../../components/UI/Button';
 
 const Bio = styled.p`
   line-height: 1.6;
@@ -25,8 +27,8 @@ const Container = styled.div`
   color: ${({ theme }) => theme.colors.text.primary};
 `;
 
-const ProfileHeader = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
+const ProfileHeader = styled(Card).attrs({ variant: 'elevated' })`
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 16px;
   padding: 30px;
   margin-bottom: 30px;
@@ -101,42 +103,15 @@ const UserOrg = styled.div`
   margin-bottom: 15px;
 `;
 
-const SubscriptionButton = styled.button`
-  background: ${({ theme }) => theme.colors.gray[800]};
-  color: white;
-  border: none;
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-transform: uppercase;
+const SubscriptionButton = styled(Button).attrs({ variant: 'brand', size: 'small' })`
   font-size: 12px;
   min-height: 40px;
-
-  @media (hover: hover) and (pointer: fine) {
-    &:hover {
-      background: ${({ theme }) => theme.colors.gray[700]};
-      transform: translateY(-2px);
-    }
-  }
 `;
 
-const WalletButton = styled.button`
-  background: rgba(255, 255, 255, 0.06);
-  color: ${({ theme }) => theme.colors.text.primary};
-  border: 1px solid ${({ theme }) => theme.colors.border.medium};
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
+const WalletButton = styled(Button).attrs({ variant: 'secondary', size: 'small' })`
+  font-size: 12px;
+  min-height: 40px;
   margin-left: 10px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  &:hover { background: rgba(255,255,255,0.12); }
 `;
 
 const UserStats = styled.div`
@@ -168,12 +143,20 @@ const StatsGrid = styled.div`
   margin-bottom: 30px;
 `;
 
-const StatsCard = styled.div`
+const StatsCard = styled(Card).attrs({ variant: 'outlined' })`
   background: ${({ theme }) => theme.colors.surface};
   border-radius: 16px;
   padding: 25px;
-  border: 1px solid ${({ theme }) => theme.colors.border.light};
 `;
+
+const StatFilters = styled.div`
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+`;
+
+const StatFilterButton = styled(Button).attrs({ size: 'small' })``;
 
 const CardTitle = styled.h3`
   color: ${({ theme }) => theme.colors.text.primary};
@@ -211,7 +194,7 @@ const AchievementsGrid = styled.div`
   gap: 20px;
 `;
 
-const AchievementCard = styled.div`
+const AchievementCard = styled(Card).attrs({ variant: 'outlined' })`
   background: ${({ theme }) => theme.colors.surface};
   border-radius: 12px;
   padding: 20px;
@@ -239,6 +222,23 @@ const AchievementTitle = styled.div`
 const AchievementDescription = styled.div`
   color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 0.9rem;
+`;
+
+const InlineAction = styled(Button).attrs({ variant: 'text', size: 'small' })`
+  min-height: auto;
+  padding: 0;
+`;
+
+const InlineConfirm = styled(Button).attrs({ variant: 'text', size: 'small' })`
+  min-height: auto;
+  padding: 0;
+  color: #00ff00;
+`;
+
+const InlineCancel = styled(Button).attrs({ variant: 'text', size: 'small' })`
+  min-height: auto;
+  padding: 0;
+  color: #ff4444;
 `;
 
 const ProfilePage: React.FC = () => {
@@ -351,17 +351,17 @@ const ProfilePage: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
               <StatLabel>BIO</StatLabel>
               {!isEditingBio ? (
-                <button onClick={() => setIsEditingBio(true)} style={{ background: 'none', border: 'none', color: '#ff6b00', cursor: 'pointer', fontSize: '0.8rem' }}>
+                <InlineAction onClick={() => setIsEditingBio(true)}>
                   Edit Bio
-                </button>
+                </InlineAction>
               ) : (
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button onClick={handleSaveBio} disabled={isSaving} style={{ background: 'none', border: 'none', color: '#00ff00', cursor: 'pointer', fontSize: '0.8rem' }}>
+                  <InlineConfirm onClick={handleSaveBio} disabled={isSaving}>
                     {isSaving ? 'Saving...' : 'Save'}
-                  </button>
-                  <button onClick={() => setIsEditingBio(false)} style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', fontSize: '0.8rem' }}>
+                  </InlineConfirm>
+                  <InlineCancel onClick={() => setIsEditingBio(false)}>
                     Cancel
-                  </button>
+                  </InlineCancel>
                 </div>
               )}
             </div>
@@ -411,38 +411,11 @@ const ProfilePage: React.FC = () => {
           <CardTitle style={{ margin: 0 }}>Match Statistics</CardTitle>
         </div>
 
-        <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
-          <button style={{
-            background: '#ff6b00',
-            color: 'white',
-            border: 'none',
-            padding: '8px 16px',
-            borderRadius: '6px',
-            fontSize: '14px'
-          }}>
-            All Matches (0)
-          </button>
-          <button style={{
-            background: 'transparent',
-            color: '#cccccc',
-            border: '1px solid #333',
-            padding: '8px 16px',
-            borderRadius: '6px',
-            fontSize: '14px'
-          }}>
-            Wins (0)
-          </button>
-          <button style={{
-            background: 'transparent',
-            color: '#cccccc',
-            border: '1px solid #333',
-            padding: '8px 16px',
-            borderRadius: '6px',
-            fontSize: '14px'
-          }}>
-            Losses (0)
-          </button>
-        </div>
+        <StatFilters>
+          <StatFilterButton variant="brand">All Matches (0)</StatFilterButton>
+          <StatFilterButton variant="outline">Wins (0)</StatFilterButton>
+          <StatFilterButton variant="outline">Losses (0)</StatFilterButton>
+        </StatFilters>
 
         <div style={{ color: '#999', fontStyle: 'italic', textAlign: 'center', padding: '40px 0' }}>
           No match statistics available yet. Start playing to see your performance data!

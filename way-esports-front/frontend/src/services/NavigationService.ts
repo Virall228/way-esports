@@ -191,10 +191,18 @@ class NavigationService {
   }
 
   // Game Navigation
-  goToGameHub(game: 'CS2' | 'CriticalOps' | 'PUBG' | 'ValorantMobile') {
-    this.handleNavigation(`/games/${game.toLowerCase()}`, {
-      title: `${game === 'ValorantMobile' ? 'Valorant Mobile' : game} Hub`,
-      state: { game, category: 'games' }
+  goToGameHub(game: string) {
+    const safeGame = (game || '').toString();
+    const label = safeGame
+      ? safeGame === 'ValorantMobile'
+        ? 'Valorant Mobile'
+        : safeGame.replace(/([a-z])([A-Z])/g, '$1 $2')
+      : 'Game';
+    const slug = safeGame.toLowerCase().replace(/\s+/g, '');
+
+    this.handleNavigation(`/games/${slug}`, {
+      title: `${label} Hub`,
+      state: { game: safeGame, category: 'games' }
     });
   }
 

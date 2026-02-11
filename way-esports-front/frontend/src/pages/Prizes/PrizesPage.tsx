@@ -2,16 +2,19 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import PrizeHistory from '../../components/Prizes/PrizeHistory';
 import PrizeLeaderboard from '../../components/Prizes/PrizeLeaderboard';
+import Card from '../../components/UI/Card';
+import Button from '../../components/UI/Button';
 
 const Container = styled.div`
-  min-height: 100vh;
-  background: #0a0a0a;
-  padding: 20px;
+  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
 `;
 
-const Header = styled.div`
+const Header = styled(Card).attrs({ variant: 'elevated' })`
   text-align: center;
   margin-bottom: 40px;
+  padding: 2rem;
 `;
 
 const Title = styled.h1`
@@ -30,32 +33,15 @@ const TabsContainer = styled.div`
   display: flex;
   justify-content: center;
   margin-bottom: 30px;
+  gap: 12px;
+  flex-wrap: wrap;
 `;
 
-const Tab = styled.button<{ $active: boolean }>`
-  background: ${({ $active }) => $active ? 'rgba(255, 107, 0, 0.2)' : 'transparent'};
-  color: ${({ $active }) => $active ? '#ff6b00' : '#cccccc'};
-  border: 1px solid rgba(255, 107, 0, 0.3);
+const Tab = styled(Button).attrs<{ $active: boolean }>((props) => ({
+  variant: props.$active ? 'brand' : 'outline',
+  size: 'small'
+}))<{ $active: boolean }>`
   padding: 12px 24px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  
-  &:first-child {
-    border-radius: 8px 0 0 8px;
-  }
-  
-  &:last-child {
-    border-radius: 0 8px 8px 0;
-  }
-  
-  &:not(:first-child) {
-    border-left: none;
-  }
-
-  &:hover {
-    background: rgba(255, 107, 0, 0.1);
-  }
 `;
 
 const Content = styled.div`

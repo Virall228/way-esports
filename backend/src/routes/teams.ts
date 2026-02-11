@@ -5,7 +5,7 @@ import Tournament from '../models/Tournament';
 import TournamentRegistration from '../models/TournamentRegistration';
 import { body } from 'express-validator';
 import { validateRequest } from '../middleware/validate';
-import { authenticateJWT } from '../middleware/auth';
+import { authenticateJWT, isAdmin } from '../middleware/auth';
 import { checkTournamentAccess } from '../middleware/tournamentAccess';
 
 const router = express.Router();
@@ -13,6 +13,11 @@ const router = express.Router();
 const getUserId = (req: any): string | null => {
   const value = req.user?._id || req.user?.id;
   return value ? value.toString() : null;
+};
+
+const isAdminUser = (req: any): boolean => {
+  const role = req.user?.role;
+  return role === 'admin' || role === 'developer';
 };
 
 const getTournamentParticipationTeamId = async (
@@ -416,6 +421,8 @@ router.get('/:id', async (req, res) => {
 
 // Create team
 router.post('/',
+  authenticateJWT,
+  isAdmin,
   body('name').notEmpty().withMessage('Team name is required'),
   body('tag').isLength({ min: 2, max: 5 }).withMessage('Tag must be 2-5 characters'),
   body('game').notEmpty().withMessage('Game is required'),
@@ -509,7 +516,7 @@ router.post('/',
   });
 
 // Bulk create teams (admin/import use)
-router.post('/batch', async (req, res) => {
+router.post('/batch', authenticateJWT, isAdmin, async (req, res) => {
   try {
     const items = Array.isArray(req.body) ? req.body : [];
     if (!items.length) {
@@ -547,11 +554,17 @@ router.post('/batch', async (req, res) => {
 
 // Update team
 router.put('/:id',
+  authenticateJWT,
   body('name').optional().notEmpty().withMessage('Team name cannot be empty'),
   body('tag').optional().isLength({ min: 2, max: 5 }).withMessage('Tag must be 2-5 characters'),
   validateRequest,
   async (req: any, res: any) => {
     try {
+      const requesterId = getUserId(req);
+      if (!requesterId) {
+        return res.status(401).json({ success: false, error: 'Authentication required' });
+      }
+
       const team = await Team.findById(req.params.id);
 
       if (!team) {
@@ -561,7 +574,7 @@ router.put('/:id',
         });
       }
 
-      if (req.user?.id && team.captain && team.captain.toString() !== req.user.id) {
+      if (!isAdminUser(req) && team.captain && team.captain.toString() !== requesterId) {
         return res.status(403).json({
           success: false,
           error: 'Not authorized to update this team'
@@ -624,9 +637,13 @@ router.put('/:id',
   });
 
 // Add member to team
-router.post('/:id/members', async (req, res) => {
+router.post('/:id/members', authenticateJWT, async (req, res) => {
   try {
     const { userId } = req.body;
+    const requesterId = getUserId(req);
+    if (!requesterId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
     const team = await Team.findById(req.params.id);
 
     if (!team) {
@@ -636,7 +653,7 @@ router.post('/:id/members', async (req, res) => {
       });
     }
 
-    if (req.user?.id && team.captain && team.captain.toString() !== req.user.id) {
+    if (!isAdminUser(req) && team.captain && team.captain.toString() !== requesterId) {
       return res.status(403).json({
         success: false,
         error: 'Not authorized to add members'
@@ -698,8 +715,12 @@ router.post('/:id/members', async (req, res) => {
 });
 
 // Remove member from team
-router.delete('/:id/members/:userId', async (req, res) => {
+router.delete('/:id/members/:userId', authenticateJWT, async (req, res) => {
   try {
+    const requesterId = getUserId(req);
+    if (!requesterId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
     const team = await Team.findById(req.params.id);
 
     if (!team) {
@@ -709,7 +730,7 @@ router.delete('/:id/members/:userId', async (req, res) => {
       });
     }
 
-    if (req.user?.id && team.captain && team.captain.toString() !== req.user.id) {
+    if (!isAdminUser(req) && team.captain && team.captain.toString() !== requesterId) {
       return res.status(403).json({
         success: false,
         error: 'Not authorized to remove members'
@@ -775,8 +796,12 @@ router.delete('/:id/members/:userId', async (req, res) => {
 });
 
 // Delete team
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateJWT, async (req, res) => {
   try {
+    const requesterId = getUserId(req);
+    if (!requesterId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
     const team = await Team.findById(req.params.id);
 
     if (!team) {
@@ -786,7 +811,7 @@ router.delete('/:id', async (req, res) => {
       });
     }
 
-    if (req.user?.id && team.captain && team.captain.toString() !== req.user.id) {
+    if (!isAdminUser(req) && team.captain && team.captain.toString() !== requesterId) {
       return res.status(403).json({
         success: false,
         error: 'Not authorized to delete this team'

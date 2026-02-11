@@ -5,6 +5,8 @@ import { useTournamentAccess } from '../../hooks/useTournamentAccess';
 import TournamentRegistrationGuard from '../../components/Tournament/TournamentRegistrationGuard';
 import navigationService from '../../services/NavigationService';
 import { tournamentService } from '../../services/tournamentService';
+import Card from '../../components/UI/Card';
+import Button from '../../components/UI/Button';
 
 const Container = styled.div`
   padding: 1rem;
@@ -21,8 +23,8 @@ const Container = styled.div`
   }
 `;
 
-const Header = styled.div`
-  background: #2a2a2a;
+const Header = styled(Card).attrs({ variant: 'elevated' })`
+  background: rgba(255, 255, 255, 0.06);
   border: 1px solid ${({ theme }) => theme.colors.border.medium};
   border-radius: 16px;
   padding: 1.25rem;
@@ -68,25 +70,13 @@ const Subtitle = styled.p`
   font-size: 1.2rem;
 `;
 
-const RulesButton = styled.button`
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+const RulesButton = styled(Button).attrs({ variant: 'secondary', size: 'small' })`
   padding: 0.75rem 1.25rem;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   gap: 8px;
   min-height: 44px;
   justify-content: center;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px);
-  }
 `;
 
 const FilterSection = styled.div`
@@ -105,24 +95,13 @@ const FilterTabs = styled.div`
   flex-wrap: wrap;
 `;
 
-const FilterTab = styled.button<{ $active: boolean }>`
-  background: ${({ $active }) =>
-    $active ? '#ff4757' : 'transparent'};
-  color: ${({ $active }) => $active ? '#ffffff' : '#cccccc'};
-  border: 1px solid ${({ $active, theme }) => $active ? theme.colors.border.strong : 'rgba(255, 255, 255, 0.2)'};
+const FilterTab = styled(Button).attrs<{ $active: boolean }>((props) => ({
+  variant: props.$active ? 'brand' : 'outline',
+  size: 'small'
+}))<{ $active: boolean }>`
   padding: 0.75rem 1.25rem;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
   min-height: 44px;
   white-space: nowrap;
-
-  &:hover {
-    background: ${({ $active }) =>
-    $active ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)'};
-    transform: translateY(-2px);
-  }
 `;
 
 const TournamentsGrid = styled.div`
@@ -142,8 +121,8 @@ const TournamentsGrid = styled.div`
   }
 `;
 
-const TournamentCard = styled.div<{ $status: string }>`
-  background: #2a2a2a;
+const TournamentCard = styled(Card).attrs({ clickable: true })<{ $status: string }>`
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 16px;
   padding: 25px;
   border: 1px solid ${({ theme, $status }) => {
@@ -158,12 +137,6 @@ const TournamentCard = styled.div<{ $status: string }>`
   position: relative;
   overflow: hidden;
   cursor: pointer;
-
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
-    border-color: ${({ theme }) => theme.colors.border.medium};
-  }
 `;
 
 const GameIcon = styled.img`
@@ -220,22 +193,13 @@ const PrizePool = styled.div`
   margin: 15px 0;
 `;
 
-const ActionButton = styled.button<{ $variant?: 'primary' | 'outline' }>`
+const ActionButton = styled(Button).attrs<{ $variant?: 'brand' | 'outline' }>((props) => ({
+  variant: props.$variant === 'outline' ? 'outline' : 'brand',
+  size: 'small'
+})) <{ $variant?: 'brand' | 'outline' }>`
   width: 100%;
-  background: ${({ $variant }) => $variant === 'outline' ? 'transparent' : '#ff6b00'};
-  color: white;
-  border: ${({ $variant }) => $variant === 'outline' ? '1px solid #666' : 'none'};
   padding: 0.75rem;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
   min-height: 44px;
-
-  &:hover {
-    transform: translateY(-2px);
-    background: ${({ $variant }) => $variant === 'outline' ? 'rgba(255,255,255,0.05)' : '#ff8533'};
-  }
 `;
 
 const EmptyState = styled.div`
@@ -385,7 +349,7 @@ const TournamentsPage: React.FC = () => {
                 <InfoValue>{t.format}</InfoValue>
               </InfoRow>
 
-              <ActionButton $variant={t.status === 'upcoming' ? 'primary' : 'outline'} style={{ marginTop: '15px' }}>
+              <ActionButton $variant={t.status === 'upcoming' ? 'brand' : 'outline'} style={{ marginTop: '15px' }}>
                 {t.status === 'upcoming' ? 'Join Now' : t.status === 'live' ? 'View Details' : 'Results'}
               </ActionButton>
             </TournamentCard>

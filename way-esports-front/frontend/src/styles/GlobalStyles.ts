@@ -15,6 +15,16 @@ export const GlobalStyles = createGlobalStyle`
   html {
     font-size: 16px;
     scroll-behavior: smooth;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  :root {
+    --sat: env(safe-area-inset-top);
+    --sab: env(safe-area-inset-bottom);
+    --sal: env(safe-area-inset-left);
+    --sar: env(safe-area-inset-right);
+    --app-height: 100vh;
   }
 
   body {
@@ -25,11 +35,16 @@ export const GlobalStyles = createGlobalStyle`
     -moz-osx-font-smoothing: grayscale;
     margin: 0;
     padding: 0;
-    overflow-x: hidden;
+    overflow: hidden;
     width: 100%;
     position: relative;
-    min-height: 100vh;
-    min-height: -webkit-fill-available;
+    height: 100%;
+    overscroll-behavior: none;
+  }
+
+  #root {
+    height: 100%;
+    width: 100%;
   }
 
   /* Remove global gradients and overlays to allow custom background image */

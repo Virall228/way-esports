@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api } from '../services/api';
+import { api, ApiError } from '../services/api';
 
 interface AccessStatus {
   canJoin: boolean;
@@ -20,17 +20,17 @@ export const useTournamentAccess = () => {
       setLoading(true);
       setError(null);
 
-      const response = await api.get('/api/referrals/stats');
-      const stats = response.data;
+      const response: any = await api.get('/api/referrals/stats');
+      const stats = response?.data ?? response ?? {};
 
-      const canJoin = stats.isSubscribed || stats.freeEntriesCount > 0;
+      const canJoin = Boolean(stats.isSubscribed) || Number(stats.freeEntriesCount || 0) > 0 || Number(stats.bonusEntries || 0) > 0;
       const isExpired = stats.subscriptionExpiresAt && 
         new Date(stats.subscriptionExpiresAt) < new Date();
 
       setAccessStatus({
         canJoin,
         isSubscribed: stats.isSubscribed && !isExpired,
-        freeEntriesCount: stats.freeEntriesCount,
+        freeEntriesCount: Number(stats.freeEntriesCount || 0),
         subscriptionExpiresAt: stats.subscriptionExpiresAt,
         requiresSubscription: !canJoin,
         redirectTo: !canJoin ? '/billing' : undefined
@@ -55,16 +55,18 @@ export const useTournamentAccess = () => {
     } catch (err: any) {
       console.error('Failed to join tournament:', err);
       
-      // Handle specific access errors
-      if (err.response?.status === 402) {
-        const errorData = err.response.data;
-        if (errorData.redirectTo) {
-          // Redirect to billing page
-          window.location.href = errorData.redirectTo;
+      if (err instanceof ApiError) {
+        if (err.status === 402) {
+          const payload = err.payload || {};
+          const redirectTo = payload.redirectTo || '/billing';
+          if (redirectTo) {
+            window.location.href = redirectTo;
+          }
+          throw new Error(payload.error || payload.message || 'Subscription required');
         }
-        throw new Error(errorData.error || 'Subscription required');
+        throw new Error(err.message || 'Failed to join tournament');
       }
-      
+
       throw new Error(err?.message || 'Failed to join tournament');
     }
   };
