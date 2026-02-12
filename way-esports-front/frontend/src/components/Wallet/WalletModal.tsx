@@ -22,7 +22,7 @@ const ModalContent = styled.div`
   border-radius: 16px;
   padding: 0;
   width: 90%;
-  max-width: 500px;
+  max-width: 100%;
   position: relative;
   overflow: hidden;
 `;
@@ -174,7 +174,6 @@ interface WalletModalProps {
 const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => {
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -184,7 +183,6 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => {
 
   const loadWalletData = async () => {
     try {
-      setLoading(true);
       const response = await api.get('/api/prizes/user/history');
       const data = response.data;
       
@@ -222,7 +220,6 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => {
         type: 'income' as const
       }]);
     } finally {
-      setLoading(false);
     }
   };
 

@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import styled from 'styled-components';
 
 const ErrorContainer = styled.div`
@@ -34,14 +34,12 @@ const ErrorMessage = styled.p`
   font-size: 1.1rem;
   margin-bottom: 2rem;
   color: #cccccc;
-  max-width: 600px;
   line-height: 1.6;
 `;
 
 const ErrorDetails = styled.details`
   margin-bottom: 2rem;
   text-align: left;
-  max-width: 600px;
   width: 100%;
 `;
 

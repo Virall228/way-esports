@@ -21,7 +21,7 @@ const ModalContent = styled.div`
   border-radius: 16px;
   padding: 0;
   width: 92%;
-  max-width: 800px;
+  max-width: 100%;
   position: relative;
   max-height: 90vh;
   overflow-y: auto;
@@ -196,31 +196,6 @@ const RewardRarity = styled.div<{ $rarity: string }>`
 const RewardValue = styled.div`
   color: #ffffff;
   font-weight: 600;
-`;
-
-const ProgressContainer = styled.div`
-  margin-bottom: 15px;
-`;
-
-const ProgressLabel = styled.div`
-  color: #cccccc;
-  font-size: 0.8rem;
-  margin-bottom: 5px;
-`;
-
-const ProgressBar = styled.div`
-  width: 100%;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-  overflow: hidden;
-`;
-
-const ProgressFill = styled.div<{ $percentage: number }>`
-  height: 100%;
-  background: linear-gradient(90deg, #3a3a3a, #2a2a2a);
-  width: ${({ $percentage }) => Math.min($percentage, 100)}%;
-  transition: width 0.3s ease;
 `;
 
 const RewardButton = styled.button<{ $locked?: boolean }>`

@@ -10,8 +10,9 @@ import Button from '../../components/UI/Button';
 
 const Container = styled.div`
   padding: 1rem;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   color: #ffffff;
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
@@ -222,7 +223,7 @@ interface Tournament {
 
 const TournamentsPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState('all');
-  const [activeGame, setActiveGame] = useState('all');
+  const [activeGame] = useState('all');
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [showGuard, setShowGuard] = useState(false);
   const [pendingTournamentId, setPendingTournamentId] = useState<string | null>(null);
@@ -239,6 +240,10 @@ const TournamentsPage: React.FC = () => {
     staleTime: 30000,
     refetchOnWindowFocus: false
   });
+
+  const errorMessage = error
+    ? (error instanceof Error ? error.message : (error as any)?.message || 'Failed to load tournaments')
+    : null;
 
   const tournaments = useMemo(() => {
     const items: any[] = Array.isArray(tournamentsRaw) ? tournamentsRaw : [];
@@ -326,8 +331,8 @@ const TournamentsPage: React.FC = () => {
 
       {loading ? (
         <EmptyState>Loading...</EmptyState>
-      ) : error ? (
-        <EmptyState>{error}</EmptyState>
+      ) : errorMessage ? (
+        <EmptyState>{errorMessage}</EmptyState>
       ) : (
         <TournamentsGrid>
           {filteredTournaments.map(t => (

@@ -133,7 +133,7 @@ export const useMobileOptimization = () => {
     });
   }, []);
 
-  const handleTouchEnd = useCallback((e: TouchEvent) => {
+  const handleTouchEnd = useCallback(() => {
     if (!touchStart || !touchEnd) return;
 
     const deltaX = touchEnd.x - touchStart.x;

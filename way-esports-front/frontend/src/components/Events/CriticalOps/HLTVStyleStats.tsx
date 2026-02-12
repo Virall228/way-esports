@@ -121,7 +121,8 @@ const HLTVStyleStats: React.FC<HLTVStyleStatsProps> = ({ match }) => {
             <ScoreNumber $winner={match.winner === match.team2.id}>{match.team2.stats.score}</ScoreNumber>
           </Score>
           <MatchInfo>
-            {match.tournament.name} - {match.tournament.round}
+            {(match.tournament?.name || 'Tournament')}
+            {match.tournament?.round ? ` - ${match.tournament.round}` : ''}
             <br />
             {match.map}
           </MatchInfo>

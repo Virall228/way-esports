@@ -20,7 +20,6 @@ const Modal = styled.div`
   background: #1a1a1a;
   border-radius: 16px;
   padding: 30px;
-  max-width: 400px;
   width: 100%;
   text-align: center;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -94,6 +93,7 @@ const TournamentRegistrationGuard: React.FC<TournamentRegistrationGuardProps> = 
   }
 
   if (!accessStatus?.canJoin) {
+    const freeEntriesCount = accessStatus?.freeEntriesCount ?? 0;
     return (
       <Overlay>
         <Modal>
@@ -101,12 +101,12 @@ const TournamentRegistrationGuard: React.FC<TournamentRegistrationGuardProps> = 
           <Title>Subscription Required</Title>
           <Message>
             You need an active subscription or free entries to join tournaments.
-            {accessStatus.freeEntriesCount === 0 && 
+            {freeEntriesCount === 0 && 
               ' Get free entries by referring friends or subscribe to unlock unlimited access!'
             }
           </Message>
           <Button onClick={() => window.location.href = '/billing'}>
-            {accessStatus.freeEntriesCount === 0 ? 'Get Subscription' : 'Go to Billing'}
+            {freeEntriesCount === 0 ? 'Get Subscription' : 'Go to Billing'}
           </Button>
           <CloseButton onClick={onAccessDenied}>
             Close

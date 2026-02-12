@@ -4,8 +4,9 @@ import { api } from '../../services/api';
 
 const Container = styled.div`
   padding: 20px;
-  max-width: 800px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
 `;
 
 const Header = styled.div`

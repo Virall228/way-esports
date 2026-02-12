@@ -53,7 +53,7 @@ const PullToRefreshIndicator = styled.div<{ $isVisible: boolean; $progress: numb
   font-weight: 600;
   font-size: 16px;
   z-index: 1000;
-  transform: translateY(${({ $isVisible, $progress }) => $isVisible ? 0 : -60}px);
+  transform: translateY(${({ $isVisible }) => $isVisible ? 0 : -60}px);
   transition: transform 0.3s ease;
   backdrop-filter: blur(10px);
   border-bottom: 2px solid rgba(255, 215, 0, 0.3);
@@ -137,8 +137,8 @@ const MobileGestures: React.FC<MobileGesturesProps> = ({
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | 'up' | 'down' | null>(null);
   const [pullToRefreshVisible, setPullToRefreshVisible] = useState(false);
   const [pullToRefreshProgress, setPullToRefreshProgress] = useState(0);
-  const [bottomSheetVisible, setBottomSheetVisible] = useState(false);
-  const [bottomSheetHeight, setBottomSheetHeight] = useState(300);
+  const [bottomSheetVisible] = useState(false);
+  const [bottomSheetHeight] = useState(300);
 
   // Minimum swipe distance
   const minSwipeDistance = 50;
@@ -166,7 +166,7 @@ const MobileGestures: React.FC<MobileGesturesProps> = ({
       }
     };
 
-    const handleTouchEnd = (e: TouchEvent) => {
+    const handleTouchEnd = () => {
       if (!touchStart || !touchEnd) return;
 
       const distanceX = touchStart.x - touchEnd.x;

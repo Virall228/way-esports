@@ -7,8 +7,9 @@ import Button from '../../components/UI/Button';
 
 const Container = styled.div`
   padding: 1rem;
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
 `;
 
 const Header = styled(Card).attrs({ variant: 'elevated' })`
@@ -45,8 +46,9 @@ const Tab = styled(Button).attrs<{ $active: boolean }>((props) => ({
 `;
 
 const Content = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
 `;
 
 const PrizesPage: React.FC = () => {

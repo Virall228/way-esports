@@ -7,8 +7,9 @@ import ValorantMobileTournaments from '../Tournaments/ValorantMobile/ValorantMob
 
 const Container = styled.div`
   padding: 1rem;
-  max-width: 1000px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   color: ${({ theme }) => theme.colors.text.primary};
 `;
 

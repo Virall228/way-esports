@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { api } from '../../services/api';
 
 const Container = styled.div`
-    max-width: 800px;
-    margin: 0 auto;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
     padding: 20px;
 `;
 
@@ -180,6 +182,9 @@ const SettingsPage: React.FC = () => {
         email: '',
         message: ''
     });
+    const [submitState, setSubmitState] = useState<{ status: 'idle' | 'loading' | 'success' | 'error'; message?: string }>({
+        status: 'idle'
+    });
 
     useEffect(() => {
         // Load saved preferences
@@ -206,24 +211,13 @@ const SettingsPage: React.FC = () => {
     const handleContactSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const response = await fetch('/api/contact', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Telegram-Init-Data': (window.Telegram?.WebApp as any)?.initData || ''
-                },
-                body: JSON.stringify(contactForm)
-            });
-
-            if (response.ok) {
-                alert('Message sent successfully!');
-                setContactForm({ name: '', email: '', message: '' });
-            } else {
-                throw new Error('Failed to send message');
-            }
+            setSubmitState({ status: 'loading' });
+            await api.post('/api/contact', contactForm, true);
+            setSubmitState({ status: 'success', message: 'Message sent successfully!' });
+            setContactForm({ name: '', email: '', message: '' });
         } catch (error) {
             console.error('Error sending message:', error);
-            alert('Failed to send message. Please try again.');
+            setSubmitState({ status: 'error', message: 'Failed to send message. Please try again.' });
         }
     };
 
@@ -297,7 +291,15 @@ const SettingsPage: React.FC = () => {
                         onChange={(e) => setContactForm(prev => ({ ...prev, message: e.target.value }))}
                         required
                     />
-                    <SubmitButton type="submit">Send Message</SubmitButton>
+                    <SubmitButton type="submit" disabled={submitState.status === 'loading'}>
+                        {submitState.status === 'loading' ? 'Sending...' : 'Send Message'}
+                    </SubmitButton>
+                    {submitState.status === 'success' && (
+                        <div style={{ color: '#4CAF50', fontWeight: 'bold' }}>{submitState.message}</div>
+                    )}
+                    {submitState.status === 'error' && (
+                        <div style={{ color: '#ff6b6b', fontWeight: 'bold' }}>{submitState.message}</div>
+                    )}
                 </ContactForm>
 
                 <ContactInfo>

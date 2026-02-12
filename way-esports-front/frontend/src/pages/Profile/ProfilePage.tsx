@@ -22,8 +22,9 @@ const Bio = styled.p`
 
 const Container = styled.div`
   padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   color: ${({ theme }) => theme.colors.text.primary};
 `;
 
@@ -164,65 +165,6 @@ const CardTitle = styled.h3`
   font-size: 1.3rem;
 `;
 
-const GameStats = styled.div`
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 15px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border.light};
-
-  &:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
-  }
-`;
-
-const GameName = styled.div`
-  color: ${({ theme }) => theme.colors.text.primary};
-  font-weight: 600;
-`;
-
-const GameRank = styled.div`
-  color: ${({ theme }) => theme.colors.text.primary};
-  font-weight: 600;
-`;
-
-const AchievementsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 20px;
-`;
-
-const AchievementCard = styled(Card).attrs({ variant: 'outlined' })`
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 12px;
-  padding: 20px;
-  text-align: center;
-  border: 1px solid rgba(255, 107, 0, 0.2);
-  transition: all 0.3s ease;
-
-  &:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 25px rgba(255, 107, 0, 0.2);
-  }
-`;
-
-const AchievementIcon = styled.div`
-  font-size: 2.5rem;
-  margin-bottom: 15px;
-`;
-
-const AchievementTitle = styled.div`
-  color: ${({ theme }) => theme.colors.text.primary};
-  font-weight: 600;
-  margin-bottom: 8px;
-`;
-
-const AchievementDescription = styled.div`
-  color: ${({ theme }) => theme.colors.textSecondary};
-  font-size: 0.9rem;
-`;
 
 const InlineAction = styled(Button).attrs({ variant: 'text', size: 'small' })`
   min-height: auto;
@@ -248,7 +190,6 @@ const ProfilePage: React.FC = () => {
   const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [isSubscriptionOpen, setIsSubscriptionOpen] = useState(false);
   const [isPhotoUploadOpen, setIsPhotoUploadOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [newBio, setNewBio] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -274,7 +215,6 @@ const ProfilePage: React.FC = () => {
 
   const handlePhotoUpload = async (file: File) => {
     try {
-      setIsUploading(true);
       const { url } = await api.uploadImage(file);
 
       // Update user profile with new logo URL
@@ -284,8 +224,6 @@ const ProfilePage: React.FC = () => {
       await refetchProfile();
     } catch (error) {
       console.error('Error in photo upload:', error);
-    } finally {
-      setIsUploading(false);
     }
   };
 

@@ -7,8 +7,9 @@ import { teamsService } from '../../services/teamsService';
 
 const Container = styled.div`
   padding: 2rem 1rem;
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   color: #fff;
 `;
 

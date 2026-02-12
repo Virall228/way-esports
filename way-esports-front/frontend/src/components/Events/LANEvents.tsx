@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import styled from 'styled-components';
 import LANEventCard from './LANEventCard';
+import { useQuery } from '@tanstack/react-query';
+import { tournamentService } from '../../services/tournamentService';
 
 const Container = styled.div`
     padding: 20px;
@@ -97,27 +99,47 @@ interface LANEvent {
     status: 'upcoming' | 'live' | 'completed';
 }
 
+const mapStatus = (status?: string): 'upcoming' | 'live' | 'completed' => {
+    if (!status) return 'upcoming';
+    const normalized = status.toLowerCase();
+    if (['live', 'ongoing', 'in_progress'].includes(normalized)) return 'live';
+    if (['completed', 'finished'].includes(normalized)) return 'completed';
+    return 'upcoming';
+};
+
 const LANEvents: React.FC = () => {
     const [filter, setFilter] = useState<'all' | 'upcoming' | 'live' | 'completed'>('all');
 
-    // Example events data
-    const events: LANEvent[] = [
-        {
-            id: '1',
-            title: 'WAY Esports LAN Championship 2024',
-            venue: 'Cyber Arena Moscow',
-            date: '2024-04-15',
-            teams: {
-                registered: 12,
-                total: 16
-            },
-            prizePool: 50000,
-            location: 'Moscow, Russia',
-            game: 'CS2',
-            status: 'upcoming'
+    const { data: tournamentsRaw = [], isLoading, error } = useQuery({
+        queryKey: ['tournaments', 'lan-events'],
+        queryFn: async () => {
+            const res: any = await tournamentService.list();
+            return res?.tournaments || res?.data || res || [];
         },
-        // Add more events here
-    ];
+        staleTime: 30000,
+        refetchOnWindowFocus: false
+    });
+
+    const events: LANEvent[] = useMemo(() => {
+        const items: any[] = Array.isArray(tournamentsRaw) ? tournamentsRaw : [];
+        return items.map((t: any) => {
+            const dateValue = t.startDate || t.date || new Date().toISOString();
+            return {
+                id: String(t.id || t._id || ''),
+                title: String(t.name || t.title || 'Tournament'),
+                venue: String(t.venue || t.location || 'TBD'),
+                date: new Date(dateValue).toISOString(),
+                teams: {
+                    registered: Number(t.participants ?? 0),
+                    total: Number(t.maxParticipants ?? t.maxTeams ?? 0)
+                },
+                prizePool: Number(t.prizePool || 0),
+                location: String(t.location || 'TBD'),
+                game: String(t.game || 'TBD'),
+                status: mapStatus(t.status)
+            };
+        });
+    }, [tournamentsRaw]);
 
     const filteredEvents = filter === 'all' 
         ? events 
@@ -163,7 +185,13 @@ const LANEvents: React.FC = () => {
             </Header>
 
             <EventsGrid>
-                {filteredEvents.length > 0 ? (
+                {isLoading && (
+                    <NoEvents>Loading events...</NoEvents>
+                )}
+                {!isLoading && error && (
+                    <NoEvents>Failed to load events</NoEvents>
+                )}
+                {!isLoading && !error && filteredEvents.length > 0 && (
                     filteredEvents.map(event => (
                         <LANEventCard
                             key={event.id}
@@ -171,7 +199,8 @@ const LANEvents: React.FC = () => {
                             onRegister={() => handleRegister(event.id)}
                         />
                     ))
-                ) : (
+                )}
+                {!isLoading && !error && filteredEvents.length === 0 && (
                     <NoEvents>
                         No {filter === 'all' ? '' : filter} LAN events found
                     </NoEvents>

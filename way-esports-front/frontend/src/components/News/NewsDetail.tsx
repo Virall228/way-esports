@@ -1,17 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled from 'styled-components';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { api } from '../../services/api';
-
-const scanline = keyframes`
-    0% {
-        transform: translateY(-100%);
-    }
-    100% {
-        transform: translateY(100%);
-    }
-`;
 
 const Container = styled.div`
     padding-bottom: 80px;
@@ -208,25 +199,27 @@ const NewsDetail: React.FC = () => {
             )}
 
             {!loading && !error && newsItem && (
-                <Header>
-                    {(newsItem.coverImage || newsItem.imageUrl) && <HeroImage src={newsItem.coverImage || newsItem.imageUrl} alt={newsItem.title} />}
-                    <Title>{newsItem.title || ''}</Title>
-                    <Meta>
-                        <span>{new Date(newsItem.publishDate || newsItem.createdAt || Date.now()).toLocaleDateString()}</span>
-                        <Tag>{newsItem.category || 'other'}</Tag>
-                    </Meta>
-                </Header>
+                <>
+                    <Header>
+                        {(newsItem.coverImage || newsItem.imageUrl) && <HeroImage src={newsItem.coverImage || newsItem.imageUrl} alt={newsItem.title} />}
+                        <Title>{newsItem.title || ''}</Title>
+                        <Meta>
+                            <span>{new Date(newsItem.publishDate || newsItem.createdAt || Date.now()).toLocaleDateString()}</span>
+                            <Tag>{newsItem.category || 'other'}</Tag>
+                        </Meta>
+                    </Header>
 
-                <Content dangerouslySetInnerHTML={{ __html: newsItem.content || '' }} />
+                    <Content dangerouslySetInnerHTML={{ __html: newsItem.content || '' }} />
 
-                <ShareSection>
-                    <ShareTitle>{t('share')}</ShareTitle>
-                    <ShareButtons>
-                        <ShareButton onClick={() => handleShare('telegram')}>Telegram</ShareButton>
-                        <ShareButton onClick={() => handleShare('twitter')}>Twitter</ShareButton>
-                        <ShareButton onClick={() => handleShare('facebook')}>Facebook</ShareButton>
-                    </ShareButtons>
-                </ShareSection>
+                    <ShareSection>
+                        <ShareTitle>{t('share')}</ShareTitle>
+                        <ShareButtons>
+                            <ShareButton onClick={() => handleShare('telegram')}>Telegram</ShareButton>
+                            <ShareButton onClick={() => handleShare('twitter')}>Twitter</ShareButton>
+                            <ShareButton onClick={() => handleShare('facebook')}>Facebook</ShareButton>
+                        </ShareButtons>
+                    </ShareSection>
+                </>
             )}
         </Container>
     );

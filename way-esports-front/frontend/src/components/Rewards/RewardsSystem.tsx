@@ -1,16 +1,247 @@
 import React, { useState, useEffect } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled from 'styled-components';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { profileService } from '../../services/profileService';
 import { api } from '../../services/api';
 
 const Container = styled.div`
   padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
 `;
 
-// ... (rest of the styled components)
+const Header = styled.div`
+  margin-bottom: 1.5rem;
+`;
+
+const Title = styled.h1`
+  color: #ffffff;
+  margin: 0 0 0.5rem 0;
+`;
+
+const TabContainer = styled.div`
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+`;
+
+const Tab = styled.button<{ $active: boolean }>`
+  background: ${({ $active }) => $active ? 'linear-gradient(135deg, #3a3a3a, #2a2a2a)' : 'transparent'};
+  color: ${({ $active }) => $active ? '#ffffff' : '#cccccc'};
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 10px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+`;
+
+const RewardsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+`;
+
+const RewardCard = styled.div<{ $rarity: 'common' | 'rare' | 'epic' | 'legendary'; $unlocked: boolean }>`
+  background: rgba(26, 26, 26, 0.9);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid ${({ $rarity }) =>
+    $rarity === 'legendary' ? '#ffd700' :
+    $rarity === 'epic' ? '#a855f7' :
+    $rarity === 'rare' ? '#3b82f6' : '#444'};
+  opacity: ${({ $unlocked }) => $unlocked ? 1 : 0.85};
+`;
+
+const RewardIcon = styled.div<{ $icon?: string; $rarity: 'common' | 'rare' | 'epic' | 'legendary' }>`
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  margin-bottom: 10px;
+  border: 1px solid ${({ $rarity }) =>
+    $rarity === 'legendary' ? '#ffd700' :
+    $rarity === 'epic' ? '#a855f7' :
+    $rarity === 'rare' ? '#3b82f6' : '#444'};
+`;
+
+const RewardName = styled.div`
+  color: #ffffff;
+  font-weight: 600;
+  margin-bottom: 4px;
+`;
+
+const RewardDescription = styled.div`
+  color: #cccccc;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+`;
+
+const RewardStats = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+`;
+
+const RewardRarity = styled.span<{ $rarity: 'common' | 'rare' | 'epic' | 'legendary' }>`
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: ${({ $rarity }) =>
+    $rarity === 'legendary' ? '#ffd700' :
+    $rarity === 'epic' ? '#a855f7' :
+    $rarity === 'rare' ? '#3b82f6' : '#cccccc'};
+`;
+
+const RewardValue = styled.span`
+  color: #ffffff;
+  font-weight: 600;
+`;
+
+const ProgressBar = styled.div`
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  overflow: hidden;
+`;
+
+const ProgressFill = styled.div<{ $percentage: number; $rarity: 'common' | 'rare' | 'epic' | 'legendary' }>`
+  width: ${({ $percentage }) => Math.min(Math.max($percentage, 0), 100)}%;
+  height: 100%;
+  background: ${({ $rarity }) =>
+    $rarity === 'legendary' ? 'linear-gradient(135deg, #ffd700, #ff6b00)' :
+    $rarity === 'epic' ? 'linear-gradient(135deg, #a855f7, #6d28d9)' :
+    $rarity === 'rare' ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' :
+    'linear-gradient(135deg, #3a3a3a, #2a2a2a)'};
+`;
+
+const RewardActions = styled.div`
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+`;
+
+const ActionButton = styled.button<{ $variant?: 'success' | 'danger' | 'primary' }>`
+  flex: 1 1 auto;
+  min-height: 40px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: ${({ $variant }) =>
+    $variant === 'danger' ? 'linear-gradient(135deg, #ff4757, #ff6b6b)' :
+    $variant === 'success' ? 'linear-gradient(135deg, #2ed573, #1e90ff)' :
+    'linear-gradient(135deg, #3a3a3a, #2a2a2a)'};
+  color: #ffffff;
+  cursor: pointer;
+`;
+
+const StatsContainer = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 1.5rem 0;
+`;
+
+const StatCard = styled.div`
+  background: rgba(26, 26, 26, 0.9);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+`;
+
+const StatValue = styled.div`
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1.2rem;
+`;
+
+const StatLabel = styled.div`
+  color: #cccccc;
+  font-size: 0.85rem;
+`;
+
+const Modal = styled.div<{ $isOpen: boolean }>`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: ${({ $isOpen }) => $isOpen ? 'flex' : 'none'};
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+`;
+
+const ModalContent = styled.div`
+  background: #1a1a1a;
+  border-radius: 16px;
+  width: min(92vw, 720px);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+`;
+
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`;
+
+const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const Label = styled.label`
+  color: #cccccc;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+`;
+
+const Input = styled.input`
+  background: rgba(26, 26, 26, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 10px;
+  color: #ffffff;
+`;
+
+const TextArea = styled.textarea`
+  background: rgba(26, 26, 26, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 10px;
+  color: #ffffff;
+  min-height: 120px;
+`;
+
+const Select = styled.select`
+  background: rgba(26, 26, 26, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 10px;
+  color: #ffffff;
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+`;
+
+const Button = styled.button<{ $variant?: 'secondary' }>`
+  flex: 1 1 auto;
+  min-height: 40px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: ${({ $variant }) => $variant === 'secondary' ? 'transparent' : 'linear-gradient(135deg, #3a3a3a, #2a2a2a)'};
+  color: #ffffff;
+  cursor: pointer;
+`;
 
 interface Reward {
   id: string;
@@ -38,7 +269,7 @@ const RewardsSystem: React.FC = () => {
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingReward, setEditingReward] = useState<Reward | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin] = useState(false);
   const { addNotification } = useNotifications();
 
   useEffect(() => {

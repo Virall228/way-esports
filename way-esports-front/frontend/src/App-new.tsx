@@ -12,7 +12,6 @@ import Tournaments from './pages/Tournaments';
 import Profile from './pages/Profile';
 import News from './pages/News';
 import Teams from './pages/Teams';
-import TournamentDetails from './components/TournamentDetails';
 import { AppProvider } from './contexts/AppContext';
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -59,8 +58,9 @@ const NavButton = styled(CyberButton)`
 
 const MainContent = styled.main`
   padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
 `;
 
 const Footer = styled.footer`

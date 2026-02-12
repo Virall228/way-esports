@@ -18,8 +18,9 @@ interface ProfileData {
 }
 
 const Container = styled.div`
-  max-width: 600px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
 `;
 
 const Form = styled.form`

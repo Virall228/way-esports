@@ -8,14 +8,16 @@ const LayoutContainer = styled.div`
   display: flex;
   flex-direction: column;
   background: ${({ theme }) => theme.colors.background};
+  width: 100%;
+  max-width: 100%;
 `;
 
 const MainContent = styled.main`
   flex: 1;
   padding: ${({ theme }) => theme.spacing.md};
-  max-width: 1200px;
-  margin: 0 auto;
   width: 100%;
+  max-width: 100%;
+  margin: 0;
   position: relative;
 `;
 
@@ -29,8 +31,9 @@ const Header = styled.header`
 `;
 
 const HeaderContent = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;

@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import TournamentBracket from './TournamentBracket';
+import { useQuery } from '@tanstack/react-query';
+import { tournamentService } from '../../../services/tournamentService';
 
 const glowAnimation = keyframes`
     0% { box-shadow: 0 0 10px rgba(255, 107, 0, 0.3); }
@@ -180,49 +182,92 @@ interface PistolKingProps {
 
 const PistolKing: React.FC<PistolKingProps> = ({ onRegister }) => {
     const [activeTab, setActiveTab] = useState<'upcoming' | 'bracket'>('upcoming');
+    const { data: tournamentsRaw = [], isLoading, error } = useQuery({
+        queryKey: ['tournaments', 'pistol-king'],
+        queryFn: async () => {
+            const res: any = await tournamentService.list();
+            return res?.tournaments || res?.data || res || [];
+        },
+        staleTime: 30000,
+        refetchOnWindowFocus: false
+    });
 
-    // Sample tournament bracket data
-    const bracketData = {
-        rounds: [
-            {
-                name: 'Round of 16',
-                matches: [
-                    {
-                        id: '1',
-                        team1: { name: 'Duo Alpha', score: 16, isWinner: true },
-                        team2: { name: 'Duo Beta', score: 14 },
-                        time: '20:00 MSK',
-                        isCompleted: true
-                    },
-                    // Add more matches as needed
-                ]
-            },
-            {
-                name: 'Quarter Finals',
-                matches: [
-                    {
-                        id: '5',
-                        team1: { name: 'Duo Alpha', score: 0 },
-                        team2: { name: 'TBD', score: 0 },
-                        time: '21:00 MSK',
-                        isCompleted: false
-                    }
-                ]
-            },
-            {
-                name: 'Semi Finals',
-                matches: [
-                    {
-                        id: '9',
-                        team1: { name: 'TBD', score: 0 },
-                        team2: { name: 'TBD', score: 0 },
-                        time: '22:00 MSK',
-                        isCompleted: false
-                    }
-                ]
-            }
-        ]
-    };
+    const tournaments = useMemo(() => {
+        const items: any[] = Array.isArray(tournamentsRaw) ? tournamentsRaw : [];
+        return items
+            .filter((t: any) => {
+                const name = (t.name || t.title || '').toString().toLowerCase();
+                const game = (t.game || '').toString().toLowerCase();
+                return name.includes('pistol') || game.includes('critical');
+            })
+            .map((t: any) => ({
+                id: String(t.id || t._id || ''),
+                title: String(t.name || t.title || 'Tournament'),
+                startDate: String(t.startDate || t.date || new Date().toISOString()),
+                game: String(t.game || 'TBD'),
+                status: String(t.status || 'upcoming'),
+                prizePool: Number(t.prizePool || 0),
+                participants: Number(t.participants ?? 0),
+                maxParticipants: Number(t.maxParticipants ?? t.maxTeams ?? 0)
+            }));
+    }, [tournamentsRaw]);
+
+    const bracketTournamentId = tournaments[0]?.id;
+    const { data: matchesRaw = [], isLoading: matchesLoading } = useQuery({
+        queryKey: ['tournament', bracketTournamentId, 'matches'],
+        queryFn: async () => {
+            if (!bracketTournamentId) return [];
+            const res: any = await tournamentService.getMatches(bracketTournamentId);
+            return res?.data || res || [];
+        },
+        enabled: Boolean(bracketTournamentId),
+        staleTime: 15000,
+        refetchOnWindowFocus: false
+    });
+
+    const rounds = useMemo(() => {
+        const list: any[] = Array.isArray(matchesRaw) ? matchesRaw : [];
+        const grouped: Record<string, any[]> = {};
+
+        const normalizeTeam = (team: any) => {
+            if (!team) return { id: '', name: 'TBD' };
+            if (typeof team === 'string') return { id: team, name: team };
+            const id = team.id || team._id || '';
+            const name = team.name || team.tag || team.username || id || 'TBD';
+            return { id: String(id), name: String(name) };
+        };
+
+        list.forEach((m) => {
+            const roundName = (m.round || 'Round').toString();
+            const team1 = normalizeTeam(m.team1);
+            const team2 = normalizeTeam(m.team2);
+            const score1 = Number(m.score?.team1 ?? 0);
+            const score2 = Number(m.score?.team2 ?? 0);
+            const status = (m.status || '').toString().toLowerCase();
+            const isCompleted = status === 'completed' || status === 'finished';
+            const winnerId = m.winner?.id || m.winner?._id || (typeof m.winner === 'string' ? m.winner : '');
+            const team1IsWinner = winnerId
+                ? String(winnerId) === team1.id
+                : (isCompleted && score1 > score2);
+            const team2IsWinner = winnerId
+                ? String(winnerId) === team2.id
+                : (isCompleted && score2 > score1);
+
+            grouped[roundName] = grouped[roundName] || [];
+            grouped[roundName].push({
+                id: String(m.id || m._id || `${roundName}-${grouped[roundName].length}`),
+                team1: { name: team1.name, score: score1, isWinner: team1IsWinner },
+                team2: { name: team2.name, score: score2, isWinner: team2IsWinner },
+                time: m.startTime ? new Date(m.startTime).toLocaleString() : 'TBD',
+                isCompleted
+            });
+        });
+
+        return Object.entries(grouped).map(([name, matches]) => ({
+            name,
+            matches
+        }));
+    }, [matchesRaw]);
 
     return (
         <Container>
@@ -252,44 +297,67 @@ const PistolKing: React.FC<PistolKingProps> = ({ onRegister }) => {
             </TabContainer>
 
             {activeTab === 'upcoming' && (
-                <TournamentCard>
-                    <TournamentHeader>
-                        <TournamentTitle>Pistol King Tournament #1</TournamentTitle>
-                        <DateTag>{new Date().toLocaleDateString()}</DateTag>
-                    </TournamentHeader>
+                <>
+                    {isLoading && (
+                        <TournamentCard>Loading tournaments...</TournamentCard>
+                    )}
+                    {!isLoading && error && (
+                        <TournamentCard>Failed to load tournaments</TournamentCard>
+                    )}
+                    {!isLoading && !error && tournaments.length === 0 && (
+                        <TournamentCard>No tournaments available yet</TournamentCard>
+                    )}
+                    {!isLoading && !error && tournaments.map((tournament) => (
+                        <TournamentCard key={tournament.id}>
+                            <TournamentHeader>
+                                <TournamentTitle>{tournament.title}</TournamentTitle>
+                                <DateTag>{new Date(tournament.startDate).toLocaleDateString()}</DateTag>
+                            </TournamentHeader>
 
-                    <InfoGrid>
-                        <InfoItem>
-                            <h4>Format</h4>
-                            <p>2v2 Single Elimination</p>
-                        </InfoItem>
-                        <InfoItem>
-                            <h4>Mode</h4>
-                            <p>Pistol Only</p>
-                        </InfoItem>
-                        <InfoItem>
-                            <h4>Entry Fee</h4>
-                            <p>Free Entry</p>
-                        </InfoItem>
-                        <InfoItem>
-                            <h4>Start Time</h4>
-                            <p>20:00 MSK</p>
-                        </InfoItem>
-                    </InfoGrid>
+                            <InfoGrid>
+                                <InfoItem>
+                                    <h4>Game</h4>
+                                    <p>{tournament.game}</p>
+                                </InfoItem>
+                                <InfoItem>
+                                    <h4>Status</h4>
+                                    <p>{tournament.status}</p>
+                                </InfoItem>
+                                <InfoItem>
+                                    <h4>Teams</h4>
+                                    <p>{tournament.participants}/{tournament.maxParticipants || 'TBD'}</p>
+                                </InfoItem>
+                                <InfoItem>
+                                    <h4>Start Time</h4>
+                                    <p>{new Date(tournament.startDate).toLocaleTimeString()}</p>
+                                </InfoItem>
+                            </InfoGrid>
 
-                    <PrizePool>
-                        <PrizeAmount>$100</PrizeAmount>
-                        <PrizeText>Prize Pool</PrizeText>
-                    </PrizePool>
+                            <PrizePool>
+                                <PrizeAmount>${tournament.prizePool.toLocaleString()}</PrizeAmount>
+                                <PrizeText>Prize Pool</PrizeText>
+                            </PrizePool>
 
-                    <RegisterButton onClick={() => onRegister('pistol-king-1')}>
-                        Register Team - Free Entry
-                    </RegisterButton>
-                </TournamentCard>
+                            <RegisterButton onClick={() => onRegister(tournament.id)}>
+                                Register Team
+                            </RegisterButton>
+                        </TournamentCard>
+                    ))}
+                </>
             )}
 
             {activeTab === 'bracket' && (
-                <TournamentBracket rounds={bracketData.rounds} />
+                <>
+                    {matchesLoading && (
+                        <TournamentCard>Loading bracket...</TournamentCard>
+                    )}
+                    {!matchesLoading && rounds.length === 0 && (
+                        <TournamentCard>No bracket data yet</TournamentCard>
+                    )}
+                    {!matchesLoading && rounds.length > 0 && (
+                        <TournamentBracket rounds={rounds} />
+                    )}
+                </>
             )}
         </Container>
     );

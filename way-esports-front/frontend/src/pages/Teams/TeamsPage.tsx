@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import CreateTeamModal from '../../components/Teams/CreateTeamModal';
+import RankingsPage from '../../components/Rankings/RankingsPage';
 import { teamsService } from '../../services/teamsService';
 import { tournamentService } from '../../services/tournamentService';
 import Card from '../../components/UI/Card';
@@ -9,8 +10,9 @@ import Button from '../../components/UI/Button';
 
 const Container = styled.div`
   padding: 1rem;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   color: #ffffff;
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
@@ -55,7 +57,6 @@ const Subtitle = styled.p`
   color: #cccccc;
   font-size: 1.2rem;
   line-height: 1.6;
-  max-width: 800px;
 `;
 
 const CreateTeamButton = styled(Button).attrs({ variant: 'brand', size: 'small' })`
@@ -63,7 +64,6 @@ const CreateTeamButton = styled(Button).attrs({ variant: 'brand', size: 'small' 
   font-size: 1rem;
   min-height: 44px;
   width: 100%;
-  max-width: 420px;
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     width: auto;
@@ -109,7 +109,6 @@ const FilterDropdown = styled.select`
   cursor: pointer;
   min-height: 44px;
   width: 100%;
-  max-width: 420px;
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     width: auto;
@@ -246,7 +245,7 @@ const Members = styled.div`
 `;
 
 const MemberTag = styled.span<{ $role: 'captain' | 'player' }>`
-  background: ${({ $role, theme }) => $role === 'captain' ? 'rgba(255,255,255,0.12)' : 'rgba(255, 255, 255, 0.06)'};
+  background: ${({ $role }) => $role === 'captain' ? 'rgba(255,255,255,0.12)' : 'rgba(255, 255, 255, 0.06)'};
   color: ${({ theme }) => theme.colors.text.secondary};
   padding: 4px 8px;
   border-radius: 12px;
@@ -451,18 +450,22 @@ const TeamsPage: React.FC = () => {
             Rankings
           </FilterTab>
         </FilterTabs>
-        <FilterDropdown
-          value={selectedGame}
-          onChange={(e) => setSelectedGame(e.target.value)}
-        >
-          <option value="all">All Teams</option>
-          <option value="valorant">Valorant</option>
-          <option value="critical-ops">Critical Ops</option>
-          <option value="cs2">CS2</option>
-        </FilterDropdown>
-        <CreateTeamButton onClick={() => setIsCreateModalOpen(true)}>
-          Create Team
-        </CreateTeamButton>
+        {activeFilter === 'teams' && (
+          <>
+            <FilterDropdown
+              value={selectedGame}
+              onChange={(e) => setSelectedGame(e.target.value)}
+            >
+              <option value="all">All Teams</option>
+              <option value="valorant">Valorant</option>
+              <option value="critical-ops">Critical Ops</option>
+              <option value="cs2">CS2</option>
+            </FilterDropdown>
+            <CreateTeamButton onClick={() => setIsCreateModalOpen(true)}>
+              Create Team
+            </CreateTeamButton>
+          </>
+        )}
       </FilterSection>
 
       {activeFilter === 'teams' && (
@@ -554,6 +557,10 @@ const TeamsPage: React.FC = () => {
             </TeamsGrid>
           )}
         </>
+      )}
+
+      {activeFilter === 'rankings' && (
+        <RankingsPage />
       )}
 
       <CreateTeamModal

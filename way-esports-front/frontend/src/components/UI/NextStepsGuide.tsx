@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import Card from './Card';
-import Button from './Button';
 
 interface NextStepsGuideProps {
   game: 'CS2' | 'CriticalOps' | 'PUBG';
@@ -21,8 +20,9 @@ const slideIn = keyframes`
 `;
 
 const Container = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   padding: ${({ theme }) => theme.spacing.xl};
 `;
 

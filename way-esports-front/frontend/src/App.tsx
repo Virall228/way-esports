@@ -11,6 +11,11 @@ import Tournaments from './pages/Tournaments';
 import Profile from './pages/Profile';
 import News from './pages/News';
 import Teams from './pages/Teams';
+import Rankings from './pages/Rankings';
+import Prizes from './pages/Prizes';
+import Matches from './pages/Matches';
+import Wallet from './pages/Wallet';
+import Settings from './pages/Settings';
 import AdminPage from './pages/Admin/AdminPage';
 import TournamentDetailsPage from './pages/Tournaments/TournamentDetailsPage';
 import BillingPage from './pages/Billing/BillingPage';
@@ -42,16 +47,19 @@ const AppShell = styled.div`
   color: ${eslTheme.colors.text.primary};
   font-family: ${eslTheme.fonts.primary};
   display: flex;
-  width: 100%;
+  width: 100vw;
+  max-width: 100%;
+  min-width: 100%;
   padding-left: var(--sal);
   padding-right: var(--sar);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: hidden;
 `;
 
 const Sidebar = styled.aside`
   display: none;
-  width: 260px;
-  min-width: 240px;
+  width: clamp(220px, 22vw, 280px);
+  min-width: clamp(200px, 18vw, 240px);
   padding: 1.5rem 1rem;
   background: rgba(17, 17, 17, 0.7);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
@@ -144,6 +152,8 @@ const ContentColumn = styled.div`
   min-width: 0;
   min-height: 0;
   height: 100%;
+  width: 100%;
+  max-width: 100%;
   overflow: hidden;
 `;
 
@@ -212,6 +222,9 @@ const BurgerButton = styled.button`
 const MainContent = styled.main`
   flex: 1 1 auto;
   min-height: 0;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   padding: 1rem 1rem calc(88px + var(--sab, 0px));
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -227,8 +240,9 @@ const MainContent = styled.main`
 `;
 
 const ContentInner = styled.div`
-  width: min(100%, 1200px);
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
@@ -367,8 +381,13 @@ const AppContent: React.FC = () => {
       { label: 'Home', to: '/', icon: '\\u{1F3E0}' },
       { label: 'Tournaments', to: '/tournaments', icon: '\\u{1F3C6}' },
       { label: 'Teams', to: '/teams', icon: '\\u{1F465}' },
+      { label: 'Rankings', to: '/rankings', icon: '\\u{1F4CA}' },
+      { label: 'Matches', to: '/matches', icon: '\\u2694' },
+      { label: 'Prizes', to: '/prizes', icon: '\\u{1F3C5}' },
       { label: 'News', to: '/news', icon: '\\u{1F4F0}' },
-      { label: 'Profile', to: '/profile', icon: '\\u{1F464}' }
+      { label: 'Wallet', to: '/wallet', icon: '\\u{1F4B3}' },
+      { label: 'Profile', to: '/profile', icon: '\\u{1F464}' },
+      { label: 'Settings', to: '/settings', icon: '\\u2699' }
     ];
 
     if (user?.role === 'admin' || user?.role === 'developer') {
@@ -467,8 +486,14 @@ const AppContent: React.FC = () => {
               <Route path="/tournament/:id" element={<TournamentDetailsPage />} />
               <Route path="/games/:game" element={<GameHubPage />} />
               <Route path="/teams" element={<Teams />} />
+              <Route path="/rankings" element={<Rankings />} />
+              <Route path="/matches" element={<Matches />} />
+              <Route path="/prizes" element={<Prizes />} />
+              <Route path="/rewards" element={<Prizes />} />
               <Route path="/news" element={<News />} />
+              <Route path="/wallet" element={<Wallet />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/settings" element={<Settings />} />
               <Route path="/profile/:id" element={<PublicProfilePage />} />
               <Route path="/user/:id" element={<PublicProfilePage />} />
               <Route path="/team/:id" element={<TeamPage />} />

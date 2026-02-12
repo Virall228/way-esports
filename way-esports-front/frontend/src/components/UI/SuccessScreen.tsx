@@ -22,8 +22,9 @@ const fadeIn = keyframes`
 `;
 
 const Container = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   padding: ${({ theme }) => theme.spacing.xl};
   animation: ${fadeIn} 0.6s ease-out;
 `;
@@ -64,6 +65,16 @@ const Message = styled.p`
   font-size: ${({ theme }) => theme.typography.body1.fontSize};
 `;
 
+const ContinueButton = styled.button`
+  margin-top: ${({ theme }) => theme.spacing.xl};
+  padding: 12px 20px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: linear-gradient(135deg, #3a3a3a, #2a2a2a);
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+`;
 const SuccessScreen: React.FC<SuccessScreenProps> = ({
   username,
   game,
@@ -138,6 +149,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         game={game}
         onActionClick={handleActionClick}
       />
+      <ContinueButton onClick={onContinue}>
+        Continue
+      </ContinueButton>
     </Container>
   );
 };

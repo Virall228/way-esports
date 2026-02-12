@@ -7,8 +7,9 @@ import { api } from '../../services/api';
 
 const Container = styled.div`
   padding: 40px;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   color: #ffffff;
 `;
 
@@ -67,9 +68,6 @@ const HeroSubtitle = styled.p`
   font-size: 1.3rem;
   color: #cccccc;
   margin-bottom: 40px;
-  max-width: 800px;
-  margin-left: auto;
-  margin-right: auto;
   line-height: 1.6;
 `;
 
@@ -200,7 +198,7 @@ const HomePage: React.FC = () => {
           setStats({
             totalUsers: res.data.totalUsers || 0,
             activeTournaments: res.data.activeTournaments || 0,
-            activeTeams: res.data.activeTeams || 120, // Default if not in backend yet
+            activeTeams: res.data.activeTeams || 0,
             totalPrizePool: res.data.totalPrizePool || 0
           });
         }

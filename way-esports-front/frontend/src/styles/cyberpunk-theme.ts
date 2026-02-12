@@ -36,6 +36,8 @@ export const cyberpunkTheme = {
     background: '#000000',
     surface: '#0a0a0a',
     accent: '#404040',
+    ring: '#ffffff',
+    highlight: '#d4d4d4',
     
     // States
     success: '#22c55e',

@@ -221,27 +221,27 @@ const ChartLabel = styled.div`
   margin-bottom: 4px;
 `;
 
-interface MatchStats {
-  id: number;
+interface UserMatchStats {
+  id: string;
   tournament: string;
   opponent: string;
   date: string;
   result: 'win' | 'loss';
   score: string;
-  kills: number;
-  deaths: number;
-  assists: number;
-  kdRatio: number;
-  headshots: number;
-  accuracy: number;
-  rounds: {
+  kills?: number;
+  deaths?: number;
+  assists?: number;
+  kdRatio?: number;
+  headshots?: number;
+  accuracy?: number;
+  rounds?: {
     round: number;
     kills: number;
     deaths: number;
     assists: number;
     result: 'win' | 'loss';
   }[];
-  performance: {
+  performance?: {
     kills: number;
     deaths: number;
     assists: number;
@@ -252,114 +252,14 @@ interface MatchStats {
 
 interface MatchStatsProps {
   username: string;
+  matches?: UserMatchStats[];
 }
 
-const MatchStats: React.FC<MatchStatsProps> = ({ username }) => {
+const MatchStats: React.FC<MatchStatsProps> = ({ username, matches = [] }) => {
   const [activeFilter, setActiveFilter] = useState('all');
-  const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
+  const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
 
-  // Example user match data
-  const matchHistory: MatchStats[] = [
-    {
-      id: 1,
-      tournament: "Critical Ops Pro League",
-      opponent: "Nova Esports",
-      date: "March 15, 2024",
-      result: "win",
-      score: "16-14",
-      kills: 25,
-      deaths: 12,
-      assists: 8,
-      kdRatio: 2.08,
-      headshots: 18,
-      accuracy: 78.5,
-      rounds: [
-        { round: 1, kills: 3, deaths: 1, assists: 0, result: 'win' },
-        { round: 2, kills: 2, deaths: 2, assists: 1, result: 'loss' },
-        { round: 3, kills: 4, deaths: 0, assists: 2, result: 'win' },
-        { round: 4, kills: 1, deaths: 3, assists: 0, result: 'loss' },
-        { round: 5, kills: 3, deaths: 1, assists: 1, result: 'win' },
-        { round: 6, kills: 2, deaths: 2, assists: 2, result: 'win' },
-        { round: 7, kills: 5, deaths: 1, assists: 0, result: 'win' },
-        { round: 8, kills: 2, deaths: 1, assists: 1, result: 'win' },
-        { round: 9, kills: 1, deaths: 1, assists: 1, result: 'loss' },
-        { round: 10, kills: 2, deaths: 0, assists: 0, result: 'win' }
-      ],
-      performance: {
-        kills: 25,
-        deaths: 12,
-        assists: 8,
-        headshots: 18,
-        accuracy: 78.5
-      }
-    },
-    {
-      id: 2,
-      tournament: "CS2 WAY Cup",
-      opponent: "Tribe Gaming",
-      date: "March 14, 2024",
-      result: "win",
-      score: "13-7",
-      kills: 22,
-      deaths: 8,
-      assists: 12,
-      kdRatio: 2.75,
-      headshots: 16,
-      accuracy: 82.3,
-      rounds: [
-        { round: 1, kills: 4, deaths: 0, assists: 1, result: 'win' },
-        { round: 2, kills: 2, deaths: 1, assists: 2, result: 'win' },
-        { round: 3, kills: 3, deaths: 1, assists: 0, result: 'win' },
-        { round: 4, kills: 1, deaths: 2, assists: 1, result: 'loss' },
-        { round: 5, kills: 2, deaths: 1, assists: 2, result: 'win' },
-        { round: 6, kills: 3, deaths: 0, assists: 1, result: 'win' },
-        { round: 7, kills: 2, deaths: 1, assists: 2, result: 'win' },
-        { round: 8, kills: 1, deaths: 1, assists: 1, result: 'win' },
-        { round: 9, kills: 2, deaths: 0, assists: 1, result: 'win' },
-        { round: 10, kills: 2, deaths: 1, assists: 1, result: 'win' }
-      ],
-      performance: {
-        kills: 22,
-        deaths: 8,
-        assists: 12,
-        headshots: 16,
-        accuracy: 82.3
-      }
-    },
-    {
-      id: 3,
-      tournament: "PUBG Mobile Masters",
-      opponent: "Cloud9",
-      date: "March 13, 2024",
-      result: "loss",
-      score: "7-13",
-      kills: 18,
-      deaths: 15,
-      assists: 6,
-      kdRatio: 1.2,
-      headshots: 12,
-      accuracy: 65.8,
-      rounds: [
-        { round: 1, kills: 2, deaths: 1, assists: 0, result: 'win' },
-        { round: 2, kills: 1, deaths: 2, assists: 1, result: 'loss' },
-        { round: 3, kills: 3, deaths: 1, assists: 0, result: 'win' },
-        { round: 4, kills: 0, deaths: 3, assists: 0, result: 'loss' },
-        { round: 5, kills: 2, deaths: 1, assists: 1, result: 'win' },
-        { round: 6, kills: 1, deaths: 2, assists: 0, result: 'loss' },
-        { round: 7, kills: 2, deaths: 1, assists: 1, result: 'win' },
-        { round: 8, kills: 1, deaths: 2, assists: 0, result: 'loss' },
-        { round: 9, kills: 3, deaths: 1, assists: 1, result: 'win' },
-        { round: 10, kills: 1, deaths: 1, assists: 1, result: 'loss' }
-      ],
-      performance: {
-        kills: 18,
-        deaths: 15,
-        assists: 6,
-        headshots: 12,
-        accuracy: 65.8
-      }
-    }
-  ];
+  const matchHistory = matches;
 
   const filteredMatches = matchHistory.filter(match => {
     if (activeFilter === 'all') return true;
@@ -368,11 +268,29 @@ const MatchStats: React.FC<MatchStatsProps> = ({ username }) => {
     return true;
   });
 
-  const toggleMatchExpansion = (matchId: number) => {
+  const toggleMatchExpansion = (matchId: string) => {
     setExpandedMatch(expandedMatch === matchId ? null : matchId);
   };
 
-  const renderMatch = (match: MatchStats) => (
+  const renderMatch = (match: UserMatchStats) => {
+    const kills = match.kills ?? 0;
+    const deaths = match.deaths ?? 0;
+    const assists = match.assists ?? 0;
+    const headshots = match.headshots ?? 0;
+    const accuracy = match.accuracy ?? 0;
+    const kdRatio = typeof match.kdRatio === 'number'
+      ? match.kdRatio
+      : (deaths > 0 ? kills / deaths : kills > 0 ? kills : 0);
+    const rounds = Array.isArray(match.rounds) ? match.rounds : [];
+    const performance = match.performance || {
+      kills,
+      deaths,
+      assists,
+      headshots,
+      accuracy
+    };
+
+    return (
     <MatchCard key={match.id} $won={match.result === 'win'}>
       <MatchHeader>
         <MatchInfo>
@@ -389,27 +307,27 @@ const MatchStats: React.FC<MatchStatsProps> = ({ username }) => {
 
       <StatsGrid>
         <StatItem>
-          <StatValue>{match.kills}</StatValue>
+          <StatValue>{kills}</StatValue>
           <StatLabel>Kills</StatLabel>
         </StatItem>
         <StatItem>
-          <StatValue>{match.deaths}</StatValue>
+          <StatValue>{deaths}</StatValue>
           <StatLabel>Deaths</StatLabel>
         </StatItem>
         <StatItem>
-          <StatValue>{match.assists}</StatValue>
+          <StatValue>{assists}</StatValue>
           <StatLabel>Assists</StatLabel>
         </StatItem>
         <StatItem>
-          <StatValue>{match.kdRatio.toFixed(2)}</StatValue>
+          <StatValue>{kdRatio.toFixed(2)}</StatValue>
           <StatLabel>K/D Ratio</StatLabel>
         </StatItem>
         <StatItem>
-          <StatValue>{match.headshots}</StatValue>
+          <StatValue>{headshots}</StatValue>
           <StatLabel>Headshots</StatLabel>
         </StatItem>
         <StatItem>
-          <StatValue>{match.accuracy}%</StatValue>
+          <StatValue>{accuracy}%</StatValue>
           <StatLabel>Accuracy</StatLabel>
         </StatItem>
       </StatsGrid>
@@ -420,7 +338,7 @@ const MatchStats: React.FC<MatchStatsProps> = ({ username }) => {
 
       <MatchDetails $expanded={expandedMatch === match.id}>
         <RoundStats>
-          {match.rounds.slice(0, 10).map(round => (
+          {rounds.slice(0, 10).map(round => (
             <RoundCard key={round.round}>
               <RoundTitle>Round {round.round}</RoundTitle>
               <RoundStatsGrid>
@@ -452,28 +370,29 @@ const MatchStats: React.FC<MatchStatsProps> = ({ username }) => {
           <div>
             <ChartLabel>
               <span>Kills</span>
-              <span>{match.performance.kills}</span>
+              <span>{performance.kills}</span>
             </ChartLabel>
-            <ChartBar $value={match.performance.kills} $max={30} />
+            <ChartBar $value={performance.kills} $max={30} />
           </div>
           <div>
             <ChartLabel>
               <span>Headshots</span>
-              <span>{match.performance.headshots}</span>
+              <span>{performance.headshots}</span>
             </ChartLabel>
-            <ChartBar $value={match.performance.headshots} $max={25} />
+            <ChartBar $value={performance.headshots} $max={25} />
           </div>
           <div>
             <ChartLabel>
               <span>Accuracy</span>
-              <span>{match.performance.accuracy}%</span>
+              <span>{performance.accuracy}%</span>
             </ChartLabel>
-            <ChartBar $value={match.performance.accuracy} $max={100} />
+            <ChartBar $value={performance.accuracy} $max={100} />
           </div>
         </PerformanceChart>
       </MatchDetails>
     </MatchCard>
-  );
+    );
+  };
 
   return (
     <StatsContainer>
@@ -502,6 +421,11 @@ const MatchStats: React.FC<MatchStatsProps> = ({ username }) => {
         </FilterButton>
       </FilterBar>
 
+      {!filteredMatches.length && (
+        <div style={{ color: '#cccccc', padding: '16px 0' }}>
+          No matches yet for {username}.
+        </div>
+      )}
       {filteredMatches.map(renderMatch)}
     </StatsContainer>
   );

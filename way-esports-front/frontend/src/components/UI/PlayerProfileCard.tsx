@@ -54,12 +54,6 @@ const AvatarContainer = styled.div`
   background: ${({ theme }) => theme.colors.primary};
 `;
 
-const Avatar = styled.img`
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-`;
-
 const PlayerInfo = styled.div`
   padding: ${({ theme }) => `${theme.spacing.xl} ${theme.spacing.md} ${theme.spacing.md}`};
 `;

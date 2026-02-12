@@ -79,8 +79,9 @@ const glowAnimation = keyframes`
 
 const Container = styled.div<{ $themeName: ThemeName }>`
   padding: ${({ theme }) => theme.spacing.xl};
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   background-color: ${({ $themeName }) => themes[$themeName].background};
   min-height: var(--app-height, 100vh);
 `;
@@ -181,8 +182,6 @@ const Title = styled.h1<{ $themeName: ThemeName }>`
 const Subtitle = styled.p<{ $themeName: ThemeName }>`
   color: ${({ $themeName }) => $themeName === 'minimal' ? themes.minimal.secondary : themes.neon.secondary};
   font-size: ${({ theme }) => theme.typography.h4.fontSize};
-  max-width: 800px;
-  margin: 0 auto;
   line-height: 1.6;
 `;
 
@@ -330,9 +329,6 @@ const ComingSoonDescription = styled.p<{ $themeName: ThemeName }>`
   color: ${({ $themeName }) => $themeName === 'minimal' ? themes.minimal.secondary : themes.neon.secondary};
   font-size: ${({ theme }) => theme.typography.h5.fontSize};
   margin-bottom: ${({ theme }) => theme.spacing.xl};
-  max-width: 800px;
-  margin-left: auto;
-  margin-right: auto;
   line-height: 1.8;
 `;
 

@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 
 // Styled components
 const Container = styled.div`
   padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
 `;
 
 const Heading = styled.h1`
@@ -107,7 +107,7 @@ const ModalContent = styled.div`
   border: 1px solid #333;
   border-radius: 8px;
   width: 80%;
-  max-width: 500px;
+  max-width: 100%;
 `;
 
 const ModalHeader = styled.h2`
@@ -141,20 +141,6 @@ const FormLabel = styled.label`
   color: #ffffff;
   margin-bottom: 0.5rem;
   font-weight: 500;
-`;
-
-const Input = styled.input`
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #333;
-  border-radius: 4px;
-  background: #262626;
-  color: #ffffff;
-  
-  &:focus {
-    outline: none;
-    border-color: #007bff;
-  }
 `;
 
 const FormHelperText = styled.p`
@@ -267,27 +253,11 @@ interface PlayerReward {
   status: 'earned' | 'claimed' | 'expired';
 }
 
-interface TeamReward {
-  _id: string;
-  rewardId: Reward;
-  earnedAt: string;
-  claimedAt?: string;
-  expiresAt?: string;
-  status: 'earned' | 'claimed' | 'expired';
-  distribution: {
-    userId: string;
-    share: number;
-    claimedAt?: string;
-  }[];
-}
-
 const RewardsPanel: React.FC = () => {
-  const { user } = useAuth();
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [availableRewards, setAvailableRewards] = useState<Reward[]>([]);
   const [playerRewards, setPlayerRewards] = useState<PlayerReward[]>([]);
-  const [teamRewards, setTeamRewards] = useState<TeamReward[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedReward, setSelectedReward] = useState<PlayerReward | null>(null);
   const [withdrawalAmount, setWithdrawalAmount] = useState<number>(0);
@@ -306,15 +276,13 @@ const RewardsPanel: React.FC = () => {
 
   const fetchRewards = async () => {
     try {
-      const [availableRes, playerRes, teamRes] = await Promise.all([
+      const [availableRes, playerRes] = await Promise.all([
         api.get('/valorant-mobile/rewards/available'),
         api.get('/valorant-mobile/rewards/player'),
-        api.get(`/valorant-mobile/rewards/team/${user.teamId || 'default'}`),
       ]);
 
       setAvailableRewards(availableRes.data.rewards);
       setPlayerRewards(playerRes.data.rewards);
-      setTeamRewards(teamRes.data.rewards);
     } catch (error: any) {
       toast.toast({
         title: 'Error fetching rewards',

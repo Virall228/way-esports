@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import styled from 'styled-components';
+import { useQuery } from '@tanstack/react-query';
+import { tournamentService } from '../../../services/tournamentService';
 
 const Container = styled.div`
     padding: 20px;
@@ -138,18 +140,31 @@ interface Event {
 }
 
 const CriticalOpsEvents: React.FC = () => {
-    const events: Event[] = [
-        {
-            id: '1',
-            title: 'Critical Ops Championship 2024',
-            imageUrl: '/images/events/cops-championship.jpg',
-            status: 'upcoming',
-            date: '2024-03-15',
-            teams: 16,
-            prizePool: 10000
+    const { data: tournamentsRaw = [], isLoading, error } = useQuery({
+        queryKey: ['tournaments', 'critical-ops'],
+        queryFn: async () => {
+            const res: any = await tournamentService.list();
+            return res?.tournaments || res?.data || res || [];
         },
-        // Add more events here
-    ];
+        staleTime: 30000,
+        refetchOnWindowFocus: false
+    });
+
+    const events: Event[] = useMemo(() => {
+        const items: any[] = Array.isArray(tournamentsRaw) ? tournamentsRaw : [];
+        return items
+            .filter((t: any) => (t.game || '').toString().toLowerCase().includes('critical'))
+            .map((t: any) => ({
+                id: String(t.id || t._id || ''),
+                title: String(t.name || t.title || 'Critical Ops Tournament'),
+                imageUrl: String(t.coverImage || t.image || '/images/events/cops-championship.jpg'),
+                status: (['ongoing', 'live', 'in_progress'].includes(String(t.status || '').toLowerCase()) ? 'live' :
+                    (String(t.status || '').toLowerCase() === 'completed' ? 'completed' : 'upcoming')),
+                date: String(t.startDate || t.date || new Date().toISOString()),
+                teams: Number(t.maxParticipants ?? t.maxTeams ?? 0),
+                prizePool: Number(t.prizePool || 0)
+            }));
+    }, [tournamentsRaw]);
 
     return (
         <Container>
@@ -157,7 +172,22 @@ const CriticalOpsEvents: React.FC = () => {
                 <Title>Critical Ops Events</Title>
             </Header>
             <EventGrid>
-                {events.map(event => (
+                {isLoading && (
+                    <EventCard>
+                        <EventContent>Loading events...</EventContent>
+                    </EventCard>
+                )}
+                {!isLoading && error && (
+                    <EventCard>
+                        <EventContent>Failed to load events</EventContent>
+                    </EventCard>
+                )}
+                {!isLoading && !error && events.length === 0 && (
+                    <EventCard>
+                        <EventContent>No Critical Ops events yet</EventContent>
+                    </EventCard>
+                )}
+                {!isLoading && !error && events.map(event => (
                     <EventCard key={event.id}>
                         <EventImage imageUrl={event.imageUrl}>
                             <EventStatus status={event.status}>

@@ -34,8 +34,8 @@ const ModalContent = styled.div`
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
   border-radius: 20px;
   padding: 32px;
-  max-width: 600px;
   width: 90%;
+  max-width: 100%;
   max-height: 80vh;
   overflow-y: auto;
   border: 1px solid rgba(255, 255, 255, 0.1);

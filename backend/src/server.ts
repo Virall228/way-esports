@@ -32,6 +32,9 @@ import adminRouter from './routes/admin';
 import uploadsRouter from './routes/uploads';
 import refundsRouter from './routes/refunds';
 import statsRouter from './routes/stats';
+import contactRouter from './routes/contact';
+import analyticsRouter from './routes/analytics';
+import usersRouter from './routes/users';
 
 import { seedDefaultAchievements } from './services/achievements/seedAchievements';
 
@@ -108,6 +111,9 @@ app.use('/api/admin', adminRouter);
 app.use('/api/uploads', uploadsRouter);
 app.use('/api/refunds', authenticateJWT, refundsRouter);
 app.use('/api/stats', statsRouter);
+app.use('/api/contact', contactRouter);
+app.use('/api/analytics', analyticsRouter);
+app.use('/api/users', usersRouter);
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));

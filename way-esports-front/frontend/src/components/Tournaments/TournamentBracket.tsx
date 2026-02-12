@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import styled from 'styled-components';
+import { useQuery } from '@tanstack/react-query';
+import { tournamentService } from '../../services/tournamentService';
 
 const BracketContainer = styled.div`
   padding: 20px;
@@ -122,12 +124,6 @@ const TeamScore = styled.span<{ $isWinner?: boolean }>`
   font-size: 18px;
 `;
 
-const PlayerList = styled.div`
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #333;
-`;
-
 const PlayerItem = styled.div`
   display: flex;
   justify-content: space-between;
@@ -215,152 +211,88 @@ interface TournamentBracketProps {
 
 const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tournamentName }) => {
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
+  const { data: matchesRaw = [], isLoading, error } = useQuery({
+    queryKey: ['tournament', tournamentId, 'bracket'],
+    queryFn: async () => {
+      if (!tournamentId) return [];
+      const res: any = await tournamentService.getMatches(String(tournamentId));
+      return res?.data || res || [];
+    },
+    enabled: Boolean(tournamentId),
+    staleTime: 15000,
+    refetchOnWindowFocus: false
+  });
 
-  // Example tournament bracket data
-  const bracketData = {
-    quarterfinals: [
-      {
-        id: 1,
-        round: "Quarterfinals",
-        team1: {
-          id: 1,
-          name: "WAY Tigers",
-          logo: "\u{1F42F}",
-          score: 16,
-          players: [
-            { id: 1, name: "Tiger_Pro", kills: 25, deaths: 12, assists: 8, kdRatio: 2.08 },
-            { id: 2, name: "Sniper_Way", kills: 18, deaths: 15, assists: 12, kdRatio: 1.2 },
-            { id: 3, name: "Rush_Master", kills: 22, deaths: 18, assists: 6, kdRatio: 1.22 },
-            { id: 4, name: "Support_King", kills: 12, deaths: 20, assists: 25, kdRatio: 0.6 },
-            { id: 5, name: "Entry_Fragger", kills: 20, deaths: 16, assists: 10, kdRatio: 1.25 }
-          ]
-        },
-        team2: {
-          id: 2,
-          name: "Elite Warriors",
-          logo: "\u2694",
-          score: 14,
-          players: [
-            { id: 6, name: "Warrior_Elite", kills: 19, deaths: 16, assists: 9, kdRatio: 1.19 },
-            { id: 7, name: "Tactical_Mind", kills: 16, deaths: 18, assists: 15, kdRatio: 0.89 },
-            { id: 8, name: "Aim_God", kills: 24, deaths: 14, assists: 7, kdRatio: 1.71 },
-            { id: 9, name: "Team_Player", kills: 11, deaths: 22, assists: 18, kdRatio: 0.5 },
-            { id: 10, name: "Clutch_Master", kills: 17, deaths: 19, assists: 11, kdRatio: 0.89 }
-          ]
-        },
-        status: "completed" as const,
-        winner: { id: 1, name: "WAY Tigers", logo: "\u{1F42F}", score: 16, players: [] },
-        date: "March 15, 2024",
-        duration: "45:32"
-      },
-      {
-        id: 2,
-        round: "Quarterfinals",
-        team1: {
-          id: 3,
-          name: "Phoenix Rising",
-          logo: "\u{1F525}",
-          score: 16,
-          players: [
-            { id: 11, name: "Phoenix_Flame", kills: 28, deaths: 10, assists: 5, kdRatio: 2.8 },
-            { id: 12, name: "Rising_Star", kills: 20, deaths: 14, assists: 12, kdRatio: 1.43 },
-            { id: 13, name: "Fire_Starter", kills: 18, deaths: 16, assists: 15, kdRatio: 1.13 },
-            { id: 14, name: "Heat_Wave", kills: 14, deaths: 18, assists: 20, kdRatio: 0.78 },
-            { id: 15, name: "Blaze_Runner", kills: 16, deaths: 17, assists: 13, kdRatio: 0.94 }
-          ]
-        },
-        team2: {
-          id: 4,
-          name: "Shadow Hunters",
-          logo: "\u{1F319}",
-          score: 12,
-          players: [
-            { id: 16, name: "Shadow_Stalker", kills: 21, deaths: 15, assists: 8, kdRatio: 1.4 },
-            { id: 17, name: "Night_Hunter", kills: 17, deaths: 16, assists: 14, kdRatio: 1.06 },
-            { id: 18, name: "Stealth_Master", kills: 15, deaths: 19, assists: 16, kdRatio: 0.79 },
-            { id: 19, name: "Dark_Assassin", kills: 13, deaths: 20, assists: 18, kdRatio: 0.65 },
-            { id: 20, name: "Silent_Killer", kills: 19, deaths: 17, assists: 10, kdRatio: 1.12 }
-          ]
-        },
-        status: "completed" as const,
-        winner: { id: 3, name: "Phoenix Rising", logo: "\u{1F525}", score: 16, players: [] },
-        date: "March 15, 2024",
-        duration: "38:45"
+  const { finals, semifinals, quarterfinals, otherRounds } = useMemo(() => {
+    const list: any[] = Array.isArray(matchesRaw) ? matchesRaw : [];
+
+    const buildTeam = (team: any, score: number): Team => {
+      if (!team) {
+        return { id: 0, name: 'TBD', logo: '?', players: [], score };
       }
-    ],
-    semifinals: [
-      {
-        id: 3,
-        round: "Semifinals",
-        team1: {
-          id: 1,
-          name: "WAY Tigers",
-          logo: "\u{1F42F}",
-          score: 16,
-          players: [
-            { id: 1, name: "Tiger_Pro", kills: 30, deaths: 8, assists: 6, kdRatio: 3.75 },
-            { id: 2, name: "Sniper_Way", kills: 22, deaths: 12, assists: 10, kdRatio: 1.83 },
-            { id: 3, name: "Rush_Master", kills: 25, deaths: 15, assists: 8, kdRatio: 1.67 },
-            { id: 4, name: "Support_King", kills: 15, deaths: 18, assists: 28, kdRatio: 0.83 },
-            { id: 5, name: "Entry_Fragger", kills: 18, deaths: 14, assists: 12, kdRatio: 1.29 }
-          ]
-        },
-        team2: {
-          id: 5,
-          name: "Thunder Storm",
-          logo: "\u26A1",
-          score: 14,
-          players: [
-            { id: 21, name: "Thunder_Bolt", kills: 26, deaths: 12, assists: 7, kdRatio: 2.17 },
-            { id: 22, name: "Storm_Chaser", kills: 20, deaths: 14, assists: 11, kdRatio: 1.43 },
-            { id: 23, name: "Lightning_Fast", kills: 19, deaths: 16, assists: 13, kdRatio: 1.19 },
-            { id: 24, name: "Rain_Maker", kills: 12, deaths: 20, assists: 22, kdRatio: 0.6 },
-            { id: 25, name: "Wind_Rider", kills: 16, deaths: 18, assists: 15, kdRatio: 0.89 }
-          ]
-        },
-        status: "completed" as const,
-        winner: { id: 1, name: "WAY Tigers", logo: "\u{1F42F}", score: 16, players: [] },
-        date: "March 16, 2024",
-        duration: "52:18"
+      if (typeof team === 'string') {
+        const safeName = team || 'TBD';
+        return { id: 0, name: safeName, logo: safeName.charAt(0).toUpperCase(), players: [], score };
       }
-    ],
-    finals: [
-      {
-        id: 4,
-        round: "Finals",
-        team1: {
-          id: 1,
-          name: "WAY Tigers",
-          logo: "\u{1F42F}",
-          score: 16,
-          players: [
-            { id: 1, name: "Tiger_Pro", kills: 35, deaths: 6, assists: 4, kdRatio: 5.83 },
-            { id: 2, name: "Sniper_Way", kills: 28, deaths: 10, assists: 8, kdRatio: 2.8 },
-            { id: 3, name: "Rush_Master", kills: 30, deaths: 12, assists: 6, kdRatio: 2.5 },
-            { id: 4, name: "Support_King", kills: 18, deaths: 16, assists: 32, kdRatio: 1.13 },
-            { id: 5, name: "Entry_Fragger", kills: 22, deaths: 14, assists: 10, kdRatio: 1.57 }
-          ]
-        },
-        team2: {
-          id: 3,
-          name: "Phoenix Rising",
-          logo: "\u{1F525}",
-          score: 13,
-          players: [
-            { id: 11, name: "Phoenix_Flame", kills: 32, deaths: 8, assists: 3, kdRatio: 4.0 },
-            { id: 12, name: "Rising_Star", kills: 25, deaths: 12, assists: 10, kdRatio: 2.08 },
-            { id: 13, name: "Fire_Starter", kills: 20, deaths: 16, assists: 18, kdRatio: 1.25 },
-            { id: 14, name: "Heat_Wave", kills: 16, deaths: 18, assists: 24, kdRatio: 0.89 },
-            { id: 15, name: "Blaze_Runner", kills: 18, deaths: 17, assists: 15, kdRatio: 1.06 }
-          ]
-        },
-        status: "completed" as const,
-        winner: { id: 1, name: "WAY Tigers", logo: "\u{1F42F}", score: 16, players: [] },
-        date: "March 17, 2024",
-        duration: "1:05:42"
+      const id = Number(team.id || team._id || 0);
+      const name = String(team.name || team.tag || team.username || 'TBD');
+      const logo = String(team.logo || name.charAt(0).toUpperCase());
+      return { id, name, logo, players: [], score };
+    };
+
+    const normalizeMatch = (match: any, fallbackIndex: number): Match => {
+      const score1 = Number(match.score?.team1 ?? 0);
+      const score2 = Number(match.score?.team2 ?? 0);
+      const team1 = buildTeam(match.team1, score1);
+      const team2 = buildTeam(match.team2, score2);
+      const status = (match.status || '').toString().toLowerCase();
+      const isCompleted = status === 'completed' || status === 'finished';
+      const winnerId = match.winner?.id || match.winner?._id || (typeof match.winner === 'string' ? match.winner : '');
+      const winner =
+        winnerId
+          ? (String(winnerId) === String(match.team1?.id || match.team1?._id) ? team1 : team2)
+          : (isCompleted ? (score1 >= score2 ? team1 : team2) : undefined);
+
+      const rawId = match.id || match._id;
+      const numericId = Number(rawId);
+      const safeId = Number.isFinite(numericId) ? numericId : (fallbackIndex + 1);
+
+      return {
+        id: safeId,
+        round: match.round || 'Round',
+        team1,
+        team2,
+        status: (status === 'live' || status === 'ongoing' || status === 'in_progress') ? 'live' :
+          (status === 'completed' || status === 'finished') ? 'completed' : 'upcoming',
+        winner,
+        date: match.startTime ? new Date(match.startTime).toLocaleDateString() : 'TBD',
+        duration: match.endTime && match.startTime
+          ? `${Math.max(1, Math.round((new Date(match.endTime).getTime() - new Date(match.startTime).getTime()) / 60000))} min`
+          : undefined
+      };
+    };
+
+    const finals: Match[] = [];
+    const semifinals: Match[] = [];
+    const quarterfinals: Match[] = [];
+    const otherRounds: Match[] = [];
+
+    list.forEach((match, index) => {
+      const round = (match.round || '').toString().toLowerCase();
+      const normalized = normalizeMatch(match, index);
+      if (round.includes('semi')) {
+        semifinals.push(normalized);
+      } else if (round.includes('quarter')) {
+        quarterfinals.push(normalized);
+      } else if (round.includes('final')) {
+        finals.push(normalized);
+      } else {
+        otherRounds.push(normalized);
       }
-    ]
-  };
+    });
+
+    return { finals, semifinals, quarterfinals, otherRounds };
+  }, [matchesRaw]);
 
   const toggleMatchExpansion = (matchId: number) => {
     setExpandedMatch(expandedMatch === matchId ? null : matchId);
@@ -449,23 +381,54 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tou
     <BracketContainer>
       <BracketHeader>
         <BracketTitle>{tournamentName} - Tournament Bracket</BracketTitle>
-        <BracketStage>Champion: WAY Tigers {'\u{1F3C6}'}</BracketStage>
+        <BracketStage>Champion: TBD {'\u{1F3C6}'}</BracketStage>
       </BracketHeader>
 
-      <RoundTitle>{'\u{1F3C6}'} Finals</RoundTitle>
-      <BracketGrid>
-        {bracketData.finals.map(renderMatch)}
-      </BracketGrid>
+      {isLoading && (
+        <RoundTitle>Loading bracket...</RoundTitle>
+      )}
+      {!isLoading && error && (
+        <RoundTitle>Failed to load bracket</RoundTitle>
+      )}
+      {!isLoading && !error && finals.length === 0 && semifinals.length === 0 && quarterfinals.length === 0 && otherRounds.length === 0 && (
+        <RoundTitle>No bracket data yet</RoundTitle>
+      )}
 
-      <RoundTitle>{'\u{1F948}'} Semifinals</RoundTitle>
-      <BracketGrid>
-        {bracketData.semifinals.map(renderMatch)}
-      </BracketGrid>
+      {!isLoading && !error && finals.length > 0 && (
+        <>
+          <RoundTitle>{'\u{1F3C6}'} Finals</RoundTitle>
+          <BracketGrid>
+            {finals.map(renderMatch)}
+          </BracketGrid>
+        </>
+      )}
 
-      <RoundTitle>{'\u{1F949}'} Quarterfinals</RoundTitle>
-      <BracketGrid>
-        {bracketData.quarterfinals.map(renderMatch)}
-      </BracketGrid>
+      {!isLoading && !error && semifinals.length > 0 && (
+        <>
+          <RoundTitle>{'\u{1F948}'} Semifinals</RoundTitle>
+          <BracketGrid>
+            {semifinals.map(renderMatch)}
+          </BracketGrid>
+        </>
+      )}
+
+      {!isLoading && !error && quarterfinals.length > 0 && (
+        <>
+          <RoundTitle>{'\u{1F949}'} Quarterfinals</RoundTitle>
+          <BracketGrid>
+            {quarterfinals.map(renderMatch)}
+          </BracketGrid>
+        </>
+      )}
+
+      {!isLoading && !error && otherRounds.length > 0 && (
+        <>
+          <RoundTitle>Other Rounds</RoundTitle>
+          <BracketGrid>
+            {otherRounds.map(renderMatch)}
+          </BracketGrid>
+        </>
+      )}
     </BracketContainer>
   );
 };

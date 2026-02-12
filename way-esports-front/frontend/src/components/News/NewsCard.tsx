@@ -1,6 +1,5 @@
 import React from 'react';
 import styled, { keyframes } from 'styled-components';
-import { useLanguage } from '../../contexts/LanguageContext';
 import type { NewsCardProps } from './';
 
 const glowEffect = keyframes`
@@ -83,7 +82,6 @@ const NewsCard: React.FC<NewsCardProps> = ({
     imageUrl,
     onClick
 }) => {
-    const { t } = useLanguage();
 
     return (
         <Card onClick={onClick}>

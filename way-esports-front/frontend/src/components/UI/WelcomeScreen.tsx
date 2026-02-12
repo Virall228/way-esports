@@ -20,8 +20,9 @@ interface WelcomeScreenProps {
 }
 
 const Container = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   padding: ${({ theme }) => theme.spacing.xl};
 `;
 
@@ -52,9 +53,6 @@ const Subtitle = styled.p`
   color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: ${({ theme }) => theme.spacing.xl};
   font-size: ${({ theme }) => theme.typography.body1.fontSize};
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
 `;
 
 const FeaturesGrid = styled.div`

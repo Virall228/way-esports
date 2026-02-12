@@ -68,7 +68,8 @@ const NotificationContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-width: 400px;
+  width: 90vw;
+  max-width: 100%;
 `;
 
 const NotificationItem = styled.div<{ $type: string; $isVisible: boolean }>`

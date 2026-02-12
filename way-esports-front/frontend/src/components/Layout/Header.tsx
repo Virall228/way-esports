@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
 
 const HeaderContainer = styled.header`
   position: fixed;
@@ -43,7 +43,7 @@ const NavLink = styled(Link)<{ $active?: boolean }>`
   
   &:hover { color: ${({ theme }) => theme.colors.text.primary}; }
   
-  ${({ $active }) => $active && `
+  ${({ $active, theme }) => $active && css`
     &::after {
       content: '';
       position: absolute;
@@ -51,7 +51,7 @@ const NavLink = styled(Link)<{ $active?: boolean }>`
       left: 0;
       right: 0;
       height: 2px;
-      background: ${({ theme }) => theme.colors.border.strong};
+      background: ${theme.colors.border.strong};
     }
   `}
 `;

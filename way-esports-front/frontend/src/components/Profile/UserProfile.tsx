@@ -1,13 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import styled, { keyframes } from 'styled-components';
+import React, { useState } from 'react';
+import styled from 'styled-components';
 import { generateWayId } from '../../utils/idGenerator';
 import ProfileLogo from '../UI/ProfileLogo';
-
-const glowAnimation = keyframes`
-    0% { box-shadow: 0 0 10px rgba(255, 107, 0, 0.3); }
-    50% { box-shadow: 0 0 20px rgba(255, 107, 0, 0.5); }
-    100% { box-shadow: 0 0 10px rgba(255, 107, 0, 0.3); }
-`;
 
 const Container = styled.div`
     padding: 20px;
@@ -25,52 +19,6 @@ const AvatarContainer = styled.div`
     position: relative;
 `;
 
-const AvatarUpload = styled.div`
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    background: rgba(255, 107, 0, 0.1);
-    border: 2px solid #FF6B00;
-    overflow: hidden;
-    position: relative;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    animation: ${glowAnimation} 3s infinite;
-
-    &:hover {
-        border-color: #FFD700;
-        
-        .upload-overlay {
-            opacity: 1;
-        }
-    }
-
-    img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-`;
-
-const UploadOverlay = styled.div.attrs({ className: 'upload-overlay' })`
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-
-    svg {
-        width: 24px;
-        height: 24px;
-        color: #fff;
-    }
-`;
 
 const OnlineStatus = styled.div<{ isOnline?: boolean }>`
     position: absolute;
@@ -255,7 +203,7 @@ const UserProfile: React.FC<UserProfileProps> = ({
     onAvatarUpload,
     onEdit
 }) => {
-    const [wayId, setWayId] = useState(providedWayId || generateWayId(username));
+    const [wayId] = useState(providedWayId || generateWayId(username));
     const [copied, setCopied] = useState(false);
 
     const handleAvatarClick = () => {

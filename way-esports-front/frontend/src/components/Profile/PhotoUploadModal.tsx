@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -20,7 +20,7 @@ const ModalContent = styled.div`
   border-radius: 16px;
   padding: 30px;
   width: 90%;
-  max-width: 500px;
+  max-width: 100%;
   position: relative;
 `;
 
@@ -113,7 +113,7 @@ const Button = styled.button<{ $variant: 'primary' | 'secondary' }>`
   cursor: pointer;
   transition: all 0.3s ease;
   
-  ${({ $variant }) => $variant === 'primary' ? `
+  ${({ $variant, theme }) => $variant === 'primary' ? css`
     background: linear-gradient(135deg, #3a3a3a, #2a2a2a);
     color: white;
     border: none;
@@ -122,14 +122,14 @@ const Button = styled.button<{ $variant: 'primary' | 'secondary' }>`
       transform: translateY(-2px);
       box-shadow: 0 8px 25px rgba(0,0,0,0.4);
     }
-  ` : `
+  ` : css`
     background: transparent;
     color: #cccccc;
     border: 1px solid #666666;
     
     &:hover {
       background: rgba(255, 255, 255, 0.1);
-      border-color: ${({ theme }) => theme.colors.border.medium};
+      border-color: ${theme.colors.border.medium};
     }
   `}
 

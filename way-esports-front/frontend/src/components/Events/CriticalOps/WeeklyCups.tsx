@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import PaymentModal from './PaymentModal';
 import TournamentBracket from './TournamentBracket';
+import { useQuery } from '@tanstack/react-query';
+import { tournamentService } from '../../../services/tournamentService';
 
 const glowAnimation = keyframes`
     0% { box-shadow: 0 0 10px rgba(255, 107, 0, 0.3); }
@@ -189,88 +191,94 @@ const WeeklyCups: React.FC<WeeklyCupProps> = ({ onRegister }) => {
     const [activeTab, setActiveTab] = useState<'upcoming' | 'bracket'>('upcoming');
     const [selectedTournament, setSelectedTournament] = useState<string | null>(null);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const { data: tournamentsRaw = [], isLoading, error } = useQuery({
+        queryKey: ['tournaments', 'weekly-cups'],
+        queryFn: async () => {
+            const res: any = await tournamentService.list();
+            return res?.tournaments || res?.data || res || [];
+        },
+        staleTime: 30000,
+        refetchOnWindowFocus: false
+    });
 
-    // Generate next 4 weekly tournaments
-    const generateWeeklyTournaments = () => {
-        const tournaments = [];
-        const today = new Date();
-        
-        for (let i = 0; i < 4; i++) {
-            const tournamentDate = new Date(today);
-            tournamentDate.setDate(today.getDate() + (7 * i));
-            
-            tournaments.push({
-                id: `weekly-${i + 1}`,
-                title: `WAY Weekly Cup #${i + 1}`,
-                date: tournamentDate.toISOString(),
-                registeredTeams: Math.floor(Math.random() * 16),
-                maxTeams: 16,
-                prizeDistribution: [
-                    { position: '1st', amount: 100 },
-                    { position: '2nd', amount: 60 },
-                    { position: '3rd', amount: 40 }
-                ]
+    const weeklyTournaments = useMemo(() => {
+        const items: any[] = Array.isArray(tournamentsRaw) ? tournamentsRaw : [];
+        return items
+            .filter((t: any) => {
+                const name = (t.name || t.title || '').toString().toLowerCase();
+                const game = (t.game || '').toString().toLowerCase();
+                return name.includes('weekly') || game.includes('critical');
+            })
+            .map((t: any) => ({
+                id: String(t.id || t._id || ''),
+                title: String(t.name || t.title || 'Weekly Cup'),
+                date: String(t.startDate || t.date || new Date().toISOString()),
+                registeredTeams: Number(t.participants ?? 0),
+                maxTeams: Number(t.maxParticipants ?? t.maxTeams ?? 0),
+                prizePool: Number(t.prizePool || 0),
+                game: String(t.game || 'TBD'),
+                status: String(t.status || 'upcoming')
+            }));
+    }, [tournamentsRaw]);
+
+    const bracketTournamentId = selectedTournament || weeklyTournaments[0]?.id;
+    const { data: matchesRaw = [], isLoading: matchesLoading } = useQuery({
+        queryKey: ['tournament', bracketTournamentId, 'matches'],
+        queryFn: async () => {
+            if (!bracketTournamentId) return [];
+            const res: any = await tournamentService.getMatches(bracketTournamentId);
+            return res?.data || res || [];
+        },
+        enabled: Boolean(bracketTournamentId),
+        staleTime: 15000,
+        refetchOnWindowFocus: false
+    });
+
+    const rounds = useMemo(() => {
+        const list: any[] = Array.isArray(matchesRaw) ? matchesRaw : [];
+        const grouped: Record<string, any[]> = {};
+
+        const normalizeTeam = (team: any) => {
+            if (!team) return { id: '', name: 'TBD' };
+            if (typeof team === 'string') return { id: team, name: team };
+            const id = team.id || team._id || '';
+            const name = team.name || team.tag || team.username || id || 'TBD';
+            return { id: String(id), name: String(name) };
+        };
+
+        list.forEach((m) => {
+            const roundName = (m.round || 'Round').toString();
+            const team1 = normalizeTeam(m.team1);
+            const team2 = normalizeTeam(m.team2);
+            const score1 = Number(m.score?.team1 ?? 0);
+            const score2 = Number(m.score?.team2 ?? 0);
+            const status = (m.status || '').toString().toLowerCase();
+            const isCompleted = status === 'completed' || status === 'finished';
+            const winnerId = m.winner?.id || m.winner?._id || (typeof m.winner === 'string' ? m.winner : '');
+            const team1IsWinner = winnerId
+                ? String(winnerId) === team1.id
+                : (isCompleted && score1 > score2);
+            const team2IsWinner = winnerId
+                ? String(winnerId) === team2.id
+                : (isCompleted && score2 > score1);
+
+            grouped[roundName] = grouped[roundName] || [];
+            grouped[roundName].push({
+                id: String(m.id || m._id || `${roundName}-${grouped[roundName].length}`),
+                team1: { name: team1.name, score: score1, isWinner: team1IsWinner },
+                team2: { name: team2.name, score: score2, isWinner: team2IsWinner },
+                time: m.startTime ? new Date(m.startTime).toLocaleString() : 'TBD',
+                isCompleted
             });
-        }
-        return tournaments;
-    };
+        });
 
-    // Sample tournament bracket data
-    const bracketData = {
-        rounds: [
-            {
-                name: 'Round of 16',
-                matches: [
-                    {
-                        id: '1',
-                        team1: { name: 'Team Alpha', score: 13, isWinner: true },
-                        team2: { name: 'Team Beta', score: 7 },
-                        time: '19:00 MSK',
-                        isCompleted: true
-                    },
-                    // Add more matches as needed
-                ]
-            },
-            {
-                name: 'Quarter Finals',
-                matches: [
-                    {
-                        id: '5',
-                        team1: { name: 'Team Alpha', score: 0 },
-                        team2: { name: 'TBD', score: 0 },
-                        time: '20:00 MSK',
-                        isCompleted: false
-                    }
-                ]
-            },
-            {
-                name: 'Semi Finals',
-                matches: [
-                    {
-                        id: '9',
-                        team1: { name: 'TBD', score: 0 },
-                        team2: { name: 'TBD', score: 0 },
-                        time: '21:00 MSK',
-                        isCompleted: false
-                    }
-                ]
-            },
-            {
-                name: 'Finals',
-                matches: [
-                    {
-                        id: '11',
-                        team1: { name: 'TBD', score: 0 },
-                        team2: { name: 'TBD', score: 0 },
-                        time: '22:00 MSK',
-                        isCompleted: false
-                    }
-                ]
-            }
-        ]
-    };
+        return Object.entries(grouped).map(([name, matches]) => ({
+            name,
+            matches
+        }));
+    }, [matchesRaw]);
 
-    const weeklyTournaments = generateWeeklyTournaments();
+    const highestPrizePool = weeklyTournaments.reduce((max, t) => Math.max(max, t.prizePool || 0), 0);
 
     const handleRegisterClick = (tournamentId: string) => {
         setSelectedTournament(tournamentId);
@@ -289,8 +297,10 @@ const WeeklyCups: React.FC<WeeklyCupProps> = ({ onRegister }) => {
             <WeeklyHeader>
                 <Title>Critical Ops Weekly Cups</Title>
                 <PrizeInfo>
-                    <PrizeAmount>$200 Prize Pool</PrizeAmount>
-                    <EntryFee>$5 per player</EntryFee>
+                    <PrizeAmount>
+                        {highestPrizePool > 0 ? `$${highestPrizePool.toLocaleString()} Prize Pool` : 'Prize Pool TBD'}
+                    </PrizeAmount>
+                    <EntryFee>Entry fee: see rules</EntryFee>
                 </PrizeInfo>
             </WeeklyHeader>
 
@@ -313,56 +323,90 @@ const WeeklyCups: React.FC<WeeklyCupProps> = ({ onRegister }) => {
 
             {activeTab === 'upcoming' && (
                 <>
-                    {weeklyTournaments.map(tournament => (
-                        <TournamentCard key={tournament.id}>
-                            <TournamentHeader>
-                                <TournamentTitle>{tournament.title}</TournamentTitle>
-                                <DateTag>
-                                    {new Date(tournament.date).toLocaleDateString()}
-                                </DateTag>
-                            </TournamentHeader>
+                    {isLoading && (
+                        <TournamentCard>Loading tournaments...</TournamentCard>
+                    )}
+                    {!isLoading && error && (
+                        <TournamentCard>Failed to load tournaments</TournamentCard>
+                    )}
+                    {!isLoading && !error && weeklyTournaments.length === 0 && (
+                        <TournamentCard>No weekly cups available yet</TournamentCard>
+                    )}
+                    {!isLoading && !error && weeklyTournaments.map(tournament => {
+                        const prizeDistribution = tournament.prizePool > 0 ? [
+                            { position: '1st', amount: Math.round(tournament.prizePool * 0.5) },
+                            { position: '2nd', amount: Math.round(tournament.prizePool * 0.3) },
+                            { position: '3rd', amount: Math.round(tournament.prizePool * 0.2) }
+                        ] : [];
 
-                            <InfoGrid>
-                                <InfoItem>
-                                    <h4>Format</h4>
-                                    <p>5v5 Single Elimination</p>
-                                </InfoItem>
-                                <InfoItem>
-                                    <h4>Teams</h4>
-                                    <p>{tournament.registeredTeams}/{tournament.maxTeams}</p>
-                                </InfoItem>
-                                <InfoItem>
-                                    <h4>Entry Fee</h4>
-                                    <p>$5 x 5 players = $25 per team</p>
-                                </InfoItem>
-                                <InfoItem>
-                                    <h4>Start Time</h4>
-                                    <p>19:00 MSK</p>
-                                </InfoItem>
-                            </InfoGrid>
+                        return (
+                            <TournamentCard key={tournament.id}>
+                                <TournamentHeader>
+                                    <TournamentTitle>{tournament.title}</TournamentTitle>
+                                    <DateTag>
+                                        {new Date(tournament.date).toLocaleDateString()}
+                                    </DateTag>
+                                </TournamentHeader>
 
-                            <PrizeDistribution>
-                                <PrizeTitle>Prize Distribution</PrizeTitle>
-                                <PrizeList>
-                                    {tournament.prizeDistribution.map(prize => (
-                                        <PrizeItem key={prize.position}>
-                                            <span>{prize.position}</span>
-                                            <span>${prize.amount}</span>
+                                <InfoGrid>
+                                    <InfoItem>
+                                        <h4>Game</h4>
+                                        <p>{tournament.game}</p>
+                                    </InfoItem>
+                                    <InfoItem>
+                                        <h4>Status</h4>
+                                        <p>{tournament.status}</p>
+                                    </InfoItem>
+                                    <InfoItem>
+                                        <h4>Teams</h4>
+                                        <p>{tournament.registeredTeams}/{tournament.maxTeams || 'TBD'}</p>
+                                    </InfoItem>
+                                    <InfoItem>
+                                        <h4>Start Time</h4>
+                                        <p>{new Date(tournament.date).toLocaleTimeString()}</p>
+                                    </InfoItem>
+                                </InfoGrid>
+
+                                <PrizeDistribution>
+                                    <PrizeTitle>Prize Distribution</PrizeTitle>
+                                    {prizeDistribution.length > 0 ? (
+                                        <PrizeList>
+                                            {prizeDistribution.map(prize => (
+                                                <PrizeItem key={prize.position}>
+                                                    <span>{prize.position}</span>
+                                                    <span>${prize.amount}</span>
+                                                </PrizeItem>
+                                            ))}
+                                        </PrizeList>
+                                    ) : (
+                                        <PrizeItem>
+                                            <span>Prize pool</span>
+                                            <span>TBD</span>
                                         </PrizeItem>
-                                    ))}
-                                </PrizeList>
-                            </PrizeDistribution>
+                                    )}
+                                </PrizeDistribution>
 
-                            <RegisterButton onClick={() => handleRegisterClick(tournament.id)}>
-                                Register Team - $25
-                            </RegisterButton>
-                        </TournamentCard>
-                    ))}
+                                <RegisterButton onClick={() => handleRegisterClick(tournament.id)}>
+                                    Register Team
+                                </RegisterButton>
+                            </TournamentCard>
+                        );
+                    })}
                 </>
             )}
 
             {activeTab === 'bracket' && (
-                <TournamentBracket rounds={bracketData.rounds} />
+                <>
+                    {matchesLoading && (
+                        <TournamentCard>Loading bracket...</TournamentCard>
+                    )}
+                    {!matchesLoading && rounds.length === 0 && (
+                        <TournamentCard>No bracket data yet</TournamentCard>
+                    )}
+                    {!matchesLoading && rounds.length > 0 && (
+                        <TournamentBracket rounds={rounds} />
+                    )}
+                </>
             )}
 
             {showPaymentModal && (

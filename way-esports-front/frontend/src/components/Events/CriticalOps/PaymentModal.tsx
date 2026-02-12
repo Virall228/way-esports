@@ -21,7 +21,7 @@ const ModalContent = styled.div`
     border-radius: 16px;
     padding: 24px;
     width: 92%;
-    max-width: 480px;
+    max-width: 100%;
     max-height: 90vh;
     overflow-y: auto;
     border: 1px solid ${({ theme }) => theme.colors.border.light};

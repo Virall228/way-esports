@@ -4,8 +4,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/api';
 
 const DashboardContainer = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   padding: 2rem;
 `;
 
@@ -139,8 +140,8 @@ export const AnalyticsDashboard: React.FC = () => {
 
   const fetchAnalytics = async () => {
     try {
-      const response = await api.get(`/api/users/${user?.id}/analytics`);
-      setAnalytics(response.data);
+      const response: any = await api.get(`/api/users/${user?.id}/analytics`, true);
+      setAnalytics(response?.data || response);
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
     }

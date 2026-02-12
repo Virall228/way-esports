@@ -4,10 +4,23 @@ import User from '../models/User';
 
 const router = express.Router();
 
+const resolveUserId = (req: any): string | null => {
+  const value = req.user?._id || req.user?.id;
+  return value ? value.toString() : null;
+};
+
 // Get wallet balance (alias for compatibility)
 router.get('/balance', async (req, res) => {
   try {
-    const user = await User.findOne({ telegramId: req.user?.id });
+    const userId = resolveUserId(req);
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -38,7 +51,15 @@ router.get('/balance', async (req, res) => {
 // Get wallet details
 router.get('/', async (req, res) => {
   try {
-    const user = await User.findOne({ telegramId: req.user?.id });
+    const userId = resolveUserId(req);
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -67,7 +88,15 @@ router.get('/', async (req, res) => {
 // Get transaction history
 router.get('/transactions', async (req, res) => {
   try {
-    const user = await User.findOne({ telegramId: req.user?.id });
+    const userId = resolveUserId(req);
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -102,7 +131,15 @@ router.get('/transactions', async (req, res) => {
 // Add payment method
 router.post('/payment-methods', async (req, res) => {
   try {
-    const user = await User.findOne({ telegramId: req.user?.id });
+    const userId = resolveUserId(req);
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -137,7 +174,15 @@ router.post('/payment-methods', async (req, res) => {
 // Update payment method
 router.put('/payment-methods/:id', async (req, res) => {
   try {
-    const user = await User.findOne({ telegramId: req.user?.id });
+    const userId = resolveUserId(req);
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -181,7 +226,15 @@ router.put('/payment-methods/:id', async (req, res) => {
 // Delete payment method
 router.delete('/payment-methods/:id', async (req, res) => {
   try {
-    const user = await User.findOne({ telegramId: req.user?.id });
+    const userId = resolveUserId(req);
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -224,7 +277,15 @@ router.post('/withdraw', async (req, res) => {
   try {
     const { amount, paymentMethodId } = req.body;
 
-    const user = await User.findOne({ telegramId: req.user?.id });
+    const userId = resolveUserId(req);
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
         success: false,

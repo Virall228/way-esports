@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import User from '../models/User';
 import Tournament from '../models/Tournament';
 import News from '../models/News';
+import Team from '../models/Team';
 
 /**
  * Get public platform statistics for the Home page
@@ -11,11 +12,13 @@ export const getPublicStats = async (req: Request, res: Response) => {
         const [
             totalUsers,
             activeTournaments,
+            activeTeams,
             newsArticles,
             prizePoolSummary
         ] = await Promise.all([
             User.countDocuments(),
-            Tournament.countDocuments({ status: { $in: ['active', 'live', 'in_progress', 'ongoing'] } }),
+            Tournament.countDocuments({ status: { $in: ['upcoming', 'ongoing'] } }),
+            Team.countDocuments({ status: 'active' }),
             News.countDocuments(),
             Tournament.aggregate([
                 { $match: { prizePool: { $exists: true } } },
@@ -26,10 +29,11 @@ export const getPublicStats = async (req: Request, res: Response) => {
         res.json({
             success: true,
             data: {
-                totalUsers: totalUsers + 1200, // Keep some offset if the user wants to start with "warm" numbers, but based on real growth
-                activeTournaments: activeTournaments + 5,
+                totalUsers,
+                activeTournaments,
+                activeTeams,
                 newsArticles,
-                totalPrizePool: (prizePoolSummary[0]?.total || 0) + 15000
+                totalPrizePool: prizePoolSummary[0]?.total || 0
             }
         });
     } catch (error) {

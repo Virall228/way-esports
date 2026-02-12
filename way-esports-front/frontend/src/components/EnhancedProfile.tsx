@@ -4,8 +4,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/api';
 
 const ProfileContainer = styled.div`
-  max-width: 800px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   padding: 2rem;
 `;
 
@@ -122,16 +123,6 @@ export const EnhancedProfile: React.FC = () => {
     }
   };
 
-  const handleSave = async (updatedProfile: Partial<UserProfile>) => {
-    try {
-      await api.put(`/api/users/${user?.id}/profile`, updatedProfile);
-      setProfile(prev => prev ? { ...prev, ...updatedProfile } : null);
-      setIsEditing(false);
-    } catch (error) {
-      console.error('Failed to update profile:', error);
-    }
-  };
-
   if (!profile) return <div>Loading...</div>;
 
   return (
@@ -159,8 +150,8 @@ export const EnhancedProfile: React.FC = () => {
             )}
           </SocialLinks>
         </ProfileInfo>
-        <EditButton onClick={() => setIsEditing(true)}>
-          Edit Profile
+        <EditButton onClick={() => setIsEditing(prev => !prev)}>
+          {isEditing ? 'Editing...' : 'Edit Profile'}
         </EditButton>
       </ProfileHeader>
 

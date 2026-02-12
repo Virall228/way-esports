@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { TeamRanking, PlayerRanking, getCurrentRankingPeriod, formatRankChange } from '../../utils/rankings';
+import { api } from '../../services/api';
+import {
+    TeamRanking,
+    PlayerRanking,
+    getCurrentRankingPeriod,
+    formatRankChange,
+    calculateRankChange
+} from '../../utils/rankings';
 
 const Container = styled.div`
-    max-width: 1200px;
-    margin: 0 auto;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
     padding: 20px;
 `;
 
@@ -181,7 +189,7 @@ const RankingsPage: React.FC = () => {
     const [game, setGame] = useState('all');
     const [teamRankings, setTeamRankings] = useState<TeamRanking[]>([]);
     const [playerRankings, setPlayerRankings] = useState<PlayerRanking[]>([]);
-    const [currentPeriod, setCurrentPeriod] = useState(getCurrentRankingPeriod());
+    const [currentPeriod] = useState(getCurrentRankingPeriod());
 
     useEffect(() => {
         fetchRankings();
@@ -189,20 +197,104 @@ const RankingsPage: React.FC = () => {
         return () => clearInterval(interval);
     }, [activeTab, timeFrame, game]);
 
+    const toNumber = (value: any, fallback = 0) => {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : fallback;
+    };
+
+    const buildRankingStats = (rank: number, previousRank: number, points: number) => ({
+        currentRank: rank,
+        previousRank,
+        rankChange: calculateRankChange(rank, previousRank),
+        points,
+        lastUpdated: new Date()
+    });
+
+    const normalizeTeamRanking = (team: any, index: number): TeamRanking => {
+        const rank = toNumber(team?.rank, index + 1);
+        const previousRank = toNumber(team?.previousRank, rank);
+        const wins = toNumber(team?.wins, 0);
+        const losses = toNumber(team?.losses, 0);
+        const matches = toNumber(team?.matches ?? team?.totalMatches, wins + losses);
+        const weeklyStats = {
+            matchesPlayed: toNumber(team?.weeklyStats?.matchesPlayed, matches),
+            wins: toNumber(team?.weeklyStats?.wins, wins),
+            losses: toNumber(team?.weeklyStats?.losses, losses),
+            points: toNumber(team?.weeklyStats?.points, wins * 3)
+        };
+
+        return {
+            id: String(team?.id || team?._id || ''),
+            rank,
+            previousRank,
+            name: team?.name || 'Team',
+            tag: team?.tag || '',
+            logo: team?.logo || '',
+            totalPrize: toNumber(team?.totalPrize, 0),
+            tournamentWins: toNumber(team?.tournamentWins, 0),
+            winRate: toNumber(team?.winRate, 0),
+            weeklyStats,
+            rankingStats: team?.rankingStats
+                ? {
+                    ...team.rankingStats,
+                    currentRank: rank,
+                    previousRank,
+                    rankChange: calculateRankChange(rank, previousRank)
+                }
+                : buildRankingStats(rank, previousRank, weeklyStats.points)
+        };
+    };
+
+    const normalizePlayerRanking = (player: any, index: number): PlayerRanking => {
+        const rank = toNumber(player?.rank, index + 1);
+        const previousRank = toNumber(player?.previousRank, rank);
+        const matches = toNumber(player?.matches ?? player?.totalMatches, 0);
+        const winRate = toNumber(player?.winRate, 0);
+        const rating = toNumber(player?.rating, Math.round(winRate));
+        const teams = Array.isArray(player?.teams) ? player.teams : [];
+        const teamName = player?.team || teams[0]?.name || teams[0]?.tag || '-';
+        const fullName = [player?.firstName, player?.lastName].filter(Boolean).join(' ').trim();
+
+        const weeklyStats = {
+            kills: toNumber(player?.weeklyStats?.kills, 0),
+            deaths: toNumber(player?.weeklyStats?.deaths, 0),
+            assists: toNumber(player?.weeklyStats?.assists, 0),
+            mvps: toNumber(player?.weeklyStats?.mvps, 0),
+            points: toNumber(player?.weeklyStats?.points, rating)
+        };
+
+        return {
+            id: String(player?.id || player?._id || ''),
+            rank,
+            previousRank,
+            name: player?.name || fullName || player?.username || 'Player',
+            avatar: player?.avatar || player?.profileLogo || '',
+            team: teamName,
+            rating,
+            matches,
+            winRate,
+            weeklyStats,
+            rankingStats: player?.rankingStats
+                ? {
+                    ...player.rankingStats,
+                    currentRank: rank,
+                    previousRank,
+                    rankChange: calculateRankChange(rank, previousRank)
+                }
+                : buildRankingStats(rank, previousRank, weeklyStats.points)
+        };
+    };
+
     const fetchRankings = async () => {
         try {
             const endpoint = activeTab === 'teams' ? 'teams/rankings' : 'players/rankings';
-            const response = await fetch(`/api/${endpoint}?timeFrame=${timeFrame}&game=${game}`, {
-                headers: {
-                    'X-Telegram-Init-Data': (window.Telegram?.WebApp as any)?.initData || ''
-                }
-            });
-            const data = await response.json();
-            
+            const raw: any = await api.get(`/api/${endpoint}?timeFrame=${timeFrame}&game=${game}`, true);
+            const list = Array.isArray(raw) ? raw : (raw?.data || []);
+
             if (activeTab === 'teams') {
-                setTeamRankings(data);
+                setTeamRankings(list.map(normalizeTeamRanking));
             } else {
-                setPlayerRankings(data);
+                setPlayerRankings(list.map(normalizePlayerRanking));
             }
         } catch (error) {
             console.error('Error fetching rankings:', error);

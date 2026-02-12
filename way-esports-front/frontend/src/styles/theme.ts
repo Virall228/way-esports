@@ -54,10 +54,15 @@ export const theme = {
     mono: "'Fira Code', monospace"
   },
   fontWeights: {
+    light: 300,
     regular: 400,
     medium: 500,
+    semiBold: 600,
     semibold: 600,
-    bold: 700
+    bold: 700,
+    extraBold: 800,
+    black: 900,
+    normal: 400
   },
   spacing: {
     xs: '0.25rem',

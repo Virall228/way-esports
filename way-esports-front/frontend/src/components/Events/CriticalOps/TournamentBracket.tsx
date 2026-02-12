@@ -122,7 +122,7 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({ rounds }) => {
             {rounds.map((round, roundIndex) => (
                 <RoundColumn key={roundIndex}>
                     <RoundTitle>{round.name}</RoundTitle>
-                    {round.matches.map((match, matchIndex) => (
+                    {round.matches.map((match) => (
                         <MatchContainer 
                             key={match.id}
                             isWinner={match.isCompleted}

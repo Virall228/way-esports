@@ -19,8 +19,8 @@ export interface SearchResult {
 const SearchContainer = styled.div`
   position: relative;
   width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
+  max-width: 100%;
+  margin: 0;
 `;
 
 const SearchInput = styled.input`
@@ -367,10 +367,6 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
     onResultSelect?.(result);
     setQuery('');
     setIsVisible(false);
-  };
-
-  const handleSuggestionClick = (suggestion: string) => {
-    setQuery(suggestion);
   };
 
   const handleInputFocus = () => {

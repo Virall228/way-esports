@@ -75,8 +75,9 @@ const NavButton = styled.button`
 
 const MainContent = styled.main`
   padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   min-height: calc(100vh - 120px);
 `;
 

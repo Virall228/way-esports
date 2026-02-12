@@ -20,8 +20,9 @@ type MatchItem = {
 
 const Container = styled.div`
   padding: 1rem;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   color: #ffffff;
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
@@ -31,14 +32,6 @@ const Container = styled.div`
   @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
     padding: 2.5rem;
   }
-`;
-
-const Header = styled(Card).attrs({ variant: 'elevated' })`
-  background: ${({ theme }) => theme.colors.bg.secondary};
-  border-radius: 16px;
-  padding: 1.25rem;
-  margin-bottom: 1.5rem;
-  border: 1px solid ${({ theme }) => theme.colors.border.light};
 `;
 
 const Title = styled.h1`
@@ -201,7 +194,8 @@ const TournamentDetailsPage: React.FC = () => {
 
   const rounds = useMemo(() => {
     const groups: Record<string, MatchItem[]> = {};
-    for (const m of matches) {
+    const list = Array.isArray(matches) ? matches : [];
+    for (const m of list) {
       const key = (m.round || 'Round').toString();
       groups[key] = groups[key] || [];
       groups[key].push(m);
@@ -250,7 +244,7 @@ const TournamentDetailsPage: React.FC = () => {
               <SurfaceCard key={m.id}>
                 <Row>
                   <Meta>{m.round || '\u2014'}{m.map ? ` \u2022 ${m.map}` : ''}</Meta>
-                  <Meta>{new Date(m.startTime).toLocaleString()}</Meta>
+                  <Meta>{m.startTime ? new Date(m.startTime).toLocaleString() : '\u2014'}</Meta>
                 </Row>
 
                 <TeamsRow>
@@ -289,7 +283,7 @@ const TournamentDetailsPage: React.FC = () => {
                   return (
                     <SurfaceCard key={m.id}>
                       <Row>
-                        <Meta>{new Date(m.startTime).toLocaleString()}</Meta>
+                        <Meta>{m.startTime ? new Date(m.startTime).toLocaleString() : '\u2014'}</Meta>
                         <Meta>{m.status}</Meta>
                       </Row>
                       <TeamsRow>

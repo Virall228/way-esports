@@ -9,8 +9,9 @@ import Button from '../../components/UI/Button';
 
 const Container = styled.div`
   padding: 1rem;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     padding: 1.5rem;
@@ -276,71 +277,31 @@ const Select = styled.select`
   }
 `;
 
-interface Team {
-  id: string;
-  name: string;
-  tag: string;
-  logo?: string;
-  game: string;
-  captain?: any;
-  members: any[];
-  stats: any;
-}
+type TabType = 'dashboard' | 'users' | 'tournaments' | 'news' | 'achievements' | 'rewards' | 'analytics' | 'referrals' | 'teams' | 'contacts';
 
-type TabType = 'dashboard' | 'users' | 'tournaments' | 'news' | 'achievements' | 'rewards' | 'analytics' | 'referrals' | 'teams';
-
-interface User {
+interface Reward {
   id: string;
-  username: string;
-  firstName: string;
-  lastName?: string;
-  email: string;
-  role: string;
-  isBanned: boolean;
-  isSubscribed: boolean;
-  subscriptionExpiresAt?: string;
-  freeEntriesCount: number;
-  bonusEntries?: number;
-  balance: number;
-  createdAt: string;
-}
-
-interface ReferralLog {
-  id: string;
-  referrer: string;
-  referred: string;
-  reward: number;
-  date: string;
-  status: string;
-}
-
-interface Tournament {
-  id: string;
-  name: string;
-  game: string;
-  status: string;
-  participants: number;
-  prizePool: number;
-}
-
-interface NewsArticle {
-  id: string;
-  title: string;
-  content: string;
-  author: string;
-  status: string;
-  createdAt: string;
-}
-
-interface Achievement {
-  id: string;
-  key: string;
   name: string;
   description: string;
-  icon: string;
+  type: string;
+  rarity: string;
+  value: number;
+  icon?: string;
   isActive: boolean;
-  criteriaType: string;
-  criteriaValue: number;
+  gameId?: string;
+  requirementsType?: string;
+  requirementsValue?: number;
+  expiresAt?: string | null;
+  createdAt?: string;
+}
+
+interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  message: string;
+  userId?: string;
+  createdAt: string;
 }
 
 const ModalActions = styled.div`
@@ -374,10 +335,10 @@ const AdminPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [modalData, setModalData] = useState<any>({});
   const newsImageRef = useRef<HTMLInputElement>(null);
   const tournamentImageRef = useRef<HTMLInputElement>(null);
   const teamImageRef = useRef<HTMLInputElement>(null);
-  const userImageRef = useRef<HTMLInputElement>(null);
 
   const formatApiError = (e: any, fallback: string) => {
     if (e instanceof ApiError) {
@@ -415,8 +376,10 @@ const AdminPage: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'news'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'achievements'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'rewards'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'teams'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'referrals'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'contacts'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'analytics'] })
       ]);
@@ -533,6 +496,24 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const fetchContacts = async (): Promise<ContactMessage[]> => {
+    try {
+      const result: any = await api.get('/api/admin/contacts');
+      const items: any[] = Array.isArray(result) ? result : (result?.data || []);
+      return items.map((m: any) => ({
+        id: (m._id || m.id || '').toString(),
+        name: m.name || '',
+        email: m.email || '',
+        message: m.message || '',
+        userId: m.userId?._id?.toString() || m.userId?.toString() || '',
+        createdAt: formatDate(m.createdAt)
+      }));
+    } catch (e) {
+      console.error('Failed to fetch contact messages:', e);
+      throw e;
+    }
+  };
+
   const fetchTournaments = async () => {
     const result: any = await api.get('/api/tournaments');
     const items: any[] = (result && (result.data || result.tournaments)) || [];
@@ -574,6 +555,26 @@ const AdminPage: React.FC = () => {
     }));
   };
 
+  const fetchRewards = async (): Promise<Reward[]> => {
+    const result: any = await api.get('/api/rewards/admin');
+    const items: any[] = Array.isArray(result) ? result : (result?.data || []);
+    return items.map((r: any) => ({
+      id: (r._id || r.id || '').toString(),
+      name: r.name || '',
+      description: r.description || '',
+      type: r.type || 'currency',
+      rarity: r.rarity || 'common',
+      value: Number(r.value || 0),
+      icon: r.icon || '',
+      isActive: !!r.isActive,
+      gameId: r.gameId || '',
+      requirementsType: r.requirements?.type || '',
+      requirementsValue: Number(r.requirements?.value || 0),
+      expiresAt: r.expiresAt || null,
+      createdAt: r.createdAt || ''
+    }));
+  };
+
   const usersQuery = useQuery({
     queryKey: ['admin', 'users'],
     queryFn: fetchUsers,
@@ -606,6 +607,14 @@ const AdminPage: React.FC = () => {
     refetchOnWindowFocus: false
   });
 
+  const rewardsQuery = useQuery({
+    queryKey: ['admin', 'rewards'],
+    queryFn: fetchRewards,
+    enabled: hasAdminAccess,
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
+
   const teamsQuery = useQuery({
     queryKey: ['admin', 'teams'],
     queryFn: fetchTeams,
@@ -617,6 +626,14 @@ const AdminPage: React.FC = () => {
   const referralsQuery = useQuery({
     queryKey: ['admin', 'referrals'],
     queryFn: fetchReferrals,
+    enabled: hasAdminAccess,
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
+
+  const contactsQuery = useQuery({
+    queryKey: ['admin', 'contacts'],
+    queryFn: fetchContacts,
     enabled: hasAdminAccess,
     staleTime: 30000,
     refetchOnWindowFocus: false
@@ -642,8 +659,10 @@ const AdminPage: React.FC = () => {
   const tournaments = tournamentsQuery.data || [];
   const news = newsQuery.data || [];
   const achievements = achievementsQuery.data || [];
+  const rewards = rewardsQuery.data || [];
   const teams = teamsQuery.data || [];
   const referrals = referralsQuery.data || [];
+  const contacts = contactsQuery.data || [];
   const dashboardStats = statsQuery.data || null;
   const analytics = analyticsQuery.data || null;
 
@@ -652,8 +671,10 @@ const AdminPage: React.FC = () => {
     tournamentsQuery.error ||
     newsQuery.error ||
     achievementsQuery.error ||
+    rewardsQuery.error ||
     teamsQuery.error ||
     referralsQuery.error ||
+    contactsQuery.error ||
     statsQuery.error ||
     analyticsQuery.error;
 
@@ -662,8 +683,10 @@ const AdminPage: React.FC = () => {
     tournamentsQuery.isFetching ||
     newsQuery.isFetching ||
     achievementsQuery.isFetching ||
+    rewardsQuery.isFetching ||
     teamsQuery.isFetching ||
     referralsQuery.isFetching ||
+    contactsQuery.isFetching ||
     statsQuery.isFetching ||
     analyticsQuery.isFetching;
 
@@ -714,6 +737,39 @@ const AdminPage: React.FC = () => {
       };
     }
 
+    if (type === 'reward') {
+      return {
+        name: item?.name || '',
+        description: item?.description || '',
+        type: item?.type || 'currency',
+        rarity: item?.rarity || 'common',
+        value: item?.value ?? 0,
+        icon: item?.icon || '',
+        isActive: item?.isActive ?? true,
+        gameId: item?.gameId || '',
+        requirementsType: item?.requirementsType || item?.requirements?.type || '',
+        requirementsValue: item?.requirementsValue ?? item?.requirements?.value ?? 0,
+        expiresAt: item?.expiresAt || ''
+      };
+    }
+
+    if (type === 'user') {
+      return {
+        username: item?.username || '',
+        firstName: item?.firstName || '',
+        lastName: item?.lastName || '',
+        email: item?.email || '',
+        role: item?.role || 'user',
+        bio: item?.bio || '',
+        balance: item?.balance ?? 0,
+        freeEntriesCount: item?.freeEntriesCount ?? 0,
+        bonusEntries: item?.bonusEntries ?? 0,
+        isSubscribed: item?.isSubscribed ?? false,
+        subscriptionExpiresAt: item?.subscriptionExpiresAt || '',
+        isBanned: item?.isBanned ?? false
+      };
+    }
+
     return item || {};
   };
 
@@ -750,6 +806,20 @@ const AdminPage: React.FC = () => {
     if (window.confirm(`Are you sure you want to delete this ${type}?`)) {
       try {
         setError(null);
+        if (type === 'reward') {
+          await api.delete(`/api/rewards/admin/${id}`);
+          await queryClient.invalidateQueries({ queryKey: ['admin', 'rewards'] });
+          await queryClient.invalidateQueries({ queryKey: ['rewards'] });
+          notify('success', 'Deleted', 'Reward deleted successfully');
+          return;
+        }
+        if (type === 'achievement') {
+          await api.delete(`/api/achievements/admin/${id}`);
+          await queryClient.invalidateQueries({ queryKey: ['admin', 'achievements'] });
+          notify('success', 'Deleted', 'Achievement deleted successfully');
+          return;
+        }
+
         const entityMap: Record<string, string> = {
           'tournament': 'tournaments',
           'news': 'news',
@@ -873,11 +943,50 @@ const AdminPage: React.FC = () => {
         return;
       }
 
+      if (modalType === 'reward') {
+        const parsedExpires = modalData.expiresAt ? new Date(modalData.expiresAt) : null;
+        const expiresAt = parsedExpires && Number.isFinite(parsedExpires.getTime())
+          ? parsedExpires.toISOString()
+          : null;
+
+        const payload: any = {
+          name: modalData.name,
+          description: modalData.description,
+          type: modalData.type || 'currency',
+          rarity: modalData.rarity || 'common',
+          value: Number(modalData.value || 0),
+          icon: modalData.icon || undefined,
+          isActive: !!modalData.isActive,
+          gameId: modalData.gameId || undefined,
+          expiresAt
+        };
+
+        if (modalData.requirementsType) {
+          payload.requirements = {
+            type: modalData.requirementsType,
+            value: Number(modalData.requirementsValue || 0)
+          };
+        }
+
+        if (editingItem?.id) {
+          await api.put(`/api/rewards/admin/${editingItem.id}`, payload);
+        } else {
+          await api.post('/api/rewards/admin', payload);
+        }
+
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'rewards'] });
+        await queryClient.invalidateQueries({ queryKey: ['rewards'] });
+        setIsModalOpen(false);
+        notify('success', 'Reward saved', `Reward ${editingItem ? 'updated' : 'created'} successfully`);
+        return;
+      }
+
       if (modalType === 'user') {
         const payload: any = {
           username: modalData.username,
           firstName: modalData.firstName,
           lastName: modalData.lastName,
+          email: modalData.email,
           role: modalData.role,
           bio: modalData.bio,
           balance: Number(modalData.balance || 0),
@@ -894,6 +1003,11 @@ const AdminPage: React.FC = () => {
           notify('success', 'User updated', 'User updated successfully');
           return;
         }
+        await api.post('/api/admin/users', payload);
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+        setIsModalOpen(false);
+        notify('success', 'User created', 'User created successfully');
+        return;
       }
 
       if (modalType === 'team') {
@@ -1199,7 +1313,7 @@ const AdminPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {teams.map(team => (
+              {teams.map((team: any) => (
                 <tr key={team.id}>
                   <Td>{team.name}</Td>
                   <Td>{team.tag}</Td>
@@ -1220,6 +1334,48 @@ const AdminPage: React.FC = () => {
     );
   }
 
+  function renderContacts() {
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+          <h3>Contact Messages</h3>
+          <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'contacts'] })}>
+            Refresh
+          </ActionButton>
+        </div>
+
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Name</Th>
+                <Th>Email</Th>
+                <Th>Message</Th>
+                <Th>User ID</Th>
+                <Th>Created</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {contacts.map((msg) => (
+                <tr key={msg.id}>
+                  <Td>{msg.name}</Td>
+                  <Td>{msg.email}</Td>
+                  <Td style={{ maxWidth: '360px', whiteSpace: 'pre-wrap' }}>{msg.message}</Td>
+                  <Td>{msg.userId || '-'}</Td>
+                  <Td>{msg.createdAt}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
+
+        {!contacts.length && (
+          <div style={{ color: '#cccccc', padding: '16px 0' }}>No contact messages yet.</div>
+        )}
+      </div>
+    );
+  }
+
   function renderRewards() {
     return (
       <div>
@@ -1228,24 +1384,87 @@ const AdminPage: React.FC = () => {
           <ActionButton onClick={() => handleCreate('reward')}>Create Reward</ActionButton>
         </div>
 
-        <div style={{ color: '#cccccc', textAlign: 'center', padding: '40px' }}>
-          <h4>Rewards System</h4>
-          <p>Manage player rewards, achievements, and incentives</p>
-          <p>Coming soon...</p>
-        </div>
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Name</Th>
+                <Th>Type</Th>
+                <Th>Rarity</Th>
+                <Th>Value</Th>
+                <Th>Active</Th>
+                <Th>Game</Th>
+                <Th>Expires</Th>
+                <Th>Actions</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {rewards.map((reward: Reward) => (
+                <tr key={reward.id}>
+                  <Td>{reward.name}</Td>
+                  <Td>{reward.type}</Td>
+                  <Td>{reward.rarity}</Td>
+                  <Td>{reward.value}</Td>
+                  <Td>{reward.isActive ? 'Yes' : 'No'}</Td>
+                  <Td>{reward.gameId || '\u2014'}</Td>
+                  <Td>{reward.expiresAt ? formatDate(reward.expiresAt) : '\u2014'}</Td>
+                  <Td>
+                    <ActionsCell>
+                      <ActionButton onClick={() => handleEdit(reward, 'reward')}>Edit</ActionButton>
+                      <ActionButton $variant="danger" onClick={() => handleDelete(reward.id, 'reward')}>Delete</ActionButton>
+                    </ActionsCell>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
+
+        {!rewards.length && (
+          <div style={{ color: '#cccccc', padding: '16px 0' }}>No rewards yet.</div>
+        )}
       </div>
     );
   }
 
   function renderAnalytics() {
+    const growth = Array.isArray(analytics?.userGrowth) ? analytics.userGrowth : [];
     return (
       <div>
         <h3>Analytics Dashboard</h3>
-        <div style={{ color: '#cccccc', textAlign: 'center', padding: '40px' }}>
-          <h4>Detailed Analytics</h4>
-          <p>User engagement, tournament performance, revenue metrics</p>
-          <p>Coming soon...</p>
-        </div>
+        <StatsGrid>
+          <StatCard>
+            <StatValue>{analytics?.activeSubscriptions ?? 0}</StatValue>
+            <StatLabel>Active Subscriptions</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>{growth.reduce((acc: number, item: any) => acc + (item?.count || 0), 0)}</StatValue>
+            <StatLabel>New Users (30d)</StatLabel>
+          </StatCard>
+        </StatsGrid>
+
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Date</Th>
+                <Th>New Users</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {growth.map((row: any) => (
+                <tr key={row._id}>
+                  <Td>{row._id}</Td>
+                  <Td>{row.count}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
+
+        {!growth.length && (
+          <div style={{ color: '#cccccc', padding: '16px 0' }}>No analytics data yet.</div>
+        )}
       </div>
     );
   }
@@ -1654,14 +1873,80 @@ const AdminPage: React.FC = () => {
         case 'reward':
           return (
             <Form>
-              <Input placeholder="Reward Name" />
-              <Input placeholder="Points Required" type="number" />
-              <Select>
+              <Input
+                placeholder="Reward Name"
+                value={modalData.name || ''}
+                onChange={(e) => setField('name', e.target.value)}
+              />
+              <TextArea
+                placeholder="Description"
+                value={modalData.description || ''}
+                onChange={(e) => setField('description', e.target.value)}
+              />
+              <Select
+                value={modalData.type || 'currency'}
+                onChange={(e) => setField('type', e.target.value)}
+              >
                 <option value="currency">Currency</option>
                 <option value="badge">Badge</option>
                 <option value="item">Item</option>
+                <option value="achievement">Achievement</option>
               </Select>
-              <TextArea placeholder="Description" />
+              <Select
+                value={modalData.rarity || 'common'}
+                onChange={(e) => setField('rarity', e.target.value)}
+              >
+                <option value="common">Common</option>
+                <option value="rare">Rare</option>
+                <option value="epic">Epic</option>
+                <option value="legendary">Legendary</option>
+              </Select>
+              <Input
+                placeholder="Value"
+                type="number"
+                value={modalData.value ?? 0}
+                onChange={(e) => setField('value', Number(e.target.value))}
+              />
+              <Input
+                placeholder="Icon URL"
+                value={modalData.icon || ''}
+                onChange={(e) => setField('icon', e.target.value)}
+              />
+              <Input
+                placeholder="Game ID (optional)"
+                value={modalData.gameId || ''}
+                onChange={(e) => setField('gameId', e.target.value)}
+              />
+              <Select
+                value={(modalData.isActive ? 'true' : 'false')}
+                onChange={(e) => setField('isActive', e.target.value === 'true')}
+              >
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+              </Select>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <Input
+                  placeholder="Requirement Type"
+                  value={modalData.requirementsType || ''}
+                  onChange={(e) => setField('requirementsType', e.target.value)}
+                />
+                <Input
+                  placeholder="Requirement Value"
+                  type="number"
+                  value={modalData.requirementsValue ?? 0}
+                  onChange={(e) => setField('requirementsValue', Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <label style={{ color: '#ccc', fontSize: '12px', display: 'block', marginBottom: '6px' }}>
+                  Expires At
+                </label>
+                <Input
+                  type="datetime-local"
+                  value={formatDateForInput(modalData.expiresAt)}
+                  onChange={(e) => setField('expiresAt', e.target.value)}
+                />
+              </div>
             </Form>
           );
         default:
@@ -1706,6 +1991,8 @@ const AdminPage: React.FC = () => {
         return renderReferrals();
       case 'teams':
         return renderTeams();
+      case 'contacts':
+        return renderContacts();
       default:
         return renderDashboard();
     }
@@ -1782,6 +2069,9 @@ const AdminPage: React.FC = () => {
         </Tab>
         <Tab $active={activeTab === 'teams'} onClick={() => setActiveTab('teams')}>
           Teams
+        </Tab>
+        <Tab $active={activeTab === 'contacts'} onClick={() => setActiveTab('contacts')}>
+          Contacts
         </Tab>
       </TabContainer>
 

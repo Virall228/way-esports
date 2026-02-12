@@ -133,7 +133,7 @@ const SearchOverlay = styled.div<{ $isVisible: boolean }>`
 
 const SearchContainer = styled.div`
   width: 90%;
-  max-width: 600px;
+  max-width: 100%;
   position: relative;
 `;
 

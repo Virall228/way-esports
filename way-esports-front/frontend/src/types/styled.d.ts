@@ -26,6 +26,8 @@ declare module 'styled-components' {
       surface: string;
       white: string;
       black: string;
+      ring: string;
+      highlight: string;
       gray: {
         50: string;
         100: string;

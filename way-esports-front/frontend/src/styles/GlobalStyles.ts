@@ -36,7 +36,9 @@ export const GlobalStyles = createGlobalStyle`
     margin: 0;
     padding: 0;
     overflow: hidden;
-    width: 100%;
+    width: 100vw;
+    max-width: 100%;
+    min-width: 100%;
     position: relative;
     height: 100%;
     overscroll-behavior: none;
@@ -45,6 +47,7 @@ export const GlobalStyles = createGlobalStyle`
   #root {
     height: 100%;
     width: 100%;
+    max-width: 100%;
   }
 
   /* Remove global gradients and overlays to allow custom background image */

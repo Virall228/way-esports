@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
 
 const Container = styled.div`
     padding-bottom: 80px;
@@ -211,7 +211,7 @@ const StatusIndicator = styled.div<{ status: 'upcoming' | 'live' | 'completed' |
             'rgba(102, 102, 102, 0.4)'};
     }
 
-    ${(props => props.status === 'live' || props.status === 'in_progress') && `
+    ${({ status }) => (status === 'live' || status === 'in_progress') && css`
         animation: pulse 2s infinite;
         
         @keyframes pulse {
@@ -221,7 +221,7 @@ const StatusIndicator = styled.div<{ status: 'upcoming' | 'live' | 'completed' |
         }
     `}
 
-    ${props => props.status === 'upcoming' && `
+    ${({ status }) => status === 'upcoming' && css`
         animation: shimmer 3s infinite;
         
         @keyframes shimmer {
