@@ -1,6 +1,19 @@
 ﻿import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import styled, { ThemeProvider } from 'styled-components';
+import {
+  Award,
+  BarChart2,
+  CreditCard,
+  Crosshair,
+  FileText,
+  Gift,
+  Home as HomeIcon,
+  Settings as SettingsIcon,
+  Shield,
+  Users,
+  User
+} from 'react-feather';
 
 import { GlobalStyles as GlobalStyle } from './styles/GlobalStyles';
 import { theme as eslTheme } from './styles/theme';
@@ -33,7 +46,7 @@ import { api } from './services/api';
 type NavItem = {
   label: string;
   to: string;
-  icon: string;
+  icon: React.ReactNode;
   adminOnly?: boolean;
 };
 
@@ -47,9 +60,9 @@ const AppShell = styled.div`
   color: ${eslTheme.colors.text.primary};
   font-family: ${eslTheme.fonts.primary};
   display: flex;
-  width: 100vw;
+  width: 100%;
   max-width: 100%;
-  min-width: 100%;
+  min-width: 0;
   padding-left: var(--sal);
   padding-right: var(--sar);
   overflow-x: hidden;
@@ -85,9 +98,9 @@ const SidebarBrand = styled.div`
 
 const Logo = styled.div`
   font-family: ${eslTheme.fonts.title};
-  font-size: 1.2rem;
+  font-size: clamp(0.95rem, 3vw, 1.2rem);
   font-weight: ${eslTheme.fontWeights.bold};
-  letter-spacing: 2px;
+  letter-spacing: clamp(1px, 0.4vw, 2px);
   text-transform: uppercase;
   color: ${eslTheme.colors.white};
 `;
@@ -134,8 +147,16 @@ const NavItemLink = styled(Link) <{ $active?: boolean; $compact?: boolean }>`
 `;
 
 const NavItemIcon = styled.span`
-  font-size: 1rem;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
 `;
 
 const NavItemLabel = styled.span`
@@ -183,6 +204,8 @@ const TopBarTitle = styled.div`
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
+  flex: 1;
 `;
 
 const TopBarBadge = styled.span`
@@ -301,8 +324,16 @@ const BottomNavItem = styled(Link) <{ $active?: boolean }>`
 `;
 
 const BottomNavIcon = styled.span`
-  font-size: 16px;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
 `;
 
 const MobileMenuOverlay = styled.div<{ $open: boolean }>`
@@ -375,27 +406,28 @@ const AppContent: React.FC = () => {
   const location = useLocation();
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
+  const iconProps = React.useMemo(() => ({ size: 18, strokeWidth: 2 }), []);
 
   const navItems = React.useMemo<NavItem[]>(() => {
     const items: NavItem[] = [
-      { label: 'Home', to: '/', icon: '\\u{1F3E0}' },
-      { label: 'Tournaments', to: '/tournaments', icon: '\\u{1F3C6}' },
-      { label: 'Teams', to: '/teams', icon: '\\u{1F465}' },
-      { label: 'Rankings', to: '/rankings', icon: '\\u{1F4CA}' },
-      { label: 'Matches', to: '/matches', icon: '\\u2694' },
-      { label: 'Prizes', to: '/prizes', icon: '\\u{1F3C5}' },
-      { label: 'News', to: '/news', icon: '\\u{1F4F0}' },
-      { label: 'Wallet', to: '/wallet', icon: '\\u{1F4B3}' },
-      { label: 'Profile', to: '/profile', icon: '\\u{1F464}' },
-      { label: 'Settings', to: '/settings', icon: '\\u2699' }
+      { label: 'Home', to: '/', icon: <HomeIcon {...iconProps} /> },
+      { label: 'Tournaments', to: '/tournaments', icon: <Award {...iconProps} /> },
+      { label: 'Teams', to: '/teams', icon: <Users {...iconProps} /> },
+      { label: 'Rankings', to: '/rankings', icon: <BarChart2 {...iconProps} /> },
+      { label: 'Matches', to: '/matches', icon: <Crosshair {...iconProps} /> },
+      { label: 'Prizes', to: '/prizes', icon: <Gift {...iconProps} /> },
+      { label: 'News', to: '/news', icon: <FileText {...iconProps} /> },
+      { label: 'Wallet', to: '/wallet', icon: <CreditCard {...iconProps} /> },
+      { label: 'Profile', to: '/profile', icon: <User {...iconProps} /> },
+      { label: 'Settings', to: '/settings', icon: <SettingsIcon {...iconProps} /> }
     ];
 
     if (user?.role === 'admin' || user?.role === 'developer') {
-      items.push({ label: 'Admin', to: '/admin', icon: '\\u2699\\uFE0F', adminOnly: true });
+      items.push({ label: 'Admin', to: '/admin', icon: <Shield {...iconProps} />, adminOnly: true });
     }
 
     return items;
-  }, [user]);
+  }, [iconProps, user]);
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';

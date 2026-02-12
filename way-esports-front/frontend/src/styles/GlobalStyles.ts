@@ -36,9 +36,9 @@ export const GlobalStyles = createGlobalStyle`
     margin: 0;
     padding: 0;
     overflow: hidden;
-    width: 100vw;
+    width: 100%;
     max-width: 100%;
-    min-width: 100%;
+    min-width: 0;
     position: relative;
     height: 100%;
     overscroll-behavior: none;
