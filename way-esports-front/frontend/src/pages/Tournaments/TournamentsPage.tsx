@@ -344,29 +344,29 @@ const TournamentsPage: React.FC = () => {
         <EmptyState>{errorMessage}</EmptyState>
       ) : (
         <TournamentsGrid>
-          {filteredTournaments.map(t => (
-            <TournamentCard key={t.id} $status={t.status} onClick={() => handleTournamentClick(t)}>
-              <GameIcon src={`/images/games/${t.game.toLowerCase().replace(/\s/g, '')}.png`} alt={t.game} />
-              <StatusBadge $status={t.status}>{getStatusLabel(t.status)}</StatusBadge>
-              <TournamentTitle>{t.title}</TournamentTitle>
+          {filteredTournaments.map((tournament) => (
+            <TournamentCard key={tournament.id} $status={tournament.status} onClick={() => handleTournamentClick(tournament)}>
+              <GameIcon src={`/images/games/${tournament.game.toLowerCase().replace(/\s/g, '')}.png`} alt={tournament.game} />
+              <StatusBadge $status={tournament.status}>{getStatusLabel(tournament.status)}</StatusBadge>
+              <TournamentTitle>{tournament.title}</TournamentTitle>
 
-              <PrizePool>{t.prizePool}</PrizePool>
+              <PrizePool>{tournament.prizePool}</PrizePool>
 
               <InfoRow>
                 <InfoLabel>{t('participantsLabel')}</InfoLabel>
-                <InfoValue>{t.participants}/{t.maxParticipants}</InfoValue>
+                <InfoValue>{tournament.participants}/{tournament.maxParticipants}</InfoValue>
               </InfoRow>
               <InfoRow>
                 <InfoLabel>{t('dateLabel')}</InfoLabel>
-                <InfoValue>{t.date}</InfoValue>
+                <InfoValue>{tournament.date}</InfoValue>
               </InfoRow>
               <InfoRow>
                 <InfoLabel>{t('formatLabel')}</InfoLabel>
-                <InfoValue>{t.format}</InfoValue>
+                <InfoValue>{tournament.format}</InfoValue>
               </InfoRow>
 
-              <ActionButton $variant={t.status === 'upcoming' ? 'brand' : 'outline'} style={{ marginTop: '15px' }}>
-                {t.status === 'upcoming' ? t('joinNow') : t.status === 'live' ? t('viewDetails') : t('results')}
+              <ActionButton $variant={tournament.status === 'upcoming' ? 'brand' : 'outline'} style={{ marginTop: '15px' }}>
+                {tournament.status === 'upcoming' ? t('joinNow') : tournament.status === 'live' ? t('viewDetails') : t('results')}
               </ActionButton>
             </TournamentCard>
           ))}

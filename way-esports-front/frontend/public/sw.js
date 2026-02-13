@@ -1,4 +1,4 @@
-const CACHE_NAME = 'way-esports-pwa-v1';
+const CACHE_NAME = 'way-esports-pwa-v2';
 
 const ASSETS = [
   '/',
@@ -29,6 +29,17 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
 
   if (url.origin !== self.location.origin) return;
+
+  // Never cache API responses.
+  if (url.pathname.startsWith('/api/')) return;
+
+  // Keep navigation fresh to avoid stale app shells.
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req).catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(req).then((cached) => {
