@@ -44,6 +44,14 @@ export const theme = {
       medium: '#2f2f2f',
       strong: '#3a3a3a',
     },
+    glass: {
+      panel: 'rgba(17, 17, 17, 0.72)',
+      panelBorder: 'rgba(255, 255, 255, 0.08)',
+      panelHover: 'rgba(255, 255, 255, 0.12)',
+      bar: 'rgba(12, 12, 12, 0.85)',
+      barBorder: 'rgba(255, 255, 255, 0.08)',
+      overlay: 'rgba(0, 0, 0, 0.6)'
+    }
   },
   fonts: {
     primary: "'Exo 2', sans-serif",
@@ -132,6 +140,57 @@ export const theme = {
     desktop: '1024px',
     wide: '1440px',
   },
+};
+
+export const lightTheme = {
+  ...theme,
+  colors: {
+    ...theme.colors,
+    primary: '#111111',
+    primaryDark: '#000000',
+    secondary: '#4b4b4b',
+    background: '#f7f7f7',
+    surface: '#ffffff',
+    accent: '#111111',
+    ring: '#d4d4d4',
+    highlight: '#111111',
+    bg: {
+      primary: '#f7f7f7',
+      secondary: '#ffffff',
+      tertiary: '#f0f0f0',
+      elevated: '#ffffff',
+    },
+    text: {
+      primary: '#111111',
+      secondary: '#3f3f3f',
+      tertiary: '#5f5f5f',
+      disabled: '#9a9a9a',
+    },
+    textSecondary: '#3f3f3f',
+    border: {
+      light: '#e5e5e5',
+      medium: '#d4d4d4',
+      strong: '#bdbdbd',
+    },
+    glass: {
+      panel: 'rgba(255, 255, 255, 0.82)',
+      panelBorder: 'rgba(0, 0, 0, 0.08)',
+      panelHover: 'rgba(0, 0, 0, 0.06)',
+      bar: 'rgba(255, 255, 255, 0.92)',
+      barBorder: 'rgba(0, 0, 0, 0.08)',
+      overlay: 'rgba(0, 0, 0, 0.35)'
+    }
+  },
+  shadows: {
+    ...theme.shadows,
+    sm: '0 1px 2px 0 rgba(0, 0, 0, 0.08)',
+    small: '0 1px 2px 0 rgba(0, 0, 0, 0.08)',
+    md: '0 4px 6px -1px rgba(0,0,0,0.12), 0 2px 4px -1px rgba(0,0,0,0.08)',
+    medium: '0 4px 6px -1px rgba(0,0,0,0.12), 0 2px 4px -1px rgba(0,0,0,0.08)',
+    lg: '0 10px 15px -3px rgba(0,0,0,0.16), 0 4px 6px -2px rgba(0,0,0,0.12)',
+    large: '0 10px 15px -3px rgba(0,0,0,0.16), 0 4px 6px -2px rgba(0,0,0,0.12)',
+    glow: '0 0 0 1px rgba(0,0,0,0.05), 0 0 24px rgba(0,0,0,0.08)',
+  }
 };
 
 export const titleStyles = `

@@ -9,10 +9,16 @@ interface CacheOptions {
 }
 
 class CacheService {
-  private redis: Redis;
+  private redis: Redis | null = null;
   private isConnected: boolean = false;
 
   constructor() {
+    const redisDisabled = this.isRedisDisabled();
+    if (redisDisabled) {
+      logInfo('redis_disabled');
+      return;
+    }
+
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 
     this.redis = new Redis(redisUrl, {
@@ -40,6 +46,7 @@ class CacheService {
   }
 
   private async connect() {
+    if (!this.redis) return;
     try {
       await this.redis.connect();
     } catch (error) {
@@ -56,7 +63,7 @@ class CacheService {
     fetchFn: () => Promise<T>,
     options: CacheOptions = { ttl: 300, key }
   ): Promise<T | null> {
-    if (!this.isConnected) {
+    if (!this.isConnected || !this.redis) {
       // Fallback: fetch directly from database
       try {
         return await fetchFn();
@@ -246,7 +253,7 @@ class CacheService {
    * Invalidate cache for specific key
    */
   async invalidate(key: string): Promise<void> {
-    if (!this.isConnected) return;
+    if (!this.isConnected || !this.redis) return;
 
     try {
       await this.redis.del(key);
@@ -260,7 +267,7 @@ class CacheService {
    * Invalidate multiple cache keys by pattern
    */
   async invalidatePattern(pattern: string): Promise<void> {
-    if (!this.isConnected) return;
+    if (!this.isConnected || !this.redis) return;
 
     try {
       const keys = await this.redis.keys(pattern);
@@ -293,7 +300,7 @@ class CacheService {
    * Get cache statistics
    */
   async getStats(): Promise<any> {
-    if (!this.isConnected) {
+    if (!this.isConnected || !this.redis) {
       return { connected: false };
     }
 
@@ -332,10 +339,15 @@ class CacheService {
    * Close Redis connection
    */
   async disconnect(): Promise<void> {
-    if (this.isConnected) {
+    if (this.isConnected && this.redis) {
       await this.redis.quit();
       this.isConnected = false;
     }
+  }
+
+  private isRedisDisabled(): boolean {
+    const value = (process.env.REDIS_DISABLED || process.env.NO_REDIS || '').toString().toLowerCase();
+    return value === '1' || value === 'true' || value === 'yes';
   }
 }
 

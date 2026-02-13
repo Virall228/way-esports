@@ -1,5 +1,4 @@
 import { createGlobalStyle } from 'styled-components';
-import { theme } from './theme';
 
 export const GlobalStyles = createGlobalStyle`
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap');
@@ -28,9 +27,9 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   body {
-    background-color: ${theme.colors.bg.primary};
-    color: ${theme.colors.text.primary};
-    font-family: ${theme.fonts.primary};
+    background-color: ${({ theme }) => theme.colors.bg.primary};
+    color: ${({ theme }) => theme.colors.text.primary};
+    font-family: ${({ theme }) => theme.fonts.primary};
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     margin: 0;
@@ -194,55 +193,55 @@ export const GlobalStyles = createGlobalStyle`
 
   /* Global title styles */
   h1, h2, h3, h4, h5, h6 {
-    font-family: ${theme.fonts.title};
-    font-weight: ${theme.fontWeights.semibold};
+    font-family: ${({ theme }) => theme.fonts.title};
+    font-weight: ${({ theme }) => theme.fontWeights.semibold};
     letter-spacing: 1px;
     margin-bottom: 1rem;
     text-transform: uppercase;
   }
 
   h1 {
-    font-weight: ${theme.fontWeights.bold};
+    font-weight: ${({ theme }) => theme.fontWeights.bold};
     font-size: 2.5rem;
     letter-spacing: 2px;
   }
 
   h2 {
-    font-weight: ${theme.fontWeights.semibold};
+    font-weight: ${({ theme }) => theme.fontWeights.semibold};
     font-size: 2rem;
     letter-spacing: 1.5px;
   }
 
   h3 {
-    font-weight: ${theme.fontWeights.medium};
+    font-weight: ${({ theme }) => theme.fontWeights.medium};
     font-size: 1.5rem;
     letter-spacing: 1px;
   }
 
   /* Body text styles */
   p, span, div, li, a {
-    font-family: ${theme.fonts.primary};
-    font-weight: ${theme.fontWeights.regular};
+    font-family: ${({ theme }) => theme.fonts.primary};
+    font-weight: ${({ theme }) => theme.fontWeights.regular};
   }
 
   /* Button styles */
   button {
-    font-family: ${theme.fonts.accent};
-    font-weight: ${theme.fontWeights.medium};
+    font-family: ${({ theme }) => theme.fonts.accent};
+    font-weight: ${({ theme }) => theme.fontWeights.medium};
     letter-spacing: 1px;
     text-transform: uppercase;
   }
 
   /* Input styles */
   input, textarea, select {
-    font-family: ${theme.fonts.primary};
-    font-weight: ${theme.fontWeights.regular};
+    font-family: ${({ theme }) => theme.fonts.primary};
+    font-weight: ${({ theme }) => theme.fontWeights.regular};
   }
 
   /* Label styles */
   label {
-    font-family: ${theme.fonts.accent};
-    font-weight: ${theme.fontWeights.medium};
+    font-family: ${({ theme }) => theme.fonts.accent};
+    font-weight: ${({ theme }) => theme.fontWeights.medium};
     letter-spacing: 0.8px;
     text-transform: uppercase;
   }
@@ -254,7 +253,7 @@ export const GlobalStyles = createGlobalStyle`
     transition: color 0.3s ease;
   }
 
-  a:hover { color: ${theme.colors.text.primary}; }
+  a:hover { color: ${({ theme }) => theme.colors.text.primary}; }
 
   /* Focus styles */
   *:focus { outline: 2px solid #444; outline-offset: 2px; }
@@ -326,31 +325,31 @@ export const GlobalStyles = createGlobalStyle`
 
   /* Utility classes for fonts */
   .font-title {
-    font-family: ${theme.fonts.accent} !important;
+    font-family: ${({ theme }) => theme.fonts.accent} !important;
   }
 
   .font-body {
-    font-family: ${theme.fonts.primary} !important;
+    font-family: ${({ theme }) => theme.fonts.primary} !important;
   }
 
   .font-weight-light {
-    font-weight: ${theme.fontWeights.regular} !important;
+    font-weight: ${({ theme }) => theme.fontWeights.regular} !important;
   }
 
   .font-weight-regular {
-    font-weight: ${theme.fontWeights.regular} !important;
+    font-weight: ${({ theme }) => theme.fontWeights.regular} !important;
   }
 
   .font-weight-medium {
-    font-weight: ${theme.fontWeights.medium} !important;
+    font-weight: ${({ theme }) => theme.fontWeights.medium} !important;
   }
 
   .font-weight-semibold {
-    font-weight: ${theme.fontWeights.semibold} !important;
+    font-weight: ${({ theme }) => theme.fontWeights.semibold} !important;
   }
 
   .font-weight-bold {
-    font-weight: ${theme.fontWeights.bold} !important;
+    font-weight: ${({ theme }) => theme.fontWeights.bold} !important;
   }
 
   .letter-spacing-tight {
@@ -369,3 +368,4 @@ export const GlobalStyles = createGlobalStyle`
     text-transform: uppercase !important;
   }
 `; 
+

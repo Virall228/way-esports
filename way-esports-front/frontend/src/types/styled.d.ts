@@ -3,9 +3,12 @@ import 'styled-components';
 declare module 'styled-components' {
   export interface DefaultTheme {
     fonts: {
+      primary: string;
+      secondary: string;
       title: string;
       body: string;
       accent: string;
+      mono?: string;
     };
     fontWeights: {
       light: number;
@@ -62,6 +65,14 @@ declare module 'styled-components' {
         light: string;
         medium: string;
         strong: string;
+      };
+      glass: {
+        panel: string;
+        panelBorder: string;
+        panelHover: string;
+        bar: string;
+        barBorder: string;
+        overlay: string;
       };
     };
     spacing: {

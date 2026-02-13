@@ -43,6 +43,21 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(true);
 
   useEffect(() => {
+    try {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'light') {
+        setIsDarkMode(false);
+      } else if (savedTheme === 'dark') {
+        setIsDarkMode(true);
+      }
+      const savedLanguage = localStorage.getItem('language');
+      if (savedLanguage === 'en' || savedLanguage === 'ru') {
+        setLanguage(savedLanguage);
+      }
+    } catch {
+      // ignore
+    }
+
     // Initialize Telegram WebApp
     const initTelegramWebApp = async () => {
       try {
@@ -78,7 +93,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   }, []);
 
   const toggleDarkMode = () => {
-    setIsDarkMode((prev) => !prev);
+    setIsDarkMode((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('theme', next ? 'dark' : 'light');
+      } catch {
+        // ignore
+      }
+      return next;
+    });
   };
 
   const value = {

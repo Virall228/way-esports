@@ -291,7 +291,7 @@ router.post('/join',
       }
 
       const participationTeamId = await getTournamentParticipationTeamId(userId, resolvedTournamentId);
-      if (participationTeamId && participationTeamId !== String(team._id)) {
+      if (participationTeamId && participationTeamId !== team.id) {
         return res.status(409).json({
           success: false,
           error: 'You are already participating in this tournament'
@@ -720,7 +720,7 @@ router.post('/:id/members', authenticateJWT, async (req, res) => {
       }
 
       const participationTeamId = await getTournamentParticipationTeamId(userId, team.tournamentId.toString());
-      if (participationTeamId && participationTeamId !== String(team._id)) {
+      if (participationTeamId && participationTeamId !== team.id) {
         return res.status(409).json({
           success: false,
           error: 'You are already participating in this tournament'

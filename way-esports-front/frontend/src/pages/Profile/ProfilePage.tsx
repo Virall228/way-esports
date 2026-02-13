@@ -7,6 +7,7 @@ import AchievementsSection from '../../components/Profile/AchievementsSection';
 import ReferralCard from '../../components/Referral/ReferralCard';
 import SubscriptionCard from '../../components/Subscription/SubscriptionCard';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { api } from '../../services/api';
 import { Link } from 'react-router-dom';
 import { useProfileQuery } from '../../hooks/useProfileQuery';
@@ -185,6 +186,7 @@ const InlineCancel = styled(Button).attrs({ variant: 'text', size: 'small' })`
 
 const ProfilePage: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { data: profileData, refetch: refetchProfile } = useProfileQuery();
   const profile = profileData || user;
   const [isWalletOpen, setIsWalletOpen] = useState(false);
@@ -251,15 +253,15 @@ const ProfilePage: React.FC = () => {
         <ProfileInfo>
           <ProfileTop>
             <div>
-              <Username>{profile?.username || 'Gamer'}</Username>
-              <UserOrg>{profile?.email || 'WAY Esports Member'}</UserOrg>
+              <Username>{profile?.username || t('defaultUsername')}</Username>
+              <UserOrg>{profile?.email || t('memberLabel')}</UserOrg>
               <Link to={`/profile/${profile?.id || user?.id}`} style={{ color: '#ff6b00', fontSize: '0.9rem', textDecoration: 'none' }}>
-                {'\u{1F517}'} View Public Profile
+                {'\u{1F517}'} {t('viewPublicProfile')}
               </Link>
             </div>
             <div>
               <SubscriptionButton onClick={() => setIsSubscriptionOpen(true)}>
-                {profile?.isSubscribed ? 'MANAGE SUBSCRIPTION' : 'GET SUBSCRIPTION'}
+                {profile?.isSubscribed ? t('manageSubscription') : t('getSubscription')}
               </SubscriptionButton>
               <WalletButton onClick={() => setIsWalletOpen(true)}>
                 {'\u{1F4B0}'} {profile?.balance?.toFixed(2) || '0.00'}
@@ -269,36 +271,36 @@ const ProfilePage: React.FC = () => {
           <UserStats>
             <StatItem>
               <StatValue>{profile?.stats?.matches || 0}</StatValue>
-              <StatLabel>Matches</StatLabel>
+              <StatLabel>{t('matches')}</StatLabel>
             </StatItem>
             <StatItem>
               <StatValue>{profile?.stats?.wins || 0}</StatValue>
-              <StatLabel>Wins</StatLabel>
+              <StatLabel>{t('wins')}</StatLabel>
             </StatItem>
             <StatItem>
               <StatValue>{profile?.stats?.mvps || 0}</StatValue>
-              <StatLabel>MVPs</StatLabel>
+              <StatLabel>{t('mvps')}</StatLabel>
             </StatItem>
             <StatItem>
               <StatValue>{profile?.stats?.kdRatio || '0.00'}</StatValue>
-              <StatLabel>K/D Ratio</StatLabel>
+              <StatLabel>{t('kdRatio')}</StatLabel>
             </StatItem>
           </UserStats>
 
           <div style={{ marginTop: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <StatLabel>BIO</StatLabel>
+              <StatLabel>{t('bioLabel')}</StatLabel>
               {!isEditingBio ? (
                 <InlineAction onClick={() => setIsEditingBio(true)}>
-                  Edit Bio
+                  {t('editBio')}
                 </InlineAction>
               ) : (
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <InlineConfirm onClick={handleSaveBio} disabled={isSaving}>
-                    {isSaving ? 'Saving...' : 'Save'}
+                    {isSaving ? t('saving') : t('save')}
                   </InlineConfirm>
                   <InlineCancel onClick={() => setIsEditingBio(false)}>
-                    Cancel
+                    {t('cancelAction')}
                   </InlineCancel>
                 </div>
               )}
@@ -318,10 +320,10 @@ const ProfilePage: React.FC = () => {
                   minHeight: '80px',
                   resize: 'vertical'
                 }}
-                placeholder="Tell the world about yourself..."
+                placeholder={t('bioPlaceholder')}
               />
             ) : (
-              <Bio style={{ marginTop: 0 }}>{profile?.bio || "No bio set yet. Tell people who you are!"}</Bio>
+              <Bio style={{ marginTop: 0 }}>{profile?.bio || t('noBio')}</Bio>
             )}
           </div>
         </ProfileInfo>
@@ -329,16 +331,16 @@ const ProfilePage: React.FC = () => {
 
       <StatsGrid>
         <StatsCard>
-          <CardTitle>Recent Matches</CardTitle>
+          <CardTitle>{t('recentMatches')}</CardTitle>
           <div style={{ color: '#999', fontStyle: 'italic', textAlign: 'center', padding: '40px 0' }}>
-            No matches played yet. Join tournaments to see your match history!
+            {t('noRecentMatches')}
           </div>
         </StatsCard>
 
         <StatsCard>
-          <CardTitle>Achievements</CardTitle>
+          <CardTitle>{t('achievementsLabel')}</CardTitle>
           <div style={{ color: '#999', fontStyle: 'italic', textAlign: 'center', padding: '40px 0' }}>
-            No achievements yet. Keep playing to earn your first achievement!
+            {t('noAchievementsYet')}
           </div>
         </StatsCard>
       </StatsGrid>
@@ -346,17 +348,17 @@ const ProfilePage: React.FC = () => {
       <StatsCard>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
           <span style={{ fontSize: '1.5rem' }}>{'\u{1F4CA}'}</span>
-          <CardTitle style={{ margin: 0 }}>Match Statistics</CardTitle>
+          <CardTitle style={{ margin: 0 }}>{t('matchStatistics')}</CardTitle>
         </div>
 
         <StatFilters>
-          <StatFilterButton variant="brand">All Matches (0)</StatFilterButton>
-          <StatFilterButton variant="outline">Wins (0)</StatFilterButton>
-          <StatFilterButton variant="outline">Losses (0)</StatFilterButton>
+          <StatFilterButton variant="brand">{t('allMatches')} (0)</StatFilterButton>
+          <StatFilterButton variant="outline">{t('wins')} (0)</StatFilterButton>
+          <StatFilterButton variant="outline">{t('losses')} (0)</StatFilterButton>
         </StatFilters>
 
         <div style={{ color: '#999', fontStyle: 'italic', textAlign: 'center', padding: '40px 0' }}>
-          No match statistics available yet. Start playing to see your performance data!
+          {t('noMatchStats')}
         </div>
       </StatsCard>
 

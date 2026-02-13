@@ -7,6 +7,7 @@ import { teamsService } from '../../services/teamsService';
 import { tournamentService } from '../../services/tournamentService';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const Container = styled.div`
   padding: 1rem;
@@ -282,6 +283,7 @@ interface Team {
 }
 
 const TeamsPage: React.FC = () => {
+  const { t } = useLanguage();
   const [activeFilter, setActiveFilter] = useState('teams');
   const [selectedGame, setSelectedGame] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -427,10 +429,11 @@ const TeamsPage: React.FC = () => {
     <Container>
       <Header>
         <HeaderContent>
-          <Title>WAY Ranked</Title>
+          <Title>{t('teamsTitle')}</Title>
           <Subtitle>
-            A modern ranking system for tracking player and team performance across the platform.
-            Compete, climb the leaderboards, and establish your dominance in the esports community.
+            {t('teamsSubtitle')}
+            {' '}
+            {t('teamsSubtitle2')}
           </Subtitle>
         </HeaderContent>
       </Header>
@@ -441,13 +444,13 @@ const TeamsPage: React.FC = () => {
             $active={activeFilter === 'teams'}
             onClick={() => setActiveFilter('teams')}
           >
-            Teams
+            {t('teams')}
           </FilterTab>
           <FilterTab
             $active={activeFilter === 'rankings'}
             onClick={() => setActiveFilter('rankings')}
           >
-            Rankings
+            {t('rankings')}
           </FilterTab>
         </FilterTabs>
         {activeFilter === 'teams' && (
@@ -456,13 +459,13 @@ const TeamsPage: React.FC = () => {
               value={selectedGame}
               onChange={(e) => setSelectedGame(e.target.value)}
             >
-              <option value="all">All Teams</option>
+              <option value="all">{t('allTeams')}</option>
               <option value="valorant">Valorant</option>
               <option value="critical-ops">Critical Ops</option>
               <option value="cs2">CS2</option>
             </FilterDropdown>
             <CreateTeamButton onClick={() => setIsCreateModalOpen(true)}>
-              Create Team
+              {t('createTeam')}
             </CreateTeamButton>
           </>
         )}
@@ -478,7 +481,7 @@ const TeamsPage: React.FC = () => {
 
           {loading && !error && (
             <div style={{ textAlign: 'center', padding: '40px 20px', color: '#cccccc' }}>
-              Loading...
+              {t('loading')}
             </div>
           )}
 
@@ -505,20 +508,20 @@ const TeamsPage: React.FC = () => {
                     <TeamStats>
                       <StatItem>
                         <StatValue>{team.tournaments}</StatValue>
-                        <StatLabel>Tournaments</StatLabel>
+                        <StatLabel>{t('tournamentsLabel')}</StatLabel>
                       </StatItem>
                       <StatItem>
                         <StatValue>{team.wins}</StatValue>
-                        <StatLabel>Wins</StatLabel>
+                        <StatLabel>{t('wins')}</StatLabel>
                       </StatItem>
                       <StatItem>
                         <StatValue>{team.winRate}%</StatValue>
-                        <StatLabel>Win Rate</StatLabel>
+                        <StatLabel>{t('winRate')}</StatLabel>
                       </StatItem>
                     </TeamStats>
 
                     <MembersList>
-                      <MembersTitle>Members ({team.members.length}/5)</MembersTitle>
+                      <MembersTitle>{t('membersLabel')} ({team.members.length}/5)</MembersTitle>
                       <Members>
                         {team.members.map((member, index) => (
                           <MemberTag key={index} $role={member.role}>
@@ -532,22 +535,22 @@ const TeamsPage: React.FC = () => {
                       {team.isOwner ? (
                         <>
                           <ActionButton $variant="secondary" onClick={() => handleEditTeam(team.id)}>
-                            Edit
+                            {t('edit')}
                           </ActionButton>
                           <ActionButton $variant="brand" onClick={() => handleViewDetails(team.id)}>
-                            View Details
+                            {t('viewDetails')}
                           </ActionButton>
                           <ActionButton $variant="danger" onClick={() => handleDeleteTeam(team.id)}>
-                            Delete
+                            {t('delete')}
                           </ActionButton>
                         </>
                       ) : (
                         <>
                           <ActionButton $variant="secondary" onClick={() => handleViewDetails(team.id)}>
-                            View Details
+                            {t('viewDetails')}
                           </ActionButton>
                           <ActionButton $variant="brand" onClick={() => handleJoinTeam(team)}>
-                            Join Team
+                            {t('joinTeam')}
                           </ActionButton>
                         </>
                       )}

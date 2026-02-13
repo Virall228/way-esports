@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import styled, { ThemeProvider } from 'styled-components';
 import {
@@ -16,7 +16,7 @@ import {
 } from 'react-feather';
 
 import { GlobalStyles as GlobalStyle } from './styles/GlobalStyles';
-import { theme as eslTheme } from './styles/theme';
+import { theme as darkTheme, lightTheme } from './styles/theme';
 
 // Import pages
 import Home from './pages/Home';
@@ -38,9 +38,10 @@ import GameHubPage from './pages/Games/GameHubPage';
 
 // Import components
 import TermsGuard from './components/Legal/TermsGuard';
-import { AppProvider } from './contexts/AppContext';
+import { AppProvider, useApp } from './contexts/AppContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NotificationProvider, useNotifications } from './contexts/NotificationContext';
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { api } from './services/api';
 
 type NavItem = {
@@ -56,9 +57,9 @@ const AppShell = styled.div`
   background:
     radial-gradient(900px 600px at 10% -10%, rgba(255, 255, 255, 0.06), transparent 60%),
     radial-gradient(800px 500px at 90% -20%, rgba(255, 255, 255, 0.04), transparent 60%),
-    ${eslTheme.colors.bg.primary};
-  color: ${eslTheme.colors.text.primary};
-  font-family: ${eslTheme.fonts.primary};
+    ${({ theme }) => theme.colors.bg.primary};
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-family: ${({ theme }) => theme.fonts.primary};
   display: flex;
   width: 100%;
   max-width: 100%;
@@ -74,8 +75,8 @@ const Sidebar = styled.aside`
   width: clamp(220px, 22vw, 280px);
   min-width: clamp(200px, 18vw, 240px);
   padding: 1.5rem 1rem;
-  background: rgba(17, 17, 17, 0.7);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: ${({ theme }) => theme.colors.glass.panel};
+  border-right: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
   backdrop-filter: blur(16px);
   position: sticky;
   top: 0;
@@ -84,7 +85,7 @@ const Sidebar = styled.aside`
   overscroll-behavior: contain;
   padding-bottom: calc(1.5rem + var(--sab, 0px));
 
-  @media (min-width: ${eslTheme.breakpoints.tablet}) {
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     display: flex;
     flex-direction: column;
   }
@@ -97,17 +98,17 @@ const SidebarBrand = styled.div`
 `;
 
 const Logo = styled.div`
-  font-family: ${eslTheme.fonts.title};
+  font-family: ${({ theme }) => theme.fonts.title};
   font-size: clamp(0.95rem, 3vw, 1.2rem);
-  font-weight: ${eslTheme.fontWeights.bold};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
   letter-spacing: clamp(1px, 0.4vw, 2px);
   text-transform: uppercase;
-  color: ${eslTheme.colors.white};
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const BrandSub = styled.div`
   font-size: 0.75rem;
-  color: ${eslTheme.colors.text.secondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   letter-spacing: 0.8px;
   text-transform: uppercase;
 `;
@@ -126,17 +127,17 @@ const NavItemLink = styled(Link) <{ $active?: boolean; $compact?: boolean }>`
   padding: ${({ $compact }) => ($compact ? '0.6rem 0.75rem' : '0.75rem 0.9rem')};
   border-radius: 12px;
   text-decoration: none;
-  color: ${({ $active }) => ($active ? eslTheme.colors.text.primary : eslTheme.colors.text.secondary)};
-  background: ${({ $active }) => ($active ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.03)')};
-  border: 1px solid ${({ $active }) => ($active ? eslTheme.colors.border.strong : 'rgba(255, 255, 255, 0.08)')};
-  transition: all ${eslTheme.transitions.fast};
+  color: ${({ $active, theme }) => ($active ? theme.colors.text.primary : theme.colors.text.secondary)};
+  background: ${({ $active, theme }) => ($active ? theme.colors.glass.panelHover : theme.colors.glass.panel)};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.border.strong : theme.colors.glass.panelBorder)};
+  transition: all ${({ theme }) => theme.transitions.fast};
   backdrop-filter: blur(12px);
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      background: rgba(255, 255, 255, 0.12);
-      color: ${eslTheme.colors.text.primary};
-      border-color: ${eslTheme.colors.border.strong};
+      background: ${({ theme }) => theme.colors.glass.panelHover};
+      color: ${({ theme }) => theme.colors.text.primary};
+      border-color: ${({ theme }) => theme.colors.border.strong};
       transform: translateY(-1px);
     }
   }
@@ -160,7 +161,7 @@ const NavItemIcon = styled.span`
 `;
 
 const NavItemLabel = styled.span`
-  font-family: ${eslTheme.fonts.accent};
+  font-family: ${({ theme }) => theme.fonts.accent};
   font-size: 0.85rem;
   letter-spacing: 0.6px;
   text-transform: uppercase;
@@ -187,15 +188,15 @@ const TopBar = styled.header`
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: rgba(12, 12, 12, 0.8);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: ${({ theme }) => theme.colors.glass.bar};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.glass.barBorder};
   backdrop-filter: blur(14px);
 
-  @media (min-width: ${eslTheme.breakpoints.tablet}) {
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     padding: 0.9rem 1.5rem;
   }
 
-  @media (min-width: ${eslTheme.breakpoints.desktop}) {
+  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
     padding: 1rem 2rem;
   }
 `;
@@ -210,7 +211,7 @@ const TopBarTitle = styled.div`
 
 const TopBarBadge = styled.span`
   font-size: 0.7rem;
-  color: ${eslTheme.colors.text.secondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
   letter-spacing: 1px;
 `;
@@ -222,18 +223,18 @@ const BurgerButton = styled.button`
   align-items: center;
   justify-content: center;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: ${eslTheme.colors.text.primary};
+  border: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
+  background: ${({ theme }) => theme.colors.glass.panel};
+  color: ${({ theme }) => theme.colors.text.primary};
 
-  @media (min-width: ${eslTheme.breakpoints.tablet}) {
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     display: none;
   }
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      background: rgba(255, 255, 255, 0.12);
-      border-color: ${eslTheme.colors.border.strong};
+      background: ${({ theme }) => theme.colors.glass.panelHover};
+      border-color: ${({ theme }) => theme.colors.border.strong};
     }
   }
 
@@ -253,11 +254,11 @@ const MainContent = styled.main`
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 
-  @media (min-width: ${eslTheme.breakpoints.tablet}) {
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     padding: 1.5rem 2rem 2rem;
   }
 
-  @media (min-width: ${eslTheme.breakpoints.desktop}) {
+  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
     padding: 2rem 2.5rem 2.5rem;
   }
 `;
@@ -272,15 +273,15 @@ const ContentInner = styled.div`
 `;
 
 const Footer = styled.footer`
-  background: rgba(10, 10, 10, 0.8);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: ${({ theme }) => theme.colors.glass.bar};
+  border-top: 1px solid ${({ theme }) => theme.colors.glass.barBorder};
   padding: 1.5rem 1rem;
   text-align: center;
-  color: ${eslTheme.colors.text.secondary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.875rem;
   flex: 0 0 auto;
 
-  @media (max-width: ${eslTheme.breakpoints.tablet}) {
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
     display: none;
   }
 `;
@@ -294,12 +295,12 @@ const BottomNav = styled.nav`
   display: flex;
   gap: 6px;
   padding: 10px calc(10px + var(--sar)) calc(10px + var(--sab, 0px)) calc(10px + var(--sal));
-  background: rgba(12, 12, 12, 0.85);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: ${({ theme }) => theme.colors.glass.bar};
+  border-top: 1px solid ${({ theme }) => theme.colors.glass.barBorder};
   backdrop-filter: blur(12px);
   overflow-x: auto;
 
-  @media (min-width: ${eslTheme.breakpoints.tablet}) {
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     display: none;
   }
 `;
@@ -309,9 +310,9 @@ const BottomNavItem = styled(Link) <{ $active?: boolean }>`
   min-width: 68px;
   min-height: 48px;
   border-radius: 12px;
-  border: 1px solid ${({ $active }) => ($active ? eslTheme.colors.border.strong : 'transparent')};
-  background: ${({ $active }) => ($active ? 'rgba(255, 255, 255, 0.1)' : 'transparent')};
-  color: ${({ $active }) => ($active ? eslTheme.colors.text.primary : eslTheme.colors.text.secondary)};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.border.strong : 'transparent')};
+  background: ${({ $active, theme }) => ($active ? theme.colors.glass.panelHover : 'transparent')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.text.primary : theme.colors.text.secondary)};
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -339,12 +340,12 @@ const BottomNavIcon = styled.span`
 const MobileMenuOverlay = styled.div<{ $open: boolean }>`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: ${({ theme }) => theme.colors.glass.overlay};
   backdrop-filter: blur(6px);
   z-index: 200;
   display: ${({ $open }) => ($open ? 'block' : 'none')};
 
-  @media (min-width: ${eslTheme.breakpoints.tablet}) {
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     display: none;
   }
 `;
@@ -355,8 +356,8 @@ const MobileMenuPanel = styled.div`
   left: 0;
   height: 100%;
   width: min(86vw, 360px);
-  background: rgba(15, 15, 15, 0.92);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: ${({ theme }) => theme.colors.glass.panel};
+  border-right: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -370,8 +371,8 @@ const MobileMenuHeader = styled.div`
 `;
 
 const MobileMenuTitle = styled.div`
-  font-family: ${eslTheme.fonts.accent};
-  font-weight: ${eslTheme.fontWeights.bold};
+  font-family: ${({ theme }) => theme.fonts.accent};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
   letter-spacing: 1px;
   text-transform: uppercase;
 `;
@@ -383,14 +384,14 @@ const CloseButton = styled.button`
   align-items: center;
   justify-content: center;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: transparent;
-  color: ${eslTheme.colors.text.primary};
+  border: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
+  background: ${({ theme }) => theme.colors.glass.panel};
+  color: ${({ theme }) => theme.colors.text.primary};
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      background: rgba(255, 255, 255, 0.12);
-      border-color: ${eslTheme.colors.border.strong};
+      background: ${({ theme }) => theme.colors.glass.panelHover};
+      border-color: ${({ theme }) => theme.colors.border.strong};
     }
   }
 
@@ -403,6 +404,7 @@ const AppContent: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const { addNotification } = useNotifications();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const location = useLocation();
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
@@ -410,24 +412,24 @@ const AppContent: React.FC = () => {
 
   const navItems = React.useMemo<NavItem[]>(() => {
     const items: NavItem[] = [
-      { label: 'Home', to: '/', icon: <HomeIcon {...iconProps} /> },
-      { label: 'Tournaments', to: '/tournaments', icon: <Award {...iconProps} /> },
-      { label: 'Teams', to: '/teams', icon: <Users {...iconProps} /> },
-      { label: 'Rankings', to: '/rankings', icon: <BarChart2 {...iconProps} /> },
-      { label: 'Matches', to: '/matches', icon: <Crosshair {...iconProps} /> },
-      { label: 'Prizes', to: '/prizes', icon: <Gift {...iconProps} /> },
-      { label: 'News', to: '/news', icon: <FileText {...iconProps} /> },
-      { label: 'Wallet', to: '/wallet', icon: <CreditCard {...iconProps} /> },
-      { label: 'Profile', to: '/profile', icon: <User {...iconProps} /> },
-      { label: 'Settings', to: '/settings', icon: <SettingsIcon {...iconProps} /> }
+      { label: t('home'), to: '/', icon: <HomeIcon {...iconProps} /> },
+      { label: t('tournaments'), to: '/tournaments', icon: <Award {...iconProps} /> },
+      { label: t('teams'), to: '/teams', icon: <Users {...iconProps} /> },
+      { label: t('rankings'), to: '/rankings', icon: <BarChart2 {...iconProps} /> },
+      { label: t('matches'), to: '/matches', icon: <Crosshair {...iconProps} /> },
+      { label: t('prizes'), to: '/prizes', icon: <Gift {...iconProps} /> },
+      { label: t('news'), to: '/news', icon: <FileText {...iconProps} /> },
+      { label: t('wallet'), to: '/wallet', icon: <CreditCard {...iconProps} /> },
+      { label: t('profile'), to: '/profile', icon: <User {...iconProps} /> },
+      { label: t('settings'), to: '/settings', icon: <SettingsIcon {...iconProps} /> }
     ];
 
     if (user?.role === 'admin' || user?.role === 'developer') {
-      items.push({ label: 'Admin', to: '/admin', icon: <Shield {...iconProps} />, adminOnly: true });
+      items.push({ label: t('admin'), to: '/admin', icon: <Shield {...iconProps} />, adminOnly: true });
     }
 
     return items;
-  }, [iconProps, user]);
+  }, [iconProps, t, user]);
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -500,9 +502,7 @@ const AppContent: React.FC = () => {
         <TopBar>
           <TopBarTitle>
             <Logo>WAY ESPORTS</Logo>
-            <TopBarBadge>
-              One Platform {'\u00B7'} One UI
-            </TopBarBadge>
+            <TopBarBadge>{t('onePlatformOneUi')}</TopBarBadge>
           </TopBarTitle>
           <BurgerButton type="button" onClick={() => setMobileMenuOpen(true)} aria-label="Open menu">
             {'\u2630'}
@@ -546,7 +546,7 @@ const AppContent: React.FC = () => {
       <MobileMenuOverlay $open={mobileMenuOpen} onClick={closeMobileMenu}>
         <MobileMenuPanel onClick={(e) => e.stopPropagation()}>
           <MobileMenuHeader>
-            <MobileMenuTitle>Menu</MobileMenuTitle>
+            <MobileMenuTitle>{t('menu')}</MobileMenuTitle>
             <CloseButton type="button" onClick={closeMobileMenu} aria-label="Close menu">
               {'\u2715'}
             </CloseButton>
@@ -579,25 +579,39 @@ const AppContent: React.FC = () => {
   );
 };
 
-const App: React.FC = () => {
+const ThemeShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isDarkMode } = useApp();
+  const activeTheme = React.useMemo(() => (isDarkMode ? darkTheme : lightTheme), [isDarkMode]);
+
   return (
-    <ThemeProvider theme={eslTheme}>
-      <AuthProvider>
-        <NotificationProvider>
-          <AppProvider>
-            <GlobalStyle />
-            <TermsGuard>
-              <BrowserRouter>
-                <AppContent />
-              </BrowserRouter>
-            </TermsGuard>
-          </AppProvider>
-        </NotificationProvider>
-      </AuthProvider>
+    <ThemeProvider theme={activeTheme}>
+      <GlobalStyle />
+      {children}
     </ThemeProvider>
   );
 };
 
+const App: React.FC = () => {
+  return (
+    <AppProvider>
+      <ThemeShell>
+        <AuthProvider>
+          <NotificationProvider>
+            <LanguageProvider>
+              <TermsGuard>
+                <BrowserRouter>
+                  <AppContent />
+                </BrowserRouter>
+              </TermsGuard>
+            </LanguageProvider>
+          </NotificationProvider>
+        </AuthProvider>
+      </ThemeShell>
+    </AppProvider>
+  );
+};
+
 export default App;
+
 
 

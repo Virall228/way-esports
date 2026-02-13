@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import { api } from '../../services/api';
+import { useApp } from '../../contexts/AppContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const Container = styled.div`
     width: 100%;
@@ -10,11 +12,11 @@ const Container = styled.div`
 `;
 
 const Section = styled.div`
-    background: rgba(26, 26, 26, 0.9);
+    background: ${({ theme }) => theme.colors.glass.panel};
     border-radius: 16px;
     padding: 24px;
     margin-bottom: 24px;
-    border: 1px solid #333;
+    border: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
 `;
 
 const SectionTitle = styled.h2`
@@ -36,7 +38,7 @@ const SettingRow = styled.div`
     justify-content: space-between;
     align-items: center;
     padding: 16px 0;
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border.medium};
 
     &:last-child {
         border-bottom: none;
@@ -44,19 +46,19 @@ const SettingRow = styled.div`
 `;
 
 const SettingLabel = styled.div`
-    color: #fff;
+    color: ${({ theme }) => theme.colors.text.primary};
     font-size: 16px;
 `;
 
 const SettingDescription = styled.div`
-    color: #999;
+    color: ${({ theme }) => theme.colors.text.tertiary};
     font-size: 14px;
     margin-top: 4px;
 `;
 
 const ThemeToggle = styled.button<{ isLight: boolean }>`
-    background: ${props => props.isLight ? '#fff' : '#333'};
-    border: 2px solid ${props => props.isLight ? '#ddd' : '#666'};
+    background: ${({ isLight, theme }) => (isLight ? theme.colors.surface : theme.colors.bg.secondary)};
+    border: 2px solid ${({ isLight, theme }) => (isLight ? theme.colors.border.light : theme.colors.border.medium)};
     width: 64px;
     height: 32px;
     border-radius: 16px;
@@ -100,11 +102,11 @@ const ContactForm = styled.form`
 `;
 
 const Input = styled.input`
-    background: #333;
-    border: 1px solid #666;
+    background: ${({ theme }) => theme.colors.surface};
+    border: 1px solid ${({ theme }) => theme.colors.border.medium};
     border-radius: 8px;
     padding: 12px;
-    color: #fff;
+    color: ${({ theme }) => theme.colors.text.primary};
     font-size: 16px;
     width: 100%;
 
@@ -115,11 +117,11 @@ const Input = styled.input`
 `;
 
 const TextArea = styled.textarea`
-    background: #333;
-    border: 1px solid #666;
+    background: ${({ theme }) => theme.colors.surface};
+    border: 1px solid ${({ theme }) => theme.colors.border.medium};
     border-radius: 8px;
     padding: 12px;
-    color: #fff;
+    color: ${({ theme }) => theme.colors.text.primary};
     font-size: 16px;
     width: 100%;
     min-height: 120px;
@@ -150,7 +152,7 @@ const SubmitButton = styled.button`
 const ContactInfo = styled.div`
     margin-top: 20px;
     padding-top: 20px;
-    border-top: 1px solid #333;
+    border-top: 1px solid ${({ theme }) => theme.colors.border.light};
 `;
 
 const ContactItem = styled.div`
@@ -158,7 +160,7 @@ const ContactItem = styled.div`
     align-items: center;
     gap: 10px;
     margin-bottom: 12px;
-    color: #fff;
+    color: ${({ theme }) => theme.colors.text.primary};
 
     svg {
         color: #FF6B00;
@@ -175,8 +177,8 @@ const ContactItem = styled.div`
 `;
 
 const SettingsPage: React.FC = () => {
-    const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-    const [language, setLanguage] = useState<'en' | 'ru'>('en');
+    const { isDarkMode, toggleDarkMode } = useApp();
+    const { language, setLanguage, t } = useLanguage();
     const [contactForm, setContactForm] = useState({
         name: '',
         email: '',
@@ -186,26 +188,12 @@ const SettingsPage: React.FC = () => {
         status: 'idle'
     });
 
-    useEffect(() => {
-        // Load saved preferences
-        const savedTheme = localStorage.getItem('theme') as 'light' | 'dark';
-        const savedLanguage = localStorage.getItem('language') as 'en' | 'ru';
-        
-        if (savedTheme) setTheme(savedTheme);
-        if (savedLanguage) setLanguage(savedLanguage);
-    }, []);
-
     const handleThemeToggle = () => {
-        const newTheme = theme === 'light' ? 'dark' : 'light';
-        setTheme(newTheme);
-        localStorage.setItem('theme', newTheme);
-        // Here you would also update your app's theme context
+        toggleDarkMode();
     };
 
     const handleLanguageChange = (lang: 'en' | 'ru') => {
         setLanguage(lang);
-        localStorage.setItem('language', lang);
-        // Here you would also update your app's language context
     };
 
     const handleContactSubmit = async (e: React.FormEvent) => {
@@ -229,22 +217,22 @@ const SettingsPage: React.FC = () => {
                         <path d="M12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z"/>
                         <path d="M12 2L9.2 4.8 6 4l.8 3.2L4 12l2.8 2.8L6 18l3.2-.8L12 20l2.8-2.8 3.2.8-.8-3.2L20 12l-2.8-2.8L18 6l-3.2.8L12 2z"/>
                     </svg>
-                    Appearance
+                    {t('appearance')}
                 </SectionTitle>
                 <SettingRow>
                     <div>
-                        <SettingLabel>Theme</SettingLabel>
-                        <SettingDescription>Choose between light and dark theme</SettingDescription>
+                        <SettingLabel>{t('theme')}</SettingLabel>
+                        <SettingDescription>{t('chooseTheme')}</SettingDescription>
                     </div>
                     <ThemeToggle 
-                        isLight={theme === 'light'}
+                        isLight={!isDarkMode}
                         onClick={handleThemeToggle}
                     />
                 </SettingRow>
                 <SettingRow>
                     <div>
-                        <SettingLabel>Language</SettingLabel>
-                        <SettingDescription>Select your preferred language</SettingDescription>
+                        <SettingLabel>{t('language')}</SettingLabel>
+                        <SettingDescription>{t('selectLanguage')}</SettingDescription>
                     </div>
                     <div>
                         <LanguageButton 
@@ -268,37 +256,37 @@ const SettingsPage: React.FC = () => {
                     <svg viewBox="0 0 24 24" fill="currentColor">
                         <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8l8 5 8-5v10zm-8-7L4 6h16l-8 5z"/>
                     </svg>
-                    Contact Us
+                    {t('contactUs')}
                 </SectionTitle>
                 <ContactForm onSubmit={handleContactSubmit}>
                     <Input
                         type="text"
-                        placeholder="Your Name"
+                        placeholder={t('yourName')}
                         value={contactForm.name}
                         onChange={(e) => setContactForm(prev => ({ ...prev, name: e.target.value }))}
                         required
                     />
                     <Input
                         type="email"
-                        placeholder="Your Email"
+                        placeholder={t('yourEmail')}
                         value={contactForm.email}
                         onChange={(e) => setContactForm(prev => ({ ...prev, email: e.target.value }))}
                         required
                     />
                     <TextArea
-                        placeholder="Your Message"
+                        placeholder={t('yourMessage')}
                         value={contactForm.message}
                         onChange={(e) => setContactForm(prev => ({ ...prev, message: e.target.value }))}
                         required
                     />
                     <SubmitButton type="submit" disabled={submitState.status === 'loading'}>
-                        {submitState.status === 'loading' ? 'Sending...' : 'Send Message'}
+                        {submitState.status === 'loading' ? t('sendingMessage') : t('sendMessage')}
                     </SubmitButton>
                     {submitState.status === 'success' && (
-                        <div style={{ color: '#4CAF50', fontWeight: 'bold' }}>{submitState.message}</div>
+                        <div style={{ color: '#4CAF50', fontWeight: 'bold' }}>{t('messageSent')}</div>
                     )}
                     {submitState.status === 'error' && (
-                        <div style={{ color: '#ff6b6b', fontWeight: 'bold' }}>{submitState.message}</div>
+                        <div style={{ color: '#ff6b6b', fontWeight: 'bold' }}>{t('messageFailed')}</div>
                     )}
                 </ContactForm>
 

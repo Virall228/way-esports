@@ -5,17 +5,31 @@ import User from '../models/User';
 
 dotenvConfig();
 
+const isRedisDisabled = (): boolean => {
+  const value = (process.env.REDIS_DISABLED || process.env.NO_REDIS || '').toString().toLowerCase();
+  return value === '1' || value === 'true' || value === 'yes';
+};
+
+const redisDisabled = isRedisDisabled();
 const connection = { url: process.env.REDIS_URL || 'redis://localhost:6379' };
 
-export const tasksQueue = new Queue('tasks', { connection });
-export const tasksEvents = new QueueEvents('tasks', { connection });
+export const tasksQueue = redisDisabled ? null : new Queue('tasks', { connection });
+export const tasksEvents = redisDisabled ? null : new QueueEvents('tasks', { connection });
 
 export async function addTask(name: string, data: any, opts?: JobsOptions) {
+  if (!tasksQueue) {
+    return { skipped: true, reason: 'redis_disabled' };
+  }
   return tasksQueue.add(name, data, opts);
 }
 
 // Basic workers; for production consider moving to a separate worker process.
 export function startWorkers() {
+  if (!tasksQueue || !tasksEvents) {
+    console.log('[queue] Redis disabled; workers are not started.');
+    return;
+  }
+
   new Worker(
     'tasks',
     async (job) => {

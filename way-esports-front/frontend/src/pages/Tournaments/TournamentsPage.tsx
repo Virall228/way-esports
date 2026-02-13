@@ -7,6 +7,7 @@ import navigationService from '../../services/NavigationService';
 import { tournamentService } from '../../services/tournamentService';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const Container = styled.div`
   padding: 1rem;
@@ -222,6 +223,7 @@ interface Tournament {
 }
 
 const TournamentsPage: React.FC = () => {
+  const { t } = useLanguage();
   const [activeFilter, setActiveFilter] = useState('all');
   const [activeGame] = useState('all');
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
@@ -278,6 +280,13 @@ const TournamentsPage: React.FC = () => {
     });
   }, [tournaments, activeFilter, activeGame]);
 
+  const getStatusLabel = (status: Tournament['status']) => {
+    if (status === 'live') return t('live');
+    if (status === 'completed') return t('completed');
+    if (status === 'comingSoon') return t('comingSoon');
+    return t('upcoming');
+  };
+
   const handleTournamentClick = async (t: Tournament) => {
     if (t.status === 'comingSoon') {
       navigationService.goToGameHub(t.game);
@@ -311,11 +320,11 @@ const TournamentsPage: React.FC = () => {
     <Container>
       <Header>
         <HeaderContent>
-          <Title>Tournaments</Title>
-          <Subtitle>Compete in tournaments, win prizes, and prove your skills</Subtitle>
+          <Title>{t('tournamentsTitle')}</Title>
+          <Subtitle>{t('tournamentsSubtitle')}</Subtitle>
         </HeaderContent>
         <RulesButton onClick={() => setIsRulesModalOpen(true)}>
-          {'\u{1F4CB}'} Rules
+          {'\u{1F4CB}'} {t('rules')}
         </RulesButton>
       </Header>
 
@@ -323,14 +332,14 @@ const TournamentsPage: React.FC = () => {
         <FilterTabs>
           {['all', 'upcoming', 'live', 'completed'].map(f => (
             <FilterTab key={f} $active={activeFilter === f} onClick={() => setActiveFilter(f)}>
-              {f.charAt(0).toUpperCase() + f.slice(1)}
+              {f === 'all' ? t('allFilter') : f === 'upcoming' ? t('upcoming') : f === 'completed' ? t('completed') : t('live')}
             </FilterTab>
           ))}
         </FilterTabs>
       </FilterSection>
 
       {loading ? (
-        <EmptyState>Loading...</EmptyState>
+        <EmptyState>{t('loading')}</EmptyState>
       ) : errorMessage ? (
         <EmptyState>{errorMessage}</EmptyState>
       ) : (
@@ -338,46 +347,46 @@ const TournamentsPage: React.FC = () => {
           {filteredTournaments.map(t => (
             <TournamentCard key={t.id} $status={t.status} onClick={() => handleTournamentClick(t)}>
               <GameIcon src={`/images/games/${t.game.toLowerCase().replace(/\s/g, '')}.png`} alt={t.game} />
-              <StatusBadge $status={t.status}>{t.status.toUpperCase()}</StatusBadge>
+              <StatusBadge $status={t.status}>{getStatusLabel(t.status)}</StatusBadge>
               <TournamentTitle>{t.title}</TournamentTitle>
 
               <PrizePool>{t.prizePool}</PrizePool>
 
               <InfoRow>
-                <InfoLabel>Participants</InfoLabel>
+                <InfoLabel>{t('participantsLabel')}</InfoLabel>
                 <InfoValue>{t.participants}/{t.maxParticipants}</InfoValue>
               </InfoRow>
               <InfoRow>
-                <InfoLabel>Date</InfoLabel>
+                <InfoLabel>{t('dateLabel')}</InfoLabel>
                 <InfoValue>{t.date}</InfoValue>
               </InfoRow>
               <InfoRow>
-                <InfoLabel>Format</InfoLabel>
+                <InfoLabel>{t('formatLabel')}</InfoLabel>
                 <InfoValue>{t.format}</InfoValue>
               </InfoRow>
 
               <ActionButton $variant={t.status === 'upcoming' ? 'brand' : 'outline'} style={{ marginTop: '15px' }}>
-                {t.status === 'upcoming' ? 'Join Now' : t.status === 'live' ? 'View Details' : 'Results'}
+                {t.status === 'upcoming' ? t('joinNow') : t.status === 'live' ? t('viewDetails') : t('results')}
               </ActionButton>
             </TournamentCard>
           ))}
         </TournamentsGrid>
       )}
 
-      {filteredTournaments.length === 0 && !loading && <EmptyState>No tournaments found</EmptyState>}
+      {filteredTournaments.length === 0 && !loading && <EmptyState>{t('noTournamentsFound')}</EmptyState>}
 
       {showGuard && (
         <TournamentRegistrationGuard onAccessDenied={() => setShowGuard(false)}>
-          <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.8)', zIndex: 1100, display: 'flex',
-            alignItems: 'center', justifyContent: 'center'
-          }}>
-            <div style={{ background: '#1a1a1a', padding: '30px', borderRadius: '16px', maxWidth: '400px', textAlign: 'center' }}>
-              <h2>Confirm Entry</h2>
-              <p>Are you sure you want to register for this tournament?</p>
-              <ActionButton onClick={onRegistrationConfirm}>Confirm & Join</ActionButton>
-              <ActionButton $variant="outline" onClick={() => setShowGuard(false)} style={{ marginTop: '10px' }}>Cancel</ActionButton>
+            <div style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.8)', zIndex: 1100, display: 'flex',
+              alignItems: 'center', justifyContent: 'center'
+            }}>
+              <div style={{ background: '#1a1a1a', padding: '30px', borderRadius: '16px', maxWidth: '400px', textAlign: 'center' }}>
+              <h2>{t('confirmEntry')}</h2>
+              <p>{t('confirmEntryText')}</p>
+              <ActionButton onClick={onRegistrationConfirm}>{t('confirmJoin')}</ActionButton>
+              <ActionButton $variant="outline" onClick={() => setShowGuard(false)} style={{ marginTop: '10px' }}>{t('cancel')}</ActionButton>
             </div>
           </div>
         </TournamentRegistrationGuard>
@@ -393,16 +402,16 @@ const TournamentsPage: React.FC = () => {
             background: '#1a1a1a', padding: '30px', borderRadius: '16px',
             maxWidth: '600px', width: '90%', maxHeight: '80vh', overflowY: 'auto'
           }} onClick={e => e.stopPropagation()}>
-            <h2 style={{ color: '#ff6b00' }}>Tournament Rules</h2>
+            <h2 style={{ color: '#ff6b00' }}>{t('rules')}</h2>
             <div style={{ color: '#ccc', marginTop: '20px' }}>
-              <h3>General</h3>
+              <h3>{t('rulesGeneral')}</h3>
               <ul>
-                <li>Players must be registered on WAY Esports.</li>
-                <li>Fair play is mandatory.</li>
-                <li>Cheating results in permanent ban.</li>
+                <li>{t('rulesItem1')}</li>
+                <li>{t('rulesItem2')}</li>
+                <li>{t('rulesItem3')}</li>
               </ul>
             </div>
-            <ActionButton onClick={() => setIsRulesModalOpen(false)}>Close</ActionButton>
+            <ActionButton onClick={() => setIsRulesModalOpen(false)}>{t('close')}</ActionButton>
           </div>
         </div>
       )}

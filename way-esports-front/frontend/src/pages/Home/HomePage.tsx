@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import { api } from '../../services/api';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const Container = styled.div`
   padding: 40px;
@@ -176,6 +177,7 @@ const StatLabel = styled.div`
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [isBooting, setIsBooting] = useState(true);
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -237,83 +239,83 @@ const HomePage: React.FC = () => {
         <Logo>WAY</Logo>
         <HeroTitle>WAY ESPORTS</HeroTitle>
         <HeroSubtitle>
-          Your ultimate destination for competitive gaming tournaments, team management, and esports excellence.
+          {t('homeHeroSubtitle')}
         </HeroSubtitle>
         <CTAButton onClick={() => navigate('/tournaments')}>
-          JOIN TOURNAMENT
+          {t('joinTournament')}
         </CTAButton>
       </HeroSection>
 
-      <SectionTitle>WHY CHOOSE WAY ESPORTS?</SectionTitle>
+      <SectionTitle>{t('whyChoose')}</SectionTitle>
 
       <FeaturesGrid>
         <FeatureCard>
           <FeatureIcon>{'\u{1F3C6}'}</FeatureIcon>
-          <FeatureTitle>Professional Tournaments</FeatureTitle>
+          <FeatureTitle>{t('featureProfessionalTournaments')}</FeatureTitle>
           <FeatureDescription>
-            Compete in high-stakes tournaments with substantial prize pools and professional organization.
+            {t('featureProfessionalTournamentsDesc')}
           </FeatureDescription>
         </FeatureCard>
 
         <FeatureCard>
           <FeatureIcon>{'\u{1F465}'}</FeatureIcon>
-          <FeatureTitle>Team Management</FeatureTitle>
+          <FeatureTitle>{t('featureTeamManagement')}</FeatureTitle>
           <FeatureDescription>
-            Create, manage, and lead your esports team with advanced tools and analytics.
+            {t('featureTeamManagementDesc')}
           </FeatureDescription>
         </FeatureCard>
 
         <FeatureCard>
           <FeatureIcon>{'\u{1F3AE}'}</FeatureIcon>
-          <FeatureTitle>Multi-Platform Gaming</FeatureTitle>
+          <FeatureTitle>{t('featureMultiPlatform')}</FeatureTitle>
           <FeatureDescription>
-            Participate in tournaments across various popular esports titles and genres.
+            {t('featureMultiPlatformDesc')}
           </FeatureDescription>
         </FeatureCard>
 
         <FeatureCard>
           <FeatureIcon>{'\u{1F4CA}'}</FeatureIcon>
-          <FeatureTitle>Advanced Analytics</FeatureTitle>
+          <FeatureTitle>{t('featureAdvancedAnalytics')}</FeatureTitle>
           <FeatureDescription>
-            Track your performance with detailed statistics and insights to improve your game.
+            {t('featureAdvancedAnalyticsDesc')}
           </FeatureDescription>
         </FeatureCard>
 
         <FeatureCard>
           <FeatureIcon>{'\u{1F3C5}'}</FeatureIcon>
-          <FeatureTitle>Rewards System</FeatureTitle>
+          <FeatureTitle>{t('featureRewardsSystem')}</FeatureTitle>
           <FeatureDescription>
-            Earn points, badges, and rewards for your achievements and participation.
+            {t('featureRewardsSystemDesc')}
           </FeatureDescription>
         </FeatureCard>
 
         <FeatureCard>
           <FeatureIcon>{'\u{1F310}'}</FeatureIcon>
-          <FeatureTitle>Global Community</FeatureTitle>
+          <FeatureTitle>{t('featureGlobalCommunity')}</FeatureTitle>
           <FeatureDescription>
-            Connect with players from around the world and build lasting friendships.
+            {t('featureGlobalCommunityDesc')}
           </FeatureDescription>
         </FeatureCard>
       </FeaturesGrid>
 
       <StatsSection>
-        <StatsTitle>PLATFORM STATISTICS</StatsTitle>
+        <StatsTitle>{t('platformStatistics')}</StatsTitle>
         <StatsGrid>
           <StatCard>
             <StatNumber>{stats.activeTournaments}+</StatNumber>
-            <StatLabel>Active Tournaments</StatLabel>
+            <StatLabel>{t('statActiveTournaments')}</StatLabel>
           </StatCard>
           <StatCard>
             <StatNumber>{stats.totalUsers.toLocaleString()}+</StatNumber>
-            <StatLabel>Registered Players</StatLabel>
+            <StatLabel>{t('statRegisteredPlayers')}</StatLabel>
           </StatCard>
           <StatCard>
             <StatNumber>{stats.activeTeams}+</StatNumber>
-            <StatLabel>Active Teams</StatLabel>
+            <StatLabel>{t('statActiveTeams')}</StatLabel>
           </StatCard>
           <StatCard>
             <StatNumber>${stats.totalPrizePool.toLocaleString()}</StatNumber>
-            <StatLabel>Total Prize Pool</StatLabel>
+            <StatLabel>{t('statTotalPrizePool')}</StatLabel>
           </StatCard>
         </StatsGrid>
       </StatsSection>
