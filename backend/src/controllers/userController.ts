@@ -33,8 +33,11 @@ const checkAdminBootstrap = async (user: any) => {
   const bootstrapId = getBootstrapAdminTelegramId();
   const bootstrapEmail = getBootstrapAdminEmail();
 
-  const isIdMatch = bootstrapId && user.telegramId === bootstrapId;
-  const isEmailMatch = bootstrapEmail && user.email === bootstrapEmail;
+  const userTelegramId = Number(user.telegramId);
+  const userEmail = typeof user.email === 'string' ? user.email.toLowerCase() : null;
+
+  const isIdMatch = typeof bootstrapId === 'number' && Number.isFinite(userTelegramId) && userTelegramId === bootstrapId;
+  const isEmailMatch = Boolean(bootstrapEmail && userEmail && userEmail === bootstrapEmail.toLowerCase());
 
   if (isIdMatch || isEmailMatch) {
     if (user.role !== 'admin' && user.role !== 'developer') {
@@ -117,6 +120,8 @@ export const login = async (req: Request, res: Response) => {
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }
+
+    await checkAdminBootstrap(user);
 
     const jwtToken = jwt.sign(
       { userId: user._id.toString(), telegramId: user.telegramId, role: user.role },

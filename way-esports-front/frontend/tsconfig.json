@@ -24,6 +24,9 @@
   },
   "include": ["src"],
   "exclude": [
+    "src/App-final.tsx",
+    "src/App-new.tsx",
+    "src/App-complete.tsx",
     "src/**/*.test.ts",
     "src/**/*.test.tsx", 
     "src/**/__tests__/**/*",

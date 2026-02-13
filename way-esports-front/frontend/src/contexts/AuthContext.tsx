@@ -106,8 +106,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      // Fallback: Email OTP (passwordless)
-      const emailRaw = window.prompt('Enter email for login');
+      // Browser fallback: try Telegram ID login first (no OTP)
+      const telegramIdRaw = window.prompt('Enter Telegram ID for login');
+      const telegramId = (telegramIdRaw || '').trim();
+      if (telegramId) {
+        const telegramResult: any = await api.post('/api/auth/login', { telegramId });
+        const token = telegramResult?.token || telegramResult?.sessionToken;
+        const rawUser = telegramResult?.user;
+        if (!token || !rawUser) {
+          throw new Error('Invalid Telegram login response');
+        }
+
+        setToken(token);
+        setUser(normalizeUser(rawUser));
+        return;
+      }
+
+      // Last fallback: Email OTP (passwordless)
+      const emailRaw = window.prompt('Enter email for login (OTP fallback)');
       const email = (emailRaw || '').trim();
       if (!email) {
         throw new Error('Email is required');
