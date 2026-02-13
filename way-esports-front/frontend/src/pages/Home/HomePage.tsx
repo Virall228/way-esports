@@ -45,15 +45,15 @@ const HeroSection = styled(Card).attrs({ variant: 'elevated' })`
 const Logo = styled.div`
   width: 120px;
   height: 120px;
-  background: ${({ theme }) => theme.colors.gray[800]};
+  background: url('/images/way-esports-logo.png.jpg') center/cover no-repeat;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 30px;
-  font-size: 2rem;
-  font-weight: bold;
-  color: #ffffff;
+  border: 1px solid ${({ theme }) => theme.colors.border.medium};
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
 `;
 
 const HeroTitle = styled.h1`
@@ -236,7 +236,7 @@ const HomePage: React.FC = () => {
   return (
     <Container>
       <HeroSection>
-        <Logo>WAY</Logo>
+        <Logo aria-label="WAY logo" />
         <HeroTitle>WAY ESPORTS</HeroTitle>
         <HeroSubtitle>
           {t('homeHeroSubtitle')}
