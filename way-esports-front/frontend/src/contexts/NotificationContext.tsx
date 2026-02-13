@@ -314,7 +314,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     if (settings.push && 'Notification' in window && Notification.permission === 'granted') {
       new Notification(notification.title, {
         body: notification.message,
-        icon: '/logo192.png',
+        icon: '/knife.svg',
       });
     }
   };

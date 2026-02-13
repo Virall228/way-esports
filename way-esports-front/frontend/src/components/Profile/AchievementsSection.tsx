@@ -85,6 +85,15 @@ const AchievementsSection: React.FC = () => {
   useEffect(() => {
     let mounted = true;
     const load = async () => {
+      if (!api.hasToken()) {
+        if (mounted) {
+          setItems([]);
+          setLoading(false);
+          setError(null);
+        }
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
@@ -92,7 +101,14 @@ const AchievementsSection: React.FC = () => {
         const list: Achievement[] = (res && res.data) || [];
         if (mounted) setItems(list);
       } catch (e: any) {
-        if (mounted) setError(e?.message || 'Failed to load achievements');
+        if (mounted) {
+          if (e?.status === 401) {
+            setItems([]);
+            setError(null);
+          } else {
+            setError(e?.message || 'Failed to load achievements');
+          }
+        }
       } finally {
         if (mounted) setLoading(false);
       }

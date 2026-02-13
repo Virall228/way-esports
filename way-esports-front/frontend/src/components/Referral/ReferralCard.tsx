@@ -185,11 +185,21 @@ const ReferralCard: React.FC = () => {
   }, []);
 
   const loadReferralStats = async () => {
+    if (!api.hasToken()) {
+      setStats(null);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const response = await api.get('/api/referrals/stats');
       setStats(response.data);
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.status === 401) {
+        setStats(null);
+        return;
+      }
       console.error('Failed to load referral stats:', error);
     } finally {
       setLoading(false);

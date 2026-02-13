@@ -142,6 +142,16 @@ const SubscriptionCard: React.FC = () => {
   }, []);
 
   const loadSubscriptionData = async () => {
+    if (!api.hasToken()) {
+      setSubscription({
+        isSubscribed: false,
+        freeEntriesCount: 0,
+        subscriptionPrice: 9.99
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const [referralResponse] = await Promise.all([
@@ -160,7 +170,15 @@ const SubscriptionCard: React.FC = () => {
         freeEntriesCount: stats.freeEntriesCount,
         subscriptionPrice: settings.subscriptionPrice
       });
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.status === 401) {
+        setSubscription({
+          isSubscribed: false,
+          freeEntriesCount: 0,
+          subscriptionPrice: 9.99
+        });
+        return;
+      }
       console.error('Failed to load subscription data:', error);
     } finally {
       setLoading(false);

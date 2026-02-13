@@ -8,7 +8,10 @@ const router = express.Router();
 // Get team rankings
 router.get('/teams/rankings', async (req, res) => {
   try {
-    const { timeFrame, game } = req.query;
+    const timeFrameRaw = (req.query.timeFrame || req.query.timeframe || 'week') as string;
+    const gameRaw = (req.query.game || 'all') as string;
+    const timeFrame = timeFrameRaw.toLowerCase();
+    const game = gameRaw.toLowerCase();
     const query: any = {};
     
     // Add game filter if specified
@@ -26,23 +29,23 @@ router.get('/teams/rankings', async (req, res) => {
 
     // Get teams with stats
     const teams = await Team.find(query)
-      .populate('achievements.tournamentId', 'name prizePool')
-      .sort({ 'stats.winRate': -1, 'stats.totalPrizeMoney': -1 });
+      .sort({ 'stats.winRate': -1, 'stats.totalPrizeMoney': -1 })
+      .lean();
 
     // Calculate rankings
-    const rankedTeams = teams.map((team, index) => ({
+    const rankedTeams = teams.map((team: any, index) => ({
       _id: team._id,
       name: team.name,
       tag: team.tag,
       logo: team.logo,
       game: team.game,
       rank: index + 1,
-      totalPrize: team.stats.totalPrizeMoney || 0,
-      tournamentWins: team.achievements?.filter((a: any) => a.position === 1).length || 0,
-      matches: team.stats.totalMatches || 0,
-      wins: team.stats.wins || 0,
-      losses: team.stats.losses || 0,
-      winRate: team.stats.winRate || 0
+      totalPrize: team?.stats?.totalPrizeMoney || 0,
+      tournamentWins: (team?.achievements || []).filter((a: any) => a?.position === 1).length,
+      matches: team?.stats?.totalMatches || 0,
+      wins: team?.stats?.wins || 0,
+      losses: team?.stats?.losses || 0,
+      winRate: team?.stats?.winRate || 0
     }));
 
     res.json(rankedTeams);
@@ -55,7 +58,8 @@ router.get('/teams/rankings', async (req, res) => {
 // Get player rankings
 router.get('/players/rankings', async (req, res) => {
   try {
-    const { timeFrame, game } = req.query;
+    const gameRaw = (req.query.game || 'all') as string;
+    const game = gameRaw.toLowerCase();
     const query: any = {};
     
     // Add game filter if specified
@@ -66,22 +70,23 @@ router.get('/players/rankings', async (req, res) => {
     // Get users with stats
     const users = await User.find(query)
       .populate('teams', 'name tag')
-      .sort({ 'stats.totalPrizeMoney': -1, 'stats.wins': -1 });
+      .sort({ 'stats.totalPrizeMoney': -1, 'stats.wins': -1 })
+      .lean();
 
     // Calculate rankings
-    const rankedPlayers = users.map((user, index) => ({
+    const rankedPlayers = users.map((user: any, index) => ({
       _id: user._id,
       username: user.username,
       firstName: user.firstName,
       lastName: user.lastName,
       profileLogo: user.profileLogo,
       rank: index + 1,
-      totalPrize: (user as any).stats?.totalPrizeMoney || 0,
-      tournamentWins: (user as any).stats?.tournamentWins || 0,
-      matches: (user as any).stats?.totalMatches || 0,
-      wins: (user as any).stats?.wins || 0,
-      losses: (user as any).stats?.losses || 0,
-      winRate: (user as any).stats?.winRate || 0,
+      totalPrize: user?.stats?.totalPrizeMoney || 0,
+      tournamentWins: user?.stats?.tournamentWins || 0,
+      matches: user?.stats?.totalMatches || 0,
+      wins: user?.stats?.wins || 0,
+      losses: user?.stats?.losses || 0,
+      winRate: user?.stats?.winRate || 0,
       teams: user.teams
     }));
 

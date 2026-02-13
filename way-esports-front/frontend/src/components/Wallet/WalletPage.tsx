@@ -94,6 +94,14 @@ const WalletPage: React.FC = () => {
     };
 
     const loadWallet = async () => {
+        if (!api.hasToken()) {
+            setBalance(0);
+            setTransactions([]);
+            setError(null);
+            setLoading(false);
+            return;
+        }
+
         try {
             setLoading(true);
             setError(null);
@@ -113,7 +121,13 @@ const WalletPage: React.FC = () => {
             });
             setTransactions(sorted);
         } catch (err: any) {
-            setError(err?.message || 'Failed to load wallet');
+            if (err?.status === 401) {
+                setBalance(0);
+                setTransactions([]);
+                setError(null);
+            } else {
+                setError(err?.message || 'Failed to load wallet');
+            }
         } finally {
             setLoading(false);
         }

@@ -125,5 +125,7 @@ export const api = {
 
   setNotifyHandler: (handler: typeof notifyHandler) => {
     notifyHandler = handler;
-  }
+  },
+
+  hasToken: () => Boolean(getToken())
 };

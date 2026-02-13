@@ -280,6 +280,17 @@ const TournamentsPage: React.FC = () => {
     });
   }, [tournaments, activeFilter, activeGame]);
 
+  const getGameIcon = (game: string) => {
+    const normalized = (game || '').toLowerCase().replace(/\s+/g, '').replace(/-/g, '');
+    const map: Record<string, string> = {
+      criticalops: '/images/main.png',
+      pubgmobile: '/images/main.png',
+      cs2: '/images/main.png',
+      valorantmobile: '/images/main.png'
+    };
+    return map[normalized] || '/images/main.png';
+  };
+
   const getStatusLabel = (status: Tournament['status']) => {
     if (status === 'live') return t('live');
     if (status === 'completed') return t('completed');
@@ -346,7 +357,7 @@ const TournamentsPage: React.FC = () => {
         <TournamentsGrid>
           {filteredTournaments.map((tournament) => (
             <TournamentCard key={tournament.id} $status={tournament.status} onClick={() => handleTournamentClick(tournament)}>
-              <GameIcon src={`/images/games/${tournament.game.toLowerCase().replace(/\s/g, '')}.png`} alt={tournament.game} />
+              <GameIcon src={getGameIcon(tournament.game)} alt={tournament.game} />
               <StatusBadge $status={tournament.status}>{getStatusLabel(tournament.status)}</StatusBadge>
               <TournamentTitle>{tournament.title}</TournamentTitle>
 

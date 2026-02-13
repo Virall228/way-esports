@@ -16,6 +16,19 @@ export const useTournamentAccess = () => {
   const [error, setError] = useState<string | null>(null);
 
   const checkAccess = async () => {
+    if (!api.hasToken()) {
+      setAccessStatus({
+        canJoin: false,
+        isSubscribed: false,
+        freeEntriesCount: 0,
+        requiresSubscription: true,
+        redirectTo: '/billing'
+      });
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -36,8 +49,19 @@ export const useTournamentAccess = () => {
         redirectTo: !canJoin ? '/billing' : undefined
       });
     } catch (err: any) {
-      console.error('Failed to check tournament access:', err);
-      setError(err?.message || 'Failed to check access status');
+      if (err?.status === 401) {
+        setAccessStatus({
+          canJoin: false,
+          isSubscribed: false,
+          freeEntriesCount: 0,
+          requiresSubscription: true,
+          redirectTo: '/billing'
+        });
+        setError(null);
+      } else {
+        console.error('Failed to check tournament access:', err);
+        setError(err?.message || 'Failed to check access status');
+      }
     } finally {
       setLoading(false);
     }

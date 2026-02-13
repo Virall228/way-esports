@@ -31,7 +31,7 @@ const HeroSection = styled(Card).attrs({ variant: 'elevated' })`
     left: 0;
     right: 0;
     bottom: 0;
-    background: url('/images/way-logo-bg.png') center/cover;
+    background: url('/images/main2.png') center/cover;
     opacity: 0.1;
     z-index: 0;
   }

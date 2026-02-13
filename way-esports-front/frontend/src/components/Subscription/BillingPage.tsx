@@ -189,6 +189,17 @@ const BillingPage: React.FC = () => {
   }, []);
 
   const loadBillingData = async () => {
+    if (!api.hasToken()) {
+      setBilling({
+        isSubscribed: false,
+        freeEntriesCount: 0,
+        subscriptionPrice: 9.99
+      });
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -209,6 +220,15 @@ const BillingPage: React.FC = () => {
         referralCode: stats.referralCode
       });
     } catch (error: any) {
+      if (error?.status === 401) {
+        setBilling({
+          isSubscribed: false,
+          freeEntriesCount: 0,
+          subscriptionPrice: 9.99
+        });
+        setError(null);
+        return;
+      }
       console.error('Failed to load billing data:', error);
       setError(error?.message || 'Failed to load billing information');
     } finally {
