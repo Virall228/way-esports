@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Link, useNavigate } from 'react-router-dom';
 import styled, { ThemeProvider } from 'styled-components';
 import {
   Award,
@@ -11,6 +11,7 @@ import {
   Home as HomeIcon,
   Settings as SettingsIcon,
   Shield,
+  LogOut,
   Users,
   User
 } from 'react-feather';
@@ -243,6 +244,40 @@ const BurgerButton = styled.button`
   }
 `;
 
+const TopBarActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const TopActionButton = styled.button`
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
+  background: ${({ theme }) => theme.colors.glass.panel};
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: ${({ theme }) => theme.colors.glass.panelHover};
+      border-color: ${({ theme }) => theme.colors.border.strong};
+    }
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+`;
+
 const MainContent = styled.main`
   flex: 1 1 auto;
   min-height: 0;
@@ -400,15 +435,39 @@ const CloseButton = styled.button`
   }
 `;
 
+const MobileMenuActionButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
+  background: ${({ theme }) => theme.colors.glass.panel};
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-family: ${({ theme }) => theme.fonts.accent};
+  font-size: 0.85rem;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+`;
+
 const AppContent: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const { addNotification } = useNotifications();
-  const { user } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const { t } = useLanguage();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
   const iconProps = React.useMemo(() => ({ size: 18, strokeWidth: 2 }), []);
+  const hasAdminAccess = user?.role === 'admin' || user?.role === 'developer';
+
+  const handleLogout = React.useCallback(() => {
+    logout();
+    closeMobileMenu();
+    navigate('/');
+  }, [logout, navigate]);
 
   const navItems = React.useMemo<NavItem[]>(() => {
     const items: NavItem[] = [
@@ -424,12 +483,12 @@ const AppContent: React.FC = () => {
       { label: t('settings'), to: '/settings', icon: <SettingsIcon {...iconProps} /> }
     ];
 
-    if (user?.role === 'admin' || user?.role === 'developer') {
+    if (hasAdminAccess) {
       items.push({ label: t('admin'), to: '/admin', icon: <Shield {...iconProps} />, adminOnly: true });
     }
 
     return items;
-  }, [iconProps, t, user]);
+  }, [hasAdminAccess, iconProps, t]);
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -504,9 +563,17 @@ const AppContent: React.FC = () => {
             <Logo>WAY ESPORTS</Logo>
             <TopBarBadge>{t('onePlatformOneUi')}</TopBarBadge>
           </TopBarTitle>
-          <BurgerButton type="button" onClick={() => setMobileMenuOpen(true)} aria-label="Open menu">
-            {'\u2630'}
-          </BurgerButton>
+          <TopBarActions>
+            {isAuthenticated && (
+              <TopActionButton type="button" onClick={handleLogout} aria-label="Logout">
+                <LogOut size={14} />
+                Logout
+              </TopActionButton>
+            )}
+            <BurgerButton type="button" onClick={() => setMobileMenuOpen(true)} aria-label="Open menu">
+              {'\u2630'}
+            </BurgerButton>
+          </TopBarActions>
         </TopBar>
 
         <MainContent>
@@ -552,7 +619,7 @@ const AppContent: React.FC = () => {
             </CloseButton>
           </MobileMenuHeader>
 
-          {navItems.map((item) => (
+          {navItems.filter((item) => !item.adminOnly || hasAdminAccess).map((item) => (
             <NavItemLink
               key={item.to}
               to={item.to}
@@ -564,11 +631,17 @@ const AppContent: React.FC = () => {
               <NavItemLabel>{item.label}</NavItemLabel>
             </NavItemLink>
           ))}
+          {isAuthenticated && (
+            <MobileMenuActionButton type="button" onClick={handleLogout}>
+              <LogOut size={14} />
+              Logout
+            </MobileMenuActionButton>
+          )}
         </MobileMenuPanel>
       </MobileMenuOverlay>
 
       <BottomNav>
-        {navItems.map((item) => (
+        {navItems.filter((item) => !item.adminOnly || hasAdminAccess).map((item) => (
           <BottomNavItem key={item.to} to={item.to} $active={isActive(item.to)}>
             <BottomNavIcon>{item.icon}</BottomNavIcon>
             {item.label}

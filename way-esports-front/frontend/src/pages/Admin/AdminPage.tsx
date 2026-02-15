@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Navigate } from 'react-router-dom';
 import { api, ApiError } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -2184,6 +2185,10 @@ const AdminPage: React.FC = () => {
       default:
         return renderDashboard();
     }
+  }
+
+  if (!authLoading && isAuthenticated && !hasAdminAccess) {
+    return <Navigate to="/" replace />;
   }
 
   return (
