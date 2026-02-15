@@ -277,7 +277,7 @@ const Select = styled.select`
   }
 `;
 
-type TabType = 'dashboard' | 'users' | 'tournaments' | 'news' | 'achievements' | 'rewards' | 'analytics' | 'referrals' | 'teams' | 'contacts';
+type TabType = 'dashboard' | 'users' | 'tournaments' | 'news' | 'achievements' | 'rewards' | 'analytics' | 'referrals' | 'teams' | 'contacts' | 'payments';
 
 interface Reward {
   id: string;
@@ -302,6 +302,22 @@ interface ContactMessage {
   message: string;
   userId?: string;
   createdAt: string;
+}
+
+interface AdminWalletTransaction {
+  id: string;
+  userId: string;
+  source: 'user' | 'wallet';
+  username: string;
+  email: string;
+  telegramId: number;
+  type: string;
+  amount: number;
+  status: string;
+  description: string;
+  date: string;
+  reference?: string;
+  balance: number;
 }
 
 const ModalActions = styled.div`
@@ -380,6 +396,7 @@ const AdminPage: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: ['admin', 'teams'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'referrals'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'contacts'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'wallet-transactions'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'analytics'] })
       ]);
@@ -575,6 +592,26 @@ const AdminPage: React.FC = () => {
     }));
   };
 
+  const fetchWalletTransactions = async (): Promise<AdminWalletTransaction[]> => {
+    const result: any = await api.get('/api/admin/wallet/transactions?limit=300');
+    const items: any[] = Array.isArray(result) ? result : (result?.data || []);
+    return items.map((tx: any) => ({
+      id: (tx.id || tx._id || '').toString(),
+      userId: (tx.userId || '').toString(),
+      source: tx.source === 'wallet' ? 'wallet' : 'user',
+      username: tx.username || '',
+      email: tx.email || '',
+      telegramId: Number(tx.telegramId || 0),
+      type: tx.type || '',
+      amount: Number(tx.amount || 0),
+      status: tx.status || '',
+      description: tx.description || '',
+      date: tx.date ? new Date(tx.date).toISOString() : new Date().toISOString(),
+      reference: tx.reference || '',
+      balance: Number(tx.balance || 0)
+    }));
+  };
+
   const usersQuery = useQuery({
     queryKey: ['admin', 'users'],
     queryFn: fetchUsers,
@@ -655,6 +692,14 @@ const AdminPage: React.FC = () => {
     refetchOnWindowFocus: false
   });
 
+  const walletTransactionsQuery = useQuery({
+    queryKey: ['admin', 'wallet-transactions'],
+    queryFn: fetchWalletTransactions,
+    enabled: hasAdminAccess,
+    staleTime: 15000,
+    refetchOnWindowFocus: false
+  });
+
   const users = usersQuery.data || [];
   const tournaments = tournamentsQuery.data || [];
   const news = newsQuery.data || [];
@@ -663,6 +708,7 @@ const AdminPage: React.FC = () => {
   const teams = teamsQuery.data || [];
   const referrals = referralsQuery.data || [];
   const contacts = contactsQuery.data || [];
+  const walletTransactions = walletTransactionsQuery.data || [];
   const dashboardStats = statsQuery.data || null;
   const analytics = analyticsQuery.data || null;
 
@@ -675,6 +721,7 @@ const AdminPage: React.FC = () => {
     teamsQuery.error ||
     referralsQuery.error ||
     contactsQuery.error ||
+    walletTransactionsQuery.error ||
     statsQuery.error ||
     analyticsQuery.error;
 
@@ -687,6 +734,7 @@ const AdminPage: React.FC = () => {
     teamsQuery.isFetching ||
     referralsQuery.isFetching ||
     contactsQuery.isFetching ||
+    walletTransactionsQuery.isFetching ||
     statsQuery.isFetching ||
     analyticsQuery.isFetching;
 
@@ -846,6 +894,54 @@ const AdminPage: React.FC = () => {
         setError(formatApiError(e, 'Delete failed'));
         notify('error', 'Delete failed', formatApiError(e, 'Delete failed'));
       }
+    }
+  };
+
+  const handleWalletAdjust = async (targetUserId: string, username: string) => {
+    const amountRaw = window.prompt(`Adjust balance for ${username}. Use + for credit, - for debit`, '0');
+    if (!amountRaw) return;
+
+    const amount = Number(amountRaw);
+    if (!Number.isFinite(amount) || amount === 0) {
+      notify('warning', 'Invalid amount', 'Enter a non-zero numeric amount');
+      return;
+    }
+
+    const reason = window.prompt('Reason (optional)', 'Manual admin adjustment') || 'Manual admin adjustment';
+
+    try {
+      setError(null);
+      await api.post(`/api/admin/users/${targetUserId}/wallet/adjust`, {
+        amount,
+        reason
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'wallet-transactions'] });
+      notify('success', 'Wallet updated', `Balance adjusted by ${amount > 0 ? '+' : ''}${amount}`);
+    } catch (e: any) {
+      setError(formatApiError(e, 'Failed to adjust wallet'));
+      notify('error', 'Wallet update failed', formatApiError(e, 'Failed to adjust wallet'));
+    }
+  };
+
+  const handleWalletTransactionStatus = async (
+    tx: AdminWalletTransaction,
+    nextStatus: 'completed' | 'failed' | 'refunded' | 'refund_denied'
+  ) => {
+    try {
+      setError(null);
+      await api.patch(`/api/admin/wallet/transactions/${tx.userId}/${tx.id}`, {
+        status: nextStatus,
+        source: tx.source
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'wallet-transactions'] });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      notify('success', 'Transaction updated', `Status changed to ${nextStatus}`);
+    } catch (e: any) {
+      setError(formatApiError(e, 'Failed to update transaction'));
+      notify('error', 'Update failed', formatApiError(e, 'Failed to update transaction'));
     }
   };
 
@@ -1163,10 +1259,100 @@ const AdminPage: React.FC = () => {
                   <Td>
                     <ActionsCell>
                       <ActionButton onClick={() => handleEdit(user, 'user')}>Edit</ActionButton>
+                      <ActionButton $variant="success" onClick={() => handleWalletAdjust(user.id, user.username)}>
+                        Adjust $
+                      </ActionButton>
+                      <ActionButton onClick={() => setActiveTab('payments')}>
+                        Payments
+                      </ActionButton>
                     </ActionsCell>
                   </Td>
                 </tr>
               ))}
+            </tbody>
+          </Table>
+        </TableWrap>
+      </div>
+    );
+  }
+
+  function renderPayments() {
+    const sorted = [...walletTransactions].sort((a, b) => {
+      const left = new Date(a.date).getTime();
+      const right = new Date(b.date).getTime();
+      return right - left;
+    });
+
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+          <h3>Payments & Wallet Transactions</h3>
+          <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'wallet-transactions'] })}>
+            Refresh
+          </ActionButton>
+        </div>
+
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>User</Th>
+                <Th>Source</Th>
+                <Th>Type</Th>
+                <Th>Amount</Th>
+                <Th>Status</Th>
+                <Th>Description</Th>
+                <Th>Date</Th>
+                <Th>Actions</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((tx) => {
+                const canApprove = tx.status === 'pending';
+                const canReviewRefund = tx.status === 'refund_pending';
+
+                return (
+                  <tr key={tx.id}>
+                    <Td>
+                      <div>{tx.username || 'Unknown'}</div>
+                      <div style={{ color: '#999', fontSize: '12px' }}>{tx.email || `TG: ${tx.telegramId}`}</div>
+                    </Td>
+                    <Td>{tx.source}</Td>
+                    <Td>{tx.type}</Td>
+                    <Td>${tx.amount.toFixed(2)}</Td>
+                    <Td>{tx.status}</Td>
+                    <Td>{tx.description || '-'}</Td>
+                    <Td>{formatDate(tx.date)}</Td>
+                    <Td>
+                      <ActionsCell>
+                        {canApprove && (
+                          <ActionButton $variant="success" onClick={() => handleWalletTransactionStatus(tx, 'completed')}>
+                            Approve
+                          </ActionButton>
+                        )}
+                        {canApprove && (
+                          <ActionButton $variant="danger" onClick={() => handleWalletTransactionStatus(tx, 'failed')}>
+                            Reject
+                          </ActionButton>
+                        )}
+                        {canReviewRefund && (
+                          <ActionButton $variant="success" onClick={() => handleWalletTransactionStatus(tx, 'refunded')}>
+                            Refund
+                          </ActionButton>
+                        )}
+                        {canReviewRefund && (
+                          <ActionButton $variant="danger" onClick={() => handleWalletTransactionStatus(tx, 'refund_denied')}>
+                            Deny Refund
+                          </ActionButton>
+                        )}
+                        {!canApprove && !canReviewRefund && (
+                          <span style={{ color: '#999', fontSize: '12px' }}>No actions</span>
+                        )}
+                      </ActionsCell>
+                    </Td>
+                  </tr>
+                );
+              })}
             </tbody>
           </Table>
         </TableWrap>
@@ -1993,6 +2179,8 @@ const AdminPage: React.FC = () => {
         return renderTeams();
       case 'contacts':
         return renderContacts();
+      case 'payments':
+        return renderPayments();
       default:
         return renderDashboard();
     }
@@ -2080,6 +2268,9 @@ const AdminPage: React.FC = () => {
         </Tab>
         <Tab $active={activeTab === 'contacts'} onClick={() => setActiveTab('contacts')}>
           Contacts
+        </Tab>
+        <Tab $active={activeTab === 'payments'} onClick={() => setActiveTab('payments')}>
+          Payments
         </Tab>
       </TabContainer>
 

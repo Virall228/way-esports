@@ -3,6 +3,7 @@ import User from '../models/User';
 import Tournament from '../models/Tournament';
 import News from '../models/News';
 import Team from '../models/Team';
+import Wallet from '../models/Wallet';
 
 /**
  * Get dashboard statistics for admin panel
@@ -96,13 +97,62 @@ export const updateEntity = async (req: Request, res: Response) => {
         const finalUpdates = { ...updates };
 
         switch (entity) {
-            case 'users':
-                Model = User;
-                if (updates.balance !== undefined) {
-                    finalUpdates['wallet.balance'] = Number(updates.balance);
-                    delete finalUpdates.balance;
+            case 'users': {
+                const user: any = await User.findById(id);
+                if (!user) {
+                    return res.status(404).json({ success: false, error: 'users not found' });
                 }
-                break;
+
+                const nextBalance = updates.balance !== undefined ? Number(updates.balance) : null;
+                const hasBalanceUpdate = typeof nextBalance === 'number' && Number.isFinite(nextBalance);
+
+                Object.keys(finalUpdates).forEach((key) => {
+                    if (key === 'balance') return;
+                    user.set(key, finalUpdates[key]);
+                });
+
+                if (hasBalanceUpdate) {
+                    const diff = nextBalance - Number(user.wallet?.balance || 0);
+                    user.wallet.balance = nextBalance;
+
+                    if (diff !== 0) {
+                        user.wallet.transactions.push({
+                            type: diff > 0 ? 'deposit' : 'withdrawal',
+                            amount: Math.abs(diff),
+                            description: `Admin adjustment via admin panel`,
+                            date: new Date(),
+                            status: 'completed'
+                        });
+                    }
+                }
+
+                await user.save();
+
+                if (hasBalanceUpdate) {
+                    let wallet: any = await Wallet.findOne({ user: user._id });
+                    if (!wallet) {
+                        wallet = await new Wallet({ user: user._id }).save();
+                    }
+
+                    const walletDiff = nextBalance - Number(wallet.balance || 0);
+                    wallet.balance = Math.max(0, nextBalance);
+
+                    if (walletDiff !== 0) {
+                        wallet.transactions.push({
+                            type: walletDiff > 0 ? 'deposit' : 'withdrawal',
+                            amount: Math.abs(walletDiff),
+                            description: 'Admin adjustment via admin panel',
+                            status: 'completed',
+                            reference: `ADM-UPD-${Date.now()}`,
+                            date: new Date()
+                        });
+                    }
+
+                    await wallet.save();
+                }
+
+                return res.json({ success: true, data: user });
+            }
             case 'teams': Model = Team; break;
             case 'tournaments': Model = Tournament; break;
             case 'news': Model = News; break;

@@ -531,7 +531,7 @@ const AppContent: React.FC = () => {
               <Route path="/team/:id" element={<TeamPage />} />
               <Route path="/teams/:id" element={<TeamPage />} />
               <Route path="/billing" element={<BillingPage />} />
-              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin" element={<AdminRoute />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </ContentInner>
@@ -577,6 +577,21 @@ const AppContent: React.FC = () => {
       </BottomNav>
     </AppShell>
   );
+};
+
+const AdminRoute: React.FC = () => {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const hasAdminAccess = isAuthenticated && (user?.role === 'admin' || user?.role === 'developer');
+
+  if (isLoading) {
+    return null;
+  }
+
+  if (!hasAdminAccess) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <AdminPage />;
 };
 
 const ThemeShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
