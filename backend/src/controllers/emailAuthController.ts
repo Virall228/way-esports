@@ -21,6 +21,28 @@ const randomNumericCode = (len: number) => {
 
 const randomToken = () => crypto.randomBytes(32).toString('hex');
 
+const getBootstrapAdminTelegramId = (): number | null => {
+  const raw = process.env.BOOTSTRAP_ADMIN_TELEGRAM_ID;
+  if (!raw) return null;
+  const parsed = parseInt(raw, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const getBootstrapAdminEmail = (): string | null => {
+  const raw = process.env.BOOTSTRAP_ADMIN_EMAIL;
+  return raw ? raw.trim().toLowerCase() : null;
+};
+
+const applyAdminBootstrapByEmail = (user: any, email: string) => {
+  const bootstrapEmail = getBootstrapAdminEmail();
+  if (!bootstrapEmail) return user;
+  if (email !== bootstrapEmail) return user;
+  if (user.role === 'admin' || user.role === 'developer') return user;
+
+  user.role = 'admin';
+  return user;
+};
+
 export const requestEmailOtp = async (req: Request, res: Response) => {
   try {
     const emailRaw = (req.body?.email || '').toString();
@@ -78,20 +100,43 @@ export const verifyEmailOtp = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'Invalid code' });
     }
 
-    let user: any = await User.findOne({ email }).lean();
-    if (!user) {
+    let userDoc: any = await User.findOne({ email });
+
+    if (!userDoc) {
+      const bootstrapEmail = getBootstrapAdminEmail();
+      const bootstrapTelegramId = getBootstrapAdminTelegramId();
+      const shouldBindToBootstrapTelegram =
+        Boolean(bootstrapEmail && bootstrapTelegramId && email === bootstrapEmail);
+
+      if (shouldBindToBootstrapTelegram) {
+        const existingBootstrapUser = await User.findOne({ telegramId: bootstrapTelegramId });
+        if (existingBootstrapUser) {
+          existingBootstrapUser.email = email;
+          existingBootstrapUser.newsletter_subscriber = true;
+          userDoc = applyAdminBootstrapByEmail(existingBootstrapUser, email);
+        }
+      }
+    }
+
+    if (!userDoc) {
       const localPart = email.split('@')[0] || 'user';
-      const created = await new User({
+      const created = new User({
         email,
         newsletter_subscriber: true,
         username: `email_${localPart}`,
         firstName: 'User',
         role: 'user'
-      }).save();
-      user = created.toObject();
+      });
+
+      userDoc = applyAdminBootstrapByEmail(created, email);
+      await userDoc.save();
     } else {
-      await User.updateOne({ _id: user._id }, { $set: { newsletter_subscriber: true } });
+      userDoc.newsletter_subscriber = true;
+      userDoc = applyAdminBootstrapByEmail(userDoc, email);
+      await userDoc.save();
     }
+
+    const user = userDoc.toObject();
 
     const sessionToken = randomToken();
     const tokenHash = hash(sessionToken);

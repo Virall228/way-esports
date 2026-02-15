@@ -324,7 +324,7 @@ const ModalActions = styled.div`
 `;
 
 const AdminPage: React.FC = () => {
-  const { user, isAuthenticated, isLoading: authLoading, login } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, login, logout } = useAuth();
   const { addNotification } = useNotifications();
   const hasAdminAccess = isAuthenticated && (user?.role === 'admin' || user?.role === 'developer');
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -2033,6 +2033,14 @@ const AdminPage: React.FC = () => {
         <div style={{ marginBottom: '16px', color: '#ff6b00', padding: '12px', background: 'rgba(255, 107, 0, 0.1)', border: '1px solid #ff6b00', borderRadius: '8px' }}>
           <strong>Access Restricted:</strong> You are logged in with role "{user?.role}".
           Admin access depends on your server role. Login with your Telegram ID (or open via Telegram WebApp on desktop/mobile) to sync role.
+          <div style={{ marginTop: '10px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <ActionButton onClick={async () => { logout(); await login(); }}>
+              Re-login as Admin
+            </ActionButton>
+            <ActionButton $variant="danger" onClick={() => logout()}>
+              Logout
+            </ActionButton>
+          </div>
         </div>
       )}
 
