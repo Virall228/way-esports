@@ -85,6 +85,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const applyAuthState = async (token: string, rawUser: any) => {
+    setToken(token);
+    const profile = await fetchProfile();
+    if (!profile) {
+      setUser(normalizeUser(rawUser));
+    }
+  };
+
   const login = async () => {
     setIsLoading(true);
     try {
@@ -96,8 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           try {
             const result: any = await api.post('/api/auth/telegram', { initData }, true);
             if (result?.success && result?.token && result?.user) {
-              setToken(result.token);
-              setUser(normalizeUser(result.user));
+              await applyAuthState(result.token, result.user);
               return;
             }
           } catch (telegramError) {
@@ -120,8 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Invalid Telegram login response');
       }
 
-      setToken(token);
-      setUser(normalizeUser(rawUser));
+      await applyAuthState(token, rawUser);
     } finally {
       setIsLoading(false);
     }

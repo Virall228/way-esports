@@ -19,7 +19,7 @@ const createSessionToken = async (userId: string) => {
 };
 
 const getBootstrapAdminTelegramId = (): number | null => {
-  const raw = process.env.BOOTSTRAP_ADMIN_TELEGRAM_ID;
+  const raw = process.env.BOOTSTRAP_ADMIN_TELEGRAM_ID || process.env.ADMIN_TELEGRAM_ID;
   if (!raw) return null;
   const num = parseInt(raw, 10);
   return Number.isFinite(num) ? num : null;

@@ -22,7 +22,7 @@ const randomNumericCode = (len: number) => {
 const randomToken = () => crypto.randomBytes(32).toString('hex');
 
 const getBootstrapAdminTelegramId = (): number | null => {
-  const raw = process.env.BOOTSTRAP_ADMIN_TELEGRAM_ID;
+  const raw = process.env.BOOTSTRAP_ADMIN_TELEGRAM_ID || process.env.ADMIN_TELEGRAM_ID;
   if (!raw) return null;
   const parsed = parseInt(raw, 10);
   return Number.isFinite(parsed) ? parsed : null;
