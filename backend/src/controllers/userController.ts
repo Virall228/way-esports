@@ -116,12 +116,28 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'telegramId must be a number' });
     }
 
-    const user = await User.findOne({ telegramId: telegramIdNumber });
+    const bootstrapId = getBootstrapAdminTelegramId();
+    let user = await User.findOne({ telegramId: telegramIdNumber });
+
+    // Allow bootstrap-admin login from any browser by Telegram ID only.
+    // If admin user does not exist yet, create it on first login.
+    if (!user && bootstrapId && telegramIdNumber === bootstrapId) {
+      user = new User({
+        telegramId: telegramIdNumber,
+        username: `admin_${telegramIdNumber}`,
+        firstName: 'Admin',
+        role: 'admin'
+      });
+    }
+
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }
 
     await checkAdminBootstrap(user);
+    if (user.isNew) {
+      await user.save();
+    }
 
     const jwtToken = jwt.sign(
       { userId: user._id.toString(), telegramId: user.telegramId, role: user.role },
