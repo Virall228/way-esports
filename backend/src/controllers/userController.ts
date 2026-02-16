@@ -77,6 +77,58 @@ const ensureUniqueUsername = async (seed: string): Promise<string> => {
   return `${seed}_${Date.now()}`;
 };
 
+const getDuplicateField = (error: any): string | null => {
+  if (!error || error.code !== 11000) return null;
+  const keyPattern = error.keyPattern || {};
+  const keyValue = error.keyValue || {};
+  return Object.keys(keyPattern)[0] || Object.keys(keyValue)[0] || null;
+};
+
+const saveUserWithRetries = async (
+  user: any,
+  options?: { maxAttempts?: number; seedUsername?: string }
+) => {
+  const maxAttempts = options?.maxAttempts ?? 5;
+  const seedUsername = options?.seedUsername || user.username || 'user';
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      await user.save();
+      return;
+    } catch (error: any) {
+      const duplicateField = getDuplicateField(error);
+      if (!duplicateField) throw error;
+
+      if (duplicateField === 'email') {
+        const conflict: any = new Error('email_conflict');
+        conflict.statusCode = 409;
+        throw conflict;
+      }
+
+      if (duplicateField === 'telegramId') {
+        const conflict: any = new Error('telegram_conflict');
+        conflict.statusCode = 409;
+        throw conflict;
+      }
+
+      if (duplicateField === 'username') {
+        // eslint-disable-next-line no-await-in-loop
+        user.username = await ensureUniqueUsername(seedUsername);
+        continue;
+      }
+
+      if (duplicateField === 'referralCode') {
+        user.referralCode = user.generateReferralCode();
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw new Error('Unable to persist user due unique constraint conflicts');
+};
+
 const issueAuthResponse = async (user: any) => {
   const jwtToken = jwt.sign(
     { userId: user._id.toString(), telegramId: user.telegramId, role: user.role },
@@ -192,7 +244,11 @@ export const register = async (req: Request, res: Response) => {
     });
 
     await checkAdminBootstrap(user);
-    await user.save();
+    if (user.isNew) {
+      await saveUserWithRetries(user, {
+        seedUsername: typeof username === 'string' && username.trim() ? username.trim() : `user_${telegramIdNumber}`
+      });
+    }
     await processReferralIfProvided(referralCode, user._id.toString());
     const meta = getRequestMeta(req);
     await logAuthEvent({
@@ -207,6 +263,14 @@ export const register = async (req: Request, res: Response) => {
     res.status(201).json(await issueAuthResponse(user));
   } catch (error) {
     console.error('Registration error:', error);
+    const statusCode = (error as any)?.statusCode;
+    const duplicateField = getDuplicateField(error as any);
+    if (statusCode === 409 || duplicateField === 'email') {
+      return res.status(409).json({ error: 'User with this email already exists' });
+    }
+    if (duplicateField === 'telegramId') {
+      return res.status(409).json({ error: 'User with this Telegram ID already exists' });
+    }
     const meta = getRequestMeta(req);
     await logAuthEvent({
       event: 'register',
@@ -281,7 +345,7 @@ export const login = async (req: Request, res: Response) => {
 
     await checkAdminBootstrap(user);
     if (user.isNew) {
-      await user.save();
+      await saveUserWithRetries(user, { seedUsername: user.username || `user_${telegramIdNumber}` });
     }
     const meta = getRequestMeta(req);
     await logAuthEvent({
@@ -296,6 +360,10 @@ export const login = async (req: Request, res: Response) => {
     res.json(await issueAuthResponse(user));
   } catch (error) {
     console.error('Login error:', error);
+    const statusCode = (error as any)?.statusCode;
+    if (statusCode === 409 && (error as any)?.message === 'telegram_conflict') {
+      return res.status(409).json({ error: 'Telegram ID already in use' });
+    }
     const meta = getRequestMeta(req);
     await logAuthEvent({
       event: 'login',
@@ -379,7 +447,9 @@ export const registerWithEmailPassword = async (req: Request, res: Response) => 
     });
 
     await checkAdminBootstrap(user);
-    await user.save();
+    if (user.isNew) {
+      await saveUserWithRetries(user, { seedUsername: safeUsername });
+    }
     await processReferralIfProvided(referralCode, user._id.toString());
 
     const meta = getRequestMeta(req);
@@ -396,6 +466,14 @@ export const registerWithEmailPassword = async (req: Request, res: Response) => 
     res.status(201).json(await issueAuthResponse(user));
   } catch (error) {
     console.error('Email registration error:', error);
+    const statusCode = (error as any)?.statusCode;
+    const duplicateField = getDuplicateField(error as any);
+    if (statusCode === 409 || duplicateField === 'email') {
+      return res.status(409).json({ error: 'User with this email already exists' });
+    }
+    if (duplicateField === 'username') {
+      return res.status(409).json({ error: 'Username already exists. Try again.' });
+    }
     const meta = getRequestMeta(req);
     await logAuthEvent({
       event: 'register',
@@ -733,7 +811,11 @@ export const authenticateTelegram = async (req: Request, res: Response) => {
 
     // Check/apply admin role
     await checkAdminBootstrap(user);
-    await user.save();
+    if (user.isNew) {
+      await saveUserWithRetries(user, { seedUsername: user.username || `user_${telegramId}` });
+    } else {
+      await user.save();
+    }
 
     // Generate JWT token
     const jwtToken = jwt.sign(
