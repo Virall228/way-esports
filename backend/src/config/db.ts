@@ -33,9 +33,8 @@ export async function connectDB(uri?: string) {
     }
   }
 
-  throw lastError instanceof Error
-    ? lastError
-    : new Error('MongoDB connection failed after retries');
+  console.error('MongoDB is still unavailable after retries. Continuing in degraded mode.');
+  return mongoose.connection;
 }
 
 export async function disconnectDB() {

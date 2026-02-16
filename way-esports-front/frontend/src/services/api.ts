@@ -28,6 +28,8 @@ const buildUrl = (endpoint: string): string => {
 };
 
 let notifyHandler: ((type: 'success' | 'error', title: string, message: string) => void) | null = null;
+let lastServerUnavailableNotifyAt = 0;
+const SERVER_UNAVAILABLE_NOTIFY_COOLDOWN_MS = 15000;
 
 const requestJson = async <T = any>(endpoint: string, method: HttpMethod, data?: any, includeTelegramData = false): Promise<T> => {
   const token = getToken();
@@ -80,7 +82,15 @@ const requestJson = async <T = any>(endpoint: string, method: HttpMethod, data?:
       }
 
       if (notifyHandler && response.status !== 401) {
-        notifyHandler('error', 'Error', message);
+        if (response.status >= 500) {
+          const now = Date.now();
+          if (now - lastServerUnavailableNotifyAt >= SERVER_UNAVAILABLE_NOTIFY_COOLDOWN_MS) {
+            lastServerUnavailableNotifyAt = now;
+            notifyHandler('error', 'Server unavailable', message);
+          }
+        } else {
+          notifyHandler('error', 'Error', message);
+        }
       }
 
       throw new ApiError(

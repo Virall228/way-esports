@@ -210,15 +210,27 @@ async function start() {
   try {
     console.log('Connecting to MongoDB...');
     await connectDB();
-    console.log('✅ MongoDB connected');
+    if (mongoose.connection.readyState === 1) {
+      console.log('✅ MongoDB connected');
+    } else {
+      console.warn('⚠️ MongoDB is not connected. API is running in degraded mode.');
+    }
 
-    await seedDefaultAchievements();
+    try {
+      await seedDefaultAchievements();
+    } catch (seedError) {
+      console.error('⚠️ Failed to seed default achievements:', seedError);
+    }
 
     // Start background workers
-    console.log('Starting background workers...');
-    startWorkers();
-    startSchedulers();
-    startMonitoring();
+    try {
+      console.log('Starting background workers...');
+      startWorkers();
+      startSchedulers();
+      startMonitoring();
+    } catch (workerError) {
+      console.error('⚠️ Failed to start background workers:', workerError);
+    }
 
     const server = app.listen(PORT_NUMBER, '0.0.0.0', () => {
       console.log(`🚀 Server is running on port ${PORT_NUMBER}`);
