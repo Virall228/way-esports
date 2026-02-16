@@ -167,6 +167,43 @@ const buildNamePair = (fallbackName: string, fullName?: string | null, firstName
   };
 };
 
+const updateExistingEmailAccount = async (existing: any, params: {
+  password: string;
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+}) => {
+  const { password, firstName, lastName, username } = params;
+
+  existing.passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+  existing.newsletter_subscriber = true;
+
+  if (typeof firstName === 'string' && firstName.trim()) {
+    existing.firstName = firstName.trim();
+  }
+
+  if (typeof lastName === 'string' && lastName.trim()) {
+    existing.lastName = lastName.trim();
+  }
+
+  if (typeof username === 'string' && username.trim()) {
+    const desiredUsername = username.trim();
+    if (desiredUsername !== existing.username) {
+      const taken = await User.exists({
+        _id: { $ne: existing._id },
+        username: desiredUsername
+      });
+      if (!taken) {
+        existing.username = desiredUsername;
+      }
+    }
+  }
+
+  await checkAdminBootstrap(existing);
+  await existing.save();
+  return existing;
+};
+
 const getRequestMeta = (req: Request) => ({
   ip: req.ip || req.socket.remoteAddress || undefined,
   userAgent: req.get('user-agent') || undefined
@@ -415,42 +452,26 @@ export const registerWithEmailPassword = async (req: Request, res: Response) => 
 
     const existing = await User.findOne({ email: normalizedEmail });
     if (existing) {
-      // If user already exists and password matches, treat registration as login.
-      if (existing.passwordHash) {
-        const samePassword = await bcrypt.compare(password, existing.passwordHash);
-        if (samePassword) {
-          await checkAdminBootstrap(existing);
-          const meta = getRequestMeta(req);
-          await logAuthEvent({
-            userId: existing._id?.toString(),
-            event: 'login',
-            status: 'success',
-            method: 'email_password',
-            identifier: normalizedEmail,
-            reason: 'register_existing_account_login',
-            ip: meta.ip,
-            userAgent: meta.userAgent
-          });
-          return res.status(200).json(await issueAuthResponse(existing));
-        }
-      }
+      await updateExistingEmailAccount(existing, {
+        password,
+        firstName,
+        lastName,
+        username
+      });
 
       const meta = getRequestMeta(req);
       await logAuthEvent({
         userId: existing._id?.toString(),
-        event: 'register',
-        status: 'failed',
+        event: 'login',
+        status: 'success',
         method: 'email_password',
         identifier: normalizedEmail,
-        reason: 'email_already_exists',
+        reason: 'register_existing_account_upsert',
         ip: meta.ip,
         userAgent: meta.userAgent
       });
-      return res.status(409).json({
-        error: `User with this email already exists: ${normalizedEmail}`,
-        email: normalizedEmail,
-        existingUserId: existing._id?.toString?.()
-      });
+
+      return res.status(200).json(await issueAuthResponse(existing));
     }
 
     const fallbackUsername = usernameFromEmail(normalizedEmail);
@@ -494,10 +515,19 @@ export const registerWithEmailPassword = async (req: Request, res: Response) => 
     const duplicateField = getDuplicateField(error as any);
     if (statusCode === 409 || duplicateField === 'email') {
       const normalizedEmail = normalizeEmail(String(req.body?.email || ''));
-      return res.status(409).json({
-        error: `User with this email already exists: ${normalizedEmail}`,
-        email: normalizedEmail
-      });
+      const existing = normalizedEmail ? await User.findOne({ email: normalizedEmail }) : null;
+      if (existing && typeof req.body?.password === 'string' && req.body.password.length >= 8) {
+        await updateExistingEmailAccount(existing, {
+          password: String(req.body.password),
+          firstName: req.body?.firstName,
+          lastName: req.body?.lastName,
+          username: req.body?.username
+        });
+
+        return res.status(200).json(await issueAuthResponse(existing));
+      }
+
+      return res.status(409).json({ error: `User with this email already exists: ${normalizedEmail}`, email: normalizedEmail });
     }
     if (duplicateField === 'username') {
       return res.status(409).json({ error: 'Username already exists. Try again.' });
