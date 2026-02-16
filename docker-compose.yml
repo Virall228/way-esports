@@ -29,6 +29,11 @@ services:
     depends_on:
       - mongo
       - redis
+    networks:
+      default:
+        aliases:
+          - api
+          - way-esports-api
     restart: unless-stopped
 
   web:
@@ -54,6 +59,11 @@ services:
       timeout: 10s
       retries: 5
       start_period: 20s
+    networks:
+      default:
+        aliases:
+          - web
+          - way-esports-web
     restart: unless-stopped
 
   reverse-proxy:
@@ -75,6 +85,10 @@ services:
       timeout: 10s
       retries: 5
       start_period: 10s
+    networks:
+      default:
+        aliases:
+          - reverse-proxy
     restart: unless-stopped
 
   certbot:
