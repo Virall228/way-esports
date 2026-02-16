@@ -61,10 +61,16 @@ const requestJson = async <T = any>(endpoint: string, method: HttpMethod, data?:
     const payload = isJson ? await response.json() : await response.text();
 
     if (!response.ok) {
+      const textPayload = typeof payload === 'string' ? payload : '';
+      const normalizedText = textPayload.trim();
+      const isHtmlPayload = /^<!doctype html>|^<html[\s>]/i.test(normalizedText);
+
       const message =
-        typeof payload === 'string'
-          ? payload
-          : (payload as any)?.error || (payload as any)?.message || 'Request failed';
+        isHtmlPayload
+          ? `Server unavailable (${response.status})`
+          : typeof payload === 'string'
+            ? payload
+            : (payload as any)?.error || (payload as any)?.message || 'Request failed';
 
       if (response.status === 402) {
         const redirectTo = (payload as any)?.redirectTo;
