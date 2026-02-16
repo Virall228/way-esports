@@ -20,7 +20,45 @@ export async function addTask(name: string, data: any, opts?: JobsOptions) {
   if (!tasksQueue) {
     return { skipped: true, reason: 'redis_disabled' };
   }
-  return tasksQueue.add(name, data, opts);
+
+  const defaultOptions: JobsOptions = {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 2000
+    },
+    removeOnComplete: 1000,
+    removeOnFail: 1000
+  };
+
+  return tasksQueue.add(name, data, {
+    ...defaultOptions,
+    ...(opts || {})
+  });
+}
+
+export async function getQueueStats() {
+  if (!tasksQueue) {
+    return {
+      enabled: false,
+      reason: 'redis_disabled'
+    };
+  }
+
+  const counts = await tasksQueue.getJobCounts(
+    'waiting',
+    'active',
+    'completed',
+    'failed',
+    'delayed',
+    'paused'
+  );
+
+  return {
+    enabled: true,
+    queue: 'tasks',
+    counts
+  };
 }
 
 // Basic workers; for production consider moving to a separate worker process.

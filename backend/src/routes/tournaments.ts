@@ -11,6 +11,8 @@ import { logTournamentEvent } from '../services/loggingService';
 import cacheService from '../services/cacheService';
 import { body } from 'express-validator';
 import { validateRequest } from '../middleware/validate';
+import { idempotency } from '../middleware/idempotency';
+import { buildPaginationMeta, parsePagination } from '../utils/pagination';
 
 // Временные заглушки для новых middleware
 const handleTournamentConcurrency = async (req: any, res: any, next: any) => next();
@@ -275,16 +277,27 @@ const handleTournamentRegistration = async (req: any, res: any) => {
 // Get all tournaments
 router.get('/', async (req, res) => {
   try {
-    const { game, status } = req.query as { game?: string; status?: string };
+    const { game, status, search } = req.query as { game?: string; status?: string; search?: string };
+    const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>, {
+      defaultLimit: 20,
+      maxLimit: 100
+    });
     const query: any = {};
 
     if (game) query.game = game;
     if (status) query.status = status;
+    if (search) {
+      query.name = { $regex: search.trim(), $options: 'i' };
+    }
+
+    const total = await Tournament.countDocuments(query);
 
     const tournaments = await Tournament.find(query)
       .populate('registeredTeams', 'name tag logo members')
       .populate('matches', 'team1 team2 status startTime')
       .sort({ startDate: 1 })
+      .skip(skip)
+      .limit(limit)
       .lean();
 
     // Transform for frontend compatibility
@@ -302,7 +315,10 @@ router.get('/', async (req, res) => {
       skillLevel: t.skillLevel || 'All Levels'
     }));
 
-    res.json({ tournaments: transformed });
+    res.json({
+      tournaments: transformed,
+      pagination: buildPaginationMeta(page, limit, total)
+    });
   } catch (error) {
     console.error('Error fetching tournaments:', error);
     res.status(500).json({
@@ -527,6 +543,7 @@ router.post('/batch', authenticateJWT, isAdmin, async (req, res) => {
 // Register for tournament (atomic implementation)
 router.post('/:id/register',
   authenticateJWT,
+  idempotency({ required: true }),
   detectReferralFraud,
   rateLimitRegistration(5, 60000), // 5 attempts per minute
   checkTournamentAccess,
@@ -536,6 +553,7 @@ router.post('/:id/register',
 // Join tournament (alias for register, frontend compatibility)
 router.post('/:id/join',
   authenticateJWT,
+  idempotency({ required: true }),
   detectReferralFraud,
   rateLimitRegistration(5, 60000),
   checkTournamentAccess,

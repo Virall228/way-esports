@@ -9,6 +9,9 @@ export interface IUser extends Document<mongoose.Types.ObjectId> {
   id: string;
   telegramId?: number;
   email?: string;
+  passwordHash?: string;
+  googleId?: string;
+  appleSub?: string;
   newsletter_subscriber?: boolean;
   username: string;
   firstName: string;
@@ -99,6 +102,17 @@ const userSchema = new Schema<IUser>({
     type: String,
     trim: true,
     lowercase: true
+  },
+  passwordHash: {
+    type: String
+  },
+  googleId: {
+    type: String,
+    trim: true
+  },
+  appleSub: {
+    type: String,
+    trim: true
   },
   newsletter_subscriber: {
     type: Boolean,
@@ -252,6 +266,8 @@ const userSchema = new Schema<IUser>({
 // Indexes
 userSchema.index({ telegramId: 1 }, { unique: true, sparse: true });
 userSchema.index({ email: 1 }, { unique: true, sparse: true });
+userSchema.index({ googleId: 1 }, { unique: true, sparse: true });
+userSchema.index({ appleSub: 1 }, { unique: true, sparse: true });
 userSchema.index({ username: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ referralCode: 1 }, { unique: true, sparse: true });

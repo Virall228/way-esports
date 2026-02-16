@@ -1,15 +1,28 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
-import { register, login, getProfile, getAllUsers, authenticateTelegram, updateUser } from '../controllers/userController';
+import {
+  register,
+  login,
+  getProfile,
+  getAllUsers,
+  authenticateTelegram,
+  updateUser,
+  registerWithEmailPassword,
+  loginWithEmailPassword,
+  authenticateGoogle,
+  authenticateApple
+} from '../controllers/userController';
 import { authenticateJWT, isAdmin } from '../middleware/auth';
 import { telegramAuthMiddleware } from '../middleware/telegramAuth';
 import { requestEmailOtp, verifyEmailOtp, logoutSession } from '../controllers/emailAuthController';
+import { idempotency } from '../middleware/idempotency';
 
 const router = Router();
 
 // Public routes
 router.post(
   '/register',
+  idempotency({ required: true }),
   [
     body('telegramId').not().isEmpty(),
     body('username').not().isEmpty().trim(),
@@ -28,6 +41,37 @@ router.post(
   login
 );
 
+router.post(
+  '/email/register',
+  idempotency({ required: true }),
+  [
+    body('email').isEmail().normalizeEmail(),
+    body('password').isLength({ min: 8 })
+  ],
+  registerWithEmailPassword
+);
+
+router.post(
+  '/email/login',
+  [
+    body('email').isEmail().normalizeEmail(),
+    body('password').isLength({ min: 8 })
+  ],
+  loginWithEmailPassword
+);
+
+router.post(
+  '/google',
+  [body('idToken').isString().notEmpty()],
+  authenticateGoogle
+);
+
+router.post(
+  '/apple',
+  [body('identityToken').isString().notEmpty()],
+  authenticateApple
+);
+
 // Telegram Mini App authentication endpoint
 // Accepts initData from Telegram WebApp and authenticates/registers user
 router.post('/telegram', telegramAuthMiddleware, authenticateTelegram);
@@ -35,12 +79,14 @@ router.post('/telegram', telegramAuthMiddleware, authenticateTelegram);
 // Email passwordless auth (OTP)
 router.post(
   '/email/request-otp',
+  idempotency({ required: true, ttlSeconds: 10 * 60 }),
   [body('email').isEmail().normalizeEmail()],
   requestEmailOtp
 );
 
 router.post(
   '/email/verify-otp',
+  idempotency({ required: true, ttlSeconds: 10 * 60 }),
   [body('email').isEmail().normalizeEmail(), body('code').isLength({ min: 4, max: 10 })],
   verifyEmailOtp
 );

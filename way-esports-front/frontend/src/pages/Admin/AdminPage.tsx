@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Navigate } from 'react-router-dom';
 import { api, ApiError } from '../../services/api';
+import { getFullUrl } from '../../config/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import Card from '../../components/UI/Card';
@@ -278,7 +279,19 @@ const Select = styled.select`
   }
 `;
 
-type TabType = 'dashboard' | 'users' | 'tournaments' | 'news' | 'achievements' | 'rewards' | 'analytics' | 'referrals' | 'teams' | 'contacts' | 'payments';
+type TabType =
+  | 'dashboard'
+  | 'users'
+  | 'tournaments'
+  | 'news'
+  | 'achievements'
+  | 'rewards'
+  | 'analytics'
+  | 'referrals'
+  | 'teams'
+  | 'contacts'
+  | 'payments'
+  | 'ops';
 
 interface Reward {
   id: string;
@@ -321,6 +334,30 @@ interface AdminWalletTransaction {
   balance: number;
 }
 
+interface OpsMetrics {
+  status: string;
+  uptimeSeconds: number;
+  mongo?: { status?: string };
+  requests?: { total?: number; errors?: number; errorRate?: number };
+  eventLoop?: { p95Ms?: number };
+  memory?: { heapUsed?: number; heapTotal?: number };
+}
+
+interface OpsQueue {
+  enabled: boolean;
+  queue?: string;
+  reason?: string;
+  counts?: Record<string, number>;
+}
+
+interface OpsBackup {
+  id: string;
+  path: string;
+  createdAt: string;
+  updatedAt: string;
+  collections: number;
+}
+
 const ModalActions = styled.div`
   display: flex;
   gap: 12px;
@@ -356,6 +393,7 @@ const AdminPage: React.FC = () => {
   const newsImageRef = useRef<HTMLInputElement>(null);
   const tournamentImageRef = useRef<HTMLInputElement>(null);
   const teamImageRef = useRef<HTMLInputElement>(null);
+  const isOpsTab = activeTab === 'ops';
 
   const formatApiError = (e: any, fallback: string) => {
     if (e instanceof ApiError) {
@@ -370,6 +408,14 @@ const AdminPage: React.FC = () => {
     }
 
     return e?.message || fallback;
+  };
+
+  const getAuthToken = () => {
+    try {
+      return localStorage.getItem('auth_token');
+    } catch {
+      return null;
+    }
   };
 
   const notify = (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string) => {
@@ -399,7 +445,11 @@ const AdminPage: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: ['admin', 'contacts'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'wallet-transactions'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] }),
-        queryClient.invalidateQueries({ queryKey: ['admin', 'analytics'] })
+        queryClient.invalidateQueries({ queryKey: ['admin', 'analytics'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'ops-metrics'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'ops-queue'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'ops-backups'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] })
       ]);
     } catch (e: any) {
       setError(formatApiError(e, 'Failed to load admin data'));
@@ -613,6 +663,44 @@ const AdminPage: React.FC = () => {
     }));
   };
 
+  const fetchAuditLogs = async () => {
+    const result: any = await api.get('/api/admin/audit?limit=100');
+    const items: any[] = Array.isArray(result) ? result : (result?.data || []);
+    return items.map((row: any) => ({
+      id: String(row?._id || ''),
+      createdAt: row?.createdAt || '',
+      action: row?.action || '',
+      entity: row?.entity || '',
+      entityId: row?.entityId || '',
+      statusCode: Number(row?.statusCode || 0),
+      actorRole: row?.actorRole || '',
+      path: row?.path || '',
+      method: row?.method || ''
+    }));
+  };
+
+  const fetchOpsMetrics = async (): Promise<OpsMetrics | null> => {
+    const result: any = await api.get('/api/admin/ops/metrics');
+    return (result?.data || result || null) as OpsMetrics | null;
+  };
+
+  const fetchOpsQueue = async (): Promise<OpsQueue | null> => {
+    const result: any = await api.get('/api/admin/ops/queue');
+    return (result?.data || result || null) as OpsQueue | null;
+  };
+
+  const fetchOpsBackups = async (): Promise<OpsBackup[]> => {
+    const result: any = await api.get('/api/admin/ops/backups');
+    const items: any[] = Array.isArray(result) ? result : (result?.data || []);
+    return items.map((entry: any) => ({
+      id: String(entry?.id || ''),
+      path: String(entry?.path || ''),
+      createdAt: String(entry?.createdAt || ''),
+      updatedAt: String(entry?.updatedAt || ''),
+      collections: Number(entry?.collections || 0)
+    }));
+  };
+
   const usersQuery = useQuery({
     queryKey: ['admin', 'users'],
     queryFn: fetchUsers,
@@ -701,6 +789,42 @@ const AdminPage: React.FC = () => {
     refetchOnWindowFocus: false
   });
 
+  const auditLogsQuery = useQuery({
+    queryKey: ['admin', 'audit-logs'],
+    queryFn: fetchAuditLogs,
+    enabled: hasAdminAccess,
+    staleTime: 15000,
+    refetchOnWindowFocus: false,
+    refetchInterval: isOpsTab ? 15000 : false
+  });
+
+  const opsMetricsQuery = useQuery({
+    queryKey: ['admin', 'ops-metrics'],
+    queryFn: fetchOpsMetrics,
+    enabled: hasAdminAccess,
+    staleTime: 10000,
+    refetchOnWindowFocus: false,
+    refetchInterval: isOpsTab ? 10000 : false
+  });
+
+  const opsQueueQuery = useQuery({
+    queryKey: ['admin', 'ops-queue'],
+    queryFn: fetchOpsQueue,
+    enabled: hasAdminAccess,
+    staleTime: 10000,
+    refetchOnWindowFocus: false,
+    refetchInterval: isOpsTab ? 10000 : false
+  });
+
+  const opsBackupsQuery = useQuery({
+    queryKey: ['admin', 'ops-backups'],
+    queryFn: fetchOpsBackups,
+    enabled: hasAdminAccess,
+    staleTime: 15000,
+    refetchOnWindowFocus: false,
+    refetchInterval: isOpsTab ? 30000 : false
+  });
+
   const users = usersQuery.data || [];
   const tournaments = tournamentsQuery.data || [];
   const news = newsQuery.data || [];
@@ -710,6 +834,10 @@ const AdminPage: React.FC = () => {
   const referrals = referralsQuery.data || [];
   const contacts = contactsQuery.data || [];
   const walletTransactions = walletTransactionsQuery.data || [];
+  const auditLogs = auditLogsQuery.data || [];
+  const opsMetrics = opsMetricsQuery.data || null;
+  const opsQueue = opsQueueQuery.data || null;
+  const opsBackups = opsBackupsQuery.data || [];
   const dashboardStats = statsQuery.data || null;
   const analytics = analyticsQuery.data || null;
 
@@ -723,6 +851,10 @@ const AdminPage: React.FC = () => {
     referralsQuery.error ||
     contactsQuery.error ||
     walletTransactionsQuery.error ||
+    auditLogsQuery.error ||
+    opsMetricsQuery.error ||
+    opsQueueQuery.error ||
+    opsBackupsQuery.error ||
     statsQuery.error ||
     analyticsQuery.error;
 
@@ -736,6 +868,10 @@ const AdminPage: React.FC = () => {
     referralsQuery.isFetching ||
     contactsQuery.isFetching ||
     walletTransactionsQuery.isFetching ||
+    auditLogsQuery.isFetching ||
+    opsMetricsQuery.isFetching ||
+    opsQueueQuery.isFetching ||
+    opsBackupsQuery.isFetching ||
     statsQuery.isFetching ||
     analyticsQuery.isFetching;
 
@@ -1131,6 +1267,64 @@ const AdminPage: React.FC = () => {
     } catch (e: any) {
       setError(formatApiError(e, 'Save failed'));
       notify('error', 'Save failed', formatApiError(e, 'Save failed'));
+    }
+  };
+
+  const refreshOps = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'ops-metrics'] }),
+      queryClient.invalidateQueries({ queryKey: ['admin', 'ops-queue'] }),
+      queryClient.invalidateQueries({ queryKey: ['admin', 'ops-backups'] }),
+      queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] })
+    ]);
+  };
+
+  const handleRunBackup = async () => {
+    try {
+      await api.post('/api/admin/ops/backups/run', {});
+      notify('success', 'Backup created', 'New backup snapshot was created');
+      await refreshOps();
+    } catch (e: any) {
+      const message = formatApiError(e, 'Failed to create backup');
+      setError(message);
+      notify('error', 'Backup failed', message);
+    }
+  };
+
+  const handleExportAuditCsv = async () => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        notify('error', 'Export failed', 'Login required');
+        return;
+      }
+
+      const response = await fetch(getFullUrl('/api/admin/audit/export.csv?limit=5000'), {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Export failed (${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `audit_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      notify('success', 'Export complete', 'Audit CSV downloaded');
+    } catch (e: any) {
+      const message = e?.message || 'Failed to export audit CSV';
+      setError(message);
+      notify('error', 'Export failed', message);
     }
   };
 
@@ -1652,6 +1846,116 @@ const AdminPage: React.FC = () => {
         {!growth.length && (
           <div style={{ color: '#cccccc', padding: '16px 0' }}>No analytics data yet.</div>
         )}
+      </div>
+    );
+  }
+
+  function renderOps() {
+    const queueCounts = opsQueue?.counts || {};
+
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+          <h3>Operations</h3>
+          <ActionsCell>
+            <ActionButton onClick={refreshOps}>Refresh</ActionButton>
+            <ActionButton onClick={handleExportAuditCsv}>Export Audit CSV</ActionButton>
+            <ActionButton $variant="success" onClick={handleRunBackup}>Run Backup</ActionButton>
+          </ActionsCell>
+        </div>
+
+        <StatsGrid>
+          <StatCard>
+            <StatValue>{opsMetrics?.status || 'n/a'}</StatValue>
+            <StatLabel>API Status</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>{opsMetrics?.requests?.total || 0}</StatValue>
+            <StatLabel>Total Requests</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>{opsMetrics?.requests?.errorRate ?? 0}%</StatValue>
+            <StatLabel>Error Rate</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>{opsMetrics?.eventLoop?.p95Ms ?? 0}ms</StatValue>
+            <StatLabel>Event Loop p95</StatLabel>
+          </StatCard>
+        </StatsGrid>
+
+        <h4 style={{ marginTop: '16px' }}>Queue</h4>
+        <div style={{ color: '#cccccc', marginBottom: '12px' }}>
+          {opsQueue?.enabled ? `Queue "${opsQueue?.queue || 'tasks'}" is enabled` : `Queue disabled (${opsQueue?.reason || 'unknown'})`}
+        </div>
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>State</Th>
+                <Th>Count</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(queueCounts).map(([key, value]) => (
+                <tr key={key}>
+                  <Td>{key}</Td>
+                  <Td>{value}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
+
+        <h4 style={{ marginTop: '24px' }}>Backups</h4>
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Snapshot</Th>
+                <Th>Collections</Th>
+                <Th>Updated</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {opsBackups.map((backup) => (
+                <tr key={backup.id}>
+                  <Td>{backup.id}</Td>
+                  <Td>{backup.collections}</Td>
+                  <Td>{formatDate(backup.updatedAt)}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
+        {!opsBackups.length && (
+          <div style={{ color: '#cccccc', padding: '12px 0' }}>No backups yet.</div>
+        )}
+
+        <h4 style={{ marginTop: '24px' }}>Recent Audit Logs</h4>
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Time</Th>
+                <Th>Action</Th>
+                <Th>Entity</Th>
+                <Th>Status</Th>
+                <Th>Path</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {auditLogs.slice(0, 30).map((log: any) => (
+                <tr key={log.id}>
+                  <Td>{formatDate(log.createdAt)}</Td>
+                  <Td>{log.action}</Td>
+                  <Td>{log.entity}{log.entityId ? `:${log.entityId}` : ''}</Td>
+                  <Td>{log.statusCode}</Td>
+                  <Td>{log.method} {log.path}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
       </div>
     );
   }
@@ -2182,13 +2486,15 @@ const AdminPage: React.FC = () => {
         return renderContacts();
       case 'payments':
         return renderPayments();
+      case 'ops':
+        return renderOps();
       default:
         return renderDashboard();
     }
   }
 
   if (!authLoading && isAuthenticated && !hasAdminAccess) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/admin-access" replace />;
   }
 
   return (
@@ -2276,6 +2582,9 @@ const AdminPage: React.FC = () => {
         </Tab>
         <Tab $active={activeTab === 'payments'} onClick={() => setActiveTab('payments')}>
           Payments
+        </Tab>
+        <Tab $active={activeTab === 'ops'} onClick={() => setActiveTab('ops')}>
+          Ops
         </Tab>
       </TabContainer>
 

@@ -6,6 +6,13 @@ import User from '../models/User';
 import Team from '../models/Team';
 import ContactMessage from '../models/ContactMessage';
 import Wallet from '../models/Wallet';
+import AuditLog from '../models/AuditLog';
+import { adminAuditMiddleware } from '../middleware/adminAudit';
+import { parsePagination, buildPaginationMeta } from '../utils/pagination';
+import { idempotency } from '../middleware/idempotency';
+import { getMetricsSnapshot } from '../services/monitoringService';
+import { getQueueStats } from '../services/queue';
+import { listJsonBackups, runJsonBackup } from '../services/backupService';
 
 const router = express.Router();
 
@@ -57,6 +64,13 @@ const toNumber = (value: unknown, fallback = 0): number => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const csvEscape = (value: unknown): string => {
+  if (value === null || value === undefined) return '';
+  const raw = String(value);
+  const escaped = raw.replace(/"/g, '""');
+  return `"${escaped}"`;
+};
+
 const ensureWalletDoc = async (userId: mongoose.Types.ObjectId) => {
   let wallet = await Wallet.findOne({ user: userId });
   if (!wallet) {
@@ -85,14 +99,196 @@ router.use((req, res, next) => {
 
   return next();
 });
+router.use(adminAuditMiddleware);
 
 router.get('/stats', getDashboardStats);
 router.get('/analytics', getAnalytics);
+router.get('/ops/metrics', async (_req, res) => {
+  try {
+    return res.json({
+      success: true,
+      data: getMetricsSnapshot()
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to fetch metrics' });
+  }
+});
+
+router.get('/ops/queue', async (_req, res) => {
+  try {
+    const stats = await getQueueStats();
+    return res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to fetch queue stats' });
+  }
+});
+
+router.get('/ops/backups', async (_req, res) => {
+  try {
+    const backups = await listJsonBackups();
+    return res.json({
+      success: true,
+      data: backups
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to list backups' });
+  }
+});
+
+router.post('/ops/backups/run', idempotency({ required: true }), async (_req, res) => {
+  try {
+    const startedAt = Date.now();
+    const result = await runJsonBackup();
+    return res.status(201).json({
+      success: true,
+      data: {
+        snapshotDir: result.snapshotDir,
+        collections: result.manifest.collections.length,
+        durationMs: Date.now() - startedAt
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to create backup' });
+  }
+});
+
+router.get('/audit', async (req, res) => {
+  try {
+    const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>, {
+      defaultLimit: 50,
+      maxLimit: 200
+    });
+    const action = typeof req.query.action === 'string' ? req.query.action.trim() : '';
+    const entity = typeof req.query.entity === 'string' ? req.query.entity.trim() : '';
+    const actorId = typeof req.query.actorId === 'string' ? req.query.actorId.trim() : '';
+
+    const query: Record<string, unknown> = {};
+    if (action) query.action = action;
+    if (entity) query.entity = entity;
+    if (actorId && mongoose.Types.ObjectId.isValid(actorId)) {
+      query.actorId = new mongoose.Types.ObjectId(actorId);
+    }
+
+    const [total, rows] = await Promise.all([
+      AuditLog.countDocuments(query),
+      AuditLog.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+    ]);
+
+    return res.json({
+      success: true,
+      data: rows,
+      pagination: buildPaginationMeta(page, limit, total)
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to fetch audit logs' });
+  }
+});
+
+router.get('/audit/export.csv', async (req, res) => {
+  try {
+    const action = typeof req.query.action === 'string' ? req.query.action.trim() : '';
+    const entity = typeof req.query.entity === 'string' ? req.query.entity.trim() : '';
+    const actorId = typeof req.query.actorId === 'string' ? req.query.actorId.trim() : '';
+    const rawLimit = toNumber(req.query.limit, 5000);
+    const limit = Math.min(Math.max(Math.trunc(rawLimit), 1), 10000);
+
+    const query: Record<string, unknown> = {};
+    if (action) query.action = action;
+    if (entity) query.entity = entity;
+    if (actorId && mongoose.Types.ObjectId.isValid(actorId)) {
+      query.actorId = new mongoose.Types.ObjectId(actorId);
+    }
+
+    const rows = await AuditLog.find(query)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    const headers = [
+      'createdAt',
+      'action',
+      'entity',
+      'entityId',
+      'statusCode',
+      'actorRole',
+      'actorTelegramId',
+      'method',
+      'path',
+      'ip',
+      'durationMs'
+    ];
+
+    const lines = [
+      headers.join(','),
+      ...rows.map((row: any) =>
+        [
+          csvEscape(row.createdAt),
+          csvEscape(row.action),
+          csvEscape(row.entity),
+          csvEscape(row.entityId || ''),
+          csvEscape(row.statusCode),
+          csvEscape(row.actorRole || ''),
+          csvEscape(row.actorTelegramId || ''),
+          csvEscape(row.method || ''),
+          csvEscape(row.path || ''),
+          csvEscape(row.ip || ''),
+          csvEscape(row.durationMs || '')
+        ].join(',')
+      )
+    ];
+
+    const csv = `${lines.join('\n')}\n`;
+    const fileName = `audit_${new Date().toISOString().slice(0, 10)}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    return res.status(200).send(csv);
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to export audit CSV' });
+  }
+});
 
 // Get all users (for admin panel)
 router.get('/users', async (req, res) => {
   try {
-    const users: any[] = await User.find().select('-password').sort({ createdAt: -1 }).lean();
+    const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>, {
+      defaultLimit: 25,
+      maxLimit: 200
+    });
+    const roleFilter = typeof req.query.role === 'string' ? req.query.role.trim() : '';
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    const query: any = {};
+
+    if (roleFilter) {
+      query.role = roleFilter;
+    }
+
+    if (search) {
+      const regex = new RegExp(search, 'i');
+      query.$or = [
+        { username: regex },
+        { firstName: regex },
+        { lastName: regex },
+        { email: regex }
+      ];
+    }
+
+    const [total, users] = await Promise.all([
+      User.countDocuments(query),
+      User.find(query)
+        .select('-password -passwordHash')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+    ]);
     const userIds = users.map((item: any) => item?._id).filter(Boolean);
 
     const wallets: any[] = await Wallet.find({ user: { $in: userIds } })
@@ -117,14 +313,18 @@ router.get('/users', async (req, res) => {
       };
     });
 
-    res.json({ success: true, data: normalizedUsers });
+    res.json({
+      success: true,
+      data: normalizedUsers,
+      pagination: buildPaginationMeta(page, limit, total)
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 // Create user (admin)
-router.post('/users', async (req, res) => {
+router.post('/users', idempotency({ required: true }), async (req, res) => {
   try {
     const {
       username,
@@ -232,7 +432,7 @@ router.patch('/users/:id/subscription', async (req, res) => {
 });
 
 // Manual wallet adjustment (credit/debit)
-router.post('/users/:id/wallet/adjust', async (req, res) => {
+router.post('/users/:id/wallet/adjust', idempotency({ required: true }), async (req, res) => {
   try {
     const { id } = req.params;
     const amount = toNumber(req.body?.amount, Number.NaN);
@@ -305,8 +505,10 @@ router.get('/wallet/transactions', async (req, res) => {
     const statusFilter = typeof req.query.status === 'string' ? req.query.status.trim() : '';
     const typeFilter = typeof req.query.type === 'string' ? req.query.type.trim() : '';
     const searchFilter = typeof req.query.search === 'string' ? req.query.search.trim().toLowerCase() : '';
-    const rawLimit = toNumber(req.query.limit, 300);
-    const limit = Math.min(Math.max(Math.trunc(rawLimit), 1), 1000);
+    const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>, {
+      defaultLimit: 100,
+      maxLimit: 500
+    });
 
     const users: any[] = await User.find({}, 'username firstName lastName email telegramId wallet').lean();
     const wallets: any[] = await Wallet.find({}, 'user balance transactions')
@@ -383,9 +585,13 @@ router.get('/wallet/transactions', async (req, res) => {
       return right - left;
     });
 
+    const total = filtered.length;
+    const paged = filtered.slice(skip, skip + limit);
+
     res.json({
       success: true,
-      data: filtered.slice(0, limit)
+      data: paged,
+      pagination: buildPaginationMeta(page, limit, total)
     });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message || 'Failed to fetch wallet transactions' });
@@ -393,7 +599,7 @@ router.get('/wallet/transactions', async (req, res) => {
 });
 
 // Approve/deny payment or refund requests
-router.patch('/wallet/transactions/:userId/:transactionId', async (req, res) => {
+router.patch('/wallet/transactions/:userId/:transactionId', idempotency({ required: true }), async (req, res) => {
   try {
     const { userId, transactionId } = req.params;
     const statusValue = typeof req.body?.status === 'string' ? req.body.status.trim() : '';
@@ -580,11 +786,33 @@ router.patch('/wallet/transactions/:userId/:transactionId', async (req, res) => 
 // Get all teams (for admin panel)
 router.get('/teams', async (req, res) => {
   try {
-    const teams = await Team.find()
-      .populate('captain', 'username')
-      .populate('members', 'username')
-      .sort({ createdAt: -1 });
-    res.json({ success: true, data: teams });
+    const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>, {
+      defaultLimit: 25,
+      maxLimit: 200
+    });
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    const query: any = {};
+
+    if (search) {
+      const regex = new RegExp(search, 'i');
+      query.$or = [{ name: regex }, { tag: regex }, { game: regex }];
+    }
+
+    const [total, teams] = await Promise.all([
+      Team.countDocuments(query),
+      Team.find(query)
+        .populate('captain', 'username')
+        .populate('members', 'username')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+    ]);
+    res.json({
+      success: true,
+      data: teams,
+      pagination: buildPaginationMeta(page, limit, total)
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -593,10 +821,21 @@ router.get('/teams', async (req, res) => {
 // Get all contact messages (admin panel)
 router.get('/contacts', async (req, res) => {
   try {
+    const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>, {
+      defaultLimit: 50,
+      maxLimit: 200
+    });
+    const total = await ContactMessage.countDocuments({});
     const messages = await ContactMessage.find()
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
       .lean();
-    res.json({ success: true, data: messages });
+    res.json({
+      success: true,
+      data: messages,
+      pagination: buildPaginationMeta(page, limit, total)
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }

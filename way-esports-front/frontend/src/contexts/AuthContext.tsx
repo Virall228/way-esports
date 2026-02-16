@@ -2,11 +2,25 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '../types';
 import { api } from '../services/api';
 
+type LoginMethod = 'telegram' | 'email' | 'register' | 'otp' | 'google' | 'apple' | 'telegram_webapp';
+
+interface LoginOptions {
+  method?: LoginMethod;
+  telegramId?: string;
+  email?: string;
+  password?: string;
+  firstName?: string;
+  username?: string;
+  code?: string;
+  idToken?: string;
+  identityToken?: string;
+}
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: () => Promise<void>;
+  login: (options?: LoginOptions) => Promise<void>;
   logout: () => void;
   fetchProfile: () => Promise<User | null>;
 }
@@ -93,11 +107,143 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = async () => {
+  const loginWithTelegramId = async (telegramIdInput?: string) => {
+    const telegramIdRaw = telegramIdInput ?? window.prompt('Enter Telegram ID') ?? '';
+    const telegramId = telegramIdRaw.trim();
+    if (!telegramId) {
+      throw new Error('Telegram ID is required');
+    }
+
+    const result: any = await api.post('/api/auth/login', { telegramId });
+    const token = result?.token || result?.sessionToken;
+    const rawUser = result?.user;
+    if (!token || !rawUser) {
+      throw new Error('Invalid Telegram login response');
+    }
+
+    await applyAuthState(token, rawUser);
+  };
+
+  const loginWithEmailPassword = async (options?: Pick<LoginOptions, 'email' | 'password'>) => {
+    const emailRaw = options?.email ?? window.prompt('Enter email') ?? '';
+    const email = emailRaw.trim();
+    const passwordRaw = options?.password ?? window.prompt('Enter password') ?? '';
+    const password = passwordRaw.trim();
+
+    if (!email || !password) {
+      throw new Error('Email and password are required');
+    }
+
+    const result: any = await api.post('/api/auth/email/login', { email, password });
+    const token = result?.token || result?.sessionToken;
+    const rawUser = result?.user;
+    if (!token || !rawUser) {
+      throw new Error('Invalid email login response');
+    }
+
+    await applyAuthState(token, rawUser);
+  };
+
+  const registerWithEmailPassword = async (
+    options?: Pick<LoginOptions, 'email' | 'password' | 'firstName' | 'username'>
+  ) => {
+    const emailRaw = options?.email ?? window.prompt('Enter email') ?? '';
+    const email = emailRaw.trim();
+    const passwordRaw = options?.password ?? window.prompt('Create password (min 8 chars)') ?? '';
+    const password = passwordRaw.trim();
+    const firstNameRaw = options?.firstName ?? window.prompt('First name (optional)') ?? '';
+    const firstName = firstNameRaw.trim();
+    const usernameRaw = options?.username ?? window.prompt('Username (optional)') ?? '';
+    const username = usernameRaw.trim();
+
+    if (!email || !password) {
+      throw new Error('Email and password are required');
+    }
+
+    const result: any = await api.post('/api/auth/email/register', {
+      email,
+      password,
+      firstName: firstName || undefined,
+      username: username || undefined
+    });
+    const token = result?.token || result?.sessionToken;
+    const rawUser = result?.user;
+    if (!token || !rawUser) {
+      throw new Error('Invalid email registration response');
+    }
+
+    await applyAuthState(token, rawUser);
+  };
+
+  const loginWithEmailOtp = async (options?: Pick<LoginOptions, 'email' | 'code'>) => {
+    const emailRaw = options?.email ?? window.prompt('Enter email') ?? '';
+    const email = emailRaw.trim();
+    if (!email) {
+      throw new Error('Email is required');
+    }
+
+    await api.post('/api/auth/email/request-otp', { email });
+    const codeRaw = options?.code ?? window.prompt('Enter OTP code from email') ?? '';
+    const code = codeRaw.trim();
+    if (!code) {
+      throw new Error('OTP code is required');
+    }
+
+    const result: any = await api.post('/api/auth/email/verify-otp', { email, code });
+    const token = result?.token || result?.sessionToken;
+    const rawUser = result?.user;
+    if (!token || !rawUser) {
+      throw new Error('Invalid OTP auth response');
+    }
+
+    await applyAuthState(token, rawUser);
+  };
+
+  const loginWithGoogleToken = async (idTokenInput?: string) => {
+    const idTokenRaw = idTokenInput ?? window.prompt('Paste Google ID token') ?? '';
+    const idToken = idTokenRaw.trim();
+    if (!idToken) {
+      throw new Error('Google ID token is required');
+    }
+
+    const result: any = await api.post('/api/auth/google', { idToken });
+    const token = result?.token || result?.sessionToken;
+    const rawUser = result?.user;
+    if (!token || !rawUser) {
+      throw new Error('Invalid Google auth response');
+    }
+
+    await applyAuthState(token, rawUser);
+  };
+
+  const loginWithAppleToken = async (identityTokenInput?: string) => {
+    const identityTokenRaw = identityTokenInput ?? window.prompt('Paste Apple identity token') ?? '';
+    const identityToken = identityTokenRaw.trim();
+    if (!identityToken) {
+      throw new Error('Apple identity token is required');
+    }
+
+    const result: any = await api.post('/api/auth/apple', { identityToken });
+    const token = result?.token || result?.sessionToken;
+    const rawUser = result?.user;
+    if (!token || !rawUser) {
+      throw new Error('Invalid Apple auth response');
+    }
+
+    await applyAuthState(token, rawUser);
+  };
+
+  const login = async (options?: LoginOptions) => {
     setIsLoading(true);
     try {
+      const forcedMethod = options?.method;
+
       // Try Telegram Mini App authentication first
-      if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
+      if (
+        (!forcedMethod || forcedMethod === 'telegram_webapp') &&
+        typeof window !== 'undefined' &&
+        (window as any).Telegram?.WebApp
+      ) {
         const initData = (window as any).Telegram.WebApp.initData;
 
         if (initData) {
@@ -113,21 +259,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      // Browser fallback: Telegram ID login
-      const telegramIdRaw = window.prompt('Enter Telegram ID for login');
-      const telegramId = (telegramIdRaw || '').trim();
-      if (!telegramId) {
-        throw new Error('Telegram ID is required');
+      const modeRaw = forcedMethod
+        ? forcedMethod
+        : window.prompt('Login method: telegram | email | register | otp | google | apple') || 'telegram';
+      const mode = modeRaw.trim().toLowerCase();
+
+      if (mode === 'email') {
+        await loginWithEmailPassword(options);
+        return;
       }
 
-      const result: any = await api.post('/api/auth/login', { telegramId });
-      const token = result?.token || result?.sessionToken;
-      const rawUser = result?.user;
-      if (!token || !rawUser) {
-        throw new Error('Invalid Telegram login response');
+      if (mode === 'register') {
+        await registerWithEmailPassword(options);
+        return;
       }
 
-      await applyAuthState(token, rawUser);
+      if (mode === 'otp') {
+        await loginWithEmailOtp(options);
+        return;
+      }
+
+      if (mode === 'google') {
+        await loginWithGoogleToken(options?.idToken);
+        return;
+      }
+
+      if (mode === 'apple') {
+        await loginWithAppleToken(options?.identityToken);
+        return;
+      }
+
+      await loginWithTelegramId(options?.telegramId);
     } finally {
       setIsLoading(false);
     }
@@ -168,6 +330,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const logout = () => {
+    api.post('/api/auth/logout', {}).catch(() => {
+      // ignore
+    });
     setToken(null);
     setUser(null);
   };

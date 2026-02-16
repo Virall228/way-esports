@@ -15,7 +15,9 @@
     "test:performance": "jest tests/performance --runInBand --detectOpenHandles",
     "migrate": "ts-node src/scripts/run-migrations.ts up",
     "migrate:down": "ts-node src/scripts/run-migrations.ts down",
-    "migrate:status": "ts-node src/scripts/run-migrations.ts status"
+    "migrate:status": "ts-node src/scripts/run-migrations.ts status",
+    "backup:db": "ts-node src/scripts/backup-db.ts",
+    "load:test": "node ../scripts/load-test.js"
   },
   "dependencies": {
     "@types/express-validator": "^2.20.33",

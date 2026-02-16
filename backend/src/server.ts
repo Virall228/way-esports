@@ -12,6 +12,7 @@ import { apiLimiter } from './middleware/rateLimiter';
 import { connectDB, disconnectDB } from './config/db';
 import { startSchedulers } from './services/scheduler';
 import { startWorkers } from './services/queue';
+import { getMetricsSnapshot, requestMetricsMiddleware, startMonitoring } from './services/monitoringService';
 
 // Import routes
 import matchesRouter from './routes/matches';
@@ -35,6 +36,7 @@ import statsRouter from './routes/stats';
 import contactRouter from './routes/contact';
 import analyticsRouter from './routes/analytics';
 import usersRouter from './routes/users';
+import tasksRouter from './routes/tasks';
 
 import { seedDefaultAchievements } from './services/achievements/seedAchievements';
 
@@ -91,6 +93,7 @@ app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
 });
+app.use(requestMetricsMiddleware);
 
 // API Routes
 app.use('/api/matches', matchesRouter);
@@ -114,6 +117,7 @@ app.use('/api/stats', statsRouter);
 app.use('/api/contact', contactRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/tasks', tasksRouter);
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
@@ -125,6 +129,39 @@ app.get('/api/health', (req, res) => {
     mongo: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
     timestamp: new Date().toISOString()
   });
+});
+
+app.get('/api/health/live', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.get('/api/health/ready', (_req, res) => {
+  const mongoConnected = mongoose.connection.readyState === 1;
+  if (!mongoConnected) {
+    return res.status(503).json({
+      status: 'degraded',
+      mongo: 'disconnected',
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  return res.json({
+    status: 'ok',
+    mongo: 'connected',
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/api/metrics', (req, res) => {
+  const expectedApiKey = (process.env.METRICS_API_KEY || '').trim();
+  if (expectedApiKey) {
+    const providedApiKey = (req.header('x-metrics-key') || '').trim();
+    if (providedApiKey !== expectedApiKey) {
+      return res.status(401).json({ success: false, error: 'Unauthorized metrics access' });
+    }
+  }
+
+  return res.json(getMetricsSnapshot());
 });
 
 // Swagger UI (serves /api-docs)
@@ -155,18 +192,6 @@ if (process.env.NODE_ENV === 'development') {
 } else {
   console.log('Production mode');
 }
-// Queue control (minimal): enqueue bulk registration
-app.post('/api/tasks/bulk-register', async (req, res) => {
-  try {
-    const { tournamentId, teamIds } = req.body || {};
-    // Placeholder handler body to avoid TS errors; implement real logic in queue service
-    res.json({ status: 'queued', tournamentId, teamIds });
-  } catch (err) {
-    console.error('bulk-register error', err);
-    res.status(500).json({ status: 'error' });
-  }
-});
-
 app.use((req, res) => {
   res.status(404).json({
     status: 'error',
@@ -190,6 +215,7 @@ async function start() {
     console.log('Starting background workers...');
     startWorkers();
     startSchedulers();
+    startMonitoring();
 
     const server = app.listen(PORT_NUMBER, '0.0.0.0', () => {
       console.log(`🚀 Server is running on port ${PORT_NUMBER}`);

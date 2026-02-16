@@ -7,6 +7,8 @@ import { body } from 'express-validator';
 import { validateRequest } from '../middleware/validate';
 import { authenticateJWT, isAdmin } from '../middleware/auth';
 import { checkTournamentAccess } from '../middleware/tournamentAccess';
+import { idempotency } from '../middleware/idempotency';
+import { buildPaginationMeta, parsePagination } from '../utils/pagination';
 
 const router = express.Router();
 
@@ -63,17 +65,31 @@ const consumeTournamentEntry = async (req: any) => {
 // Get all teams
 router.get('/', async (req, res) => {
   try {
-    const { game, status } = req.query;
+    const { game, status, search } = req.query;
+    const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>, {
+      defaultLimit: 20,
+      maxLimit: 100
+    });
     const query: any = {};
 
     if (game) query.game = game;
     if (status) query.status = status;
+    if (typeof search === 'string' && search.trim()) {
+      query.$or = [
+        { name: { $regex: search.trim(), $options: 'i' } },
+        { tag: { $regex: search.trim(), $options: 'i' } }
+      ];
+    }
+
+    const total = await Team.countDocuments(query);
 
     const teams = await Team.find(query)
       .populate('captain', 'username firstName lastName profileLogo')
       .populate('members', 'username firstName lastName profileLogo')
       .populate('achievements.tournamentId', 'name prizePool')
       .sort({ 'stats.winRate': -1 })
+      .skip(skip)
+      .limit(limit)
       .lean();
 
     // Transform for frontend compatibility
@@ -123,7 +139,8 @@ router.get('/', async (req, res) => {
 
     res.json({
       success: true,
-      data: transformed
+      data: transformed,
+      pagination: buildPaginationMeta(page, limit, total)
     });
   } catch (error) {
     console.error('Error fetching teams:', error);
@@ -138,6 +155,7 @@ router.get('/', async (req, res) => {
 router.post('/create',
   authenticateJWT,
   checkTournamentAccess,
+  idempotency({ required: true }),
   body('name').notEmpty().withMessage('Team name is required'),
   body('tag').isLength({ min: 2, max: 5 }).withMessage('Tag must be 2-5 characters'),
   body('game').notEmpty().withMessage('Game is required'),
@@ -250,6 +268,7 @@ router.post('/create',
 router.post('/join',
   authenticateJWT,
   checkTournamentAccess,
+  idempotency({ required: true }),
   body('teamId').isMongoId().withMessage('Team ID is required'),
   body('tournamentId').optional().isMongoId().withMessage('Invalid tournament ID'),
   validateRequest,

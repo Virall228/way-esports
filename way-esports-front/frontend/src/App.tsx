@@ -31,6 +31,7 @@ import Matches from './pages/Matches';
 import Wallet from './pages/Wallet';
 import Settings from './pages/Settings';
 import AdminPage from './pages/Admin/AdminPage';
+import AdminAccessPage from './pages/Admin/AdminAccessPage';
 import TournamentDetailsPage from './pages/Tournaments/TournamentDetailsPage';
 import BillingPage from './pages/Billing/BillingPage';
 import PublicProfilePage from './pages/Profile/PublicProfilePage';
@@ -454,7 +455,7 @@ const MobileMenuActionButton = styled.button`
 const AppContent: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const { addNotification } = useNotifications();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, login, logout } = useAuth();
   const { t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
@@ -468,6 +469,24 @@ const AppContent: React.FC = () => {
     closeMobileMenu();
     navigate('/');
   }, [logout, navigate]);
+
+  const openAdminAccess = React.useCallback(() => {
+    closeMobileMenu();
+    navigate('/admin-access');
+  }, [navigate]);
+
+  const handleLogin = React.useCallback(async () => {
+    try {
+      await login();
+      closeMobileMenu();
+    } catch (error: any) {
+      addNotification({
+        type: 'error',
+        title: 'Login failed',
+        message: error?.message || 'Unable to login'
+      });
+    }
+  }, [addNotification, login]);
 
   const navItems = React.useMemo<NavItem[]>(() => {
     const items: NavItem[] = [
@@ -564,6 +583,14 @@ const AppContent: React.FC = () => {
             <TopBarBadge>{t('onePlatformOneUi')}</TopBarBadge>
           </TopBarTitle>
           <TopBarActions>
+            <TopActionButton type="button" onClick={openAdminAccess} aria-label="Admin access">
+              Admin
+            </TopActionButton>
+            {!isAuthenticated && (
+              <TopActionButton type="button" onClick={handleLogin} aria-label="Login">
+                Login
+              </TopActionButton>
+            )}
             {isAuthenticated && (
               <TopActionButton type="button" onClick={handleLogout} aria-label="Logout">
                 <LogOut size={14} />
@@ -599,6 +626,7 @@ const AppContent: React.FC = () => {
               <Route path="/teams/:id" element={<TeamPage />} />
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/admin" element={<AdminRoute />} />
+              <Route path="/admin-access" element={<AdminAccessPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </ContentInner>
@@ -631,10 +659,18 @@ const AppContent: React.FC = () => {
               <NavItemLabel>{item.label}</NavItemLabel>
             </NavItemLink>
           ))}
+          <MobileMenuActionButton type="button" onClick={openAdminAccess}>
+            Admin Access
+          </MobileMenuActionButton>
           {isAuthenticated && (
             <MobileMenuActionButton type="button" onClick={handleLogout}>
               <LogOut size={14} />
               Logout
+            </MobileMenuActionButton>
+          )}
+          {!isAuthenticated && (
+            <MobileMenuActionButton type="button" onClick={handleLogin}>
+              Login
             </MobileMenuActionButton>
           )}
         </MobileMenuPanel>
@@ -661,7 +697,7 @@ const AdminRoute: React.FC = () => {
   }
 
   if (!hasAdminAccess) {
-    return <Navigate to="/" replace />;
+    return <AdminAccessPage />;
   }
 
   return <AdminPage />;

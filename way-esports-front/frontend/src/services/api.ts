@@ -33,6 +33,13 @@ const requestJson = async <T = any>(endpoint: string, method: HttpMethod, data?:
   const token = getToken();
   const headers: Record<string, string> = { ...API_CONFIG.DEFAULT_HEADERS };
   if (token) headers.Authorization = `Bearer ${token}`;
+  if (method !== 'GET' && method !== 'DELETE') {
+    const randomKey =
+      (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    headers['X-Idempotency-Key'] = randomKey;
+  }
 
   // Add Telegram initData if available and requested
   if (includeTelegramData && typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {

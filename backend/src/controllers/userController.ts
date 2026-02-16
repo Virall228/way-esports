@@ -1,8 +1,10 @@
 import { Request, Response } from 'express';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import User from '../models/User';
 import Session from '../models/Session';
+import { verifyGoogleIdToken, verifyAppleIdentityToken } from '../services/oauthTokenVerifier';
 
 const JWT_EXPIRATION = '24h';
 const SESSION_TTL_DAYS = 30;
@@ -48,6 +50,68 @@ const checkAdminBootstrap = async (user: any) => {
   }
 };
 
+const SALT_ROUNDS = 12;
+
+const normalizeEmail = (email: string): string => email.trim().toLowerCase();
+
+const usernameFromEmail = (email: string): string => {
+  const base = email.split('@')[0] || 'user';
+  const normalized = base.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 24);
+  return normalized || 'user';
+};
+
+const ensureUniqueUsername = async (seed: string): Promise<string> => {
+  let candidate = seed;
+  let attempt = 0;
+
+  while (attempt < 20) {
+    // eslint-disable-next-line no-await-in-loop
+    const exists = await User.exists({ username: candidate });
+    if (!exists) return candidate;
+    attempt += 1;
+    candidate = `${seed}_${Math.floor(Math.random() * 10000)}`;
+  }
+
+  return `${seed}_${Date.now()}`;
+};
+
+const issueAuthResponse = async (user: any) => {
+  const jwtToken = jwt.sign(
+    { userId: user._id.toString(), telegramId: user.telegramId, role: user.role },
+    process.env.JWT_SECRET || 'your_jwt_secret',
+    { expiresIn: JWT_EXPIRATION }
+  );
+  const sessionToken = await createSessionToken(user._id.toString());
+
+  return {
+    user: user.toObject(),
+    token: sessionToken,
+    jwtToken
+  };
+};
+
+const buildNamePair = (fallbackName: string, fullName?: string | null, firstName?: string | null, lastName?: string | null) => {
+  if (firstName && firstName.trim()) {
+    return {
+      firstName: firstName.trim(),
+      lastName: lastName?.trim() || undefined
+    };
+  }
+
+  if (fullName && fullName.trim()) {
+    const parts = fullName.trim().split(/\s+/);
+    return {
+      firstName: parts[0] || fallbackName,
+      lastName: parts.slice(1).join(' ') || undefined
+    };
+  }
+
+  return {
+    firstName: fallbackName,
+    lastName: lastName?.trim() || undefined
+  };
+};
+
 // Register endpoint
 export const register = async (req: Request, res: Response) => {
   try {
@@ -65,14 +129,7 @@ export const register = async (req: Request, res: Response) => {
     const existingUser = await User.findOne({ telegramId: telegramIdNumber });
     if (existingUser) {
       await checkAdminBootstrap(existingUser);
-      const jwtToken = jwt.sign(
-        { userId: existingUser._id.toString(), telegramId: existingUser.telegramId, role: existingUser.role },
-        process.env.JWT_SECRET || 'your_jwt_secret',
-        { expiresIn: JWT_EXPIRATION }
-      );
-
-      const sessionToken = await createSessionToken(existingUser._id.toString());
-      return res.status(200).json({ user: existingUser.toObject(), token: sessionToken, jwtToken });
+      return res.status(200).json(await issueAuthResponse(existingUser));
     }
 
     const user = new User({
@@ -86,16 +143,7 @@ export const register = async (req: Request, res: Response) => {
 
     await checkAdminBootstrap(user);
     await user.save();
-
-    const jwtToken = jwt.sign(
-      { userId: user._id.toString(), telegramId: user.telegramId, role: user.role },
-      process.env.JWT_SECRET || 'your_jwt_secret',
-      { expiresIn: JWT_EXPIRATION }
-    );
-
-    const sessionToken = await createSessionToken(user._id.toString());
-
-    res.status(201).json({ user: user.toObject(), token: sessionToken, jwtToken });
+    res.status(201).json(await issueAuthResponse(user));
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Error registering user' });
@@ -138,19 +186,199 @@ export const login = async (req: Request, res: Response) => {
     if (user.isNew) {
       await user.save();
     }
-
-    const jwtToken = jwt.sign(
-      { userId: user._id.toString(), telegramId: user.telegramId, role: user.role },
-      process.env.JWT_SECRET || 'your_jwt_secret',
-      { expiresIn: JWT_EXPIRATION }
-    );
-
-    const sessionToken = await createSessionToken(user._id.toString());
-
-    res.json({ user: user.toObject(), token: sessionToken, jwtToken });
+    res.json(await issueAuthResponse(user));
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Error logging in' });
+  }
+};
+
+// Email + password registration
+export const registerWithEmailPassword = async (req: Request, res: Response) => {
+  try {
+    const { email, password, username, firstName, lastName } = req.body || {};
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'email and password are required' });
+    }
+
+    if (typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ error: 'password must be at least 8 characters' });
+    }
+
+    const normalizedEmail = normalizeEmail(String(email));
+
+    const existing = await User.findOne({ email: normalizedEmail });
+    if (existing) {
+      return res.status(409).json({ error: 'User with this email already exists' });
+    }
+
+    const fallbackUsername = usernameFromEmail(normalizedEmail);
+    const safeUsername = await ensureUniqueUsername(
+      typeof username === 'string' && username.trim() ? username.trim() : fallbackUsername
+    );
+    const nameInfo = buildNamePair('User', null, firstName || null, lastName || null);
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+
+    const user = new User({
+      email: normalizedEmail,
+      username: safeUsername,
+      firstName: nameInfo.firstName,
+      lastName: nameInfo.lastName,
+      passwordHash,
+      role: 'user',
+      newsletter_subscriber: true
+    });
+
+    await checkAdminBootstrap(user);
+    await user.save();
+
+    res.status(201).json(await issueAuthResponse(user));
+  } catch (error) {
+    console.error('Email registration error:', error);
+    res.status(500).json({ error: 'Error registering with email/password' });
+  }
+};
+
+// Email + password login
+export const loginWithEmailPassword = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body || {};
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'email and password are required' });
+    }
+
+    const normalizedEmail = normalizeEmail(String(email));
+    const user: any = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    if (!user.passwordHash) {
+      return res.status(400).json({ error: 'Password login is not configured for this account' });
+    }
+
+    const isValid = await bcrypt.compare(String(password), user.passwordHash);
+    if (!isValid) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    await checkAdminBootstrap(user);
+    res.json(await issueAuthResponse(user));
+  } catch (error) {
+    console.error('Email login error:', error);
+    res.status(500).json({ error: 'Error logging in with email/password' });
+  }
+};
+
+const upsertSocialUser = async (params: {
+  provider: 'google' | 'apple';
+  providerId: string;
+  email: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  fullName?: string | null;
+}) => {
+  const { provider, providerId, email, firstName, lastName, fullName } = params;
+  const providerField = provider === 'google' ? 'googleId' : 'appleSub';
+  const normalizedEmail = email ? normalizeEmail(email) : null;
+
+  let user: any = await User.findOne({ [providerField]: providerId });
+  if (!user && normalizedEmail) {
+    user = await User.findOne({ email: normalizedEmail });
+  }
+
+  if (user) {
+    user[providerField] = providerId;
+    if (normalizedEmail && !user.email) {
+      user.email = normalizedEmail;
+    }
+    if (!user.firstName || user.firstName === 'User') {
+      const names = buildNamePair('User', fullName, firstName, lastName);
+      user.firstName = names.firstName;
+      if (names.lastName) user.lastName = names.lastName;
+    }
+    await checkAdminBootstrap(user);
+    await user.save();
+    return user;
+  }
+
+  const names = buildNamePair('User', fullName, firstName, lastName);
+  const seedUsername = normalizedEmail ? usernameFromEmail(normalizedEmail) : `${provider}_${providerId.slice(0, 12)}`;
+  const safeUsername = await ensureUniqueUsername(seedUsername);
+
+  user = new User({
+    email: normalizedEmail || undefined,
+    username: safeUsername,
+    firstName: names.firstName,
+    lastName: names.lastName,
+    [providerField]: providerId,
+    role: 'user',
+    newsletter_subscriber: true
+  });
+
+  await checkAdminBootstrap(user);
+  await user.save();
+  return user;
+};
+
+// Google OAuth login/register
+export const authenticateGoogle = async (req: Request, res: Response) => {
+  try {
+    const idToken = (req.body?.idToken || '').toString();
+    if (!idToken) {
+      return res.status(400).json({ error: 'idToken is required' });
+    }
+
+    const verified = await verifyGoogleIdToken(idToken);
+    if (!verified.providerId) {
+      return res.status(400).json({ error: 'Invalid Google token payload' });
+    }
+    if (verified.email && !verified.emailVerified) {
+      return res.status(400).json({ error: 'Google email is not verified' });
+    }
+
+    const user = await upsertSocialUser({
+      provider: 'google',
+      providerId: verified.providerId,
+      email: verified.email,
+      firstName: verified.firstName,
+      lastName: verified.lastName,
+      fullName: verified.fullName
+    });
+
+    res.json(await issueAuthResponse(user));
+  } catch (error: any) {
+    console.error('Google auth error:', error);
+    res.status(401).json({ error: error?.message || 'Google authentication failed' });
+  }
+};
+
+// Apple OAuth login/register
+export const authenticateApple = async (req: Request, res: Response) => {
+  try {
+    const identityToken = (req.body?.identityToken || '').toString();
+    if (!identityToken) {
+      return res.status(400).json({ error: 'identityToken is required' });
+    }
+
+    const verified = await verifyAppleIdentityToken(identityToken);
+    if (verified.email && !verified.emailVerified) {
+      return res.status(400).json({ error: 'Apple email is not verified' });
+    }
+    const user = await upsertSocialUser({
+      provider: 'apple',
+      providerId: verified.providerId,
+      email: verified.email,
+      firstName: req.body?.firstName || null,
+      lastName: req.body?.lastName || null
+    });
+
+    res.json(await issueAuthResponse(user));
+  } catch (error: any) {
+    console.error('Apple auth error:', error);
+    res.status(401).json({ error: error?.message || 'Apple authentication failed' });
   }
 };
 
