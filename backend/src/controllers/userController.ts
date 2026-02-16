@@ -107,9 +107,17 @@ const saveUserWithRetries = async (
       }
 
       if (duplicateField === 'telegramId') {
-        const conflict: any = new Error('telegram_conflict');
-        conflict.statusCode = 409;
-        throw conflict;
+        // Legacy data may contain telegramId collisions for email-only users.
+        // Drop telegramId and retry persist.
+        try {
+          if (typeof user.set === 'function') {
+            user.set('telegramId', undefined);
+          }
+          user.telegramId = undefined;
+        } catch {
+          // ignore and retry
+        }
+        continue;
       }
 
       if (duplicateField === 'username') {
@@ -518,8 +526,45 @@ export const registerWithEmailPassword = async (req: Request, res: Response) => 
   } catch (error) {
     console.error('Email registration error:', error);
     const statusCode = (error as any)?.statusCode;
+    const message = (error as any)?.message || '';
     const duplicateField = getDuplicateField(error as any);
-    if (statusCode === 409 || duplicateField === 'email') {
+
+    if (duplicateField === 'telegramId' || message === 'telegram_conflict') {
+      const normalizedEmail = normalizeEmail(String(req.body?.email || ''));
+      const fallbackUsername = `${usernameFromEmail(normalizedEmail)}_${Math.floor(Math.random() * 1000000)}`;
+      const nameInfo = buildNamePair('User', null, req.body?.firstName || null, req.body?.lastName || null);
+      const passwordRaw = typeof req.body?.password === 'string' ? String(req.body.password) : '';
+
+      if (normalizedEmail && passwordRaw.length >= 8) {
+        const passwordHash = await bcrypt.hash(passwordRaw, SALT_ROUNDS);
+        const recovered = await User.findOneAndUpdate(
+          { email: normalizedEmail },
+          {
+            $setOnInsert: {
+              email: normalizedEmail,
+              username: fallbackUsername,
+              firstName: nameInfo.firstName,
+              lastName: nameInfo.lastName,
+              role: 'user',
+              newsletter_subscriber: true,
+              passwordHash
+            }
+          },
+          { new: true, upsert: true }
+        );
+
+        if (recovered) {
+          recovered.passwordHash = passwordHash;
+          recovered.newsletter_subscriber = true;
+          recovered.telegramId = undefined;
+          await checkAdminBootstrap(recovered);
+          await recovered.save();
+          return res.status(200).json(await issueAuthResponse(recovered));
+        }
+      }
+    }
+
+    if (statusCode === 409 || duplicateField === 'email' || message === 'email_conflict') {
       const normalizedEmail = normalizeEmail(String(req.body?.email || ''));
       console.warn('[auth/email/register] duplicate email conflict', {
         normalizedEmail,
