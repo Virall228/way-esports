@@ -55,6 +55,7 @@ export interface IUser extends Document<mongoose.Types.ObjectId> {
       amount: number;
       description: string;
       date: Date;
+      reference?: string;
       status?: 'pending' | 'completed' | 'failed' | 'refund_pending' | 'refunded' | 'refund_denied';
       refundReason?: string;
       refundRequestedAt?: Date;
@@ -204,6 +205,7 @@ const userSchema = new Schema<IUser>({
         type: Date,
         default: Date.now
       },
+      reference: String,
       status: {
         type: String,
         enum: ['pending', 'completed', 'failed', 'refund_pending', 'refunded', 'refund_denied'],

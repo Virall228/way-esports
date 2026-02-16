@@ -4,6 +4,12 @@ ENV HUSKY=0 NPM_CONFIG_IGNORE_SCRIPTS=true NPM_CONFIG_AUDIT=false NPM_CONFIG_FUN
 # Build-time API URL for Vite
 ARG VITE_API_URL
 ENV VITE_API_URL=${VITE_API_URL}
+ARG VITE_GOOGLE_CLIENT_ID
+ENV VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+ARG VITE_APPLE_CLIENT_ID
+ENV VITE_APPLE_CLIENT_ID=${VITE_APPLE_CLIENT_ID}
+ARG VITE_APPLE_REDIRECT_URI
+ENV VITE_APPLE_REDIRECT_URI=${VITE_APPLE_REDIRECT_URI}
 COPY package*.json ./
 # Используем npm install вместо npm ci для большей гибкости при несинхронизированных lock файлах
 # npm install автоматически обновит package-lock.json если нужно

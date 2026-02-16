@@ -1,10 +1,11 @@
 import React from 'react';
 import styled from 'styled-components';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
+import { ApiError } from '../../services/api';
 
 const Container = styled.div`
   max-width: 760px;
@@ -21,15 +22,6 @@ const Title = styled.h1`
 const Subtitle = styled.p`
   margin: 0.4rem 0 0;
   color: ${({ theme }) => theme.colors.text.secondary};
-`;
-
-const Grid = styled.div`
-  display: grid;
-  gap: 1rem;
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    grid-template-columns: 1fr 1fr;
-  }
 `;
 
 const Block = styled(Card).attrs({ variant: 'outlined' })`
@@ -59,20 +51,101 @@ const Row = styled.div`
   gap: 0.5rem;
 `;
 
+const Divider = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: ${({ theme }) => theme.colors.text.tertiary};
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0.5rem 0;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: ${({ theme }) => theme.colors.border.medium};
+  }
+`;
+
+const SocialActions = styled.div`
+  display: grid;
+  gap: 0.6rem;
+`;
+
+const SocialButton = styled(Button)`
+  width: 100%;
+`;
+
+const GoogleHost = styled.div`
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+`;
+
+const InlineLink = styled.button`
+  border: none;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.brand.primary};
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  margin-left: 0.35rem;
+`;
+
 const AuthPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, fetchProfile, isLoading } = useAuth();
   const { addNotification } = useNotifications();
 
   const [identifier, setIdentifier] = React.useState('');
   const [password, setPassword] = React.useState('');
-  const [registerEmail, setRegisterEmail] = React.useState('');
-  const [registerPassword, setRegisterPassword] = React.useState('');
-  const [registerUsername, setRegisterUsername] = React.useState('');
-  const [registerFirstName, setRegisterFirstName] = React.useState('');
-  const [telegramId, setTelegramId] = React.useState('');
+  const [isRegistrationMode, setIsRegistrationMode] = React.useState(false);
+  const [socialLoading, setSocialLoading] = React.useState<'google' | 'apple' | null>(null);
+  const [isGoogleReady, setIsGoogleReady] = React.useState(false);
+  const [isAppleReady, setIsAppleReady] = React.useState(false);
+  const googleHostRef = React.useRef<HTMLDivElement | null>(null);
+  const googleRenderedRef = React.useRef(false);
+  const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
+  const appleClientId = (import.meta.env.VITE_APPLE_CLIENT_ID || '').trim();
+  const appleRedirectUri = (
+    import.meta.env.VITE_APPLE_REDIRECT_URI ||
+    (typeof window !== 'undefined' ? `${window.location.origin}/auth` : '')
+  ).trim();
+  const referralCode = React.useMemo(() => {
+    const fromQuery = new URLSearchParams(location.search).get('ref') || new URLSearchParams(location.search).get('referral');
+    if (fromQuery && fromQuery.trim()) {
+      return fromQuery.trim();
+    }
+    try {
+      return localStorage.getItem('referral_code')?.trim() || '';
+    } catch {
+      return '';
+    }
+  }, [location.search]);
 
-  const finalizeLogin = async () => {
+  React.useEffect(() => {
+    if (!referralCode) return;
+    try {
+      localStorage.setItem('referral_code', referralCode);
+    } catch {
+      // ignore storage errors
+    }
+  }, [referralCode]);
+
+  const clearStoredReferral = () => {
+    try {
+      localStorage.removeItem('referral_code');
+    } catch {
+      // ignore storage errors
+    }
+  };
+
+  const finalizeLogin = React.useCallback(async () => {
     const profile = await fetchProfile();
     const role = profile?.role || 'user';
     if (role === 'admin' || role === 'developer') {
@@ -80,160 +153,405 @@ const AuthPage: React.FC = () => {
       return;
     }
     navigate('/');
+  }, [fetchProfile, navigate]);
+
+  const isEmailLike = (value: string) => /\S+@\S+\.\S+/.test(value);
+
+  const loadScript = React.useCallback((id: string, src: string) => {
+    if (typeof document === 'undefined') {
+      return Promise.reject(new Error('Document is not available'));
+    }
+
+    const existing = document.getElementById(id) as HTMLScriptElement | null;
+    if (existing) {
+      if (existing.dataset.loaded === 'true') return Promise.resolve();
+      return new Promise<void>((resolve, reject) => {
+        existing.addEventListener('load', () => resolve(), { once: true });
+        existing.addEventListener('error', () => reject(new Error(`Failed to load ${src}`)), { once: true });
+      });
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      const script = document.createElement('script');
+      script.id = id;
+      script.src = src;
+      script.async = true;
+      script.onload = () => {
+        script.dataset.loaded = 'true';
+        resolve();
+      };
+      script.onerror = () => reject(new Error(`Failed to load ${src}`));
+      document.head.appendChild(script);
+    });
+  }, []);
+
+  const handleSocialTokenLogin = React.useCallback(async (provider: 'google' | 'apple', token: string) => {
+    if (!token) {
+      addNotification({
+        type: 'error',
+        title: `${provider} login failed`,
+        message: 'Token is missing'
+      });
+      return;
+    }
+
+    try {
+      setSocialLoading(provider);
+      if (provider === 'google') {
+        await login({ method: 'google', idToken: token });
+      } else {
+        await login({ method: 'apple', identityToken: token });
+      }
+      await finalizeLogin();
+    } catch (error: any) {
+      addNotification({
+        type: 'error',
+        title: `${provider} login failed`,
+        message: error?.message || `Unable to login with ${provider}`
+      });
+    } finally {
+      setSocialLoading(null);
+    }
+  }, [addNotification, finalizeLogin, login]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const initGoogle = async () => {
+      if (!googleClientId || !googleHostRef.current) return;
+
+      try {
+        await loadScript('google-identity-services', 'https://accounts.google.com/gsi/client');
+        if (cancelled || !googleHostRef.current) return;
+
+        const googleApi = (window as any).google;
+        if (!googleApi?.accounts?.id) return;
+
+        googleApi.accounts.id.initialize({
+          client_id: googleClientId,
+          callback: (response: any) => {
+            const credential = response?.credential;
+            if (credential) {
+              handleSocialTokenLogin('google', credential);
+            } else {
+              addNotification({
+                type: 'error',
+                title: 'Google login failed',
+                message: 'Google did not return credential'
+              });
+            }
+          }
+        });
+
+        if (!googleRenderedRef.current) {
+          googleHostRef.current.innerHTML = '';
+          googleApi.accounts.id.renderButton(googleHostRef.current, {
+            theme: 'outline',
+            size: 'large',
+            shape: 'pill',
+            text: 'continue_with',
+            width: 320
+          });
+          googleRenderedRef.current = true;
+        }
+
+        setIsGoogleReady(true);
+      } catch {
+        if (!cancelled) setIsGoogleReady(false);
+      }
+    };
+
+    initGoogle().catch(() => {
+      if (!cancelled) setIsGoogleReady(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [addNotification, googleClientId, handleSocialTokenLogin, loadScript]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const initApple = async () => {
+      if (!appleClientId) return;
+
+      try {
+        await loadScript('apple-signin-js', 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js');
+        if (cancelled) return;
+
+        const appleApi = (window as any).AppleID;
+        if (!appleApi?.auth?.init) return;
+
+        appleApi.auth.init({
+          clientId: appleClientId,
+          scope: 'name email',
+          redirectURI: appleRedirectUri,
+          usePopup: true
+        });
+
+        setIsAppleReady(true);
+      } catch {
+        if (!cancelled) setIsAppleReady(false);
+      }
+    };
+
+    initApple().catch(() => {
+      if (!cancelled) setIsAppleReady(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [appleClientId, appleRedirectUri, loadScript]);
+
+  const handleAppleLogin = async () => {
+    if (!isAppleReady) {
+      addNotification({
+        type: 'warning',
+        title: 'Apple login unavailable',
+        message: 'Apple Sign-In is not configured'
+      });
+      return;
+    }
+
+    try {
+      const appleApi = (window as any).AppleID;
+      const response = await appleApi?.auth?.signIn();
+      const idToken = response?.authorization?.id_token;
+
+      if (!idToken) {
+        addNotification({
+          type: 'error',
+          title: 'Apple login failed',
+          message: 'Apple did not return identity token'
+        });
+        return;
+      }
+
+      await handleSocialTokenLogin('apple', idToken);
+    } catch (error: any) {
+      addNotification({
+        type: 'error',
+        title: 'Apple login failed',
+        message: error?.message || 'Unable to login with Apple'
+      });
+    }
   };
 
-  const handleEmailLogin = async () => {
+  const handleContinue = async () => {
+    const cleanIdentifier = identifier.trim();
+    const cleanPassword = password.trim();
+
+    if (!cleanIdentifier) {
+      addNotification({
+        type: 'error',
+        title: 'Missing credentials',
+        message: 'Enter identifier'
+      });
+      return;
+    }
+
+    const isTelegramId = /^[0-9]+$/.test(cleanIdentifier);
+
+    if (isTelegramId) {
+      try {
+        await login({
+          method: 'telegram',
+          telegramId: cleanIdentifier
+        });
+        await finalizeLogin();
+      } catch (error: any) {
+        addNotification({
+          type: 'error',
+          title: 'Telegram login failed',
+          message: error?.message || 'Unable to login by Telegram ID'
+        });
+      }
+      return;
+    }
+
+    if (!cleanPassword) {
+      addNotification({
+        type: 'error',
+        title: 'Missing password',
+        message: 'Enter password'
+      });
+      return;
+    }
+
+    if (isRegistrationMode) {
+      if (!isEmailLike(cleanIdentifier)) {
+        addNotification({
+          type: 'error',
+          title: 'Email required',
+          message: 'Registration requires valid email'
+        });
+        return;
+      }
+
+      try {
+        await login({
+          method: 'register',
+          email: cleanIdentifier,
+          password: cleanPassword,
+          referralCode: referralCode || undefined
+        });
+        clearStoredReferral();
+        addNotification({
+          type: 'success',
+          title: 'Account created',
+          message: 'Registration complete'
+        });
+        await finalizeLogin();
+      } catch (error: any) {
+        addNotification({
+          type: 'error',
+          title: 'Registration failed',
+          message: error?.message || 'Unable to register'
+        });
+      }
+      return;
+    }
+
     try {
       await login({
         method: 'email',
-        identifier: identifier.trim(),
-        password: password.trim()
+        identifier: cleanIdentifier,
+        password: cleanPassword
       });
       await finalizeLogin();
+      return;
     } catch (error: any) {
-      addNotification({
-        type: 'error',
-        title: 'Login failed',
-        message: error?.message || 'Unable to login'
-      });
+      const autoRegisterAllowed =
+        isEmailLike(cleanIdentifier) &&
+        (
+          !(error instanceof ApiError) ||
+          error.status === 401
+        );
+
+      if (!autoRegisterAllowed) {
+        addNotification({
+          type: 'error',
+          title: 'Login failed',
+          message: error?.message || 'Unable to login'
+        });
+        return;
+      }
+
+      try {
+        await login({
+          method: 'register',
+          email: cleanIdentifier,
+          password: cleanPassword,
+          referralCode: referralCode || undefined
+        });
+        clearStoredReferral();
+
+        addNotification({
+          type: 'success',
+          title: 'Account created',
+          message: 'New account was created and signed in'
+        });
+        await finalizeLogin();
+        return;
+      } catch (registerError: any) {
+        if (registerError instanceof ApiError && registerError.status === 409) {
+          addNotification({
+            type: 'error',
+            title: 'Login failed',
+            message: 'Account exists. Check password and try again'
+          });
+          return;
+        }
+        addNotification({
+          type: 'error',
+          title: 'Registration failed',
+          message: registerError?.message || 'Unable to register'
+        });
+        return;
+      }
     }
   };
 
-  const handleRegister = async () => {
-    try {
-      await login({
-        method: 'register',
-        email: registerEmail.trim(),
-        password: registerPassword.trim(),
-        username: registerUsername.trim() || undefined,
-        firstName: registerFirstName.trim() || undefined
-      });
-      await finalizeLogin();
-    } catch (error: any) {
-      addNotification({
-        type: 'error',
-        title: 'Registration failed',
-        message: error?.message || 'Unable to register'
-      });
-    }
-  };
-
-  const handleTelegramLogin = async () => {
-    try {
-      await login({
-        method: 'telegram',
-        telegramId: telegramId.trim()
-      });
-      await finalizeLogin();
-    } catch (error: any) {
-      addNotification({
-        type: 'error',
-        title: 'Telegram login failed',
-        message: error?.message || 'Unable to login by Telegram ID'
-      });
-    }
+  const toggleMode = () => {
+    setIsRegistrationMode((prev) => !prev);
   };
 
   return (
     <Container>
       <Card variant="elevated">
         <Title>Account Access</Title>
-        <Subtitle>Login or register. Admin dashboard remains hidden for non-admin roles.</Subtitle>
-        <Row style={{ marginTop: '0.75rem' }}>
-          <Button variant="outline" onClick={() => navigate('/control-access')}>
-            Privileged Access
-          </Button>
-        </Row>
+        <Subtitle>
+          {isRegistrationMode
+            ? 'Create account with email and password.'
+            : 'Login with email/username + password, or with Telegram ID only.'}
+        </Subtitle>
+        {!!referralCode && (
+          <Subtitle style={{ marginTop: '0.35rem' }}>
+            Referral code applied: <strong>{referralCode}</strong>
+          </Subtitle>
+        )}
       </Card>
 
-      <Grid>
-        <Block>
-          <h3 style={{ margin: 0 }}>Login</h3>
-          <Label>
-            Email or Username
-            <Input
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="name@email.com or username"
-            />
-          </Label>
-          <Label>
-            Password
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="********"
-            />
-          </Label>
-          <Row>
-            <Button onClick={handleEmailLogin} disabled={isLoading}>
-              {isLoading ? 'Please wait...' : 'Login'}
-            </Button>
-          </Row>
-        </Block>
-
-        <Block>
-          <h3 style={{ margin: 0 }}>Register</h3>
-          <Label>
-            Email
-            <Input
-              type="email"
-              value={registerEmail}
-              onChange={(e) => setRegisterEmail(e.target.value)}
-              placeholder="player@email.com"
-            />
-          </Label>
-          <Label>
-            Password
-            <Input
-              type="password"
-              value={registerPassword}
-              onChange={(e) => setRegisterPassword(e.target.value)}
-              placeholder="minimum 8 chars"
-            />
-          </Label>
-          <Label>
-            Username (optional)
-            <Input
-              value={registerUsername}
-              onChange={(e) => setRegisterUsername(e.target.value)}
-              placeholder="nickname"
-            />
-          </Label>
-          <Label>
-            First Name (optional)
-            <Input
-              value={registerFirstName}
-              onChange={(e) => setRegisterFirstName(e.target.value)}
-              placeholder="Player"
-            />
-          </Label>
-          <Row>
-            <Button onClick={handleRegister} disabled={isLoading}>
-              {isLoading ? 'Please wait...' : 'Create Account'}
-            </Button>
-          </Row>
-        </Block>
-      </Grid>
-
       <Block>
-        <h3 style={{ margin: 0 }}>Telegram ID Login</h3>
-        <Subtitle>Use this if your role is bound to Telegram ID (admin/support).</Subtitle>
+        <h3 style={{ margin: 0 }}>{isRegistrationMode ? 'Registration' : 'Login'}</h3>
         <Label>
-          Telegram ID
+          Identifier
           <Input
-            value={telegramId}
-            onChange={(e) => setTelegramId(e.target.value)}
-            placeholder="123456789"
-            inputMode="numeric"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            placeholder={isRegistrationMode ? 'name@email.com' : 'name@email.com, username or Telegram ID'}
+          />
+        </Label>
+        <Label>
+          Password {isRegistrationMode ? '' : '(optional for Telegram ID)'}
+          <Input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder={isRegistrationMode ? '********' : 'Leave empty for Telegram ID'}
           />
         </Label>
         <Row>
-          <Button onClick={handleTelegramLogin} disabled={isLoading}>
-            {isLoading ? 'Please wait...' : 'Login by Telegram ID'}
+          <Button onClick={handleContinue} disabled={isLoading}>
+            {isLoading ? 'Please wait...' : isRegistrationMode ? 'Create account' : 'Continue'}
           </Button>
         </Row>
+        <Row>
+          <InlineLink type="button" onClick={toggleMode}>
+            {isRegistrationMode ? 'Back to login' : 'Registration'}
+          </InlineLink>
+        </Row>
+
+        {!isRegistrationMode && (
+          <>
+            <Divider>or</Divider>
+            <SocialActions>
+              {googleClientId ? (
+                <GoogleHost ref={googleHostRef} aria-label="Google login button" />
+              ) : (
+                <Subtitle>Google login is not configured</Subtitle>
+              )}
+              <SocialButton
+                onClick={handleAppleLogin}
+                variant="outline"
+                disabled={!appleClientId || socialLoading === 'apple'}
+              >
+                {socialLoading === 'apple'
+                  ? 'Connecting Apple...'
+                  : isAppleReady
+                    ? 'Continue with Apple'
+                    : 'Apple login unavailable'}
+              </SocialButton>
+              {(socialLoading === 'google' || (googleClientId && !isGoogleReady)) && (
+                <Subtitle>
+                  {socialLoading === 'google' ? 'Connecting Google...' : 'Google login loading...'}
+                </Subtitle>
+              )}
+            </SocialActions>
+          </>
+        )}
       </Block>
     </Container>
   );

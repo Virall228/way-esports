@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 
@@ -16,6 +18,13 @@ type MatchItem = {
   startTime?: string;
   status?: string;
   score?: { team1?: number; team2?: number };
+};
+
+type RoomData = {
+  roomId: string;
+  password: string;
+  visibleAt?: string;
+  expiresAt?: string;
 };
 
 const Container = styled.div`
@@ -150,8 +159,12 @@ const EmptyState = styled.div`
 `;
 
 const MatchesPage: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+  const { addNotification } = useNotifications();
   const [statusFilter, setStatusFilter] = useState<'all' | 'upcoming' | 'live' | 'completed' | 'cancelled'>('all');
   const [gameFilter, setGameFilter] = useState('all');
+  const [roomByMatch, setRoomByMatch] = useState<Record<string, RoomData>>({});
+  const [loadingRoomId, setLoadingRoomId] = useState<string | null>(null);
 
   const { data: matchesRaw = [], isLoading, error } = useQuery({
     queryKey: ['matches'],
@@ -175,6 +188,34 @@ const MatchesPage: React.FC = () => {
       return true;
     });
   }, [matchesRaw, statusFilter, gameFilter]);
+
+  const handleLoadRoom = async (matchId: string) => {
+    try {
+      setLoadingRoomId(matchId);
+      const response: any = await api.get(`/api/matches/${matchId}/room`, true);
+      const payload = response?.data || response;
+      if (!payload?.roomId || !payload?.password) {
+        throw new Error('Room credentials are not available yet');
+      }
+      setRoomByMatch((prev) => ({
+        ...prev,
+        [matchId]: {
+          roomId: payload.roomId,
+          password: payload.password,
+          visibleAt: payload.visibleAt,
+          expiresAt: payload.expiresAt
+        }
+      }));
+    } catch (err: any) {
+      addNotification({
+        type: 'warning',
+        title: 'Room Access',
+        message: err?.message || 'Room credentials are not available'
+      });
+    } finally {
+      setLoadingRoomId(null);
+    }
+  };
 
   return (
     <Container>
@@ -236,6 +277,24 @@ const MatchesPage: React.FC = () => {
                   <Vs>{status === 'completed' ? score : 'vs'}</Vs>
                   <TeamName style={{ textAlign: 'right' }}>{t2}</TeamName>
                 </TeamsRow>
+
+                {isAuthenticated && (status === 'upcoming' || status === 'live') && m.id && (
+                  <Row style={{ justifyContent: 'flex-start', gap: '10px' }}>
+                    <Button
+                      variant="outline"
+                      size="small"
+                      onClick={() => handleLoadRoom(m.id!)}
+                      disabled={loadingRoomId === m.id}
+                    >
+                      {loadingRoomId === m.id ? 'Loading room...' : 'Show Room Credentials'}
+                    </Button>
+                    {roomByMatch[m.id] && (
+                      <Meta>
+                        Room: <strong>{roomByMatch[m.id].roomId}</strong> · Password: <strong>{roomByMatch[m.id].password}</strong>
+                      </Meta>
+                    )}
+                  </Row>
+                )}
               </SurfaceCard>
             );
           })}

@@ -28,7 +28,8 @@ router.post(
     body('username').not().isEmpty().trim(),
     body('firstName').not().isEmpty().trim(),
     body('lastName').optional().trim(),
-    body('photoUrl').optional().isString()
+    body('photoUrl').optional().isString(),
+    body('referralCode').optional().isString().trim().isLength({ min: 3, max: 64 })
   ],
   register
 );
@@ -46,7 +47,8 @@ router.post(
   idempotency({ required: true }),
   [
     body('email').isEmail().normalizeEmail(),
-    body('password').isLength({ min: 8 })
+    body('password').isLength({ min: 8 }),
+    body('referralCode').optional().isString().trim().isLength({ min: 3, max: 64 })
   ],
   registerWithEmailPassword
 );

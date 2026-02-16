@@ -43,6 +43,59 @@ const validateReferralCompletion = async (req: any, res: any, next: any) => {
 };
 
 const router = express.Router();
+const SUPPORTED_MATCH_GAMES = new Set(['Critical Ops', 'CS2', 'PUBG Mobile']);
+const MATCH_INTERVAL_MIN = 30;
+
+const normalizeMatchGame = (game: string | undefined): 'Critical Ops' | 'CS2' | 'PUBG Mobile' => {
+  if (game && SUPPORTED_MATCH_GAMES.has(game)) {
+    return game as 'Critical Ops' | 'CS2' | 'PUBG Mobile';
+  }
+  return 'CS2';
+};
+
+const generateBracketMatches = async (tournament: any) => {
+  if (!tournament || tournament.type !== 'team') return [];
+  if (Array.isArray(tournament.matches) && tournament.matches.length > 0) return tournament.matches;
+
+  const participants = Array.isArray(tournament.registeredTeams)
+    ? tournament.registeredTeams.map((id: any) => id?.toString?.() || String(id)).filter(Boolean)
+    : [];
+
+  if (participants.length < 2) return [];
+
+  const shuffled = [...participants].sort(() => Math.random() - 0.5);
+  const createdIds: any[] = [];
+  const baseStart = tournament.startDate instanceof Date ? tournament.startDate : new Date();
+  let slot = 0;
+
+  for (let i = 0; i < shuffled.length - 1; i += 2) {
+    const team1 = shuffled[i];
+    const team2 = shuffled[i + 1];
+    const startTime = new Date(baseStart.getTime() + slot * MATCH_INTERVAL_MIN * 60 * 1000);
+    slot += 1;
+
+    const match = await Match.create({
+      tournament: tournament._id,
+      team1,
+      team2,
+      startTime,
+      status: 'scheduled',
+      game: normalizeMatchGame(tournament.game),
+      round: 'Round 1',
+      score: { team1: 0, team2: 0 }
+    });
+
+    createdIds.push(match._id);
+  }
+
+  if (!createdIds.length) return [];
+
+  tournament.matches = createdIds;
+  tournament.bracket = { matches: createdIds };
+  await tournament.save();
+
+  return createdIds;
+};
 
 const consumeTournamentEntry = async (user: any): Promise<boolean> => {
   if (!user || typeof user.hasActiveSubscription !== 'function' || typeof user.useFreeEntry !== 'function') {
@@ -558,6 +611,49 @@ router.post('/:id/join',
   rateLimitRegistration(5, 60000),
   checkTournamentAccess,
   handleTournamentRegistration);
+
+// Start tournament manually (admin) and generate initial bracket
+router.post('/:id/start', authenticateJWT, isAdmin, async (req, res) => {
+  try {
+    const tournament: any = await Tournament.findById(req.params.id);
+    if (!tournament) {
+      return res.status(404).json({ success: false, error: 'Tournament not found' });
+    }
+
+    if (tournament.status === 'completed') {
+      return res.status(400).json({ success: false, error: 'Tournament already completed' });
+    }
+
+    if (tournament.type === 'team' && (!Array.isArray(tournament.registeredTeams) || tournament.registeredTeams.length < 2)) {
+      return res.status(400).json({ success: false, error: 'At least 2 teams are required to start tournament' });
+    }
+
+    if (tournament.type === 'solo' && (!Array.isArray(tournament.registeredPlayers) || tournament.registeredPlayers.length < 2)) {
+      return res.status(400).json({ success: false, error: 'At least 2 players are required to start tournament' });
+    }
+
+    tournament.status = 'ongoing';
+    tournament.isRegistrationOpen = false;
+    await tournament.save();
+
+    const generated = await generateBracketMatches(tournament);
+
+    await cacheService.invalidateTournamentCaches();
+
+    return res.json({
+      success: true,
+      message: 'Tournament started successfully',
+      data: {
+        id: tournament._id?.toString() || '',
+        status: tournament.status,
+        generatedMatches: generated.length
+      }
+    });
+  } catch (error) {
+    console.error('Error starting tournament:', error);
+    return res.status(500).json({ success: false, error: 'Failed to start tournament' });
+  }
+});
 
 // Update tournament (admin only)
 router.put('/:id',

@@ -33,6 +33,15 @@ export interface IMatch extends Document<mongoose.Types.ObjectId> {
       defusedBombs?: number;
     };
   };
+  roomCredentials?: {
+    roomId: string;
+    password: string;
+    generatedAt: Date;
+    visibleAt: Date;
+    expiresAt?: Date;
+  };
+  payoutProcessed?: boolean;
+  payoutProcessedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -108,6 +117,20 @@ const matchSchema = new Schema<IMatch>({
       plantedBombs: { type: Number },
       defusedBombs: { type: Number }
     }
+  },
+  roomCredentials: {
+    roomId: { type: String, trim: true },
+    password: { type: String, trim: true },
+    generatedAt: { type: Date },
+    visibleAt: { type: Date },
+    expiresAt: { type: Date }
+  },
+  payoutProcessed: {
+    type: Boolean,
+    default: false
+  },
+  payoutProcessedAt: {
+    type: Date
   }
 }, {
   timestamps: true
@@ -117,5 +140,6 @@ const matchSchema = new Schema<IMatch>({
 matchSchema.index({ tournament: 1, startTime: 1 });
 matchSchema.index({ status: 1 });
 matchSchema.index({ game: 1 });
+matchSchema.index({ 'roomCredentials.roomId': 1 }, { sparse: true });
 
 export default mongoose.model<IMatch>('Match', matchSchema); 

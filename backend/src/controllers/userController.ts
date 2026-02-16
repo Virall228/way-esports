@@ -6,6 +6,7 @@ import User from '../models/User';
 import Session from '../models/Session';
 import { verifyGoogleIdToken, verifyAppleIdentityToken } from '../services/oauthTokenVerifier';
 import { logAuthEvent } from '../services/authLogService';
+import ReferralService from '../services/referralService';
 
 const JWT_EXPIRATION = '24h';
 const SESSION_TTL_DAYS = 30;
@@ -118,10 +119,21 @@ const getRequestMeta = (req: Request) => ({
   userAgent: req.get('user-agent') || undefined
 });
 
+const processReferralIfProvided = async (referralCodeRaw: unknown, userId: string) => {
+  if (typeof referralCodeRaw !== 'string') return;
+  const referralCode = referralCodeRaw.trim();
+  if (!referralCode) return;
+  try {
+    await ReferralService.processReferral(referralCode, userId);
+  } catch (error) {
+    console.error('Referral processing failed:', error);
+  }
+};
+
 // Register endpoint
 export const register = async (req: Request, res: Response) => {
   try {
-    const { telegramId, username, firstName, lastName, photoUrl } = req.body || {};
+    const { telegramId, username, firstName, lastName, photoUrl, referralCode } = req.body || {};
 
     if (!telegramId || !username || !firstName) {
       const meta = getRequestMeta(req);
@@ -180,6 +192,7 @@ export const register = async (req: Request, res: Response) => {
 
     await checkAdminBootstrap(user);
     await user.save();
+    await processReferralIfProvided(referralCode, user._id.toString());
     const meta = getRequestMeta(req);
     await logAuthEvent({
       userId: user._id?.toString(),
@@ -302,7 +315,7 @@ export const login = async (req: Request, res: Response) => {
 // Email + password registration
 export const registerWithEmailPassword = async (req: Request, res: Response) => {
   try {
-    const { email, password, username, firstName, lastName } = req.body || {};
+    const { email, password, username, firstName, lastName, referralCode } = req.body || {};
 
     if (!email || !password) {
       const meta = getRequestMeta(req);
@@ -369,6 +382,7 @@ export const registerWithEmailPassword = async (req: Request, res: Response) => 
 
     await checkAdminBootstrap(user);
     await user.save();
+    await processReferralIfProvided(referralCode, user._id.toString());
 
     const meta = getRequestMeta(req);
     await logAuthEvent({

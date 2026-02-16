@@ -154,21 +154,26 @@ const SubscriptionCard: React.FC = () => {
 
     try {
       setLoading(true);
-      const [referralResponse] = await Promise.all([
-        api.get('/api/referrals/stats')
-      ]);
-      
-      const stats = referralResponse.data;
-      
-      // Get subscription settings
-      const settingsResponse = await api.get('/api/referrals/settings');
-      const settings = settingsResponse.data;
+      const referralResponse: any = await api.get('/api/referrals/stats');
+      const stats = referralResponse?.data || referralResponse || {};
+
+      let subscriptionPrice = 9.99;
+      try {
+        const settingsResponse: any = await api.get('/api/referrals/public-settings');
+        const settings = settingsResponse?.data || settingsResponse || {};
+        const parsedPrice = Number(settings.subscriptionPrice);
+        if (Number.isFinite(parsedPrice) && parsedPrice > 0) {
+          subscriptionPrice = parsedPrice;
+        }
+      } catch {
+        // fallback to default price
+      }
 
       setSubscription({
-        isSubscribed: stats.isSubscribed,
+        isSubscribed: Boolean(stats.isSubscribed),
         subscriptionExpiresAt: stats.subscriptionExpiresAt,
-        freeEntriesCount: stats.freeEntriesCount,
-        subscriptionPrice: settings.subscriptionPrice
+        freeEntriesCount: Number(stats.freeEntriesCount || 0),
+        subscriptionPrice
       });
     } catch (error: any) {
       if (error?.status === 401) {

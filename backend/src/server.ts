@@ -37,6 +37,7 @@ import contactRouter from './routes/contact';
 import analyticsRouter from './routes/analytics';
 import usersRouter from './routes/users';
 import tasksRouter from './routes/tasks';
+import tournamentRoomsRouter from './routes/tournamentRooms';
 
 import { seedDefaultAchievements } from './services/achievements/seedAchievements';
 
@@ -102,6 +103,7 @@ app.use('/api/profile', profileRouter);
 app.use('/api/wallet', authenticateJWT, walletRouter);
 app.use('/api/tournaments', tournamentsRouter);
 app.use('/api/rankings', rankingsRouter);
+app.use('/api', rankingsRouter);
 app.use('/api/rewards', rewardsRouter);
 app.use('/api/search', searchRouter);
 app.use('/api/auth', authRouter);
@@ -118,6 +120,7 @@ app.use('/api/contact', contactRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/tasks', tasksRouter);
+app.use('/api/tournament-rooms', tournamentRoomsRouter);
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));

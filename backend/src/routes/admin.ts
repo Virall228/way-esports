@@ -787,6 +787,7 @@ router.patch('/wallet/transactions/:userId/:transactionId', idempotency({ requir
     const source = typeof req.body?.source === 'string' ? req.body.source.trim() : 'user';
     const adminNote = typeof req.body?.note === 'string' ? req.body.note.trim() : '';
     const manualBalanceDelta = toNumber(req.body?.balanceDelta, 0);
+    const subscriptionDays = Math.max(1, Math.trunc(toNumber(req.body?.subscriptionDays, 30)));
 
     if (source === 'wallet') {
       const nextWalletStatus = (
@@ -922,6 +923,24 @@ router.patch('/wallet/transactions/:userId/:transactionId', idempotency({ requir
 
     if (balanceDelta !== 0) {
       user.wallet.balance += balanceDelta;
+    }
+
+    if (tx.type === 'subscription') {
+      if (nextStatus === 'completed' && prevStatus !== 'completed') {
+        const now = new Date();
+        const baseDate = user.subscriptionExpiresAt && new Date(user.subscriptionExpiresAt) > now
+          ? new Date(user.subscriptionExpiresAt)
+          : now;
+
+        const nextExpiry = new Date(baseDate.getTime() + subscriptionDays * 24 * 60 * 60 * 1000);
+        user.isSubscribed = true;
+        user.subscriptionExpiresAt = nextExpiry;
+      }
+
+      if (nextStatus === 'refunded' && prevStatus !== 'refunded') {
+        user.isSubscribed = false;
+        user.subscriptionExpiresAt = new Date();
+      }
     }
 
     await user.save();

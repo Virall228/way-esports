@@ -193,8 +193,8 @@ const ReferralCard: React.FC = () => {
 
     try {
       setLoading(true);
-      const response = await api.get('/api/referrals/stats');
-      setStats(response.data);
+      const response: any = await api.get('/api/referrals/stats');
+      setStats((response?.data || response) as ReferralStats);
     } catch (error: any) {
       if (error?.status === 401) {
         setStats(null);
@@ -221,7 +221,7 @@ const ReferralCard: React.FC = () => {
   const shareReferralLink = (platform: string) => {
     if (!stats?.referralCode) return;
 
-    const referralUrl = `${window.location.origin}/register?ref=${stats.referralCode}`;
+    const referralUrl = `${window.location.origin}/auth?ref=${encodeURIComponent(stats.referralCode)}`;
     const message = `Join me on WAY Esports! Use my referral code: ${stats.referralCode}`;
 
     let shareUrl = '';

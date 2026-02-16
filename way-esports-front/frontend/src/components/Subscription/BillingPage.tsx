@@ -175,6 +175,7 @@ interface BillingData {
   freeEntriesCount: number;
   subscriptionPrice: number;
   referralCode?: string;
+  pendingSubscriptionRequest?: boolean;
 }
 
 const BillingPage: React.FC = () => {
@@ -203,21 +204,41 @@ const BillingPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      
-      const [referralResponse, settingsResponse] = await Promise.all([
+
+      const [referralResponse, publicSettingsResponse, transactionsResponse]: any[] = await Promise.all([
         api.get('/api/referrals/stats'),
-        api.get('/api/referrals/settings')
+        api.get('/api/referrals/public-settings'),
+        api.get('/api/wallet/transactions')
       ]);
-      
-      const stats = referralResponse.data;
-      const settings = settingsResponse.data;
+
+      const stats = referralResponse?.data || referralResponse || {};
+      const publicSettings = publicSettingsResponse?.data || publicSettingsResponse || {};
+
+      let subscriptionPrice = 9.99;
+      try {
+        const parsedPrice = Number(publicSettings.subscriptionPrice);
+        if (Number.isFinite(parsedPrice) && parsedPrice > 0) {
+          subscriptionPrice = parsedPrice;
+        }
+      } catch {
+        // keep default price
+      }
+
+      const txList: any[] = Array.isArray(transactionsResponse?.data)
+        ? transactionsResponse.data
+        : (Array.isArray(transactionsResponse) ? transactionsResponse : []);
+
+      const pendingSubscriptionRequest = txList.some((tx: any) => (
+        tx?.type === 'subscription' && tx?.status === 'pending'
+      ));
 
       setBilling({
-        isSubscribed: stats.isSubscribed,
+        isSubscribed: Boolean(stats.isSubscribed),
         subscriptionExpiresAt: stats.subscriptionExpiresAt,
-        freeEntriesCount: stats.freeEntriesCount,
-        subscriptionPrice: settings.subscriptionPrice,
-        referralCode: stats.referralCode
+        freeEntriesCount: Number(stats.freeEntriesCount || 0),
+        subscriptionPrice,
+        referralCode: stats.referralCode,
+        pendingSubscriptionRequest
       });
     } catch (error: any) {
       if (error?.status === 401) {
@@ -242,12 +263,18 @@ const BillingPage: React.FC = () => {
       setError(null);
       setSuccess(null);
 
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const response: any = await api.post('/api/wallet/subscribe', {
+        paymentMethod: 'manual'
+      });
+      const payload = response?.data || response || {};
+      const status = payload?.status || 'pending';
+      const amount = Number(payload?.amount || billing?.subscriptionPrice || 0);
 
-      // In a real implementation, this would integrate with a payment provider
-      // For now, we'll simulate successful subscription
-      setSuccess('Subscription activated successfully! You now have unlimited tournament access.');
+      if (status === 'completed') {
+        setSuccess(`Subscription activated successfully. Charged $${amount.toFixed(2)}.`);
+      } else {
+        setSuccess(`Subscription request created for $${amount.toFixed(2)}. Awaiting admin confirmation.`);
+      }
       
       // Reload data
       await loadBillingData();
@@ -308,12 +335,23 @@ const BillingPage: React.FC = () => {
         <PricePeriod>per month</PricePeriod>
         
         {(!billing.isSubscribed || isExpired) ? (
-          <SubscribeButton 
-            onClick={handleSubscribe}
-            disabled={processing}
-          >
-            {processing ? 'Processing...' : 'Subscribe Now'}
-          </SubscribeButton>
+          <>
+            <SubscribeButton 
+              onClick={handleSubscribe}
+              disabled={processing || billing.pendingSubscriptionRequest}
+            >
+              {billing.pendingSubscriptionRequest
+                ? 'Pending admin confirmation'
+                : processing
+                  ? 'Processing...'
+                  : 'Subscribe Now'}
+            </SubscribeButton>
+            {billing.pendingSubscriptionRequest && (
+              <div style={{ color: '#cccccc', fontSize: '0.9rem' }}>
+                Your payment request is pending review in admin panel.
+              </div>
+            )}
+          </>
         ) : (
           <SubscribeButton disabled>
             {'\u2713'} Active Subscription

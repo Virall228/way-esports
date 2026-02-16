@@ -194,10 +194,9 @@ export class ReferralService {
       if (!settings) {
         // Create default settings if none exist
         settings = new ReferralSettings({
-          referralsNeededForBonus: 3,
-          bonusType: 'free_entry',
-          bonusValue: 1,
-          newUserBonus: 1,
+          referralBonusThreshold: 3,
+          refereeBonus: 1,
+          referrerBonus: 1,
           subscriptionPrice: 9.99
         });
         await settings.save();

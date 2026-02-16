@@ -15,6 +15,7 @@ interface LoginOptions {
   code?: string;
   idToken?: string;
   identityToken?: string;
+  referralCode?: string;
 }
 
 interface AuthContextType {
@@ -151,7 +152,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const registerWithEmailPassword = async (
-    options?: Pick<LoginOptions, 'email' | 'password' | 'firstName' | 'username'>
+    options?: Pick<LoginOptions, 'email' | 'password' | 'firstName' | 'username' | 'referralCode'>
   ) => {
     const emailRaw = options?.email ?? '';
     const email = emailRaw.trim();
@@ -161,6 +162,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const firstName = firstNameRaw.trim();
     const usernameRaw = options?.username ?? '';
     const username = usernameRaw.trim();
+    const referralCodeRaw = options?.referralCode ?? '';
+    const referralCode = referralCodeRaw.trim();
 
     if (!email || !password) {
       throw new Error('Email and password are required');
@@ -170,7 +173,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email,
       password,
       firstName: firstName || undefined,
-      username: username || undefined
+      username: username || undefined,
+      referralCode: referralCode || undefined
     });
     const token = result?.token || result?.sessionToken;
     const rawUser = result?.user;

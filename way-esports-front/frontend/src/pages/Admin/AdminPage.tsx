@@ -391,6 +391,13 @@ interface OpsStreamPayload {
   error?: string;
 }
 
+interface ReferralSettingsRow {
+  referralBonusThreshold: number;
+  refereeBonus: number;
+  referrerBonus: number;
+  subscriptionPrice: number;
+}
+
 interface AdminUserRow {
   id: string;
   username: string;
@@ -514,6 +521,7 @@ const AdminPage: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: ['admin', 'rewards'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'teams'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'referrals'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'referral-settings'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'contacts'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'wallet-transactions'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] }),
@@ -742,6 +750,18 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const fetchReferralSettings = async (): Promise<ReferralSettingsRow> => {
+    const result: any = await api.get('/api/referrals/settings');
+    const data = result?.data || result || {};
+
+    return {
+      referralBonusThreshold: Number(data.referralBonusThreshold || 3),
+      refereeBonus: Number(data.refereeBonus || 1),
+      referrerBonus: Number(data.referrerBonus || 1),
+      subscriptionPrice: Number(data.subscriptionPrice || 9.99)
+    };
+  };
+
   const fetchContacts = async (): Promise<ContactMessage[]> => {
     try {
       const result: any = await api.get('/api/admin/contacts');
@@ -960,6 +980,14 @@ const AdminPage: React.FC = () => {
     refetchOnWindowFocus: false
   });
 
+  const referralSettingsQuery = useQuery({
+    queryKey: ['admin', 'referral-settings'],
+    queryFn: fetchReferralSettings,
+    enabled: hasAdminAccess,
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
+
   const contactsQuery = useQuery({
     queryKey: ['admin', 'contacts'],
     queryFn: fetchContacts,
@@ -1045,6 +1073,7 @@ const AdminPage: React.FC = () => {
   const rewards = rewardsQuery.data || [];
   const teams = teamsQuery.data || [];
   const referrals = referralsQuery.data || [];
+  const referralSettings = referralSettingsQuery.data || null;
   const contacts = contactsQuery.data || [];
   const walletTransactions = walletTransactionsQuery.data || [];
   const auditLogs = auditLogsQuery.data || [];
@@ -1063,6 +1092,7 @@ const AdminPage: React.FC = () => {
     rewardsQuery.error ||
     teamsQuery.error ||
     referralsQuery.error ||
+    referralSettingsQuery.error ||
     contactsQuery.error ||
     walletTransactionsQuery.error ||
     auditLogsQuery.error ||
@@ -1081,6 +1111,7 @@ const AdminPage: React.FC = () => {
     rewardsQuery.isFetching ||
     teamsQuery.isFetching ||
     referralsQuery.isFetching ||
+    referralSettingsQuery.isFetching ||
     contactsQuery.isFetching ||
     walletTransactionsQuery.isFetching ||
     auditLogsQuery.isFetching ||
@@ -1250,6 +1281,22 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const handleStartTournament = async (id: string) => {
+    try {
+      await api.post(`/api/tournaments/${id}/start`, {});
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
+        queryClient.invalidateQueries({ queryKey: ['matches'] }),
+        queryClient.invalidateQueries({ queryKey: ['tournaments'] })
+      ]);
+      notify('success', 'Tournament started', 'Bracket matches generated');
+    } catch (e: any) {
+      const message = formatApiError(e, 'Failed to start tournament');
+      setError(message);
+      notify('error', 'Start failed', message);
+    }
+  };
+
   const handleWalletAdjust = async (targetUserId: string, username: string) => {
     const amountRaw = window.prompt(`Adjust balance for ${username}. Use + for credit, - for debit`, '0');
     if (!amountRaw) return;
@@ -1278,15 +1325,134 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const handleSubscriptionToggle = async (targetUser: AdminUserRow, nextState: boolean) => {
+    try {
+      setError(null);
+      const expiresAt = nextState
+        ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        : null;
+
+      await api.patch(`/api/admin/users/${targetUser.id}/subscription`, {
+        isSubscribed: nextState,
+        subscriptionExpiresAt: expiresAt
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      notify(
+        'success',
+        'Subscription updated',
+        `${targetUser.username}: ${nextState ? 'enabled for 30 days' : 'disabled'}`
+      );
+    } catch (e: any) {
+      setError(formatApiError(e, 'Failed to update subscription'));
+      notify('error', 'Subscription update failed', formatApiError(e, 'Failed to update subscription'));
+    }
+  };
+
+  const handleUpdateReferralSettings = async () => {
+    const current = referralSettings || {
+      referralBonusThreshold: 3,
+      refereeBonus: 1,
+      referrerBonus: 1,
+      subscriptionPrice: 9.99
+    };
+
+    const thresholdInput = window.prompt('Referrals needed for referrer bonus', String(current.referralBonusThreshold));
+    if (thresholdInput === null) return;
+    const refereeBonusInput = window.prompt('Bonus entries for invited user', String(current.refereeBonus));
+    if (refereeBonusInput === null) return;
+    const referrerBonusInput = window.prompt('Bonus entries for referrer', String(current.referrerBonus));
+    if (referrerBonusInput === null) return;
+    const subscriptionPriceInput = window.prompt('Subscription price (USD)', String(current.subscriptionPrice));
+    if (subscriptionPriceInput === null) return;
+
+    const payload = {
+      referralBonusThreshold: Number(thresholdInput),
+      refereeBonus: Number(refereeBonusInput),
+      referrerBonus: Number(referrerBonusInput),
+      subscriptionPrice: Number(subscriptionPriceInput)
+    };
+
+    if (
+      !Number.isFinite(payload.referralBonusThreshold) ||
+      payload.referralBonusThreshold < 1 ||
+      !Number.isFinite(payload.refereeBonus) ||
+      payload.refereeBonus < 0 ||
+      !Number.isFinite(payload.referrerBonus) ||
+      payload.referrerBonus < 0 ||
+      !Number.isFinite(payload.subscriptionPrice) ||
+      payload.subscriptionPrice <= 0
+    ) {
+      notify('warning', 'Invalid values', 'Please enter valid numeric values');
+      return;
+    }
+
+    try {
+      setError(null);
+      await api.put('/api/referrals/settings', payload);
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'referral-settings'] });
+      notify('success', 'Referral settings updated', 'Changes saved successfully');
+    } catch (e: any) {
+      setError(formatApiError(e, 'Failed to update referral settings'));
+      notify('error', 'Update failed', formatApiError(e, 'Failed to update referral settings'));
+    }
+  };
+
+  const handleGrantReferralEntries = async () => {
+    const userId = (window.prompt('Target user ID') || '').trim();
+    if (!userId) return;
+
+    const countRaw = window.prompt('How many free entries to add?', '1');
+    if (countRaw === null) return;
+    const count = Number(countRaw);
+    if (!Number.isFinite(count) || count <= 0) {
+      notify('warning', 'Invalid count', 'Count must be a positive number');
+      return;
+    }
+
+    const reason = (window.prompt('Reason for manual bonus', 'Manual admin referral bonus') || '').trim() || 'Manual admin referral bonus';
+
+    try {
+      setError(null);
+      await api.post('/api/referrals/add-free-entries', {
+        userId,
+        count: Math.floor(count),
+        reason
+      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'referrals'] })
+      ]);
+      notify('success', 'Entries added', `Added ${Math.floor(count)} entries to user ${userId}`);
+    } catch (e: any) {
+      setError(formatApiError(e, 'Failed to add free entries'));
+      notify('error', 'Add entries failed', formatApiError(e, 'Failed to add free entries'));
+    }
+  };
+
   const handleWalletTransactionStatus = async (
     tx: AdminWalletTransaction,
     nextStatus: 'completed' | 'failed' | 'refunded' | 'refund_denied'
   ) => {
     try {
       setError(null);
+      let subscriptionDays: number | undefined;
+
+      if (tx.type === 'subscription' && nextStatus === 'completed') {
+        const daysRaw = window.prompt('Subscription duration in days', '30');
+        if (daysRaw === null) return;
+        const parsed = Number(daysRaw);
+        if (!Number.isFinite(parsed) || parsed <= 0) {
+          notify('warning', 'Invalid duration', 'Subscription days must be a positive number');
+          return;
+        }
+        subscriptionDays = Math.trunc(parsed);
+      }
+
       await api.patch(`/api/admin/wallet/transactions/${tx.userId}/${tx.id}`, {
         status: nextStatus,
-        source: tx.source
+        source: tx.source,
+        subscriptionDays
       });
 
       await queryClient.invalidateQueries({ queryKey: ['admin', 'wallet-transactions'] });
@@ -1726,6 +1892,12 @@ const AdminPage: React.FC = () => {
                   <Td>
                     <ActionsCell>
                       <ActionButton onClick={() => handleEdit(user, 'user')}>Edit</ActionButton>
+                      <ActionButton
+                        $variant={user.isSubscribed ? 'danger' : 'success'}
+                        onClick={() => handleSubscriptionToggle(user, !user.isSubscribed)}
+                      >
+                        {user.isSubscribed ? 'Disable sub' : 'Enable sub'}
+                      </ActionButton>
                       <ActionButton $variant="success" onClick={() => handleWalletAdjust(user.id, user.username)}>
                         Adjust $
                       </ActionButton>
@@ -1850,8 +2022,41 @@ const AdminPage: React.FC = () => {
   function renderReferrals() {
     return (
       <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3>Referral Logs</h3>
+        <div style={{ display: 'grid', gap: '14px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <h3>Referral Logs</h3>
+            <ActionsCell>
+              <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'referrals'] })}>
+                Refresh
+              </ActionButton>
+              <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'referral-settings'] })}>
+                Reload settings
+              </ActionButton>
+            </ActionsCell>
+          </div>
+
+          <Card variant="outlined">
+            <div style={{ display: 'grid', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <h4 style={{ margin: 0 }}>Referral Program Settings</h4>
+                <ActionsCell>
+                  <ActionButton onClick={handleUpdateReferralSettings}>Edit Settings</ActionButton>
+                  <ActionButton $variant="success" onClick={handleGrantReferralEntries}>
+                    Add Free Entries
+                  </ActionButton>
+                </ActionsCell>
+              </div>
+              <div style={{ color: '#cccccc', fontSize: '14px' }}>
+                Bonus threshold: <strong>{referralSettings?.referralBonusThreshold ?? 3}</strong> referrals
+                {' • '}
+                Invited user bonus: <strong>{referralSettings?.refereeBonus ?? 1}</strong>
+                {' • '}
+                Referrer bonus: <strong>{referralSettings?.referrerBonus ?? 1}</strong>
+                {' • '}
+                Subscription price: <strong>${Number(referralSettings?.subscriptionPrice ?? 9.99).toFixed(2)}</strong>
+              </div>
+            </div>
+          </Card>
         </div>
 
         <TableWrap>
@@ -1912,6 +2117,11 @@ const AdminPage: React.FC = () => {
                   <Td>${tournament.prizePool}</Td>
                   <Td>
                     <ActionsCell>
+                      {(tournament.status === 'upcoming' || tournament.status === 'open') && (
+                        <ActionButton $variant="success" onClick={() => handleStartTournament(tournament.id)}>
+                          Start
+                        </ActionButton>
+                      )}
                       <ActionButton onClick={() => handleEdit(tournament, 'tournament')}>Edit</ActionButton>
                       <ActionButton $variant="danger" onClick={() => handleDelete(tournament.id, 'tournament')}>Delete</ActionButton>
                     </ActionsCell>

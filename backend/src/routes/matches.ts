@@ -3,9 +3,117 @@ import Match, { IMatch } from '../models/Match';
 import Tournament from '../models/Tournament';
 import Team from '../models/Team';
 import User from '../models/User';
+import Wallet from '../models/Wallet';
+import { authenticateJWT, isAdmin } from '../middleware/auth';
 import { evaluateUserAchievements } from '../services/achievements/engine';
 
 const router = express.Router();
+
+const resolveUserId = (req: any): string | null => {
+  const value = req.user?._id || req.user?.id;
+  return value ? value.toString() : null;
+};
+
+const isAdminRole = (req: any): boolean => {
+  const role = req.user?.role;
+  return role === 'admin' || role === 'developer';
+};
+
+const ensureWalletDoc = async (userId: string) => {
+  let wallet = await Wallet.findOne({ user: userId });
+  if (!wallet) {
+    wallet = await new Wallet({ user: userId }).save();
+  }
+  return wallet;
+};
+
+const isUserMatchParticipant = async (match: any, userId: string): Promise<boolean> => {
+  const [team1, team2] = await Promise.all([
+    Team.findById(match.team1).select('members players captain').lean(),
+    Team.findById(match.team2).select('members players captain').lean()
+  ]);
+
+  const isInTeam = (team: any) => {
+    if (!team) return false;
+    const members = Array.isArray(team.members) ? team.members.map((m: any) => m.toString()) : [];
+    const players = Array.isArray(team.players) ? team.players.map((m: any) => m.toString()) : [];
+    const captainId = team.captain?.toString?.();
+    return members.includes(userId) || players.includes(userId) || captainId === userId;
+  };
+
+  return isInTeam(team1) || isInTeam(team2);
+};
+
+async function distributeMatchWinnerPayout(matchId: string, winnerTeamId?: string | null) {
+  if (!winnerTeamId) return;
+
+  const lockedMatch: any = await Match.findOneAndUpdate(
+    { _id: matchId, payoutProcessed: { $ne: true } },
+    { $set: { payoutProcessed: true, payoutProcessedAt: new Date() } },
+    { new: true }
+  ).select('tournament winner team1 team2');
+
+  if (!lockedMatch) return;
+
+  const tournament: any = await Tournament.findById(lockedMatch.tournament)
+    .select('prizePool matches status')
+    .lean();
+
+  if (!tournament || Number(tournament.prizePool || 0) <= 0) {
+    return;
+  }
+
+  const winnerTeam: any = await Team.findById(winnerTeamId).select('members players captain name').lean();
+  if (!winnerTeam) return;
+
+  const participantIds = new Set<string>();
+  if (winnerTeam.captain) participantIds.add(winnerTeam.captain.toString());
+  (winnerTeam.members || []).forEach((m: any) => participantIds.add(m.toString()));
+  (winnerTeam.players || []).forEach((p: any) => participantIds.add(p.toString()));
+
+  const winners = Array.from(participantIds);
+  if (!winners.length) return;
+
+  const matchCount = Math.max(Array.isArray(tournament.matches) ? tournament.matches.length : 0, 1);
+  const matchReward = Number((Number(tournament.prizePool || 0) / matchCount).toFixed(2));
+
+  if (matchReward <= 0) return;
+
+  const perUserReward = Number((matchReward / winners.length).toFixed(2));
+  if (perUserReward <= 0) return;
+
+  await Promise.all(
+    winners.map(async (userId, index) => {
+      const reference = `MATCH-${matchId}-${Date.now()}-${index + 1}`;
+      const description = `Match win reward (${winnerTeam.name || 'Team'})`;
+
+      const wallet = await ensureWalletDoc(userId);
+      wallet.balance += perUserReward;
+      wallet.transactions.push({
+        type: 'prize',
+        amount: perUserReward,
+        description,
+        status: 'completed',
+        reference,
+        date: new Date()
+      });
+      await wallet.save();
+
+      await User.findByIdAndUpdate(userId, {
+        $inc: { 'wallet.balance': perUserReward },
+        $push: {
+          'wallet.transactions': {
+            type: 'prize',
+            amount: perUserReward,
+            description,
+            status: 'completed',
+            date: new Date()
+          }
+        }
+      });
+    })
+  );
+}
 
 async function handleMatchCompleted(matchId: string, winnerTeamId?: string | null) {
   const match: any = await Match.findById(matchId).lean();
@@ -48,12 +156,14 @@ async function handleMatchCompleted(matchId: string, winnerTeamId?: string | nul
   if (team1Won) {
     await updateUsers(team1Members, { ...baseInc, 'stats.wins': 1 });
     await updateUsers(team2Members, { ...baseInc, 'stats.losses': 1 });
+    await distributeMatchWinnerPayout(matchId, winnerId);
     return;
   }
 
   if (team2Won) {
     await updateUsers(team2Members, { ...baseInc, 'stats.wins': 1 });
     await updateUsers(team1Members, { ...baseInc, 'stats.losses': 1 });
+    await distributeMatchWinnerPayout(matchId, winnerId);
     return;
   }
 
@@ -118,6 +228,7 @@ router.get('/', async (req, res) => {
         name: match.winner.name || '',
         tag: match.winner.tag || ''
       } : match.winner,
+      roomVisibleAt: match.roomCredentials?.visibleAt?.toISOString?.() || null,
       createdAt: match.createdAt?.toISOString(),
       updatedAt: match.updatedAt?.toISOString()
     }));
@@ -132,6 +243,62 @@ router.get('/', async (req, res) => {
       success: false,
       error: 'Failed to fetch matches'
     });
+  }
+});
+
+// Get room credentials for a match (participants/admin only)
+router.get('/:id/room', authenticateJWT, async (req: any, res: any) => {
+  try {
+    const match: any = await Match.findById(req.params.id).lean();
+    if (!match) {
+      return res.status(404).json({ success: false, error: 'Match not found' });
+    }
+
+    if (!match.roomCredentials?.roomId || !match.roomCredentials?.password) {
+      return res.status(404).json({ success: false, error: 'Room credentials are not generated yet' });
+    }
+
+    const requesterId = resolveUserId(req);
+    if (!requesterId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+
+    if (!isAdminRole(req)) {
+      const isParticipant = await isUserMatchParticipant(match, requesterId);
+      if (!isParticipant) {
+        return res.status(403).json({ success: false, error: 'Access denied for this match room' });
+      }
+    }
+
+    const visibleAt = match.roomCredentials.visibleAt ? new Date(match.roomCredentials.visibleAt) : null;
+    const expiresAt = match.roomCredentials.expiresAt ? new Date(match.roomCredentials.expiresAt) : null;
+    const now = new Date();
+
+    if (visibleAt && now < visibleAt) {
+      return res.status(403).json({
+        success: false,
+        error: 'Room credentials will be available 5 minutes before match start',
+        availableAt: visibleAt.toISOString()
+      });
+    }
+
+    if (expiresAt && now > expiresAt) {
+      return res.status(410).json({ success: false, error: 'Room credentials expired' });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        roomId: match.roomCredentials.roomId,
+        password: match.roomCredentials.password,
+        generatedAt: match.roomCredentials.generatedAt,
+        visibleAt: match.roomCredentials.visibleAt,
+        expiresAt: match.roomCredentials.expiresAt
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching room credentials:', error);
+    return res.status(500).json({ success: false, error: 'Failed to fetch room credentials' });
   }
 });
 
@@ -191,6 +358,7 @@ router.get('/:id', async (req, res) => {
         tag: match.winner.tag || '',
         logo: match.winner.logo || ''
       } : match.winner,
+      roomVisibleAt: match.roomCredentials?.visibleAt?.toISOString?.() || null,
       createdAt: match.createdAt?.toISOString(),
       updatedAt: match.updatedAt?.toISOString()
     };
@@ -209,7 +377,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create match
-router.post('/', async (req, res) => {
+router.post('/', authenticateJWT, isAdmin, async (req, res) => {
   try {
     const matchData: Partial<IMatch> = req.body;
 
@@ -260,7 +428,7 @@ router.post('/', async (req, res) => {
 });
 
 // Bulk create matches
-router.post('/batch', async (req, res) => {
+router.post('/batch', authenticateJWT, isAdmin, async (req, res) => {
   try {
     const items = Array.isArray(req.body) ? req.body : [];
     if (!items.length) {
@@ -308,7 +476,7 @@ router.post('/batch', async (req, res) => {
 });
 
 // Update match score and stats
-router.put('/:id/score', async (req, res) => {
+router.put('/:id/score', authenticateJWT, isAdmin, async (req, res) => {
   try {
     const match = await Match.findById(req.params.id);
 
@@ -367,7 +535,7 @@ router.put('/:id/score', async (req, res) => {
 });
 
 // Update match status
-router.put('/:id/status', async (req, res) => {
+router.put('/:id/status', authenticateJWT, isAdmin, async (req, res) => {
   try {
     const { status } = req.body;
     const match = await Match.findById(req.params.id);

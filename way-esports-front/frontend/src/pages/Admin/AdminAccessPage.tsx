@@ -58,10 +58,9 @@ const Actions = styled.div`
 
 const AdminAccessPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isLoading, login, fetchProfile } = useAuth();
+  const { user, isAuthenticated, isLoading, login, logout, fetchProfile } = useAuth();
   const { addNotification } = useNotifications();
-  const [telegramId, setTelegramId] = React.useState('');
-  const [email, setEmail] = React.useState('');
+  const [identifier, setIdentifier] = React.useState('');
   const [password, setPassword] = React.useState('');
 
   const role = user?.role || 'guest';
@@ -73,52 +72,35 @@ const AdminAccessPage: React.FC = () => {
     }
   }, [hasAdminAccess, navigate]);
 
-  const handleTelegramAdminLogin = async () => {
+  const handleContinue = async () => {
     try {
-      if (!telegramId.trim()) {
+      const cleanIdentifier = identifier.trim();
+      const cleanPassword = password.trim();
+
+      if (!cleanIdentifier) {
         addNotification({
           type: 'error',
-          title: 'Missing Telegram ID',
-          message: 'Enter your Telegram ID'
+          title: 'Missing identifier',
+          message: 'Enter Telegram ID or email/username'
         });
         return;
       }
 
-      await login({ method: 'telegram', telegramId: telegramId.trim() });
-      const profile = await fetchProfile();
-      const profileRole = profile?.role || 'user';
+      const isTelegramId = /^[0-9]+$/.test(cleanIdentifier);
 
-      if (profileRole === 'admin' || profileRole === 'developer') {
-        navigate('/admin', { replace: true });
-        return;
+      if (isTelegramId && !cleanPassword) {
+        await login({ method: 'telegram', telegramId: cleanIdentifier });
+      } else {
+        if (!cleanPassword) {
+          addNotification({
+            type: 'error',
+            title: 'Missing password',
+            message: 'Password is required for email/username login'
+          });
+          return;
+        }
+        await login({ method: 'email', identifier: cleanIdentifier, password: cleanPassword });
       }
-
-      addNotification({
-        type: 'warning',
-        title: 'Role not assigned',
-        message: 'This account is logged in, but role is not admin/developer on the server'
-      });
-    } catch (error: any) {
-      addNotification({
-        type: 'error',
-        title: 'Telegram login failed',
-        message: error?.message || 'Unable to login by Telegram ID'
-      });
-    }
-  };
-
-  const handleEmailLogin = async () => {
-    try {
-      if (!email.trim() || !password.trim()) {
-        addNotification({
-          type: 'error',
-          title: 'Missing credentials',
-          message: 'Enter email and password'
-        });
-        return;
-      }
-
-      await login({ method: 'email', identifier: email.trim(), password: password.trim() });
 
       const profile = await fetchProfile();
       const profileRole = profile?.role || 'user';
@@ -136,10 +118,21 @@ const AdminAccessPage: React.FC = () => {
     } catch (error: any) {
       addNotification({
         type: 'error',
-        title: 'Email login failed',
-        message: error?.message || 'Unable to login with email/password'
+        title: 'Login failed',
+        message: error?.message || 'Unable to login'
       });
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    setIdentifier('');
+    setPassword('');
+    addNotification({
+      type: 'info',
+      title: 'Session cleared',
+      message: 'Login with required account'
+    });
   };
 
   return (
@@ -153,35 +146,17 @@ const AdminAccessPage: React.FC = () => {
 
       <Form>
         <Label>
-          Telegram ID (for privileged accounts)
+          Identifier (Telegram ID or Email/Username)
           <Input
-            value={telegramId}
-            onChange={(e) => setTelegramId(e.target.value)}
-            placeholder="123456789"
-            inputMode="numeric"
-          />
-        </Label>
-
-        <Actions>
-          <Button onClick={handleTelegramAdminLogin} disabled={isLoading}>
-            {isLoading ? 'Logging in...' : 'Login by Telegram ID'}
-          </Button>
-        </Actions>
-      </Form>
-
-      <Form>
-        <Label>
-          Email
-          <Input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="admin@example.com"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            placeholder="123456789 or admin@example.com"
+            inputMode="text"
           />
         </Label>
 
         <Label>
-          Password
+          Password (optional for Telegram ID)
           <Input
             type="password"
             value={password}
@@ -191,9 +166,14 @@ const AdminAccessPage: React.FC = () => {
         </Label>
 
         <Actions>
-          <Button onClick={handleEmailLogin} disabled={isLoading}>
-            {isLoading ? 'Logging in...' : 'Login with Email'}
+          <Button onClick={handleContinue} disabled={isLoading}>
+            {isLoading ? 'Logging in...' : 'Continue'}
           </Button>
+          {isAuthenticated && (
+            <Button variant="outline" onClick={handleLogout} disabled={isLoading}>
+              Logout
+            </Button>
+          )}
         </Actions>
       </Form>
 

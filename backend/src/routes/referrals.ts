@@ -22,6 +22,24 @@ router.get('/stats', authenticateJWT, async (req, res) => {
 });
 
 /**
+ * GET /api/referrals/public-settings
+ * Get public referral settings (for billing UI)
+ */
+router.get('/public-settings', async (_req, res) => {
+  try {
+    const settings = await ReferralService.getReferralSettings();
+    res.json({
+      referralBonusThreshold: settings?.referralBonusThreshold ?? 3,
+      refereeBonus: settings?.refereeBonus ?? 1,
+      referrerBonus: settings?.referrerBonus ?? 1,
+      subscriptionPrice: settings?.subscriptionPrice ?? 9.99
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * GET /api/referrals/settings
  * Get referral settings (admin only)
  */
