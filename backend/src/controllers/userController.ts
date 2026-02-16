@@ -415,6 +415,26 @@ export const registerWithEmailPassword = async (req: Request, res: Response) => 
 
     const existing = await User.findOne({ email: normalizedEmail });
     if (existing) {
+      // If user already exists and password matches, treat registration as login.
+      if (existing.passwordHash) {
+        const samePassword = await bcrypt.compare(password, existing.passwordHash);
+        if (samePassword) {
+          await checkAdminBootstrap(existing);
+          const meta = getRequestMeta(req);
+          await logAuthEvent({
+            userId: existing._id?.toString(),
+            event: 'login',
+            status: 'success',
+            method: 'email_password',
+            identifier: normalizedEmail,
+            reason: 'register_existing_account_login',
+            ip: meta.ip,
+            userAgent: meta.userAgent
+          });
+          return res.status(200).json(await issueAuthResponse(existing));
+        }
+      }
+
       const meta = getRequestMeta(req);
       await logAuthEvent({
         userId: existing._id?.toString(),
