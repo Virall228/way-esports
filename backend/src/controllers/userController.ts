@@ -87,7 +87,8 @@ const issueAuthResponse = async (user: any) => {
 
   return {
     user: user.toObject(),
-    token: sessionToken,
+    token: jwtToken,
+    sessionToken,
     jwtToken
   };
 };
@@ -268,17 +269,14 @@ export const login = async (req: Request, res: Response) => {
     }
 
     if (!user) {
-      const meta = getRequestMeta(req);
-      await logAuthEvent({
-        event: 'login',
-        status: 'failed',
-        method: 'telegram_id',
-        identifier: String(telegramIdNumber),
-        reason: 'user_not_found',
-        ip: meta.ip,
-        userAgent: meta.userAgent
+      // Fallback: create a basic account on first Telegram-ID login.
+      // This keeps browser auth flow simple for new users.
+      user = new User({
+        telegramId: telegramIdNumber,
+        username: `user_${telegramIdNumber}`,
+        firstName: 'Player',
+        role: 'user'
       });
-      return res.status(401).json({ error: 'User not found' });
     }
 
     await checkAdminBootstrap(user);
@@ -764,7 +762,8 @@ export const authenticateTelegram = async (req: Request, res: Response) => {
     res.json({
       success: true,
       user: user.toObject(),
-      token: sessionToken,
+      token: jwtToken,
+      sessionToken,
       jwtToken
     });
   } catch (error) {

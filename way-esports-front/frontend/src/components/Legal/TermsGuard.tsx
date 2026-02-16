@@ -27,14 +27,19 @@ const TermsGuard: React.FC<TermsGuardProps> = ({ children }) => {
   const checkTermsStatus = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/terms/status');
-      setTermsStatus(response.data);
+      const response = await api.get<TermsStatus>('/api/terms/status');
+      setTermsStatus(response);
 
-      if (response.data.required && !response.data.accepted) {
+      if (response.required && !response.accepted) {
         setShowTermsModal(true);
       }
     } catch (error) {
       console.error('Failed to check terms status:', error);
+      setTermsStatus({
+        hasCurrentTerms: false,
+        required: false,
+        accepted: true
+      });
     } finally {
       setLoading(false);
     }
