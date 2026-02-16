@@ -46,7 +46,7 @@ router.post(
   '/email/register',
   idempotency({ required: true }),
   [
-    body('email').isEmail().normalizeEmail(),
+    body('email').isEmail().customSanitizer((value) => String(value).trim().toLowerCase()),
     body('password').isLength({ min: 8 }),
     body('referralCode').optional().isString().trim().isLength({ min: 3, max: 64 })
   ],
@@ -88,14 +88,14 @@ router.post('/telegram', telegramAuthMiddleware, authenticateTelegram);
 router.post(
   '/email/request-otp',
   idempotency({ required: true, ttlSeconds: 10 * 60 }),
-  [body('email').isEmail().normalizeEmail()],
+  [body('email').isEmail().customSanitizer((value) => String(value).trim().toLowerCase())],
   requestEmailOtp
 );
 
 router.post(
   '/email/verify-otp',
   idempotency({ required: true, ttlSeconds: 10 * 60 }),
-  [body('email').isEmail().normalizeEmail(), body('code').isLength({ min: 4, max: 10 })],
+  [body('email').isEmail().customSanitizer((value) => String(value).trim().toLowerCase()), body('code').isLength({ min: 4, max: 10 })],
   verifyEmailOtp
 );
 
