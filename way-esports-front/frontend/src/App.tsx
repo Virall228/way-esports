@@ -476,6 +476,11 @@ const AppContent: React.FC = () => {
     navigate('/auth');
   }, [navigate]);
 
+  const handleControlAccess = React.useCallback(() => {
+    closeMobileMenu();
+    navigate(hasAdminAccess ? '/admin' : '/control-access');
+  }, [hasAdminAccess, navigate]);
+
   const navItems = React.useMemo<NavItem[]>(() => {
     const items: NavItem[] = [
       { label: t('home'), to: '/', icon: <HomeIcon {...iconProps} /> },
@@ -571,6 +576,13 @@ const AppContent: React.FC = () => {
             <TopBarBadge>{t('onePlatformOneUi')}</TopBarBadge>
           </TopBarTitle>
           <TopBarActions>
+            <TopActionButton
+              type="button"
+              onClick={handleControlAccess}
+              aria-label={hasAdminAccess ? 'Control' : 'Privileged access'}
+            >
+              {hasAdminAccess ? 'Control' : 'Access'}
+            </TopActionButton>
             {!isAuthenticated && (
               <TopActionButton type="button" onClick={handleLogin} aria-label="Login">
                 Login
@@ -614,6 +626,7 @@ const AppContent: React.FC = () => {
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/admin-access" element={<AdminAccessPage />} />
               <Route path="/control-access" element={<AdminAccessPage />} />
+              <Route path="/control" element={<Navigate to="/control-access" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </ContentInner>
@@ -646,11 +659,9 @@ const AppContent: React.FC = () => {
               <NavItemLabel>{item.label}</NavItemLabel>
             </NavItemLink>
           ))}
-          {hasAdminAccess && (
-            <MobileMenuActionButton type="button" onClick={() => { closeMobileMenu(); navigate('/admin'); }}>
-              Control
-            </MobileMenuActionButton>
-          )}
+          <MobileMenuActionButton type="button" onClick={handleControlAccess}>
+            {hasAdminAccess ? 'Control' : 'Access'}
+          </MobileMenuActionButton>
         </MobileMenuPanel>
       </MobileMenuOverlay>
 

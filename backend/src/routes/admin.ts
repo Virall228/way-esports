@@ -7,6 +7,7 @@ import Team from '../models/Team';
 import ContactMessage from '../models/ContactMessage';
 import Wallet from '../models/Wallet';
 import AuditLog from '../models/AuditLog';
+import AuthLog from '../models/AuthLog';
 import { adminAuditMiddleware } from '../middleware/adminAudit';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination';
 import { idempotency } from '../middleware/idempotency';
@@ -62,6 +63,35 @@ const toWalletType = (
 const toNumber = (value: unknown, fallback = 0): number => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const buildAuthLogQuery = (queryParams: Record<string, unknown>) => {
+  const event = typeof queryParams.event === 'string' ? queryParams.event.trim() : '';
+  const method = typeof queryParams.method === 'string' ? queryParams.method.trim() : '';
+  const status = typeof queryParams.status === 'string' ? queryParams.status.trim() : '';
+  const userId = typeof queryParams.userId === 'string' ? queryParams.userId.trim() : '';
+  const search = typeof queryParams.search === 'string' ? queryParams.search.trim() : '';
+
+  const query: Record<string, unknown> = {};
+
+  if (event) query.event = event;
+  if (method) query.method = method;
+  if (status) query.status = status;
+  if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+    query.userId = new mongoose.Types.ObjectId(userId);
+  }
+
+  if (search) {
+    const regex = new RegExp(search, 'i');
+    query.$or = [
+      { identifier: regex },
+      { reason: regex },
+      { ip: regex },
+      { userAgent: regex }
+    ];
+  }
+
+  return query;
 };
 
 const csvEscape = (value: unknown): string => {
@@ -314,6 +344,95 @@ router.get('/audit/export.csv', async (req, res) => {
     return res.status(200).send(csv);
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message || 'Failed to export audit CSV' });
+  }
+});
+
+router.get('/auth-logs', async (req, res) => {
+  try {
+    const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>, {
+      defaultLimit: 100,
+      maxLimit: 500
+    });
+    const query = buildAuthLogQuery(req.query as Record<string, unknown>);
+
+    const [total, rows] = await Promise.all([
+      AuthLog.countDocuments(query),
+      AuthLog.find(query)
+        .populate('userId', 'username email telegramId role')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+    ]);
+
+    return res.json({
+      success: true,
+      data: rows,
+      pagination: buildPaginationMeta(page, limit, total)
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to fetch auth logs' });
+  }
+});
+
+router.get('/auth-logs/export.csv', async (req, res) => {
+  try {
+    const rawLimit = toNumber(req.query.limit, 5000);
+    const limit = Math.min(Math.max(Math.trunc(rawLimit), 1), 10000);
+    const query = buildAuthLogQuery(req.query as Record<string, unknown>);
+
+    const rows = await AuthLog.find(query)
+      .populate('userId', 'username email telegramId role')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    const headers = [
+      'createdAt',
+      'event',
+      'status',
+      'method',
+      'userId',
+      'username',
+      'email',
+      'telegramId',
+      'role',
+      'identifier',
+      'reason',
+      'ip',
+      'userAgent'
+    ];
+
+    const lines = [
+      headers.join(','),
+      ...rows.map((row: any) => {
+        const userData = row?.userId || {};
+        return [
+          csvEscape(row.createdAt),
+          csvEscape(row.event),
+          csvEscape(row.status),
+          csvEscape(row.method),
+          csvEscape(userData?._id || ''),
+          csvEscape(userData?.username || ''),
+          csvEscape(userData?.email || ''),
+          csvEscape(userData?.telegramId || ''),
+          csvEscape(userData?.role || ''),
+          csvEscape(row.identifier || ''),
+          csvEscape(row.reason || ''),
+          csvEscape(row.ip || ''),
+          csvEscape(row.userAgent || '')
+        ].join(',');
+      })
+    ];
+
+    const csv = `${lines.join('\n')}\n`;
+    const fileName = `auth_logs_${new Date().toISOString().slice(0, 10)}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    return res.status(200).send(csv);
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to export auth log CSV' });
   }
 });
 

@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import User from '../models/User';
 import Session from '../models/Session';
 import { verifyGoogleIdToken, verifyAppleIdentityToken } from '../services/oauthTokenVerifier';
+import { logAuthEvent } from '../services/authLogService';
 
 const JWT_EXPIRATION = '24h';
 const SESSION_TTL_DAYS = 30;
@@ -112,23 +113,59 @@ const buildNamePair = (fallbackName: string, fullName?: string | null, firstName
   };
 };
 
+const getRequestMeta = (req: Request) => ({
+  ip: req.ip || req.socket.remoteAddress || undefined,
+  userAgent: req.get('user-agent') || undefined
+});
+
 // Register endpoint
 export const register = async (req: Request, res: Response) => {
   try {
     const { telegramId, username, firstName, lastName, photoUrl } = req.body || {};
 
     if (!telegramId || !username || !firstName) {
+      const meta = getRequestMeta(req);
+      await logAuthEvent({
+        event: 'register',
+        status: 'failed',
+        method: 'telegram_id',
+        identifier: telegramId ? String(telegramId) : undefined,
+        reason: 'missing_required_fields',
+        ip: meta.ip,
+        userAgent: meta.userAgent
+      });
       return res.status(400).json({ error: 'telegramId, username and firstName are required' });
     }
 
     const telegramIdNumber = typeof telegramId === 'string' ? parseInt(telegramId, 10) : telegramId;
     if (!Number.isFinite(telegramIdNumber)) {
+      const meta = getRequestMeta(req);
+      await logAuthEvent({
+        event: 'register',
+        status: 'failed',
+        method: 'telegram_id',
+        identifier: String(telegramId),
+        reason: 'invalid_telegram_id',
+        ip: meta.ip,
+        userAgent: meta.userAgent
+      });
       return res.status(400).json({ error: 'telegramId must be a number' });
     }
 
     const existingUser = await User.findOne({ telegramId: telegramIdNumber });
     if (existingUser) {
       await checkAdminBootstrap(existingUser);
+      const meta = getRequestMeta(req);
+      await logAuthEvent({
+        userId: existingUser._id?.toString(),
+        event: 'login',
+        status: 'success',
+        method: 'telegram_id',
+        identifier: String(telegramIdNumber),
+        reason: 'existing_user',
+        ip: meta.ip,
+        userAgent: meta.userAgent
+      });
       return res.status(200).json(await issueAuthResponse(existingUser));
     }
 
@@ -143,9 +180,29 @@ export const register = async (req: Request, res: Response) => {
 
     await checkAdminBootstrap(user);
     await user.save();
+    const meta = getRequestMeta(req);
+    await logAuthEvent({
+      userId: user._id?.toString(),
+      event: 'register',
+      status: 'success',
+      method: 'telegram_id',
+      identifier: String(telegramIdNumber),
+      ip: meta.ip,
+      userAgent: meta.userAgent
+    });
     res.status(201).json(await issueAuthResponse(user));
   } catch (error) {
     console.error('Registration error:', error);
+    const meta = getRequestMeta(req);
+    await logAuthEvent({
+      event: 'register',
+      status: 'failed',
+      method: 'telegram_id',
+      identifier: req.body?.telegramId ? String(req.body.telegramId) : undefined,
+      reason: 'server_error',
+      ip: meta.ip,
+      userAgent: meta.userAgent
+    });
     res.status(500).json({ error: 'Error registering user' });
   }
 };
@@ -156,11 +213,30 @@ export const login = async (req: Request, res: Response) => {
     const { telegramId } = req.body || {};
 
     if (!telegramId) {
+      const meta = getRequestMeta(req);
+      await logAuthEvent({
+        event: 'login',
+        status: 'failed',
+        method: 'telegram_id',
+        reason: 'missing_telegram_id',
+        ip: meta.ip,
+        userAgent: meta.userAgent
+      });
       return res.status(400).json({ error: 'telegramId is required' });
     }
 
     const telegramIdNumber = typeof telegramId === 'string' ? parseInt(telegramId, 10) : telegramId;
     if (!Number.isFinite(telegramIdNumber)) {
+      const meta = getRequestMeta(req);
+      await logAuthEvent({
+        event: 'login',
+        status: 'failed',
+        method: 'telegram_id',
+        identifier: String(telegramId),
+        reason: 'invalid_telegram_id',
+        ip: meta.ip,
+        userAgent: meta.userAgent
+      });
       return res.status(400).json({ error: 'telegramId must be a number' });
     }
 
@@ -179,6 +255,16 @@ export const login = async (req: Request, res: Response) => {
     }
 
     if (!user) {
+      const meta = getRequestMeta(req);
+      await logAuthEvent({
+        event: 'login',
+        status: 'failed',
+        method: 'telegram_id',
+        identifier: String(telegramIdNumber),
+        reason: 'user_not_found',
+        ip: meta.ip,
+        userAgent: meta.userAgent
+      });
       return res.status(401).json({ error: 'User not found' });
     }
 
@@ -186,9 +272,29 @@ export const login = async (req: Request, res: Response) => {
     if (user.isNew) {
       await user.save();
     }
+    const meta = getRequestMeta(req);
+    await logAuthEvent({
+      userId: user._id?.toString(),
+      event: 'login',
+      status: 'success',
+      method: 'telegram_id',
+      identifier: String(telegramIdNumber),
+      ip: meta.ip,
+      userAgent: meta.userAgent
+    });
     res.json(await issueAuthResponse(user));
   } catch (error) {
     console.error('Login error:', error);
+    const meta = getRequestMeta(req);
+    await logAuthEvent({
+      event: 'login',
+      status: 'failed',
+      method: 'telegram_id',
+      identifier: req.body?.telegramId ? String(req.body.telegramId) : undefined,
+      reason: 'server_error',
+      ip: meta.ip,
+      userAgent: meta.userAgent
+    });
     res.status(500).json({ error: 'Error logging in' });
   }
 };
@@ -199,10 +305,30 @@ export const registerWithEmailPassword = async (req: Request, res: Response) => 
     const { email, password, username, firstName, lastName } = req.body || {};
 
     if (!email || !password) {
+      const meta = getRequestMeta(req);
+      await logAuthEvent({
+        event: 'register',
+        status: 'failed',
+        method: 'email_password',
+        identifier: email ? String(email) : undefined,
+        reason: 'missing_email_or_password',
+        ip: meta.ip,
+        userAgent: meta.userAgent
+      });
       return res.status(400).json({ error: 'email and password are required' });
     }
 
     if (typeof password !== 'string' || password.length < 8) {
+      const meta = getRequestMeta(req);
+      await logAuthEvent({
+        event: 'register',
+        status: 'failed',
+        method: 'email_password',
+        identifier: String(email),
+        reason: 'weak_password',
+        ip: meta.ip,
+        userAgent: meta.userAgent
+      });
       return res.status(400).json({ error: 'password must be at least 8 characters' });
     }
 
@@ -210,6 +336,17 @@ export const registerWithEmailPassword = async (req: Request, res: Response) => 
 
     const existing = await User.findOne({ email: normalizedEmail });
     if (existing) {
+      const meta = getRequestMeta(req);
+      await logAuthEvent({
+        userId: existing._id?.toString(),
+        event: 'register',
+        status: 'failed',
+        method: 'email_password',
+        identifier: normalizedEmail,
+        reason: 'email_already_exists',
+        ip: meta.ip,
+        userAgent: meta.userAgent
+      });
       return res.status(409).json({ error: 'User with this email already exists' });
     }
 
@@ -233,9 +370,30 @@ export const registerWithEmailPassword = async (req: Request, res: Response) => 
     await checkAdminBootstrap(user);
     await user.save();
 
+    const meta = getRequestMeta(req);
+    await logAuthEvent({
+      userId: user._id?.toString(),
+      event: 'register',
+      status: 'success',
+      method: 'email_password',
+      identifier: normalizedEmail,
+      ip: meta.ip,
+      userAgent: meta.userAgent
+    });
+
     res.status(201).json(await issueAuthResponse(user));
   } catch (error) {
     console.error('Email registration error:', error);
+    const meta = getRequestMeta(req);
+    await logAuthEvent({
+      event: 'register',
+      status: 'failed',
+      method: 'email_password',
+      identifier: req.body?.email ? String(req.body.email) : undefined,
+      reason: 'server_error',
+      ip: meta.ip,
+      userAgent: meta.userAgent
+    });
     res.status(500).json({ error: 'Error registering with email/password' });
   }
 };
@@ -247,6 +405,16 @@ export const loginWithEmailPassword = async (req: Request, res: Response) => {
 
     const rawIdentifier = (identifier || email || username || '').toString().trim();
     if (!rawIdentifier || !password) {
+      const meta = getRequestMeta(req);
+      await logAuthEvent({
+        event: 'login',
+        status: 'failed',
+        method: 'email_password',
+        identifier: rawIdentifier || undefined,
+        reason: 'missing_identifier_or_password',
+        ip: meta.ip,
+        userAgent: meta.userAgent
+      });
       return res.status(400).json({ error: 'identifier and password are required' });
     }
 
@@ -257,22 +425,74 @@ export const loginWithEmailPassword = async (req: Request, res: Response) => {
 
     const user: any = await User.findOne(userQuery);
     if (!user) {
+      const meta = getRequestMeta(req);
+      await logAuthEvent({
+        event: 'login',
+        status: 'failed',
+        method: 'email_password',
+        identifier: rawIdentifier,
+        reason: 'invalid_credentials',
+        ip: meta.ip,
+        userAgent: meta.userAgent
+      });
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     if (!user.passwordHash) {
+      const meta = getRequestMeta(req);
+      await logAuthEvent({
+        userId: user._id?.toString(),
+        event: 'login',
+        status: 'failed',
+        method: 'email_password',
+        identifier: rawIdentifier,
+        reason: 'password_login_not_configured',
+        ip: meta.ip,
+        userAgent: meta.userAgent
+      });
       return res.status(400).json({ error: 'Password login is not configured for this account' });
     }
 
     const isValid = await bcrypt.compare(String(password), user.passwordHash);
     if (!isValid) {
+      const meta = getRequestMeta(req);
+      await logAuthEvent({
+        userId: user._id?.toString(),
+        event: 'login',
+        status: 'failed',
+        method: 'email_password',
+        identifier: rawIdentifier,
+        reason: 'invalid_credentials',
+        ip: meta.ip,
+        userAgent: meta.userAgent
+      });
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     await checkAdminBootstrap(user);
+    const meta = getRequestMeta(req);
+    await logAuthEvent({
+      userId: user._id?.toString(),
+      event: 'login',
+      status: 'success',
+      method: 'email_password',
+      identifier: rawIdentifier,
+      ip: meta.ip,
+      userAgent: meta.userAgent
+    });
     res.json(await issueAuthResponse(user));
   } catch (error) {
     console.error('Email login error:', error);
+    const meta = getRequestMeta(req);
+    await logAuthEvent({
+      event: 'login',
+      status: 'failed',
+      method: 'email_password',
+      identifier: req.body?.identifier || req.body?.email || req.body?.username || undefined,
+      reason: 'server_error',
+      ip: meta.ip,
+      userAgent: meta.userAgent
+    });
     res.status(500).json({ error: 'Error logging in with email/password' });
   }
 };
@@ -353,9 +573,29 @@ export const authenticateGoogle = async (req: Request, res: Response) => {
       fullName: verified.fullName
     });
 
+    const meta = getRequestMeta(req);
+    await logAuthEvent({
+      userId: user._id?.toString(),
+      event: 'login',
+      status: 'success',
+      method: 'google',
+      identifier: verified.email || verified.providerId,
+      ip: meta.ip,
+      userAgent: meta.userAgent
+    });
+
     res.json(await issueAuthResponse(user));
   } catch (error: any) {
     console.error('Google auth error:', error);
+    const meta = getRequestMeta(req);
+    await logAuthEvent({
+      event: 'login',
+      status: 'failed',
+      method: 'google',
+      reason: error?.message || 'google_auth_failed',
+      ip: meta.ip,
+      userAgent: meta.userAgent
+    });
     res.status(401).json({ error: error?.message || 'Google authentication failed' });
   }
 };
@@ -380,9 +620,29 @@ export const authenticateApple = async (req: Request, res: Response) => {
       lastName: req.body?.lastName || null
     });
 
+    const meta = getRequestMeta(req);
+    await logAuthEvent({
+      userId: user._id?.toString(),
+      event: 'login',
+      status: 'success',
+      method: 'apple',
+      identifier: verified.email || verified.providerId,
+      ip: meta.ip,
+      userAgent: meta.userAgent
+    });
+
     res.json(await issueAuthResponse(user));
   } catch (error: any) {
     console.error('Apple auth error:', error);
+    const meta = getRequestMeta(req);
+    await logAuthEvent({
+      event: 'login',
+      status: 'failed',
+      method: 'apple',
+      reason: error?.message || 'apple_auth_failed',
+      ip: meta.ip,
+      userAgent: meta.userAgent
+    });
     res.status(401).json({ error: error?.message || 'Apple authentication failed' });
   }
 };
@@ -476,6 +736,17 @@ export const authenticateTelegram = async (req: Request, res: Response) => {
 
     const sessionToken = await createSessionToken(user._id.toString());
 
+    const meta = getRequestMeta(req);
+    await logAuthEvent({
+      userId: user._id?.toString(),
+      event: 'login',
+      status: 'success',
+      method: 'telegram_webapp',
+      identifier: String(telegramId),
+      ip: meta.ip,
+      userAgent: meta.userAgent
+    });
+
     res.json({
       success: true,
       user: user.toObject(),
@@ -484,6 +755,15 @@ export const authenticateTelegram = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Telegram authentication error:', error);
+    const meta = getRequestMeta(req);
+    await logAuthEvent({
+      event: 'login',
+      status: 'failed',
+      method: 'telegram_webapp',
+      reason: 'telegram_webapp_auth_failed',
+      ip: meta.ip,
+      userAgent: meta.userAgent
+    });
     res.status(500).json({
       success: false,
       error: 'Error authenticating with Telegram'

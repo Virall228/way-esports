@@ -334,6 +334,23 @@ interface AdminWalletTransaction {
   balance: number;
 }
 
+interface AdminAuthLog {
+  id: string;
+  createdAt: string;
+  userId?: string;
+  username?: string;
+  email?: string;
+  telegramId?: number;
+  role?: string;
+  event: string;
+  status: string;
+  method: string;
+  identifier?: string;
+  reason?: string;
+  ip?: string;
+  userAgent?: string;
+}
+
 interface PaginationMeta {
   page: number;
   limit: number;
@@ -430,6 +447,12 @@ const AdminPage: React.FC = () => {
   const [usersSearch, setUsersSearch] = useState('');
   const [opsStreamData, setOpsStreamData] = useState<OpsStreamPayload | null>(null);
   const [opsStreamConnected, setOpsStreamConnected] = useState(false);
+  const [authLogFilters, setAuthLogFilters] = useState({
+    event: '',
+    method: '',
+    status: '',
+    search: ''
+  });
   const isOpsTab = activeTab === 'ops';
 
   const formatApiError = (e: any, fallback: string) => {
@@ -453,6 +476,18 @@ const AdminPage: React.FC = () => {
     } catch {
       return null;
     }
+  };
+
+  const buildAuthLogQueryString = (limit: number) => {
+    const params = new URLSearchParams();
+    params.set('limit', String(limit));
+
+    if (authLogFilters.event) params.set('event', authLogFilters.event);
+    if (authLogFilters.method) params.set('method', authLogFilters.method);
+    if (authLogFilters.status) params.set('status', authLogFilters.status);
+    if (authLogFilters.search.trim()) params.set('search', authLogFilters.search.trim());
+
+    return params.toString();
   };
 
   const notify = (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string) => {
@@ -486,7 +521,8 @@ const AdminPage: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: ['admin', 'ops-metrics'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'ops-queue'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'ops-backups'] }),
-        queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] })
+        queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'auth-logs'] })
       ]);
     } catch (e: any) {
       setError(formatApiError(e, 'Failed to load admin data'));
@@ -821,6 +857,31 @@ const AdminPage: React.FC = () => {
     }));
   };
 
+  const fetchAuthLogs = async (): Promise<AdminAuthLog[]> => {
+    const result: any = await api.get(`/api/admin/auth-logs?${buildAuthLogQueryString(150)}`);
+    const items: any[] = Array.isArray(result) ? result : (result?.data || []);
+
+    return items.map((row: any) => {
+      const userData = row?.userId || {};
+      return {
+        id: String(row?._id || row?.id || ''),
+        createdAt: row?.createdAt || '',
+        userId: String(userData?._id || row?.userId || ''),
+        username: userData?.username || '',
+        email: userData?.email || '',
+        telegramId: Number(userData?.telegramId || 0),
+        role: userData?.role || '',
+        event: row?.event || '',
+        status: row?.status || '',
+        method: row?.method || '',
+        identifier: row?.identifier || '',
+        reason: row?.reason || '',
+        ip: row?.ip || '',
+        userAgent: row?.userAgent || ''
+      };
+    });
+  };
+
   const fetchOpsMetrics = async (): Promise<OpsMetrics | null> => {
     const result: any = await api.get('/api/admin/ops/metrics');
     return (result?.data || result || null) as OpsMetrics | null;
@@ -940,6 +1001,15 @@ const AdminPage: React.FC = () => {
     refetchInterval: isOpsTab ? 15000 : false
   });
 
+  const authLogsQuery = useQuery({
+    queryKey: ['admin', 'auth-logs', authLogFilters.event, authLogFilters.method, authLogFilters.status, authLogFilters.search],
+    queryFn: fetchAuthLogs,
+    enabled: hasAdminAccess,
+    staleTime: 15000,
+    refetchOnWindowFocus: false,
+    refetchInterval: isOpsTab ? 15000 : false
+  });
+
   const opsMetricsQuery = useQuery({
     queryKey: ['admin', 'ops-metrics'],
     queryFn: fetchOpsMetrics,
@@ -978,6 +1048,7 @@ const AdminPage: React.FC = () => {
   const contacts = contactsQuery.data || [];
   const walletTransactions = walletTransactionsQuery.data || [];
   const auditLogs = auditLogsQuery.data || [];
+  const authLogs = authLogsQuery.data || [];
   const opsMetrics = opsMetricsQuery.data || null;
   const opsQueue = opsQueueQuery.data || null;
   const opsBackups = opsBackupsQuery.data || [];
@@ -995,6 +1066,7 @@ const AdminPage: React.FC = () => {
     contactsQuery.error ||
     walletTransactionsQuery.error ||
     auditLogsQuery.error ||
+    authLogsQuery.error ||
     opsMetricsQuery.error ||
     opsQueueQuery.error ||
     opsBackupsQuery.error ||
@@ -1012,6 +1084,7 @@ const AdminPage: React.FC = () => {
     contactsQuery.isFetching ||
     walletTransactionsQuery.isFetching ||
     auditLogsQuery.isFetching ||
+    authLogsQuery.isFetching ||
     opsMetricsQuery.isFetching ||
     opsQueueQuery.isFetching ||
     opsBackupsQuery.isFetching ||
@@ -1418,7 +1491,8 @@ const AdminPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'ops-metrics'] }),
       queryClient.invalidateQueries({ queryKey: ['admin', 'ops-queue'] }),
       queryClient.invalidateQueries({ queryKey: ['admin', 'ops-backups'] }),
-      queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] }),
+      queryClient.invalidateQueries({ queryKey: ['admin', 'auth-logs'] })
     ]);
   };
 
@@ -1466,6 +1540,44 @@ const AdminPage: React.FC = () => {
       notify('success', 'Export complete', 'Audit CSV downloaded');
     } catch (e: any) {
       const message = e?.message || 'Failed to export audit CSV';
+      setError(message);
+      notify('error', 'Export failed', message);
+    }
+  };
+
+  const handleExportAuthCsv = async () => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        notify('error', 'Export failed', 'Login required');
+        return;
+      }
+
+      const queryString = buildAuthLogQueryString(5000);
+      const response = await fetch(getFullUrl(`/api/admin/auth-logs/export.csv?${queryString}`), {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Export failed (${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `auth_logs_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      notify('success', 'Export complete', 'Auth log CSV downloaded');
+    } catch (e: any) {
+      const message = e?.message || 'Failed to export auth log CSV';
       setError(message);
       notify('error', 'Export failed', message);
     }
@@ -2146,6 +2258,90 @@ const AdminPage: React.FC = () => {
             </tbody>
           </Table>
         </TableWrap>
+
+        <h4 style={{ marginTop: '24px' }}>Recent Auth Logs</h4>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+          <Select
+            value={authLogFilters.event}
+            onChange={(e) => setAuthLogFilters((prev) => ({ ...prev, event: e.target.value }))}
+            style={{ minWidth: '130px' }}
+          >
+            <option value="">All Events</option>
+            <option value="login">Login</option>
+            <option value="register">Register</option>
+            <option value="logout">Logout</option>
+          </Select>
+          <Select
+            value={authLogFilters.method}
+            onChange={(e) => setAuthLogFilters((prev) => ({ ...prev, method: e.target.value }))}
+            style={{ minWidth: '160px' }}
+          >
+            <option value="">All Methods</option>
+            <option value="telegram_id">telegram_id</option>
+            <option value="telegram_webapp">telegram_webapp</option>
+            <option value="email_password">email_password</option>
+            <option value="email_otp">email_otp</option>
+            <option value="google">google</option>
+            <option value="apple">apple</option>
+          </Select>
+          <Select
+            value={authLogFilters.status}
+            onChange={(e) => setAuthLogFilters((prev) => ({ ...prev, status: e.target.value }))}
+            style={{ minWidth: '130px' }}
+          >
+            <option value="">All Statuses</option>
+            <option value="success">success</option>
+            <option value="failed">failed</option>
+          </Select>
+          <Input
+            value={authLogFilters.search}
+            onChange={(e) => setAuthLogFilters((prev) => ({ ...prev, search: e.target.value }))}
+            placeholder="Search identifier/reason/ip"
+            style={{ minWidth: '220px', flex: '1 1 220px' }}
+          />
+          <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'auth-logs'] })}>
+            Refresh Logs
+          </ActionButton>
+          <ActionButton onClick={handleExportAuthCsv}>
+            Export Auth CSV
+          </ActionButton>
+        </div>
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Time</Th>
+                <Th>User</Th>
+                <Th>Event</Th>
+                <Th>Method</Th>
+                <Th>Status</Th>
+                <Th>Identifier</Th>
+                <Th>Reason</Th>
+                <Th>IP</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {authLogs.slice(0, 40).map((log: AdminAuthLog) => (
+                <tr key={log.id}>
+                  <Td>{formatDate(log.createdAt)}</Td>
+                  <Td>
+                    {log.username || 'unknown'}
+                    {log.telegramId ? ` (${log.telegramId})` : ''}
+                  </Td>
+                  <Td>{log.event}</Td>
+                  <Td>{log.method}</Td>
+                  <Td>{log.status}</Td>
+                  <Td>{log.identifier || '-'}</Td>
+                  <Td>{log.reason || '-'}</Td>
+                  <Td>{log.ip || '-'}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
+        {!authLogs.length && (
+          <div style={{ color: '#cccccc', padding: '12px 0' }}>No auth logs yet.</div>
+        )}
       </div>
     );
   }

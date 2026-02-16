@@ -139,6 +139,11 @@ const AuthPage: React.FC = () => {
       <Card variant="elevated">
         <Title>Account Access</Title>
         <Subtitle>Login or register. Admin dashboard remains hidden for non-admin roles.</Subtitle>
+        <Row style={{ marginTop: '0.75rem' }}>
+          <Button variant="outline" onClick={() => navigate('/control-access')}>
+            Privileged Access
+          </Button>
+        </Row>
       </Card>
 
       <Grid>
@@ -235,4 +240,3 @@ const AuthPage: React.FC = () => {
 };
 
 export default AuthPage;
-

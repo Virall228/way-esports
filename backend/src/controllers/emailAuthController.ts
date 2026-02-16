@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import EmailOtp from '../models/EmailOtp';
 import Session from '../models/Session';
+import { logAuthEvent } from '../services/authLogService';
 
 const OTP_TTL_MINUTES = 10;
 const OTP_MAX_ATTEMPTS = 5;
@@ -47,6 +48,14 @@ export const requestEmailOtp = async (req: Request, res: Response) => {
   try {
     const emailRaw = (req.body?.email || '').toString();
     if (!emailRaw) {
+      await logAuthEvent({
+        event: 'login',
+        status: 'failed',
+        method: 'email_otp',
+        reason: 'missing_email',
+        ip: req.ip || req.socket.remoteAddress || undefined,
+        userAgent: req.get('user-agent') || undefined
+      });
       return res.status(400).json({ success: false, error: 'email is required' });
     }
 
@@ -62,9 +71,28 @@ export const requestEmailOtp = async (req: Request, res: Response) => {
       console.log(`Email OTP for ${email}: ${code}`);
     }
 
+    await logAuthEvent({
+      event: 'login',
+      status: 'success',
+      method: 'email_otp',
+      identifier: email,
+      reason: 'otp_requested',
+      ip: req.ip || req.socket.remoteAddress || undefined,
+      userAgent: req.get('user-agent') || undefined
+    });
+
     res.json({ success: true });
   } catch (error: any) {
     console.error('requestEmailOtp error:', error);
+    await logAuthEvent({
+      event: 'login',
+      status: 'failed',
+      method: 'email_otp',
+      identifier: req.body?.email ? String(req.body.email).toLowerCase() : undefined,
+      reason: 'request_otp_failed',
+      ip: req.ip || req.socket.remoteAddress || undefined,
+      userAgent: req.get('user-agent') || undefined
+    });
     res.status(500).json({ success: false, error: 'Failed to request OTP' });
   }
 };
@@ -75,6 +103,15 @@ export const verifyEmailOtp = async (req: Request, res: Response) => {
     const codeRaw = (req.body?.code || '').toString();
 
     if (!emailRaw || !codeRaw) {
+      await logAuthEvent({
+        event: 'login',
+        status: 'failed',
+        method: 'email_otp',
+        identifier: emailRaw ? String(emailRaw).toLowerCase() : undefined,
+        reason: 'missing_email_or_code',
+        ip: req.ip || req.socket.remoteAddress || undefined,
+        userAgent: req.get('user-agent') || undefined
+      });
       return res.status(400).json({ success: false, error: 'email and code are required' });
     }
 
@@ -83,20 +120,56 @@ export const verifyEmailOtp = async (req: Request, res: Response) => {
 
     const otp = await EmailOtp.findOne({ email }).sort({ createdAt: -1 });
     if (!otp) {
+      await logAuthEvent({
+        event: 'login',
+        status: 'failed',
+        method: 'email_otp',
+        identifier: email,
+        reason: 'otp_not_found',
+        ip: req.ip || req.socket.remoteAddress || undefined,
+        userAgent: req.get('user-agent') || undefined
+      });
       return res.status(400).json({ success: false, error: 'Invalid code' });
     }
 
     if (otp.expiresAt.getTime() < Date.now()) {
+      await logAuthEvent({
+        event: 'login',
+        status: 'failed',
+        method: 'email_otp',
+        identifier: email,
+        reason: 'otp_expired',
+        ip: req.ip || req.socket.remoteAddress || undefined,
+        userAgent: req.get('user-agent') || undefined
+      });
       return res.status(400).json({ success: false, error: 'Code expired' });
     }
 
     if ((otp.attempts || 0) >= OTP_MAX_ATTEMPTS) {
+      await logAuthEvent({
+        event: 'login',
+        status: 'failed',
+        method: 'email_otp',
+        identifier: email,
+        reason: 'too_many_attempts',
+        ip: req.ip || req.socket.remoteAddress || undefined,
+        userAgent: req.get('user-agent') || undefined
+      });
       return res.status(400).json({ success: false, error: 'Too many attempts' });
     }
 
     if (otp.codeHash !== codeHash) {
       otp.attempts = (otp.attempts || 0) + 1;
       await otp.save();
+      await logAuthEvent({
+        event: 'login',
+        status: 'failed',
+        method: 'email_otp',
+        identifier: email,
+        reason: 'invalid_code',
+        ip: req.ip || req.socket.remoteAddress || undefined,
+        userAgent: req.get('user-agent') || undefined
+      });
       return res.status(400).json({ success: false, error: 'Invalid code' });
     }
 
@@ -152,6 +225,16 @@ export const verifyEmailOtp = async (req: Request, res: Response) => {
 
     await EmailOtp.deleteMany({ email });
 
+    await logAuthEvent({
+      userId: user._id?.toString(),
+      event: 'login',
+      status: 'success',
+      method: 'email_otp',
+      identifier: email,
+      ip: req.ip || req.socket.remoteAddress || undefined,
+      userAgent: req.get('user-agent') || undefined
+    });
+
     res.json({
       success: true,
       user,
@@ -160,6 +243,15 @@ export const verifyEmailOtp = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('verifyEmailOtp error:', error);
+    await logAuthEvent({
+      event: 'login',
+      status: 'failed',
+      method: 'email_otp',
+      identifier: req.body?.email ? String(req.body.email).toLowerCase() : undefined,
+      reason: 'verify_otp_failed',
+      ip: req.ip || req.socket.remoteAddress || undefined,
+      userAgent: req.get('user-agent') || undefined
+    });
     res.status(500).json({ success: false, error: 'Failed to verify OTP' });
   }
 };
@@ -178,6 +270,14 @@ export const logoutSession = async (req: Request, res: Response) => {
 
     const tokenHash = hash(token);
     await Session.deleteOne({ tokenHash });
+    await logAuthEvent({
+      userId: (req.user as any)?._id?.toString?.(),
+      event: 'logout',
+      status: 'success',
+      method: 'email_password',
+      ip: req.ip || req.socket.remoteAddress || undefined,
+      userAgent: req.get('user-agent') || undefined
+    });
     res.json({ success: true });
   } catch (error: any) {
     console.error('logoutSession error:', error);

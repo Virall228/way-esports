@@ -109,8 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginWithTelegramId = async (telegramIdInput?: string) => {
-    const telegramIdRaw = telegramIdInput ?? window.prompt('Enter Telegram ID') ?? '';
-    const telegramId = telegramIdRaw.trim();
+    const telegramId = (telegramIdInput || '').trim();
     if (!telegramId) {
       throw new Error('Telegram ID is required');
     }
@@ -132,10 +131,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       options?.identifier ??
       options?.email ??
       options?.username ??
-      window.prompt('Enter email or username') ??
       '';
     const identifier = identifierRaw.trim();
-    const passwordRaw = options?.password ?? window.prompt('Enter password') ?? '';
+    const passwordRaw = options?.password ?? '';
     const password = passwordRaw.trim();
 
     if (!identifier || !password) {
@@ -155,13 +153,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const registerWithEmailPassword = async (
     options?: Pick<LoginOptions, 'email' | 'password' | 'firstName' | 'username'>
   ) => {
-    const emailRaw = options?.email ?? window.prompt('Enter email') ?? '';
+    const emailRaw = options?.email ?? '';
     const email = emailRaw.trim();
-    const passwordRaw = options?.password ?? window.prompt('Create password (min 8 chars)') ?? '';
+    const passwordRaw = options?.password ?? '';
     const password = passwordRaw.trim();
-    const firstNameRaw = options?.firstName ?? window.prompt('First name (optional)') ?? '';
+    const firstNameRaw = options?.firstName ?? '';
     const firstName = firstNameRaw.trim();
-    const usernameRaw = options?.username ?? window.prompt('Username (optional)') ?? '';
+    const usernameRaw = options?.username ?? '';
     const username = usernameRaw.trim();
 
     if (!email || !password) {
@@ -184,14 +182,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginWithEmailOtp = async (options?: Pick<LoginOptions, 'email' | 'code'>) => {
-    const emailRaw = options?.email ?? window.prompt('Enter email') ?? '';
+    const emailRaw = options?.email ?? '';
     const email = emailRaw.trim();
     if (!email) {
       throw new Error('Email is required');
     }
 
     await api.post('/api/auth/email/request-otp', { email });
-    const codeRaw = options?.code ?? window.prompt('Enter OTP code from email') ?? '';
+    const codeRaw = options?.code ?? '';
     const code = codeRaw.trim();
     if (!code) {
       throw new Error('OTP code is required');
@@ -208,8 +206,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginWithGoogleToken = async (idTokenInput?: string) => {
-    const idTokenRaw = idTokenInput ?? window.prompt('Paste Google ID token') ?? '';
-    const idToken = idTokenRaw.trim();
+    const idToken = (idTokenInput || '').trim();
     if (!idToken) {
       throw new Error('Google ID token is required');
     }
@@ -225,8 +222,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginWithAppleToken = async (identityTokenInput?: string) => {
-    const identityTokenRaw = identityTokenInput ?? window.prompt('Paste Apple identity token') ?? '';
-    const identityToken = identityTokenRaw.trim();
+    const identityToken = (identityTokenInput || '').trim();
     if (!identityToken) {
       throw new Error('Apple identity token is required');
     }
@@ -267,10 +263,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      const modeRaw = forcedMethod
-        ? forcedMethod
-        : window.prompt('Login method: telegram | email | register | otp | google | apple') || 'telegram';
-      const mode = modeRaw.trim().toLowerCase();
+      if (!forcedMethod) {
+        throw new Error('Login method is required');
+      }
+
+      const mode = forcedMethod.trim().toLowerCase();
 
       if (mode === 'email') {
         await loginWithEmailPassword(options);
@@ -297,7 +294,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      await loginWithTelegramId(options?.telegramId);
+      if (mode === 'telegram') {
+        await loginWithTelegramId(options?.telegramId);
+        return;
+      }
+
+      if (mode === 'telegram_webapp') {
+        throw new Error('Telegram WebApp init data is not available');
+      }
+
+      throw new Error(`Unsupported login method: ${mode}`);
     } finally {
       setIsLoading(false);
     }
@@ -310,7 +316,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!token && typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initData) {
         setIsLoading(true);
         try {
-          await login();
+          await login({ method: 'telegram_webapp' });
           return;
         } catch (e) {
           console.error('Auto-login failed:', e);

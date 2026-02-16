@@ -58,7 +58,7 @@ const Actions = styled.div`
 
 const AdminAccessPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isLoading, login, logout, fetchProfile } = useAuth();
+  const { user, isAuthenticated, isLoading, login, fetchProfile } = useAuth();
   const { addNotification } = useNotifications();
   const [telegramId, setTelegramId] = React.useState('');
   const [email, setEmail] = React.useState('');
@@ -118,11 +118,7 @@ const AdminAccessPage: React.FC = () => {
         return;
       }
 
-      await login({
-        method: 'email',
-        email: email.trim(),
-        password: password.trim()
-      });
+      await login({ method: 'email', identifier: email.trim(), password: password.trim() });
 
       const profile = await fetchProfile();
       const profileRole = profile?.role || 'user';
@@ -198,11 +194,6 @@ const AdminAccessPage: React.FC = () => {
           <Button onClick={handleEmailLogin} disabled={isLoading}>
             {isLoading ? 'Logging in...' : 'Login with Email'}
           </Button>
-          {isAuthenticated && (
-            <Button variant="danger" onClick={logout}>
-              Logout
-            </Button>
-          )}
         </Actions>
       </Form>
 
