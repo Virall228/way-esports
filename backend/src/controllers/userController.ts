@@ -446,7 +446,7 @@ export const registerWithEmailPassword = async (req: Request, res: Response) => 
         ip: meta.ip,
         userAgent: meta.userAgent
       });
-      return res.status(409).json({ error: 'User with this email already exists' });
+      return res.status(409).json({ error: 'User with this email already exists', email: normalizeEmail(String(req.body?.email || '')) });
     }
 
     const fallbackUsername = usernameFromEmail(normalizedEmail);

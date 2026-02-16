@@ -44,7 +44,6 @@ router.post(
 
 router.post(
   '/email/register',
-  idempotency({ required: true }),
   [
     body('email').isEmail().customSanitizer((value) => String(value).trim().toLowerCase()),
     body('password').isLength({ min: 8 }),
