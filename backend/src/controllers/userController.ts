@@ -446,7 +446,11 @@ export const registerWithEmailPassword = async (req: Request, res: Response) => 
         ip: meta.ip,
         userAgent: meta.userAgent
       });
-      return res.status(409).json({ error: 'User with this email already exists', email: normalizeEmail(String(req.body?.email || '')) });
+      return res.status(409).json({
+        error: `User with this email already exists: ${normalizedEmail}`,
+        email: normalizedEmail,
+        existingUserId: existing._id?.toString?.()
+      });
     }
 
     const fallbackUsername = usernameFromEmail(normalizedEmail);
@@ -489,7 +493,11 @@ export const registerWithEmailPassword = async (req: Request, res: Response) => 
     const statusCode = (error as any)?.statusCode;
     const duplicateField = getDuplicateField(error as any);
     if (statusCode === 409 || duplicateField === 'email') {
-      return res.status(409).json({ error: 'User with this email already exists' });
+      const normalizedEmail = normalizeEmail(String(req.body?.email || ''));
+      return res.status(409).json({
+        error: `User with this email already exists: ${normalizedEmail}`,
+        email: normalizedEmail
+      });
     }
     if (duplicateField === 'username') {
       return res.status(409).json({ error: 'Username already exists. Try again.' });
