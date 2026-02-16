@@ -21,6 +21,24 @@ const TermsGuard: React.FC<TermsGuardProps> = ({ children }) => {
   const [showTermsModal, setShowTermsModal] = useState(false);
 
   useEffect(() => {
+    let token: string | null = null;
+    try {
+      token = localStorage.getItem('auth_token');
+    } catch {
+      token = null;
+    }
+
+    // Auth page and guest sessions should never be blocked by terms check.
+    if (!token) {
+      setTermsStatus({
+        hasCurrentTerms: false,
+        required: false,
+        accepted: true
+      });
+      setLoading(false);
+      return;
+    }
+
     checkTermsStatus();
   }, []);
 

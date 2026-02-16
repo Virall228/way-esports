@@ -51,11 +51,16 @@ const requestJson = async <T = any>(endpoint: string, method: HttpMethod, data?:
     }
   }
 
+  const controller = new AbortController();
+  const timeoutMs = Math.max(1000, Number(API_CONFIG.TIMEOUT || 10000));
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
   try {
     const response = await fetch(buildUrl(endpoint), {
       method,
       headers,
-      body: data !== undefined ? JSON.stringify(data) : undefined
+      body: data !== undefined ? JSON.stringify(data) : undefined,
+      signal: controller.signal
     });
 
     const contentType = response.headers.get('content-type') || '';
@@ -102,12 +107,22 @@ const requestJson = async <T = any>(endpoint: string, method: HttpMethod, data?:
 
     return payload as T;
   } catch (error: any) {
+    if (error?.name === 'AbortError') {
+      const timeoutError = new ApiError(504, `Request timeout (${timeoutMs} ms)`);
+      if (notifyHandler) {
+        notifyHandler('error', 'Network Error', timeoutError.message);
+      }
+      throw timeoutError;
+    }
+
     if (error instanceof ApiError) throw error;
 
     if (notifyHandler) {
       notifyHandler('error', 'Network Error', error.message || 'Check your internet connection');
     }
     throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
 };
 
