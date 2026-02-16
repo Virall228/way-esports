@@ -243,16 +243,21 @@ export const registerWithEmailPassword = async (req: Request, res: Response) => 
 // Email + password login
 export const loginWithEmailPassword = async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body || {};
+    const { identifier, email, username, password } = req.body || {};
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'email and password are required' });
+    const rawIdentifier = (identifier || email || username || '').toString().trim();
+    if (!rawIdentifier || !password) {
+      return res.status(400).json({ error: 'identifier and password are required' });
     }
 
-    const normalizedEmail = normalizeEmail(String(email));
-    const user: any = await User.findOne({ email: normalizedEmail });
+    const isEmailIdentifier = rawIdentifier.includes('@');
+    const userQuery = isEmailIdentifier
+      ? { email: normalizeEmail(rawIdentifier) }
+      : { username: rawIdentifier };
+
+    const user: any = await User.findOne(userQuery);
     if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     if (!user.passwordHash) {
@@ -261,7 +266,7 @@ export const loginWithEmailPassword = async (req: Request, res: Response) => {
 
     const isValid = await bcrypt.compare(String(password), user.passwordHash);
     if (!isValid) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     await checkAdminBootstrap(user);

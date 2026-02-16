@@ -54,8 +54,14 @@ router.post(
 router.post(
   '/email/login',
   [
-    body('email').isEmail().normalizeEmail(),
-    body('password').isLength({ min: 8 })
+    body('password').isLength({ min: 8 }),
+    body().custom((value) => {
+      const raw = value?.identifier ?? value?.email ?? value?.username;
+      if (!raw || typeof raw !== 'string' || !raw.trim()) {
+        throw new Error('identifier (or email/username) is required');
+      }
+      return true;
+    })
   ],
   loginWithEmailPassword
 );

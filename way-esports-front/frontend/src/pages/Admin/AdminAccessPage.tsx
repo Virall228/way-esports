@@ -95,13 +95,13 @@ const AdminAccessPage: React.FC = () => {
 
       addNotification({
         type: 'warning',
-        title: 'Admin role not assigned',
+        title: 'Role not assigned',
         message: 'This account is logged in, but role is not admin/developer on the server'
       });
     } catch (error: any) {
       addNotification({
         type: 'error',
-        title: 'Admin login failed',
+        title: 'Telegram login failed',
         message: error?.message || 'Unable to login by Telegram ID'
       });
     }
@@ -149,15 +149,15 @@ const AdminAccessPage: React.FC = () => {
   return (
     <Wrapper>
       <Header>
-        <Title>Admin Access</Title>
+        <Title>Control Access</Title>
         <Description>
-          Login to open the admin dashboard. Regular users do not see admin navigation.
+          Login to open the control dashboard. Regular users do not see this navigation.
         </Description>
       </Header>
 
       <Form>
         <Label>
-          Telegram ID (for bootstrap admin)
+          Telegram ID (for privileged accounts)
           <Input
             value={telegramId}
             onChange={(e) => setTelegramId(e.target.value)}
@@ -168,10 +168,7 @@ const AdminAccessPage: React.FC = () => {
 
         <Actions>
           <Button onClick={handleTelegramAdminLogin} disabled={isLoading}>
-            {isLoading ? 'Logging in...' : 'Login as Admin (Telegram ID)'}
-          </Button>
-          <Button variant="outline" onClick={() => login()} disabled={isLoading}>
-            Manual Login Prompt
+            {isLoading ? 'Logging in...' : 'Login by Telegram ID'}
           </Button>
         </Actions>
       </Form>
@@ -222,4 +219,3 @@ const AdminAccessPage: React.FC = () => {
 };
 
 export default AdminAccessPage;
-

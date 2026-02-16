@@ -334,6 +334,15 @@ interface AdminWalletTransaction {
   balance: number;
 }
 
+interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
 interface OpsMetrics {
   status: string;
   uptimeSeconds: number;
@@ -358,6 +367,29 @@ interface OpsBackup {
   collections: number;
 }
 
+interface OpsStreamPayload {
+  timestamp: string;
+  metrics?: OpsMetrics;
+  queue?: OpsQueue;
+  error?: string;
+}
+
+interface AdminUserRow {
+  id: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  isBanned: boolean;
+  isSubscribed: boolean;
+  subscriptionExpiresAt?: string;
+  freeEntriesCount: number;
+  bonusEntries: number;
+  balance: number;
+  createdAt: string;
+}
+
 const ModalActions = styled.div`
   display: flex;
   gap: 12px;
@@ -378,7 +410,7 @@ const ModalActions = styled.div`
 `;
 
 const AdminPage: React.FC = () => {
-  const { user, isAuthenticated, isLoading: authLoading, login, logout } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { addNotification } = useNotifications();
   const hasAdminAccess = isAuthenticated && (user?.role === 'admin' || user?.role === 'developer');
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -393,6 +425,11 @@ const AdminPage: React.FC = () => {
   const newsImageRef = useRef<HTMLInputElement>(null);
   const tournamentImageRef = useRef<HTMLInputElement>(null);
   const teamImageRef = useRef<HTMLInputElement>(null);
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersSearchInput, setUsersSearchInput] = useState('');
+  const [usersSearch, setUsersSearch] = useState('');
+  const [opsStreamData, setOpsStreamData] = useState<OpsStreamPayload | null>(null);
+  const [opsStreamConnected, setOpsStreamConnected] = useState(false);
   const isOpsTab = activeTab === 'ops';
 
   const formatApiError = (e: any, fallback: string) => {
@@ -462,6 +499,101 @@ const AdminPage: React.FC = () => {
     load();
   }, [hasAdminAccess]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setUsersPage(1);
+      setUsersSearch(usersSearchInput.trim());
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [usersSearchInput]);
+
+  useEffect(() => {
+    if (!hasAdminAccess || !isOpsTab) {
+      setOpsStreamConnected(false);
+      return;
+    }
+
+    const token = getAuthToken();
+    if (!token) {
+      setOpsStreamConnected(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    let cancelled = false;
+    let started = false;
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    const processChunk = (chunk: string) => {
+      buffer += chunk;
+
+      while (true) {
+        const boundary = buffer.indexOf('\n\n');
+        if (boundary === -1) break;
+
+        const block = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+
+        const lines = block.split('\n');
+        const dataLine = lines.find((line) => line.startsWith('data: '));
+        if (!dataLine) continue;
+
+        const rawPayload = dataLine.slice(6);
+        try {
+          const parsed = JSON.parse(rawPayload) as OpsStreamPayload;
+          setOpsStreamData(parsed);
+          setOpsStreamConnected(true);
+        } catch {
+          // ignore malformed chunks
+        }
+      }
+    };
+
+    const connect = async () => {
+      try {
+        const response = await fetch(getFullUrl('/api/admin/ops/stream'), {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          signal: controller.signal
+        });
+
+        if (!response.ok || !response.body) {
+          throw new Error(`Ops stream unavailable (${response.status})`);
+        }
+
+        started = true;
+        const reader = response.body.getReader();
+
+        while (!cancelled) {
+          // eslint-disable-next-line no-await-in-loop
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value) {
+            processChunk(decoder.decode(value, { stream: true }));
+          }
+        }
+      } catch (error) {
+        if (!cancelled && started) {
+          setOpsStreamConnected(false);
+        }
+      }
+    };
+
+    connect().catch(() => {
+      setOpsStreamConnected(false);
+    });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+      setOpsStreamConnected(false);
+    };
+  }, [hasAdminAccess, isOpsTab]);
+
   const formatDateForInput = (value: any) => {
     try {
       if (!value) return '';
@@ -506,24 +638,34 @@ const AdminPage: React.FC = () => {
     }
   };
 
-  const fetchUsers = async () => {
-    const result: any = await api.get('/api/admin/users');
+  const fetchUsers = async (): Promise<{ items: AdminUserRow[]; pagination: PaginationMeta | null }> => {
+    const params = new URLSearchParams();
+    params.set('page', String(usersPage));
+    params.set('limit', '25');
+    if (usersSearch) params.set('search', usersSearch);
+
+    const result: any = await api.get(`/api/admin/users?${params.toString()}`);
     const items: any[] = (result && (result.data || result.users || result)) || [];
-    return items.map((u: any) => ({
-      id: (u._id || u.id || '').toString(),
-      username: u.username || '',
-      firstName: u.firstName || '',
-      lastName: u.lastName || '',
-      email: u.email || '',
-      role: u.role || 'user',
-      isBanned: !!u.isBanned,
-      isSubscribed: !!u.isSubscribed,
-      subscriptionExpiresAt: u.subscriptionExpiresAt,
-      freeEntriesCount: Number(u.freeEntriesCount || 0),
-      bonusEntries: Number(u.bonusEntries || 0),
-      balance: Number(u.wallet?.balance || 0),
-      createdAt: formatDate(u.createdAt)
-    }));
+    const pagination: PaginationMeta | null = result?.pagination || null;
+
+    return {
+      items: items.map((u: any) => ({
+        id: (u._id || u.id || '').toString(),
+        username: u.username || '',
+        firstName: u.firstName || '',
+        lastName: u.lastName || '',
+        email: u.email || '',
+        role: u.role || 'user',
+        isBanned: !!u.isBanned,
+        isSubscribed: !!u.isSubscribed,
+        subscriptionExpiresAt: u.subscriptionExpiresAt,
+        freeEntriesCount: Number(u.freeEntriesCount || 0),
+        bonusEntries: Number(u.bonusEntries || 0),
+        balance: Number(u.wallet?.balance || 0),
+        createdAt: formatDate(u.createdAt)
+      })),
+      pagination
+    };
   };
 
   const fetchTeams = async () => {
@@ -702,7 +844,7 @@ const AdminPage: React.FC = () => {
   };
 
   const usersQuery = useQuery({
-    queryKey: ['admin', 'users'],
+    queryKey: ['admin', 'users', usersPage, usersSearch],
     queryFn: fetchUsers,
     enabled: hasAdminAccess,
     staleTime: 30000,
@@ -825,7 +967,8 @@ const AdminPage: React.FC = () => {
     refetchInterval: isOpsTab ? 30000 : false
   });
 
-  const users = usersQuery.data || [];
+  const users = usersQuery.data?.items || [];
+  const usersPagination = usersQuery.data?.pagination || null;
   const tournaments = tournamentsQuery.data || [];
   const news = newsQuery.data || [];
   const achievements = achievementsQuery.data || [];
@@ -1424,11 +1567,28 @@ const AdminPage: React.FC = () => {
   }
 
   function renderUsers() {
+    const totalPages = usersPagination?.totalPages || 1;
+    const currentPage = usersPagination?.page || usersPage;
+
     return (
       <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
-          <h3>User Management</h3>
-          <ActionButton onClick={() => handleCreate('user')}>Add User</ActionButton>
+        <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <h3>User Management</h3>
+            <ActionsCell>
+              <ActionButton onClick={() => handleCreate('user')}>Add User</ActionButton>
+              <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })}>
+                Refresh
+              </ActionButton>
+            </ActionsCell>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 420px)', gap: '8px' }}>
+            <Input
+              placeholder="Search users by username/email/name"
+              value={usersSearchInput}
+              onChange={(e) => setUsersSearchInput(e.target.value)}
+            />
+          </div>
         </div>
 
         <TableWrap>
@@ -1467,6 +1627,26 @@ const AdminPage: React.FC = () => {
             </tbody>
           </Table>
         </TableWrap>
+
+        <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ color: '#cccccc', fontSize: '13px' }}>
+            Page {currentPage} of {totalPages} {usersPagination ? `• total ${usersPagination.total}` : ''}
+          </div>
+          <ActionsCell>
+            <ActionButton
+              onClick={() => setUsersPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage <= 1}
+            >
+              Prev
+            </ActionButton>
+            <ActionButton
+              onClick={() => setUsersPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage >= totalPages}
+            >
+              Next
+            </ActionButton>
+          </ActionsCell>
+        </div>
       </div>
     );
   }
@@ -1851,7 +2031,12 @@ const AdminPage: React.FC = () => {
   }
 
   function renderOps() {
-    const queueCounts = opsQueue?.counts || {};
+    const liveMetrics = opsStreamData?.metrics || null;
+    const liveQueue = opsStreamData?.queue || null;
+    const effectiveMetrics = liveMetrics || opsMetrics;
+    const effectiveQueue = liveQueue || opsQueue;
+    const queueCounts = effectiveQueue?.counts || {};
+    const streamTimestamp = opsStreamData?.timestamp ? formatDate(opsStreamData.timestamp) : '-';
 
     return (
       <div>
@@ -1866,26 +2051,31 @@ const AdminPage: React.FC = () => {
 
         <StatsGrid>
           <StatCard>
-            <StatValue>{opsMetrics?.status || 'n/a'}</StatValue>
+            <StatValue>{effectiveMetrics?.status || 'n/a'}</StatValue>
             <StatLabel>API Status</StatLabel>
           </StatCard>
           <StatCard>
-            <StatValue>{opsMetrics?.requests?.total || 0}</StatValue>
+            <StatValue>{effectiveMetrics?.requests?.total || 0}</StatValue>
             <StatLabel>Total Requests</StatLabel>
           </StatCard>
           <StatCard>
-            <StatValue>{opsMetrics?.requests?.errorRate ?? 0}%</StatValue>
+            <StatValue>{effectiveMetrics?.requests?.errorRate ?? 0}%</StatValue>
             <StatLabel>Error Rate</StatLabel>
           </StatCard>
           <StatCard>
-            <StatValue>{opsMetrics?.eventLoop?.p95Ms ?? 0}ms</StatValue>
+            <StatValue>{effectiveMetrics?.eventLoop?.p95Ms ?? 0}ms</StatValue>
             <StatLabel>Event Loop p95</StatLabel>
           </StatCard>
         </StatsGrid>
+        <div style={{ color: '#cccccc', marginBottom: '12px' }}>
+          Stream: {opsStreamConnected ? 'live' : 'polling fallback'} • Last update: {streamTimestamp}
+        </div>
 
         <h4 style={{ marginTop: '16px' }}>Queue</h4>
         <div style={{ color: '#cccccc', marginBottom: '12px' }}>
-          {opsQueue?.enabled ? `Queue "${opsQueue?.queue || 'tasks'}" is enabled` : `Queue disabled (${opsQueue?.reason || 'unknown'})`}
+          {effectiveQueue?.enabled
+            ? `Queue "${effectiveQueue?.queue || 'tasks'}" is enabled`
+            : `Queue disabled (${effectiveQueue?.reason || 'unknown'})`}
         </div>
         <TableWrap>
           <Table>
@@ -2494,7 +2684,7 @@ const AdminPage: React.FC = () => {
   }
 
   if (!authLoading && isAuthenticated && !hasAdminAccess) {
-    return <Navigate to="/admin-access" replace />;
+    return <Navigate to="/control-access" replace />;
   }
 
   return (
@@ -2502,9 +2692,9 @@ const AdminPage: React.FC = () => {
       <Header>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <Title>Admin Panel</Title>
+            <Title>Control Center</Title>
             <p style={{ color: '#cccccc', margin: '8px 0 0 0' }}>
-              Manage users, tournaments, news, and system settings
+              Manage users, tournaments, news, payments and operations
             </p>
           </div>
           <ActionButton onClick={() => load()}>
@@ -2513,35 +2703,12 @@ const AdminPage: React.FC = () => {
         </div>
       </Header>
 
-      {!isAuthenticated && (
-        <div style={{ marginBottom: '20px', color: '#cccccc' }}>
-          <p>Authentication required.</p>
-          <ActionButton onClick={() => login()}>
-            {authLoading ? 'Loading...' : 'Login (Telegram)'}
-          </ActionButton>
-        </div>
-      )}
-
       {effectiveError && (
         <div style={{ marginBottom: '16px', color: '#ff4757', padding: '12px', background: 'rgba(255, 71, 87, 0.1)', border: '1px solid #ff4757', borderRadius: '8px' }}>
           {effectiveError}
         </div>
       )}
 
-      {isAuthenticated && user?.role !== 'admin' && user?.role !== 'developer' && (
-        <div style={{ marginBottom: '16px', color: '#ff6b00', padding: '12px', background: 'rgba(255, 107, 0, 0.1)', border: '1px solid #ff6b00', borderRadius: '8px' }}>
-          <strong>Access Restricted:</strong> You are logged in with role "{user?.role}".
-          Admin access depends on your server role. Login with your Telegram ID (or open via Telegram WebApp on desktop/mobile) to sync role.
-          <div style={{ marginTop: '10px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <ActionButton onClick={async () => { logout(); await login(); }}>
-              Re-login as Admin
-            </ActionButton>
-            <ActionButton $variant="danger" onClick={() => logout()}>
-              Logout
-            </ActionButton>
-          </div>
-        </div>
-      )}
 
       {isBusy && (
         <div style={{ marginBottom: '16px', color: '#cccccc' }}>

@@ -6,11 +6,12 @@ type LoginMethod = 'telegram' | 'email' | 'register' | 'otp' | 'google' | 'apple
 
 interface LoginOptions {
   method?: LoginMethod;
+  identifier?: string;
   telegramId?: string;
   email?: string;
+  username?: string;
   password?: string;
   firstName?: string;
-  username?: string;
   code?: string;
   idToken?: string;
   identityToken?: string;
@@ -124,17 +125,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await applyAuthState(token, rawUser);
   };
 
-  const loginWithEmailPassword = async (options?: Pick<LoginOptions, 'email' | 'password'>) => {
-    const emailRaw = options?.email ?? window.prompt('Enter email') ?? '';
-    const email = emailRaw.trim();
+  const loginWithEmailPassword = async (
+    options?: Pick<LoginOptions, 'identifier' | 'email' | 'username' | 'password'>
+  ) => {
+    const identifierRaw =
+      options?.identifier ??
+      options?.email ??
+      options?.username ??
+      window.prompt('Enter email or username') ??
+      '';
+    const identifier = identifierRaw.trim();
     const passwordRaw = options?.password ?? window.prompt('Enter password') ?? '';
     const password = passwordRaw.trim();
 
-    if (!email || !password) {
-      throw new Error('Email and password are required');
+    if (!identifier || !password) {
+      throw new Error('Identifier and password are required');
     }
 
-    const result: any = await api.post('/api/auth/email/login', { email, password });
+    const result: any = await api.post('/api/auth/email/login', { identifier, password });
     const token = result?.token || result?.sessionToken;
     const rawUser = result?.user;
     if (!token || !rawUser) {

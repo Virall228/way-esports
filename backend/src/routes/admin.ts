@@ -86,9 +86,18 @@ const getPrimaryAdminTelegramId = (): number | null => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const isPrimaryAdminOnlyMode = (): boolean => {
+  const raw = (process.env.PRIMARY_ADMIN_ONLY || '').toLowerCase().trim();
+  return raw === '1' || raw === 'true' || raw === 'yes';
+};
+
 // All admin routes are protected by JWT and Admin role
 router.use(authenticateJWT, isAdmin);
 router.use((req, res, next) => {
+  if (!isPrimaryAdminOnlyMode()) {
+    return next();
+  }
+
   const primaryAdminTelegramId = getPrimaryAdminTelegramId();
   if (!primaryAdminTelegramId) return next();
 
@@ -136,6 +145,59 @@ router.get('/ops/backups', async (_req, res) => {
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message || 'Failed to list backups' });
   }
+});
+
+router.get('/ops/stream', async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders?.();
+
+  let closed = false;
+
+  const writeEvent = async () => {
+    if (closed) return;
+
+    try {
+      const payload = {
+        timestamp: new Date().toISOString(),
+        metrics: getMetricsSnapshot(),
+        queue: await getQueueStats()
+      };
+      res.write(`event: snapshot\n`);
+      res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    } catch (error: any) {
+      const fallback = {
+        timestamp: new Date().toISOString(),
+        error: error?.message || 'stream_snapshot_failed'
+      };
+      res.write(`event: error\n`);
+      res.write(`data: ${JSON.stringify(fallback)}\n\n`);
+    }
+  };
+
+  await writeEvent();
+
+  const intervalMs = Math.max(3000, Number(process.env.OPS_STREAM_INTERVAL_MS || 10000));
+  const interval = setInterval(() => {
+    writeEvent().catch((error) => {
+      console.error('ops stream write error', error);
+    });
+  }, intervalMs);
+
+  const heartbeat = setInterval(() => {
+    if (!closed) {
+      res.write(': keep-alive\n\n');
+    }
+  }, 15000);
+
+  req.on('close', () => {
+    closed = true;
+    clearInterval(interval);
+    clearInterval(heartbeat);
+    res.end();
+  });
 });
 
 router.post('/ops/backups/run', idempotency({ required: true }), async (_req, res) => {
