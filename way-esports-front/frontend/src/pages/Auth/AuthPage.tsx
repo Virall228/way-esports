@@ -89,7 +89,7 @@ const GoogleHost = styled.div`
 const InlineLink = styled.button`
   border: none;
   background: transparent;
-  color: ${({ theme }) => theme.colors.brand.primary};
+  color: ${({ theme }) => theme.colors.primary};
   cursor: pointer;
   font: inherit;
   padding: 0;

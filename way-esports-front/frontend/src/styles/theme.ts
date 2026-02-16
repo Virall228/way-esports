@@ -17,6 +17,9 @@ export const theme = {
     primary: '#ffffff',
     primaryDark: '#e5e5e5',
     secondary: '#a3a3a3',
+    brand: {
+      primary: '#ffffff'
+    },
     background: '#0a0a0a',
     surface: '#111111',
     accent: '#f1f1f1',
@@ -149,6 +152,9 @@ export const lightTheme = {
     primary: '#111111',
     primaryDark: '#000000',
     secondary: '#4b4b4b',
+    brand: {
+      primary: '#111111'
+    },
     background: '#f7f7f7',
     surface: '#ffffff',
     accent: '#111111',
