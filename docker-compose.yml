@@ -77,8 +77,10 @@ services:
       - "80:80"
       - "443:443"
     depends_on:
-      - web
-      - api
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "sh", "-c", "test -s /var/run/nginx.pid"]
       interval: 30s
