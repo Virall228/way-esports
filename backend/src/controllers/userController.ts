@@ -55,6 +55,7 @@ const checkAdminBootstrap = async (user: any) => {
 const SALT_ROUNDS = 12;
 
 const normalizeEmail = (email: string): string => email.trim().toLowerCase();
+const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const usernameFromEmail = (email: string): string => {
   const base = email.split('@')[0] || 'user';
@@ -525,50 +526,46 @@ export const registerWithEmailPassword = async (req: Request, res: Response) => 
         statusCode,
         duplicateField
       });
-      const existing = normalizedEmail ? await User.findOne({ email: normalizedEmail }) : null;
-      if (existing && typeof req.body?.password === 'string' && req.body.password.length >= 8) {
-        await updateExistingEmailAccount(existing, {
-          password: String(req.body.password),
+
+      const passwordRaw = typeof req.body?.password === 'string' && req.body.password.length >= 8
+        ? String(req.body.password)
+        : `temp_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+
+      const escaped = escapeRegex(normalizedEmail);
+      let recoveredUser: any = normalizedEmail
+        ? await User.findOne({
+          email: { $regex: new RegExp(`^${escaped}$`, 'i') }
+        })
+        : null;
+
+      if (recoveredUser) {
+        await updateExistingEmailAccount(recoveredUser, {
+          password: passwordRaw,
           firstName: req.body?.firstName,
           lastName: req.body?.lastName,
           username: req.body?.username
         });
-
-        return res.status(200).json(await issueAuthResponse(existing));
+        return res.status(200).json(await issueAuthResponse(recoveredUser));
       }
 
-      if (!existing && normalizedEmail && typeof req.body?.password === 'string' && req.body.password.length >= 8) {
+      if (normalizedEmail) {
         const fallbackUsername = `${usernameFromEmail(normalizedEmail)}_${Math.floor(Math.random() * 1000000)}`;
         const nameInfo = buildNamePair('User', null, req.body?.firstName || null, req.body?.lastName || null);
-        const passwordHash = await bcrypt.hash(String(req.body.password), SALT_ROUNDS);
+        const passwordHash = await bcrypt.hash(passwordRaw, SALT_ROUNDS);
 
-        const upsertedUser = await User.findOneAndUpdate(
-          { email: normalizedEmail },
-          {
-            $setOnInsert: {
-              email: normalizedEmail,
-              username: fallbackUsername,
-              firstName: nameInfo.firstName,
-              lastName: nameInfo.lastName,
-              role: 'user',
-              newsletter_subscriber: true,
-              passwordHash
-            }
-          },
-          { new: true, upsert: true }
-        );
-
-        if (upsertedUser) {
-          if (!upsertedUser.passwordHash) {
-            upsertedUser.passwordHash = passwordHash;
-          }
-          await checkAdminBootstrap(upsertedUser);
-          await upsertedUser.save();
-          return res.status(200).json(await issueAuthResponse(upsertedUser));
-        }
+        recoveredUser = new User({
+          email: normalizedEmail,
+          username: fallbackUsername,
+          firstName: nameInfo.firstName,
+          lastName: nameInfo.lastName,
+          role: 'user',
+          newsletter_subscriber: true,
+          passwordHash
+        });
+        await saveUserWithRetries(recoveredUser, { seedUsername: fallbackUsername });
+        await checkAdminBootstrap(recoveredUser);
+        return res.status(200).json(await issueAuthResponse(recoveredUser));
       }
-
-      return res.status(409).json({ error: `User with this email already exists: ${normalizedEmail}`, email: normalizedEmail });
     }
     if (duplicateField === 'username') {
       return res.status(409).json({ error: 'Username already exists. Try again.' });
