@@ -49,4 +49,8 @@ referralSchema.index({ refereeId: 1 });
 referralSchema.index({ referralCode: 1 });
 referralSchema.index({ createdAt: 1 });
 
-export default mongoose.model<IReferral>('Referral', referralSchema);
+const ReferralModel =
+  (mongoose.models.Referral as mongoose.Model<IReferral> | undefined) ||
+  mongoose.model<IReferral>('Referral', referralSchema);
+
+export default ReferralModel;
