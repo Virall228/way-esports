@@ -451,6 +451,11 @@ export const registerWithEmailPassword = async (req: Request, res: Response) => 
     const normalizedEmail = normalizeEmail(String(email));
 
     const existing = await User.findOne({ email: normalizedEmail });
+    console.log('[auth/email/register] incoming', {
+      normalizedEmail,
+      existingUserId: existing?._id?.toString?.() || null
+    });
+
     if (existing) {
       await updateExistingEmailAccount(existing, {
         password,
@@ -515,6 +520,11 @@ export const registerWithEmailPassword = async (req: Request, res: Response) => 
     const duplicateField = getDuplicateField(error as any);
     if (statusCode === 409 || duplicateField === 'email') {
       const normalizedEmail = normalizeEmail(String(req.body?.email || ''));
+      console.warn('[auth/email/register] duplicate email conflict', {
+        normalizedEmail,
+        statusCode,
+        duplicateField
+      });
       const existing = normalizedEmail ? await User.findOne({ email: normalizedEmail }) : null;
       if (existing && typeof req.body?.password === 'string' && req.body.password.length >= 8) {
         await updateExistingEmailAccount(existing, {
@@ -525,6 +535,37 @@ export const registerWithEmailPassword = async (req: Request, res: Response) => 
         });
 
         return res.status(200).json(await issueAuthResponse(existing));
+      }
+
+      if (!existing && normalizedEmail && typeof req.body?.password === 'string' && req.body.password.length >= 8) {
+        const fallbackUsername = `${usernameFromEmail(normalizedEmail)}_${Math.floor(Math.random() * 1000000)}`;
+        const nameInfo = buildNamePair('User', null, req.body?.firstName || null, req.body?.lastName || null);
+        const passwordHash = await bcrypt.hash(String(req.body.password), SALT_ROUNDS);
+
+        const upsertedUser = await User.findOneAndUpdate(
+          { email: normalizedEmail },
+          {
+            $setOnInsert: {
+              email: normalizedEmail,
+              username: fallbackUsername,
+              firstName: nameInfo.firstName,
+              lastName: nameInfo.lastName,
+              role: 'user',
+              newsletter_subscriber: true,
+              passwordHash
+            }
+          },
+          { new: true, upsert: true }
+        );
+
+        if (upsertedUser) {
+          if (!upsertedUser.passwordHash) {
+            upsertedUser.passwordHash = passwordHash;
+          }
+          await checkAdminBootstrap(upsertedUser);
+          await upsertedUser.save();
+          return res.status(200).json(await issueAuthResponse(upsertedUser));
+        }
       }
 
       return res.status(409).json({ error: `User with this email already exists: ${normalizedEmail}`, email: normalizedEmail });
