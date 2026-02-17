@@ -8,7 +8,8 @@ import ReferralCard from '../../components/Referral/ReferralCard';
 import SubscriptionCard from '../../components/Subscription/SubscriptionCard';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { api } from '../../services/api';
+import { useNotifications } from '../../contexts/NotificationContext';
+import { api, ApiError } from '../../services/api';
 import { Link } from 'react-router-dom';
 import { useProfileQuery } from '../../hooks/useProfileQuery';
 import Card from '../../components/UI/Card';
@@ -184,23 +185,86 @@ const InlineCancel = styled(Button).attrs({ variant: 'text', size: 'small' })`
   color: #ff4444;
 `;
 
+const InlineInput = styled.input`
+  min-height: 36px;
+  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.border.medium};
+  background: ${({ theme }) => theme.colors.bg.elevated};
+  color: ${({ theme }) => theme.colors.text.primary};
+  padding: 0.4rem 0.65rem;
+`;
+
 const ProfilePage: React.FC = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { addNotification } = useNotifications();
   const { data: profileData, refetch: refetchProfile } = useProfileQuery();
   const profile = profileData || user;
   const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [isSubscriptionOpen, setIsSubscriptionOpen] = useState(false);
   const [isPhotoUploadOpen, setIsPhotoUploadOpen] = useState(false);
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [newBio, setNewBio] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingUsername, setIsSavingUsername] = useState(false);
 
   useEffect(() => {
     if (profile?.bio) {
       setNewBio(profile.bio);
     }
+    if (profile?.username) {
+      setNewUsername(profile.username);
+    }
   }, [profile]);
+
+  const hasEmoji = (value: string) => /\p{Extended_Pictographic}/u.test(value);
+
+  const handleSaveUsername = async () => {
+    const normalizedUsername = newUsername.trim();
+    if (!normalizedUsername) {
+      addNotification({
+        type: 'error',
+        title: 'Invalid username',
+        message: 'Username cannot be empty'
+      });
+      return;
+    }
+    if (hasEmoji(normalizedUsername)) {
+      addNotification({
+        type: 'error',
+        title: 'Invalid username',
+        message: 'Username cannot contain emoji'
+      });
+      return;
+    }
+
+    try {
+      setIsSavingUsername(true);
+      await api.patch('/api/profile', { username: normalizedUsername });
+      await refetchProfile();
+      setIsEditingUsername(false);
+      addNotification({
+        type: 'success',
+        title: 'Username updated',
+        message: 'Your username has been updated'
+      });
+    } catch (error: any) {
+      let message = error?.message || 'Failed to update username';
+      if (error instanceof ApiError && error.status === 429 && error.payload?.nextChangeAt) {
+        const nextDate = new Date(error.payload.nextChangeAt).toLocaleString();
+        message = `You can change username once every 7 days. Next change: ${nextDate}`;
+      }
+      addNotification({
+        type: 'error',
+        title: 'Update failed',
+        message
+      });
+    } finally {
+      setIsSavingUsername(false);
+    }
+  };
 
   const handleSaveBio = async () => {
     try {
@@ -254,6 +318,28 @@ const ProfilePage: React.FC = () => {
           <ProfileTop>
             <div>
               <Username>{profile?.username || t('defaultUsername')}</Username>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '6px' }}>
+                {isEditingUsername ? (
+                  <>
+                    <InlineInput
+                      value={newUsername}
+                      onChange={(e) => setNewUsername(e.target.value)}
+                      maxLength={32}
+                      placeholder="Username"
+                    />
+                    <InlineConfirm onClick={handleSaveUsername} disabled={isSavingUsername}>
+                      {isSavingUsername ? t('saving') : t('save')}
+                    </InlineConfirm>
+                    <InlineCancel onClick={() => { setIsEditingUsername(false); setNewUsername(profile?.username || ''); }}>
+                      {t('cancelAction')}
+                    </InlineCancel>
+                  </>
+                ) : (
+                  <InlineAction onClick={() => setIsEditingUsername(true)}>
+                    Change username
+                  </InlineAction>
+                )}
+              </div>
               <UserOrg>{profile?.email || t('memberLabel')}</UserOrg>
               <Link to={`/profile/${profile?.id || user?.id}`} style={{ color: '#ff6b00', fontSize: '0.9rem', textDecoration: 'none' }}>
                 {'\u{1F517}'} {t('viewPublicProfile')}

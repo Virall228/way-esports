@@ -13,6 +13,11 @@ const getUserFilter = (req: any): { _id: any } | null => {
   return { _id: userId };
 };
 
+const USERNAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const EMOJI_REGEX = /\p{Extended_Pictographic}/u;
+
+const hasEmoji = (value: string): boolean => EMOJI_REGEX.test(value);
+
 // Get user profile
 router.get('/', authenticateJWT, async (req, res) => {
   try {
@@ -51,9 +56,18 @@ router.get('/', authenticateJWT, async (req, res) => {
   }
 });
 const updateProfileValidators = [
-  body('username').optional().isLength({ min: 3 }).withMessage('Username must be at least 3 characters'),
-  body('firstName').optional().notEmpty().withMessage('First name cannot be empty'),
-  body('lastName').optional().notEmpty().withMessage('Last name cannot be empty'),
+  body('username')
+    .optional()
+    .isLength({ min: 3, max: 32 })
+    .withMessage('Username must be between 3 and 32 characters'),
+  body('firstName')
+    .optional()
+    .isLength({ min: 1, max: 40 })
+    .withMessage('First name must be between 1 and 40 characters'),
+  body('lastName')
+    .optional()
+    .isLength({ min: 1, max: 40 })
+    .withMessage('Last name must be between 1 and 40 characters'),
   body('bio').optional().isLength({ max: 500 }).withMessage('Bio cannot exceed 500 characters'),
   body('photoUrl').optional().isString().withMessage('Photo URL must be a string'),
   body('profileLogo').optional().isString().withMessage('Profile logo must be a string'),
@@ -87,11 +101,7 @@ const updateProfileHandler = async (req: any, res: any) => {
       });
     }
 
-    const user = await User.findOneAndUpdate(
-      userFilter,
-      { $set: req.body },
-      { new: true, runValidators: true }
-    ).populate('teams');
+    const user: any = await User.findOne(userFilter);
 
     if (!user) {
       return res.status(404).json({
@@ -100,6 +110,69 @@ const updateProfileHandler = async (req: any, res: any) => {
       });
     }
 
+    if (typeof req.body.username === 'string') {
+      const normalizedUsername = req.body.username.trim();
+
+      if (hasEmoji(normalizedUsername)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Username cannot contain emoji'
+        });
+      }
+
+      if (normalizedUsername !== user.username) {
+        const lastChangedAt = user.usernameChangedAt
+          ? new Date(user.usernameChangedAt).getTime()
+          : 0;
+
+        if (lastChangedAt) {
+          const now = Date.now();
+          const nextAllowedAt = lastChangedAt + USERNAME_CHANGE_COOLDOWN_MS;
+          if (now < nextAllowedAt) {
+            return res.status(429).json({
+              success: false,
+              error: 'Username can only be changed once every 7 days',
+              nextChangeAt: new Date(nextAllowedAt).toISOString()
+            });
+          }
+        }
+
+        user.username = normalizedUsername;
+        user.usernameChangedAt = new Date();
+      }
+    }
+
+    if (typeof req.body.firstName === 'string') {
+      const normalizedFirstName = req.body.firstName.trim();
+      if (hasEmoji(normalizedFirstName)) {
+        return res.status(400).json({
+          success: false,
+          error: 'First name cannot contain emoji'
+        });
+      }
+      user.firstName = normalizedFirstName;
+    }
+
+    if (typeof req.body.lastName === 'string') {
+      const normalizedLastName = req.body.lastName.trim();
+      if (hasEmoji(normalizedLastName)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Last name cannot contain emoji'
+        });
+      }
+      user.lastName = normalizedLastName;
+    }
+
+    if (typeof req.body.bio === 'string') user.bio = req.body.bio;
+    if (typeof req.body.photoUrl === 'string') user.photoUrl = req.body.photoUrl;
+    if (typeof req.body.profileLogo === 'string') user.profileLogo = req.body.profileLogo;
+    if (Array.isArray(req.body.gameProfiles)) user.gameProfiles = req.body.gameProfiles;
+    if (typeof req.body.email === 'string') user.email = req.body.email.trim().toLowerCase();
+
+    await user.save();
+    await user.populate('teams');
+
     res.json({
       success: true,
       data: user
@@ -107,6 +180,10 @@ const updateProfileHandler = async (req: any, res: any) => {
   } catch (error: any) {
     console.error('Error updating profile:', error);
     if (error.code === 11000) {
+      const duplicateField = Object.keys(error.keyPattern || error.keyValue || {})[0];
+      if (duplicateField === 'email') {
+        return res.status(400).json({ success: false, error: 'Email already in use' });
+      }
       return res.status(400).json({ success: false, error: 'Username already taken' });
     }
     res.status(500).json({

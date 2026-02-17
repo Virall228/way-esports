@@ -14,6 +14,7 @@ export interface IUser extends Document<mongoose.Types.ObjectId> {
   appleSub?: string;
   newsletter_subscriber?: boolean;
   username: string;
+  usernameChangedAt?: Date;
   firstName: string;
   lastName?: string;
   bio?: string;
@@ -122,6 +123,9 @@ const userSchema = new Schema<IUser>({
   username: {
     type: String,
     required: true
+  },
+  usernameChangedAt: {
+    type: Date
   },
   firstName: {
     type: String,

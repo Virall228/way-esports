@@ -61,6 +61,8 @@ const usernameFromEmail = (email: string): string => {
   return normalized || 'user';
 };
 
+const generateRegistrationUsernameSeed = (): string => `player_${Math.floor(Math.random() * 1000000)}`;
+
 const ensureUniqueUsername = async (seed: string): Promise<string> => {
   let candidate = seed;
   let attempt = 0;
@@ -256,7 +258,7 @@ const upsertEmailAccountFallback = async (params: {
   const nameInfo = buildNamePair('User', null, params.firstName || null, params.lastName || null);
   const baseUsername = typeof params.username === 'string' && params.username.trim()
     ? params.username.trim()
-    : usernameFromEmail(normalizedEmail);
+    : generateRegistrationUsernameSeed();
   let attemptedTelegramIndexRepair = false;
 
   for (let attempt = 0; attempt < 10; attempt += 1) {
