@@ -46,6 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       firstName: source?.firstName,
       lastName: source?.lastName,
       bio: source?.bio,
+      photoUrl: source?.photoUrl || source?.photo_url,
       profileLogo: source?.profileLogo || source?.photoUrl || source?.photo_url || source?.avatar,
       role: source?.role || 'user',
       avatar: source?.photoUrl || source?.photo_url || source?.profileLogo || source?.avatar,

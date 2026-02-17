@@ -307,12 +307,12 @@ const ProfilePage: React.FC = () => {
     <Container>
       <ProfileHeader>
         <Avatar
-          $hasImage={!!profile?.profileLogo}
-          $imageUrl={profile?.profileLogo}
+          $hasImage={!!(profile?.profileLogo || profile?.photoUrl)}
+          $imageUrl={profile?.profileLogo || profile?.photoUrl}
           onClick={() => setIsPhotoUploadOpen(true)}
         >
-          {profile?.profileLogo ? (
-            <AvatarImage src={getFullAvatarUrl(profile.profileLogo) || ''} alt="Profile" />
+          {(profile?.profileLogo || profile?.photoUrl) ? (
+            <AvatarImage src={getFullAvatarUrl(profile?.profileLogo || profile?.photoUrl) || ''} alt="Profile" />
           ) : (
             profile?.username?.charAt(0).toUpperCase() || '\u{1F464}'
           )}
