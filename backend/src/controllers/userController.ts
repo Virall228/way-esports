@@ -241,8 +241,7 @@ const upsertEmailAccountFallback = async (params: {
             firstName: nameInfo.firstName,
             lastName: nameInfo.lastName,
             role: 'user',
-            referralCode: referralCodeCandidate,
-            newsletter_subscriber: true
+            referralCode: referralCodeCandidate
           },
           $set: {
             passwordHash,
