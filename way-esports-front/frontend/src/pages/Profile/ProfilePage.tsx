@@ -340,7 +340,7 @@ const ProfilePage: React.FC = () => {
                   </InlineAction>
                 )}
               </div>
-              <UserOrg>{profile?.email || t('memberLabel')}</UserOrg>
+              <UserOrg>{t('memberLabel')}</UserOrg>
               <Link to={`/profile/${profile?.id || user?.id}`} style={{ color: '#ff6b00', fontSize: '0.9rem', textDecoration: 'none' }}>
                 {'\u{1F517}'} {t('viewPublicProfile')}
               </Link>

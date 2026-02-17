@@ -496,18 +496,23 @@ const AppContent: React.FC = () => {
       { label: t('rankings'), to: '/rankings', icon: <BarChart2 {...iconProps} /> },
       { label: t('matches'), to: '/matches', icon: <Crosshair {...iconProps} /> },
       { label: t('prizes'), to: '/prizes', icon: <Gift {...iconProps} /> },
-      { label: t('news'), to: '/news', icon: <FileText {...iconProps} /> },
-      { label: t('wallet'), to: '/wallet', icon: <CreditCard {...iconProps} /> },
-      { label: t('profile'), to: '/profile', icon: <User {...iconProps} /> },
-      { label: t('settings'), to: '/settings', icon: <SettingsIcon {...iconProps} /> }
+      { label: t('news'), to: '/news', icon: <FileText {...iconProps} /> }
     ];
+
+    if (isAuthenticated) {
+      items.push(
+        { label: t('wallet'), to: '/wallet', icon: <CreditCard {...iconProps} /> },
+        { label: t('profile'), to: '/profile', icon: <User {...iconProps} /> },
+        { label: t('settings'), to: '/settings', icon: <SettingsIcon {...iconProps} /> }
+      );
+    }
 
     if (hasAdminAccess) {
       items.push({ label: 'Control', to: '/admin', icon: <Shield {...iconProps} />, adminOnly: true });
     }
 
     return items;
-  }, [hasAdminAccess, iconProps, t]);
+  }, [hasAdminAccess, iconProps, isAuthenticated, t]);
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -603,7 +608,7 @@ const AppContent: React.FC = () => {
         <MainContent>
           <ContentInner>
             <Routes>
-              <Route path="/" element={<Home />} />
+              <Route path="/" element={isAuthenticated ? <Home /> : <Navigate to="/auth" replace />} />
               <Route path="/tournaments" element={<Tournaments />} />
               <Route path="/tournaments/:id" element={<TournamentDetailsPage />} />
               <Route path="/tournament/:id" element={<TournamentDetailsPage />} />
@@ -614,16 +619,16 @@ const AppContent: React.FC = () => {
               <Route path="/prizes" element={<Prizes />} />
               <Route path="/rewards" element={<Prizes />} />
               <Route path="/news" element={<News />} />
-              <Route path="/wallet" element={<Wallet />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/settings" element={<Settings />} />
+              <Route path="/wallet" element={<RequireAuth><Wallet /></RequireAuth>} />
+              <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
+              <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
               <Route path="/profile/:id" element={<PublicProfilePage />} />
               <Route path="/user/:id" element={<PublicProfilePage />} />
               <Route path="/team/:id" element={<TeamPage />} />
               <Route path="/teams/:id" element={<TeamPage />} />
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/admin" element={<AdminRoute />} />
-              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/auth" element={isAuthenticated ? <Navigate to="/" replace /> : <AuthPage />} />
               <Route path="/admin-access" element={<AdminAccessPage />} />
               <Route path="/control-access" element={<AdminAccessPage />} />
               <Route path="/control" element={<Navigate to="/control-access" replace />} />
@@ -692,6 +697,20 @@ const AdminRoute: React.FC = () => {
   }
 
   return <AdminPage />;
+};
+
+const RequireAuth: React.FC<{ children: React.ReactElement }> = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return null;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  return children;
 };
 
 const ThemeShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {

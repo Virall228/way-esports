@@ -246,12 +246,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const forcedMethod = options?.method;
 
-      // Try Telegram Mini App authentication first
-      if (
-        (!forcedMethod || forcedMethod === 'telegram_webapp') &&
-        typeof window !== 'undefined' &&
-        (window as any).Telegram?.WebApp
-      ) {
+      if (forcedMethod === 'telegram_webapp' && typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
         const initData = (window as any).Telegram.WebApp.initData;
 
         if (initData) {
@@ -262,7 +257,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               return;
             }
           } catch (telegramError) {
-            console.warn('Telegram auth failed, falling back to manual registration:', telegramError);
+            console.warn('Telegram auth failed:', telegramError);
           }
         }
       }
@@ -316,19 +311,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const bootstrap = async () => {
       const token = getToken();
-
-      if (!token && typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initData) {
-        setIsLoading(true);
-        try {
-          await login({ method: 'telegram_webapp' });
-          return;
-        } catch (e) {
-          console.error('Auto-login failed:', e);
-        } finally {
-          setIsLoading(false);
-        }
-      }
-
       if (!token) return;
 
       setIsLoading(true);

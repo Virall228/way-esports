@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { api } from '../../services/api';
 import { useApp } from '../../contexts/AppContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Container = styled.div`
     width: 100%;
@@ -54,6 +55,12 @@ const SettingDescription = styled.div`
     color: ${({ theme }) => theme.colors.text.tertiary};
     font-size: 14px;
     margin-top: 4px;
+`;
+
+const SettingValue = styled.div`
+    color: ${({ theme }) => theme.colors.text.primary};
+    font-size: 15px;
+    font-weight: 600;
 `;
 
 const ThemeToggle = styled.button<{ isLight: boolean }>`
@@ -179,6 +186,7 @@ const ContactItem = styled.div`
 const SettingsPage: React.FC = () => {
     const { isDarkMode, toggleDarkMode } = useApp();
     const { language, setLanguage, t } = useLanguage();
+    const { user } = useAuth();
     const [contactForm, setContactForm] = useState({
         name: '',
         email: '',
@@ -211,6 +219,29 @@ const SettingsPage: React.FC = () => {
 
     return (
         <Container>
+            <Section>
+                <SectionTitle>
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 12c2.76 0 5-2.24 5-5S14.76 2 12 2 7 4.24 7 7s2.24 5 5 5zm0 2c-3.31 0-10 1.66-10 5v2h20v-2c0-3.34-6.69-5-10-5z"/>
+                    </svg>
+                    Account
+                </SectionTitle>
+                <SettingRow>
+                    <div>
+                        <SettingLabel>Username</SettingLabel>
+                        <SettingDescription>Public name for your profile and teams</SettingDescription>
+                    </div>
+                    <SettingValue>{user?.username || '-'}</SettingValue>
+                </SettingRow>
+                <SettingRow>
+                    <div>
+                        <SettingLabel>Email</SettingLabel>
+                        <SettingDescription>Visible only to you in Settings</SettingDescription>
+                    </div>
+                    <SettingValue>{user?.email || 'Not set'}</SettingValue>
+                </SettingRow>
+            </Section>
+
             <Section>
                 <SectionTitle>
                     <svg viewBox="0 0 24 24" fill="currentColor">
