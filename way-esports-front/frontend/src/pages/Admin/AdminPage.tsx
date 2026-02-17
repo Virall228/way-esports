@@ -165,6 +165,34 @@ const Td = styled.td`
   color: #ffffff;
 `;
 
+const UserCell = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const UserAvatar = styled.img`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 107, 0, 0.45);
+`;
+
+const UserAvatarFallback = styled.div`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 107, 0, 0.45);
+  background: rgba(255, 107, 0, 0.18);
+  color: #ffb680;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+`;
+
 const ActionsCell = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -404,6 +432,7 @@ interface AdminUserRow {
   firstName: string;
   lastName: string;
   email: string;
+  avatarUrl?: string;
   role: string;
   isBanned: boolean;
   isSubscribed: boolean;
@@ -662,6 +691,16 @@ const AdminPage: React.FC = () => {
       return '';
     }
   };
+
+  const resolveMediaUrl = (value?: string | null) => {
+    if (!value) return '';
+    if (value.startsWith('http')) return value;
+    const normalized = value.startsWith('/') ? value : `/${value}`;
+    if (normalized.startsWith('/api/uploads/')) return getFullUrl(normalized);
+    if (normalized.startsWith('/uploads/')) return getFullUrl(`/api${normalized}`);
+    return normalized;
+  };
+
   const fetchDashboardStats = async () => {
     try {
       const result = await api.get('/api/admin/stats');
@@ -699,6 +738,7 @@ const AdminPage: React.FC = () => {
         firstName: u.firstName || '',
         lastName: u.lastName || '',
         email: u.email || '',
+        avatarUrl: resolveMediaUrl(u.profileLogo || u.photoUrl || u.avatar || ''),
         role: u.role || 'user',
         isBanned: !!u.isBanned,
         isSubscribed: !!u.isSubscribed,
@@ -1873,6 +1913,7 @@ const AdminPage: React.FC = () => {
           <Table>
             <thead>
               <tr>
+                <Th>Avatar</Th>
                 <Th>Username</Th>
                 <Th>Role</Th>
                 <Th>Subscription</Th>
@@ -1884,6 +1925,17 @@ const AdminPage: React.FC = () => {
             <tbody>
               {users.map(user => (
                 <tr key={user.id}>
+                  <Td>
+                    <UserCell>
+                      {user.avatarUrl ? (
+                        <UserAvatar src={user.avatarUrl} alt={user.username} />
+                      ) : (
+                        <UserAvatarFallback>
+                          {(user.username || '?').charAt(0).toUpperCase()}
+                        </UserAvatarFallback>
+                      )}
+                    </UserCell>
+                  </Td>
                   <Td>{user.username}</Td>
                   <Td>{user.role}</Td>
                   <Td>{user.isSubscribed ? '\u2705 Active' : '\u274C None'} {user.freeEntriesCount > 0 ? `(${user.freeEntriesCount} free)` : ''}</Td>

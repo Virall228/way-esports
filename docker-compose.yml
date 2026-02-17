@@ -18,6 +18,8 @@ services:
       - BOOTSTRAP_ADMIN_TELEGRAM_ID=${BOOTSTRAP_ADMIN_TELEGRAM_ID:-}
       - BOOTSTRAP_ADMIN_EMAIL=${BOOTSTRAP_ADMIN_EMAIL:-}
       - PRIMARY_ADMIN_ONLY=${PRIMARY_ADMIN_ONLY:-false}
+    volumes:
+      - ./backend/uploads:/app/uploads
     expose:
       - "3000"
     healthcheck:

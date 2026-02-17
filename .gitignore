@@ -77,3 +77,4 @@ local.env
 
 # Public uploads (если есть)
 public/uploads/ 
+backend/uploads/

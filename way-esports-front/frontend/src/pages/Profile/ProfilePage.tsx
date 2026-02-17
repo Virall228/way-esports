@@ -10,6 +10,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { api, ApiError } from '../../services/api';
+import { getFullUrl } from '../../config/api';
 import { Link } from 'react-router-dom';
 import { useProfileQuery } from '../../hooks/useProfileQuery';
 import Card from '../../components/UI/Card';
@@ -296,8 +297,10 @@ const ProfilePage: React.FC = () => {
   const getFullAvatarUrl = (path: string | null | undefined) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    // Assuming the backend serves static files at the base URL + path
-    return path;
+    const normalized = path.startsWith('/') ? path : `/${path}`;
+    if (normalized.startsWith('/api/uploads/')) return getFullUrl(normalized);
+    if (normalized.startsWith('/uploads/')) return getFullUrl(`/api${normalized}`);
+    return normalized;
   };
 
   return (

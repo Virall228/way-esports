@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../services/api';
+import { getFullUrl } from '../../config/api';
 import Card from '../../components/UI/Card';
 
 const Container = styled.div`
@@ -83,6 +84,14 @@ const StatLabel = styled.div`
 
 const PublicProfilePage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    const toAvatarUrl = (value?: string | null) => {
+        if (!value) return '/images/default-avatar.png';
+        if (value.startsWith('http')) return value;
+        const normalized = value.startsWith('/') ? value : `/${value}`;
+        if (normalized.startsWith('/api/uploads/')) return getFullUrl(normalized);
+        if (normalized.startsWith('/uploads/')) return getFullUrl(`/api${normalized}`);
+        return normalized;
+    };
     const { data: profile, isLoading, error } = useQuery({
         queryKey: ['profile', id],
         queryFn: async () => {
@@ -106,7 +115,7 @@ const PublicProfilePage: React.FC = () => {
     return (
         <Container>
             <ProfileHeader>
-                <Avatar src={profile.profileLogo || '/images/default-avatar.png'} alt={profile.username} />
+                <Avatar src={toAvatarUrl(profile.profileLogo || profile.photoUrl)} alt={profile.username} />
                 <Info>
                     <Username>{profile.username}</Username>
                     <RealName>{profile.firstName} {profile.lastName}</RealName>

@@ -11,8 +11,8 @@ router.post('/', authenticateJWT, upload.single('image'), (req: any, res) => {
             return res.status(400).json({ success: false, error: 'No file uploaded' });
         }
 
-        // Return the accessible URL
-        const fileUrl = `/uploads/${req.file.filename}`;
+        // Serve through /api/uploads/* to avoid proxy conflicts with frontend static assets
+        const fileUrl = `/api/uploads/${req.file.filename}`;
 
         res.json({
             success: true,

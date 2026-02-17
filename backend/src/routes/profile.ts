@@ -207,7 +207,7 @@ router.get('/:identifier/public', async (req, res) => {
 
     const user = await User.findOne(query)
       .populate('teams', 'name tag logo')
-      .select('username firstName lastName bio profileLogo teams stats gameProfiles achievements createdAt');
+      .select('username firstName lastName bio profileLogo photoUrl teams stats gameProfiles achievements createdAt');
 
     if (!user) {
       return res.status(404).json({

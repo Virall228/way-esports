@@ -164,6 +164,7 @@ app.use('/api/tasks', tasksRouter);
 app.use('/api/tournament-rooms', tournamentRoomsRouter);
 
 // Serve static files from uploads directory
+app.use('/api/uploads', express.static(path.join(process.cwd(), 'uploads')));
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Health check endpoint
