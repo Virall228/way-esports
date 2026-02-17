@@ -83,6 +83,39 @@ const getDuplicateField = (error: any): string | null => {
   return Object.keys(keyPattern)[0] || Object.keys(keyValue)[0] || null;
 };
 
+const isNullDuplicateKey = (error: any, field: string): boolean => {
+  const keyValue = error?.keyValue || {};
+  if (Object.prototype.hasOwnProperty.call(keyValue, field) && keyValue[field] === null) {
+    return true;
+  }
+
+  const message = String(error?.message || '');
+  return message.includes(`dup key: { ${field}: null }`);
+};
+
+const repairOptionalUniqueIndex = async (field: string, bsonType: 'string' | 'number') => {
+  const indexName = `${field}_1`;
+
+  try {
+    await User.collection.dropIndex(indexName);
+  } catch (error: any) {
+    if (error?.codeName !== 'IndexNotFound') {
+      throw error;
+    }
+  }
+
+  await User.collection.createIndex(
+    { [field]: 1 } as any,
+    {
+      name: indexName,
+      unique: true,
+      partialFilterExpression: {
+        [field]: { $type: bsonType }
+      } as any
+    }
+  );
+};
+
 const saveUserWithRetries = async (
   user: any,
   options?: { maxAttempts?: number; seedUsername?: string }
@@ -224,6 +257,7 @@ const upsertEmailAccountFallback = async (params: {
   const baseUsername = typeof params.username === 'string' && params.username.trim()
     ? params.username.trim()
     : usernameFromEmail(normalizedEmail);
+  let attemptedTelegramIndexRepair = false;
 
   for (let attempt = 0; attempt < 10; attempt += 1) {
     const usernameCandidate = attempt === 0
@@ -257,6 +291,18 @@ const upsertEmailAccountFallback = async (params: {
       }
     } catch (error: any) {
       if (error?.code === 11000) {
+        const duplicateField = getDuplicateField(error);
+        if (
+          duplicateField === 'telegramId' &&
+          isNullDuplicateKey(error, 'telegramId') &&
+          !attemptedTelegramIndexRepair
+        ) {
+          attemptedTelegramIndexRepair = true;
+          console.warn('[auth/email/register] repairing legacy telegramId unique index');
+          await repairOptionalUniqueIndex('telegramId', 'number');
+          continue;
+        }
+
         console.warn('[auth/email/register] upsert duplicate', {
           attempt: attempt + 1,
           keyPattern: error?.keyPattern || null,

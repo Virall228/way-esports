@@ -38,12 +38,53 @@ import analyticsRouter from './routes/analytics';
 import usersRouter from './routes/users';
 import tasksRouter from './routes/tasks';
 import tournamentRoomsRouter from './routes/tournamentRooms';
+import User from './models/User';
 
 import { seedDefaultAchievements } from './services/achievements/seedAchievements';
 
 const app = express();
 const PORT = typeof config.port === 'string' ? parseInt(config.port, 10) : config.port;
 const PORT_NUMBER = Number.isFinite(PORT) ? PORT : 3000;
+
+const ensureUserOptionalUniqueIndexes = async () => {
+  const optionalUniqueFields = [
+    { field: 'telegramId', bsonType: 'number' },
+    { field: 'email', bsonType: 'string' },
+    { field: 'googleId', bsonType: 'string' },
+    { field: 'appleSub', bsonType: 'string' },
+    { field: 'referralCode', bsonType: 'string' }
+  ] as const;
+
+  const indexes = await User.collection.indexes();
+
+  for (const item of optionalUniqueFields) {
+    const indexName = `${item.field}_1`;
+    const existing = indexes.find((idx: any) => idx.name === indexName);
+    if (!existing) continue;
+
+    const hasPartialFilter = Boolean(existing.partialFilterExpression?.[item.field]);
+    if (hasPartialFilter && existing.unique) continue;
+
+    console.warn(`[index-repair] rebuilding ${indexName} as partial unique index`);
+
+    try {
+      await User.collection.dropIndex(indexName);
+    } catch (error: any) {
+      if (error?.codeName !== 'IndexNotFound') throw error;
+    }
+
+    await User.collection.createIndex(
+      { [item.field]: 1 } as any,
+      {
+        name: indexName,
+        unique: true,
+        partialFilterExpression: {
+          [item.field]: { $type: item.bsonType }
+        } as any
+      }
+    );
+  }
+};
 
 // Security middleware - CORS configuration for Telegram Mini App
 const corsOptions = {
@@ -212,6 +253,11 @@ async function start() {
     await connectDB();
     if (mongoose.connection.readyState === 1) {
       console.log('✅ MongoDB connected');
+      try {
+        await ensureUserOptionalUniqueIndexes();
+      } catch (indexRepairError) {
+        console.error('⚠️ Failed to repair optional unique user indexes:', indexRepairError);
+      }
     } else {
       console.warn('⚠️ MongoDB is not connected. API is running in degraded mode.');
     }

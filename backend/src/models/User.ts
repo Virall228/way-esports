@@ -266,13 +266,28 @@ const userSchema = new Schema<IUser>({
 });
 
 // Indexes
-userSchema.index({ telegramId: 1 }, { unique: true, sparse: true });
-userSchema.index({ email: 1 }, { unique: true, sparse: true });
-userSchema.index({ googleId: 1 }, { unique: true, sparse: true });
-userSchema.index({ appleSub: 1 }, { unique: true, sparse: true });
+userSchema.index(
+  { telegramId: 1 },
+  { unique: true, partialFilterExpression: { telegramId: { $type: 'number' } } }
+);
+userSchema.index(
+  { email: 1 },
+  { unique: true, partialFilterExpression: { email: { $type: 'string' } } }
+);
+userSchema.index(
+  { googleId: 1 },
+  { unique: true, partialFilterExpression: { googleId: { $type: 'string' } } }
+);
+userSchema.index(
+  { appleSub: 1 },
+  { unique: true, partialFilterExpression: { appleSub: { $type: 'string' } } }
+);
 userSchema.index({ username: 1 });
 userSchema.index({ role: 1 });
-userSchema.index({ referralCode: 1 }, { unique: true, sparse: true });
+userSchema.index(
+  { referralCode: 1 },
+  { unique: true, partialFilterExpression: { referralCode: { $type: 'string' } } }
+);
 userSchema.index({ isSubscribed: 1 });
 userSchema.index({ participatingTournaments: 1 });
 
