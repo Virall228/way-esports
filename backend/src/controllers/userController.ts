@@ -55,8 +55,6 @@ const checkAdminBootstrap = async (user: any) => {
 const SALT_ROUNDS = 12;
 
 const normalizeEmail = (email: string): string => email.trim().toLowerCase();
-const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
 const usernameFromEmail = (email: string): string => {
   const base = email.split('@')[0] || 'user';
   const normalized = base.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 24);
@@ -211,6 +209,68 @@ const updateExistingEmailAccount = async (existing: any, params: {
   await checkAdminBootstrap(existing);
   await existing.save();
   return existing;
+};
+
+const upsertEmailAccountFallback = async (params: {
+  email: string;
+  password: string;
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+}) => {
+  const normalizedEmail = normalizeEmail(params.email);
+  const passwordHash = await bcrypt.hash(params.password, SALT_ROUNDS);
+  const nameInfo = buildNamePair('User', null, params.firstName || null, params.lastName || null);
+  const baseUsername = typeof params.username === 'string' && params.username.trim()
+    ? params.username.trim()
+    : usernameFromEmail(normalizedEmail);
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const usernameCandidate = attempt === 0
+      ? baseUsername
+      : `${baseUsername}_${Math.floor(Math.random() * 1000000)}`;
+    const referralCodeCandidate = crypto.randomBytes(8).toString('hex').toUpperCase();
+
+    try {
+      const user = await User.findOneAndUpdate(
+        { email: normalizedEmail },
+        {
+          $setOnInsert: {
+            email: normalizedEmail,
+            username: usernameCandidate,
+            firstName: nameInfo.firstName,
+            lastName: nameInfo.lastName,
+            role: 'user',
+            referralCode: referralCodeCandidate,
+            newsletter_subscriber: true
+          },
+          $set: {
+            passwordHash,
+            newsletter_subscriber: true
+          }
+        },
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+      );
+
+      if (user) {
+        await checkAdminBootstrap(user);
+        return user;
+      }
+    } catch (error: any) {
+      if (error?.code === 11000) {
+        console.warn('[auth/email/register] upsert duplicate', {
+          attempt: attempt + 1,
+          keyPattern: error?.keyPattern || null,
+          keyValue: error?.keyValue || null,
+          message: error?.message || 'duplicate_key'
+        });
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw new Error('Unable to upsert email account fallback');
 };
 
 const getRequestMeta = (req: Request) => ({
@@ -488,27 +548,14 @@ export const registerWithEmailPassword = async (req: Request, res: Response) => 
       return res.status(200).json(await issueAuthResponse(existing));
     }
 
-    const fallbackUsername = usernameFromEmail(normalizedEmail);
-    const safeUsername = await ensureUniqueUsername(
-      typeof username === 'string' && username.trim() ? username.trim() : fallbackUsername
-    );
-    const nameInfo = buildNamePair('User', null, firstName || null, lastName || null);
-    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-
-    const user = new User({
+    const user = await upsertEmailAccountFallback({
       email: normalizedEmail,
-      username: safeUsername,
-      firstName: nameInfo.firstName,
-      lastName: nameInfo.lastName,
-      passwordHash,
-      role: 'user',
-      newsletter_subscriber: true
+      password,
+      username,
+      firstName,
+      lastName
     });
 
-    await checkAdminBootstrap(user);
-    if (user.isNew) {
-      await saveUserWithRetries(user, { seedUsername: safeUsername });
-    }
     await processReferralIfProvided(referralCode, user._id.toString());
 
     const meta = getRequestMeta(req);
@@ -529,42 +576,15 @@ export const registerWithEmailPassword = async (req: Request, res: Response) => 
     const message = (error as any)?.message || '';
     const duplicateField = getDuplicateField(error as any);
 
-    if (duplicateField === 'telegramId' || message === 'telegram_conflict') {
-      const normalizedEmail = normalizeEmail(String(req.body?.email || ''));
-      const fallbackUsername = `${usernameFromEmail(normalizedEmail)}_${Math.floor(Math.random() * 1000000)}`;
-      const nameInfo = buildNamePair('User', null, req.body?.firstName || null, req.body?.lastName || null);
-      const passwordRaw = typeof req.body?.password === 'string' ? String(req.body.password) : '';
-
-      if (normalizedEmail && passwordRaw.length >= 8) {
-        const passwordHash = await bcrypt.hash(passwordRaw, SALT_ROUNDS);
-        const recovered = await User.findOneAndUpdate(
-          { email: normalizedEmail },
-          {
-            $setOnInsert: {
-              email: normalizedEmail,
-              username: fallbackUsername,
-              firstName: nameInfo.firstName,
-              lastName: nameInfo.lastName,
-              role: 'user',
-              newsletter_subscriber: true,
-              passwordHash
-            }
-          },
-          { new: true, upsert: true }
-        );
-
-        if (recovered) {
-          recovered.passwordHash = passwordHash;
-          recovered.newsletter_subscriber = true;
-          recovered.telegramId = undefined;
-          await checkAdminBootstrap(recovered);
-          await recovered.save();
-          return res.status(200).json(await issueAuthResponse(recovered));
-        }
-      }
-    }
-
-    if (statusCode === 409 || duplicateField === 'email' || message === 'email_conflict') {
+    if (
+      statusCode === 409 ||
+      duplicateField === 'email' ||
+      duplicateField === 'telegramId' ||
+      duplicateField === 'username' ||
+      message === 'email_conflict' ||
+      message === 'telegram_conflict' ||
+      message === 'Unable to persist user due unique constraint conflicts'
+    ) {
       const normalizedEmail = normalizeEmail(String(req.body?.email || ''));
       console.warn('[auth/email/register] duplicate email conflict', {
         normalizedEmail,
@@ -572,43 +592,14 @@ export const registerWithEmailPassword = async (req: Request, res: Response) => 
         duplicateField
       });
 
-      const passwordRaw = typeof req.body?.password === 'string' && req.body.password.length >= 8
-        ? String(req.body.password)
-        : `temp_${Math.random().toString(36).slice(2)}_${Date.now()}`;
-
-      const escaped = escapeRegex(normalizedEmail);
-      let recoveredUser: any = normalizedEmail
-        ? await User.findOne({
-          email: { $regex: new RegExp(`^${escaped}$`, 'i') }
-        })
-        : null;
-
-      if (recoveredUser) {
-        await updateExistingEmailAccount(recoveredUser, {
-          password: passwordRaw,
-          firstName: req.body?.firstName,
-          lastName: req.body?.lastName,
-          username: req.body?.username
-        });
-        return res.status(200).json(await issueAuthResponse(recoveredUser));
-      }
-
-      if (normalizedEmail) {
-        const fallbackUsername = `${usernameFromEmail(normalizedEmail)}_${Math.floor(Math.random() * 1000000)}`;
-        const nameInfo = buildNamePair('User', null, req.body?.firstName || null, req.body?.lastName || null);
-        const passwordHash = await bcrypt.hash(passwordRaw, SALT_ROUNDS);
-
-        recoveredUser = new User({
+      if (normalizedEmail && typeof req.body?.password === 'string' && req.body.password.length >= 8) {
+        const recoveredUser = await upsertEmailAccountFallback({
           email: normalizedEmail,
-          username: fallbackUsername,
-          firstName: nameInfo.firstName,
-          lastName: nameInfo.lastName,
-          role: 'user',
-          newsletter_subscriber: true,
-          passwordHash
+          password: req.body.password,
+          username: req.body?.username,
+          firstName: req.body?.firstName,
+          lastName: req.body?.lastName
         });
-        await saveUserWithRetries(recoveredUser, { seedUsername: fallbackUsername });
-        await checkAdminBootstrap(recoveredUser);
         return res.status(200).json(await issueAuthResponse(recoveredUser));
       }
     }
