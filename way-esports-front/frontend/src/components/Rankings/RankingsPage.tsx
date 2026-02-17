@@ -8,6 +8,7 @@ import {
     formatRankChange,
     calculateRankChange
 } from '../../utils/rankings';
+import { resolveMediaUrl, resolveTeamLogoUrl } from '../../utils/media';
 
 const Container = styled.div`
     width: 100%;
@@ -229,7 +230,7 @@ const RankingsPage: React.FC = () => {
             previousRank,
             name: team?.name || 'Team',
             tag: team?.tag || '',
-            logo: team?.logo || '',
+            logo: resolveTeamLogoUrl(team?.logo || ''),
             totalPrize: toNumber(team?.totalPrize, 0),
             tournamentWins: toNumber(team?.tournamentWins, 0),
             winRate: toNumber(team?.winRate, 0),
@@ -268,7 +269,7 @@ const RankingsPage: React.FC = () => {
             rank,
             previousRank,
             name: player?.name || fullName || player?.username || 'Player',
-            avatar: player?.avatar || player?.profileLogo || '',
+            avatar: resolveMediaUrl(player?.avatar || player?.profileLogo || ''),
             team: teamName,
             rating,
             matches,

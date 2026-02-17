@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import styled, { css } from 'styled-components';
+import { api } from '../../services/api';
+import { resolveTeamLogoUrl } from '../../utils/media';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -200,6 +202,31 @@ const ErrorMessage = styled.div`
   margin-top: 5px;
 `;
 
+const UploadRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+`;
+
+const LogoPreview = styled.div<{ $imageUrl?: string }>`
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: ${({ $imageUrl }) => ($imageUrl ? `url(${$imageUrl}) center/cover no-repeat` : 'linear-gradient(135deg, #3a3a3a, #2a2a2a)')};
+`;
+
+const HiddenFileInput = styled.input`
+  display: none;
+`;
+
 interface CreateTeamModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -214,9 +241,11 @@ const CreateTeamModal: React.FC<CreateTeamModalProps> = ({ isOpen, onClose, onCr
     game: '',
     tournamentId: '',
     description: '',
+    logo: '',
     isPrivate: false,
     requiresApproval: true
   });
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   if (!isOpen) return null;
@@ -275,12 +304,36 @@ const CreateTeamModal: React.FC<CreateTeamModalProps> = ({ isOpen, onClose, onCr
           game: '',
           tournamentId: '',
           description: '',
+          logo: '',
           isPrivate: false,
           requiresApproval: true
         });
       } catch {
         // Keep modal open to show error on page
       }
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingLogo(true);
+      const result = await api.uploadImage(file);
+      setFormData((prev) => ({
+        ...prev,
+        logo: result.url || ''
+      }));
+      setErrors((prev) => ({ ...prev, logo: '' }));
+    } catch (error: any) {
+      setErrors((prev) => ({
+        ...prev,
+        logo: error?.message || 'Failed to upload team logo'
+      }));
+    } finally {
+      setIsUploadingLogo(false);
+      e.target.value = '';
     }
   };
 
@@ -368,6 +421,27 @@ const CreateTeamModal: React.FC<CreateTeamModalProps> = ({ isOpen, onClose, onCr
               placeholder="Tell others about your team, goals, and requirements..."
               maxLength={500}
             />
+          </FormGroup>
+
+          <FormGroup>
+            <Label>Team Logo (optional)</Label>
+            <UploadRow>
+              <LogoPreview $imageUrl={resolveTeamLogoUrl(formData.logo)}>
+                {!formData.logo ? (formData.tag || 'LOGO').slice(0, 2).toUpperCase() : null}
+              </LogoPreview>
+              <label>
+                <Button type="button" $variant="secondary" disabled={isUploadingLogo}>
+                  {isUploadingLogo ? 'Uploading...' : formData.logo ? 'Change Logo' : 'Upload Logo'}
+                </Button>
+                <HiddenFileInput
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  disabled={isUploadingLogo}
+                />
+              </label>
+            </UploadRow>
+            {errors.logo && <ErrorMessage>{errors.logo}</ErrorMessage>}
           </FormGroup>
 
           <FormGroup>

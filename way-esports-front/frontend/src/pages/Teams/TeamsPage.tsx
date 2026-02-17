@@ -8,6 +8,7 @@ import { tournamentService } from '../../services/tournamentService';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { resolveTeamLogoUrl } from '../../utils/media';
 
 const Container = styled.div`
   padding: 1rem;
@@ -170,11 +171,15 @@ const TeamHeader = styled.div`
   margin-bottom: 20px;
 `;
 
-const TeamAvatar = styled.div`
+const TeamAvatar = styled.div<{ $imageUrl?: string }>`
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.gray[700]}, ${({ theme }) => theme.colors.gray[900]});
+  background: ${({ $imageUrl, theme }) => (
+    $imageUrl
+      ? `url(${$imageUrl}) center/cover no-repeat`
+      : `linear-gradient(135deg, ${theme.colors.gray[700]}, ${theme.colors.gray[900]})`
+  )};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -272,6 +277,7 @@ interface Team {
   id: string;
   name: string;
   tag: string;
+  logo?: string;
   game: string;
   tournamentId?: string | null;
   description: string;
@@ -333,6 +339,7 @@ const TeamsPage: React.FC = () => {
         id: (t.id || t._id || '').toString(),
         name: t.name || '',
         tag: t.tag || '',
+        logo: resolveTeamLogoUrl(t.logo || ''),
         game: t.game || '',
         tournamentId: t.tournamentId || null,
         description: t.description || '',
@@ -387,6 +394,7 @@ const TeamsPage: React.FC = () => {
         game: teamData?.game,
         tournamentId: teamData?.tournamentId,
         description: teamData?.description,
+        logo: teamData?.logo,
         isPrivate: Boolean(teamData?.isPrivate),
         requiresApproval: Boolean(teamData?.requiresApproval)
       });
@@ -496,7 +504,9 @@ const TeamsPage: React.FC = () => {
                 .map(team => (
                   <TeamCard key={team.id}>
                     <TeamHeader>
-                      <TeamAvatar>{team.tag.replace('#', '')}</TeamAvatar>
+                      <TeamAvatar $imageUrl={team.logo}>
+                        {!team.logo ? team.tag.replace('#', '').slice(0, 2) : null}
+                      </TeamAvatar>
                       <TeamInfo>
                         <TeamName>{team.name}</TeamName>
                         <TeamTag>{team.tag}</TeamTag>

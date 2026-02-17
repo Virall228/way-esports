@@ -193,6 +193,14 @@ const UserAvatarFallback = styled.div`
   font-weight: 700;
 `;
 
+const TeamAvatar = styled(UserAvatar)`
+  border-radius: 8px;
+`;
+
+const TeamAvatarFallback = styled(UserAvatarFallback)`
+  border-radius: 8px;
+`;
+
 const ActionsCell = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -760,7 +768,7 @@ const AdminPage: React.FC = () => {
         id: t.id,
         name: t.name,
         tag: t.tag,
-        logo: t.logo,
+        logo: resolveMediaUrl(t.logo || ''),
         game: t.game,
         captain: t.captain,
         members: t.members,
@@ -2240,6 +2248,7 @@ const AdminPage: React.FC = () => {
           <Table>
             <thead>
               <tr>
+                <Th>Logo</Th>
                 <Th>Name</Th>
                 <Th>Tag</Th>
                 <Th>Game</Th>
@@ -2250,6 +2259,15 @@ const AdminPage: React.FC = () => {
             <tbody>
               {teams.map((team: any) => (
                 <tr key={team.id}>
+                  <Td>
+                    {team.logo ? (
+                      <TeamAvatar src={team.logo} alt={team.name} />
+                    ) : (
+                      <TeamAvatarFallback>
+                        {(team.tag || team.name || '?').toString().slice(0, 2).toUpperCase()}
+                      </TeamAvatarFallback>
+                    )}
+                  </Td>
                   <Td>{team.name}</Td>
                   <Td>{team.tag}</Td>
                   <Td>{team.game}</Td>

@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { useQuery } from '@tanstack/react-query';
 import Card from '../../components/UI/Card';
+import Button from '../../components/UI/Button';
+import { useAuth } from '../../contexts/AuthContext';
+import { api } from '../../services/api';
 import { teamsService } from '../../services/teamsService';
+import { resolveMediaUrl, resolveTeamLogoUrl } from '../../utils/media';
 
 const Container = styled.div`
   padding: 2rem 1rem;
@@ -49,6 +53,12 @@ const TeamTitle = styled.h1`
   color: #ff6b00;
 `;
 
+const TeamHeaderMeta = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+`;
+
 const TeamTag = styled.span`
   background: #ff6b00;
   color: #fff;
@@ -57,6 +67,18 @@ const TeamTag = styled.span`
   font-size: 1rem;
   margin-left: 1rem;
   vertical-align: middle;
+`;
+
+const TeamLogoActions = styled.div`
+  margin-top: 0.25rem;
+`;
+
+const HiddenFileInput = styled.input`
+  display: none;
+`;
+
+const UploadLogoButton = styled(Button).attrs({ variant: 'outline', size: 'small' })`
+  min-height: 40px;
 `;
 
 const Section = styled.div`
@@ -155,7 +177,10 @@ const AchievementCard = styled(Card)`
 
 const TeamPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { data: team, isLoading, error } = useQuery({
+  const { user } = useAuth();
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const { data: team, isLoading, error, refetch } = useQuery({
     queryKey: ['team', id],
     queryFn: async () => {
       if (!id) return null;
@@ -180,24 +205,72 @@ const TeamPage: React.FC = () => {
   const wins = team.stats?.wins || 0;
   const losses = team.stats?.losses || 0;
   const winRate = team.stats?.winRate || 0;
+  const teamLogo = resolveTeamLogoUrl(team.logo);
+  const currentUserId = user?.id || '';
+  const currentUserRole = user?.role || 'user';
+  const canManageLogo = Boolean(
+    currentUserId && (
+      currentUserId === team.captain?.id ||
+      currentUserRole === 'admin' ||
+      currentUserRole === 'developer'
+    )
+  );
+
+  const handleTeamLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !id) return;
+
+    try {
+      setIsUploadingLogo(true);
+      setLogoError(null);
+      const uploaded = await api.uploadImage(file);
+      await teamsService.updateLogo(id, uploaded.url);
+      await refetch();
+    } catch (uploadError: any) {
+      setLogoError(uploadError?.message || 'Failed to update team logo');
+    } finally {
+      setIsUploadingLogo(false);
+      e.target.value = '';
+    }
+  };
 
   return (
     <Container>
       <TeamHeader>
-        {team.logo ? (
-          <Logo src={team.logo} alt={team.name} />
+        {teamLogo ? (
+          <Logo src={teamLogo} alt={team.name} />
         ) : (
           <LogoPlaceholder>
             {team.tag?.replace('#', '') || team.name?.charAt(0)}
           </LogoPlaceholder>
         )}
-        <div>
+        <TeamHeaderMeta>
           <TeamTitle>
             {team.name}
             <TeamTag>{team.tag}</TeamTag>
           </TeamTitle>
           <p style={{ margin: '0.5rem 0', opacity: 0.8 }}>{team.game}</p>
-        </div>
+          {canManageLogo && (
+            <TeamLogoActions>
+              <label>
+                <UploadLogoButton disabled={isUploadingLogo}>
+                  {isUploadingLogo ? 'Uploading...' : teamLogo ? 'Change Team Logo' : 'Upload Team Logo'}
+                </UploadLogoButton>
+                <HiddenFileInput
+                  type="file"
+                  accept="image/*"
+                  onChange={handleTeamLogoUpload}
+                  disabled={isUploadingLogo}
+                />
+              </label>
+              {logoError && (
+                <div style={{ marginTop: '8px', color: '#ff6b6b', fontSize: '0.9rem' }}>
+                  {logoError}
+                </div>
+              )}
+            </TeamLogoActions>
+          )}
+        </TeamHeaderMeta>
       </TeamHeader>
 
       {/* Stats Section */}
@@ -230,7 +303,7 @@ const TeamPage: React.FC = () => {
           {(team.members || []).map((member: any, index: number) => (
             <MemberCard key={index} to={`/profile/${member.id}`}>
               {member.profileLogo ? (
-                <MemberAvatar src={member.profileLogo} alt={member.username} />
+                <MemberAvatar src={resolveMediaUrl(member.profileLogo)} alt={member.username} />
               ) : (
                 <AvatarPlaceholder>
                   {member.username?.charAt(0)?.toUpperCase() || '?'}

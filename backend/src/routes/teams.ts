@@ -22,6 +22,23 @@ const isAdminUser = (req: any): boolean => {
   return role === 'admin' || role === 'developer';
 };
 
+const normalizeTeamLogoUrl = (input: unknown): string => {
+  if (typeof input !== 'string') return '';
+  const trimmed = input.trim();
+  if (!trimmed) return '';
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  const normalized = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  if (normalized.startsWith('/api/uploads/') || normalized.startsWith('/uploads/')) {
+    return normalized;
+  }
+
+  throw new Error('Team logo must be an uploaded image URL');
+};
+
 const getTournamentParticipationTeamId = async (
   userId: string,
   tournamentId: string
@@ -168,7 +185,20 @@ router.post('/create',
         return res.status(401).json({ success: false, error: 'Authentication required' });
       }
 
-      const tournamentId = req.body.tournamentId;
+      const { logo: rawLogo, ...teamInput } = req.body || {};
+      let normalizedLogo: string | undefined;
+      if (typeof rawLogo !== 'undefined') {
+        try {
+          normalizedLogo = normalizeTeamLogoUrl(rawLogo);
+        } catch (logoError: any) {
+          return res.status(400).json({
+            success: false,
+            error: logoError?.message || 'Invalid team logo'
+          });
+        }
+      }
+
+      const tournamentId = teamInput.tournamentId;
       const tournament = await Tournament.findById(tournamentId).select('_id isRegistrationOpen status');
 
       if (!tournament) {
@@ -189,8 +219,8 @@ router.post('/create',
 
       const existingTeam = await Team.findOne({
         $or: [
-          { name: req.body.name },
-          { tag: req.body.tag }
+          { name: teamInput.name },
+          { tag: teamInput.tag }
         ]
       }).select('_id');
 
@@ -199,7 +229,8 @@ router.post('/create',
       }
 
       const team = new Team({
-        ...req.body,
+        ...teamInput,
+        ...(typeof normalizedLogo !== 'undefined' ? { logo: normalizedLogo } : {}),
         tournamentId,
         captain: userId,
         members: [userId],
@@ -465,8 +496,22 @@ router.post('/',
   validateRequest,
   async (req: any, res: any) => {
     try {
+      const { logo: rawLogo, ...teamPayload } = req.body || {};
+      let normalizedLogo: string | undefined;
+      if (typeof rawLogo !== 'undefined') {
+        try {
+          normalizedLogo = normalizeTeamLogoUrl(rawLogo);
+        } catch (logoError: any) {
+          return res.status(400).json({
+            success: false,
+            error: logoError?.message || 'Invalid team logo'
+          });
+        }
+      }
+
       const teamData: Partial<ITeam> = {
-        ...req.body
+        ...teamPayload,
+        ...(typeof normalizedLogo !== 'undefined' ? { logo: normalizedLogo } : {})
       };
       // If authenticated user exists, attach as captain/member; otherwise allow anonymous create
       if (req.user?.id) {
@@ -562,6 +607,9 @@ router.post('/batch', authenticateJWT, isAdmin, async (req, res) => {
     // Optional attach captains if caller is authenticated
     const payload = items.map((item) => {
       const doc: any = { ...item };
+      if (typeof doc.logo !== 'undefined') {
+        doc.logo = normalizeTeamLogoUrl(doc.logo);
+      }
       if (req.user?.id && !doc.captain) {
         doc.captain = req.user.id;
         doc.members = doc.members && Array.isArray(doc.members) ? doc.members : [req.user.id];
@@ -578,6 +626,9 @@ router.post('/batch', authenticateJWT, isAdmin, async (req, res) => {
     });
   } catch (error: any) {
     console.error('Error bulk creating teams:', error);
+    if (error?.message === 'Team logo must be an uploaded image URL') {
+      return res.status(400).json({ success: false, error: error.message });
+    }
     if (error.code === 11000) {
       return res.status(400).json({ success: false, error: 'Duplicate team name or tag in batch' });
     }
@@ -617,9 +668,53 @@ router.put('/:id',
         });
       }
 
+      const allowedFields = [
+        'name',
+        'tag',
+        'game',
+        'description',
+        'isPrivate',
+        'requiresApproval',
+        'logo'
+      ];
+      const adminOnlyFields = ['status', 'tournamentId', 'captain'];
+
+      const updatePayload: Record<string, any> = {};
+      for (const field of allowedFields) {
+        if (typeof req.body[field] !== 'undefined') {
+          updatePayload[field] = req.body[field];
+        }
+      }
+
+      if (isAdminUser(req)) {
+        for (const field of adminOnlyFields) {
+          if (typeof req.body[field] !== 'undefined') {
+            updatePayload[field] = req.body[field];
+          }
+        }
+      }
+
+      if (typeof updatePayload.logo !== 'undefined') {
+        try {
+          updatePayload.logo = normalizeTeamLogoUrl(updatePayload.logo);
+        } catch (logoError: any) {
+          return res.status(400).json({
+            success: false,
+            error: logoError?.message || 'Invalid team logo'
+          });
+        }
+      }
+
+      if (!Object.keys(updatePayload).length) {
+        return res.status(400).json({
+          success: false,
+          error: 'No valid fields provided for update'
+        });
+      }
+
       const updatedTeam: any = await Team.findByIdAndUpdate(
         req.params.id,
-        req.body,
+        updatePayload,
         { new: true }
       ).populate('captain', 'username firstName lastName')
         .populate('members', 'username firstName lastName')
@@ -671,6 +766,63 @@ router.put('/:id',
       });
     }
   });
+
+// Update team logo (captain/admin)
+router.post('/:id/logo',
+  authenticateJWT,
+  body('logoUrl').isString().withMessage('logoUrl is required'),
+  validateRequest,
+  async (req: any, res: any) => {
+    try {
+      const requesterId = getUserId(req);
+      if (!requesterId) {
+        return res.status(401).json({ success: false, error: 'Authentication required' });
+      }
+
+      const team = await Team.findById(req.params.id);
+      if (!team) {
+        return res.status(404).json({
+          success: false,
+          error: 'Team not found'
+        });
+      }
+
+      if (!isAdminUser(req) && team.captain && team.captain.toString() !== requesterId) {
+        return res.status(403).json({
+          success: false,
+          error: 'Not authorized to update this team logo'
+        });
+      }
+
+      let normalizedLogo = '';
+      try {
+        normalizedLogo = normalizeTeamLogoUrl(req.body.logoUrl);
+      } catch (logoError: any) {
+        return res.status(400).json({
+          success: false,
+          error: logoError?.message || 'Invalid team logo'
+        });
+      }
+
+      team.logo = normalizedLogo;
+      await team.save();
+
+      return res.json({
+        success: true,
+        data: {
+          id: String(team._id),
+          logo: team.logo || ''
+        }
+      });
+    } catch (error: any) {
+      console.error('Error updating team logo:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update team logo'
+      });
+    }
+  }
+);
 
 // Add member to team
 router.post('/:id/members', authenticateJWT, async (req, res) => {

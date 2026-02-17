@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { tournamentService } from '../../services/tournamentService';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
+import { resolveTeamLogoUrl } from '../../utils/media';
 
 type MatchItem = {
   id?: string;
@@ -102,6 +103,30 @@ const TeamName = styled.div`
   font-weight: 700;
 `;
 
+const TeamCell = styled.div<{ $align?: 'left' | 'right' }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: ${({ $align }) => ($align === 'right' ? 'flex-end' : 'flex-start')};
+  width: 100%;
+  flex-direction: ${({ $align }) => ($align === 'right' ? 'row-reverse' : 'row')};
+`;
+
+const TeamLogo = styled.div<{ $imageUrl?: string }>`
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: ${({ $imageUrl }) => ($imageUrl ? `url(${$imageUrl}) center/cover no-repeat` : 'rgba(255, 107, 0, 0.2)')};
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+`;
+
 const Vs = styled.div`
   color: ${({ theme }) => theme.colors.text.secondary};
   font-weight: 700;
@@ -111,6 +136,27 @@ const Vs = styled.div`
 const Meta = styled.div`
   color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.85rem;
+`;
+
+const RegisteredTeamsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  margin-bottom: 1rem;
+`;
+
+const RegisteredTeamItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+`;
+
+const RegisteredTeamsCard = styled(SurfaceCard)`
+  margin-bottom: 1rem;
 `;
 
 const Banner = styled.div<{ $src?: string }>`
@@ -203,6 +249,28 @@ const TournamentDetailsPage: React.FC = () => {
     return Object.entries(groups);
   }, [matches]);
 
+  const registeredTeams = useMemo(() => {
+    const list = Array.isArray(tournament?.registeredTeams) ? tournament.registeredTeams : [];
+    return list.map((team: any) => ({
+      id: String(team?.id || team?._id || ''),
+      name: String(team?.name || team?.tag || 'Team'),
+      logo: resolveTeamLogoUrl(team?.logo || '')
+    }));
+  }, [tournament?.registeredTeams]);
+
+  const getTeamDisplay = (rawTeam: any) => {
+    if (!rawTeam) {
+      return { name: 'TBD', logo: '' };
+    }
+    if (typeof rawTeam === 'string') {
+      return { name: rawTeam || 'TBD', logo: '' };
+    }
+    return {
+      name: String(rawTeam.name || rawTeam.tag || rawTeam.username || 'TBD'),
+      logo: resolveTeamLogoUrl(rawTeam.logo || '')
+    };
+  };
+
   return (
     <Container>
       <Banner $src={tournament?.image || tournament?.coverImage}>
@@ -225,6 +293,23 @@ const TournamentDetailsPage: React.FC = () => {
         <Tab $active={tab === 'bracket'} onClick={() => setTab('bracket')}>Bracket</Tab>
       </Tabs>
 
+      {registeredTeams.length > 0 && (
+        <RegisteredTeamsCard>
+          <Row>
+            <TeamName>Registered Teams</TeamName>
+            <Meta>{registeredTeams.length}</Meta>
+          </Row>
+          <RegisteredTeamsGrid>
+            {registeredTeams.map((team: { id: string; name: string; logo: string }) => (
+              <RegisteredTeamItem key={team.id || team.name}>
+                <TeamLogo $imageUrl={team.logo}>{!team.logo ? team.name.slice(0, 1).toUpperCase() : null}</TeamLogo>
+                <TeamName>{team.name}</TeamName>
+              </RegisteredTeamItem>
+            ))}
+          </RegisteredTeamsGrid>
+        </RegisteredTeamsCard>
+      )}
+
       {error && (
         <div style={{ color: '#e57373', padding: '20px 0' }}>{error}</div>
       )}
@@ -236,8 +321,8 @@ const TournamentDetailsPage: React.FC = () => {
       {!loading && !error && tab !== 'bracket' && (
         <List>
           {filteredMatches.map((m) => {
-            const t1 = typeof m.team1 === 'string' ? m.team1 : (m.team1?.name || m.team1?.tag || 'TBD');
-            const t2 = typeof m.team2 === 'string' ? m.team2 : (m.team2?.name || m.team2?.tag || 'TBD');
+            const t1 = getTeamDisplay(m.team1);
+            const t2 = getTeamDisplay(m.team2);
             const score = m.score ? `${m.score.team1 ?? 0}:${m.score.team2 ?? 0}` : '\u2014';
 
             return (
@@ -248,9 +333,15 @@ const TournamentDetailsPage: React.FC = () => {
                 </Row>
 
                 <TeamsRow>
-                  <TeamName>{t1}</TeamName>
+                  <TeamCell>
+                    <TeamLogo $imageUrl={t1.logo}>{!t1.logo ? t1.name.slice(0, 1).toUpperCase() : null}</TeamLogo>
+                    <TeamName>{t1.name}</TeamName>
+                  </TeamCell>
                   <Vs>{tab === 'schedule' ? 'vs' : score}</Vs>
-                  <TeamName style={{ textAlign: 'right' }}>{t2}</TeamName>
+                  <TeamCell $align="right">
+                    <TeamLogo $imageUrl={t2.logo}>{!t2.logo ? t2.name.slice(0, 1).toUpperCase() : null}</TeamLogo>
+                    <TeamName>{t2.name}</TeamName>
+                  </TeamCell>
                 </TeamsRow>
 
                 <Row>
@@ -277,8 +368,8 @@ const TournamentDetailsPage: React.FC = () => {
               </Row>
               <List>
                 {ms.map((m) => {
-                  const t1 = typeof m.team1 === 'string' ? m.team1 : (m.team1?.name || m.team1?.tag || 'TBD');
-                  const t2 = typeof m.team2 === 'string' ? m.team2 : (m.team2?.name || m.team2?.tag || 'TBD');
+                  const t1 = getTeamDisplay(m.team1);
+                  const t2 = getTeamDisplay(m.team2);
                   const score = m.score ? `${m.score.team1 ?? 0}:${m.score.team2 ?? 0}` : '\u2014';
                   return (
                     <SurfaceCard key={m.id}>
@@ -287,9 +378,15 @@ const TournamentDetailsPage: React.FC = () => {
                         <Meta>{m.status}</Meta>
                       </Row>
                       <TeamsRow>
-                        <TeamName>{t1}</TeamName>
+                        <TeamCell>
+                          <TeamLogo $imageUrl={t1.logo}>{!t1.logo ? t1.name.slice(0, 1).toUpperCase() : null}</TeamLogo>
+                          <TeamName>{t1.name}</TeamName>
+                        </TeamCell>
                         <Vs>{score}</Vs>
-                        <TeamName style={{ textAlign: 'right' }}>{t2}</TeamName>
+                        <TeamCell $align="right">
+                          <TeamLogo $imageUrl={t2.logo}>{!t2.logo ? t2.name.slice(0, 1).toUpperCase() : null}</TeamLogo>
+                          <TeamName>{t2.name}</TeamName>
+                        </TeamCell>
                       </TeamsRow>
                     </SurfaceCard>
                   );

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { useQuery } from '@tanstack/react-query';
 import { tournamentService } from '../../services/tournamentService';
+import { resolveTeamLogoUrl } from '../../utils/media';
 
 const BracketContainer = styled.div`
   padding: 20px;
@@ -100,10 +101,10 @@ const TeamInfo = styled.div`
   gap: 12px;
 `;
 
-const TeamLogo = styled.div`
+const TeamLogo = styled.div<{ $imageUrl?: string }>`
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, #ff6b00, #ffd700);
+  background: ${({ $imageUrl }) => ($imageUrl ? `url(${$imageUrl}) center/cover no-repeat` : 'linear-gradient(135deg, #ff6b00, #ffd700)')};
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -228,15 +229,15 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tou
 
     const buildTeam = (team: any, score: number): Team => {
       if (!team) {
-        return { id: 0, name: 'TBD', logo: '?', players: [], score };
+        return { id: 0, name: 'TBD', logo: '', players: [], score };
       }
       if (typeof team === 'string') {
         const safeName = team || 'TBD';
-        return { id: 0, name: safeName, logo: safeName.charAt(0).toUpperCase(), players: [], score };
+        return { id: 0, name: safeName, logo: '', players: [], score };
       }
       const id = Number(team.id || team._id || 0);
       const name = String(team.name || team.tag || team.username || 'TBD');
-      const logo = String(team.logo || name.charAt(0).toUpperCase());
+      const logo = resolveTeamLogoUrl(team.logo || '');
       return { id, name, logo, players: [], score };
     };
 
@@ -311,7 +312,9 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tou
 
       <TeamContainer $isWinner={match.winner?.id === match.team1.id}>
         <TeamInfo>
-          <TeamLogo>{match.team1.logo}</TeamLogo>
+          <TeamLogo $imageUrl={match.team1.logo}>
+            {!match.team1.logo ? match.team1.name.slice(0, 1).toUpperCase() : null}
+          </TeamLogo>
           <TeamName $isWinner={match.winner?.id === match.team1.id}>
             {match.team1.name}
           </TeamName>
@@ -323,7 +326,9 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tou
 
       <TeamContainer $isWinner={match.winner?.id === match.team2.id}>
         <TeamInfo>
-          <TeamLogo>{match.team2.logo}</TeamLogo>
+          <TeamLogo $imageUrl={match.team2.logo}>
+            {!match.team2.logo ? match.team2.name.slice(0, 1).toUpperCase() : null}
+          </TeamLogo>
           <TeamName $isWinner={match.winner?.id === match.team2.id}>
             {match.team2.name}
           </TeamName>

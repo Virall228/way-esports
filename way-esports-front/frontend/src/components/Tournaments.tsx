@@ -1,5 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
+import { resolveTeamLogoUrl } from '../utils/media';
 
 const TournamentsContainer = styled.div`
     padding-bottom: 80px;
@@ -74,15 +75,34 @@ const TeamsList = styled.div`
 `;
 
 const Team = styled.div`
-    padding: 8px;
-    border-bottom: 1px solid #444;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  padding: 8px;
+  border-bottom: 1px solid #444;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 
-    &:last-child {
-        border-bottom: none;
-    }
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const TeamLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const TeamLogo = styled.div<{ $imageUrl?: string }>`
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: ${({ $imageUrl }) => ($imageUrl ? `url(${$imageUrl}) center/cover no-repeat` : 'linear-gradient(135deg, #ff6b00, #ffd700)')};
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #000;
 `;
 
 const ActionButton = styled.button<{ variant?: 'primary' | 'secondary' }>`
@@ -161,6 +181,7 @@ interface Tournament {
     maxTeams: number;
     registeredTeams: Array<{
         name: string;
+        logo?: string;
         players: string[];
     }>;
     prizePool?: number;
@@ -212,7 +233,12 @@ const Tournaments: React.FC<TournamentsProps> = ({ tournaments, onRegister, onVi
                         <TeamsList>
                             {tournament.registeredTeams.map((team, index) => (
                                 <Team key={index}>
-                                    <span>{team.name}</span>
+                                    <TeamLeft>
+                                        <TeamLogo $imageUrl={resolveTeamLogoUrl(team.logo || '')}>
+                                          {!team.logo ? (team.name || '?').slice(0, 1).toUpperCase() : null}
+                                        </TeamLogo>
+                                        <span>{team.name}</span>
+                                    </TeamLeft>
                                     <span>{team.players.length} players</span>
                                 </Team>
                             ))}
