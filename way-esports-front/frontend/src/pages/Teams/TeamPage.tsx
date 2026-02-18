@@ -248,22 +248,10 @@ const TeamPage: React.FC = () => {
     staleTime: 30000,
     refetchOnWindowFocus: false
   });
-
-  if (isLoading) return <Container><div style={{ textAlign: 'center', padding: '3rem' }}>Loading team details...</div></Container>;
-  if (error || !team) {
-    const message = (error as Error | undefined)?.message || 'Team not found';
-    return <Container><div style={{ textAlign: 'center', padding: '3rem', color: '#ff6b6b' }}>{message}</div></Container>;
-  }
-
-  const totalPrizeMoney = team.stats?.totalPrizeMoney || 0;
-  const wins = team.stats?.wins || 0;
-  const losses = team.stats?.losses || 0;
-  const winRate = team.stats?.winRate || 0;
-  const teamLogo = resolveTeamLogoUrl(team.logo);
   const currentUserId = user?.id || '';
   const currentUserRole = user?.role || 'user';
   const canManageLogo = Boolean(
-    currentUserId && (
+    team && currentUserId && (
       currentUserId === team.captain?.id ||
       currentUserRole === 'admin' ||
       currentUserRole === 'developer'
@@ -355,6 +343,18 @@ const TeamPage: React.FC = () => {
   const handleDragOverTeamLogo = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
   };
+
+  if (isLoading) return <Container><div style={{ textAlign: 'center', padding: '3rem' }}>Loading team details...</div></Container>;
+  if (error || !team) {
+    const message = (error as Error | undefined)?.message || 'Team not found';
+    return <Container><div style={{ textAlign: 'center', padding: '3rem', color: '#ff6b6b' }}>{message}</div></Container>;
+  }
+
+  const totalPrizeMoney = team.stats?.totalPrizeMoney || 0;
+  const wins = team.stats?.wins || 0;
+  const losses = team.stats?.losses || 0;
+  const winRate = team.stats?.winRate || 0;
+  const teamLogo = resolveTeamLogoUrl(team.logo);
 
   return (
     <Container>
