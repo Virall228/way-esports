@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import styled from 'styled-components';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import { useAuth } from '../../contexts/AuthContext';
@@ -178,12 +178,62 @@ const AchievementCard = styled(Card)`
   }
 `;
 
+const JoinRequestsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const JoinRequestCard = styled(Card).attrs({ variant: 'outlined' })`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+`;
+
+const JoinRequestUser = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const JoinRequestActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+`;
+
+const RequestAvatar = styled.img`
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+`;
+
+const RequestAvatarFallback = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+`;
+
 const TeamPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const logoInputRef = useRef<HTMLInputElement | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [logoError, setLogoError] = useState<string | null>(null);
+  const [requestError, setRequestError] = useState<string | null>(null);
   const { data: team, isLoading, error, refetch } = useQuery({
     queryKey: ['team', id],
     queryFn: async () => {
@@ -219,6 +269,52 @@ const TeamPage: React.FC = () => {
       currentUserRole === 'developer'
     )
   );
+
+  const { data: joinRequests = [], isLoading: isJoinRequestsLoading } = useQuery({
+    queryKey: ['team', id, 'join-requests'],
+    queryFn: async () => {
+      if (!id) return [];
+      const response: any = await teamsService.getJoinRequests(id);
+      return response?.data || response || [];
+    },
+    enabled: Boolean(id && canManageLogo),
+    staleTime: 10000,
+    refetchOnWindowFocus: false
+  });
+
+  const approveRequestMutation = useMutation({
+    mutationFn: async (targetUserId: string) => {
+      if (!id) throw new Error('Team id missing');
+      return teamsService.approveJoinRequest(id, targetUserId);
+    },
+    onSuccess: async () => {
+      setRequestError(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['team', id] }),
+        queryClient.invalidateQueries({ queryKey: ['team', id, 'join-requests'] }),
+        queryClient.invalidateQueries({ queryKey: ['teams'] }),
+        queryClient.invalidateQueries({ queryKey: ['tournaments'] }),
+        queryClient.invalidateQueries({ queryKey: ['rankings'] })
+      ]);
+    },
+    onError: (error: any) => {
+      setRequestError(error?.message || 'Failed to approve join request');
+    }
+  });
+
+  const rejectRequestMutation = useMutation({
+    mutationFn: async (targetUserId: string) => {
+      if (!id) throw new Error('Team id missing');
+      return teamsService.rejectJoinRequest(id, targetUserId);
+    },
+    onSuccess: async () => {
+      setRequestError(null);
+      await queryClient.invalidateQueries({ queryKey: ['team', id, 'join-requests'] });
+    },
+    onError: (error: any) => {
+      setRequestError(error?.message || 'Failed to reject join request');
+    }
+  });
 
   const handleTeamLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -321,6 +417,64 @@ const TeamPage: React.FC = () => {
           </StatCard>
         </StatsGrid>
       </Section>
+
+      {canManageLogo && (
+        <Section>
+          <SectionTitle>Join Requests</SectionTitle>
+          {requestError && (
+            <div style={{ color: '#ff6b6b', marginBottom: '10px' }}>{requestError}</div>
+          )}
+          {isJoinRequestsLoading ? (
+            <div style={{ opacity: 0.8 }}>Loading requests...</div>
+          ) : (
+            <JoinRequestsList>
+              {(Array.isArray(joinRequests) ? joinRequests : []).map((request: any) => {
+                const username = request?.user?.username || request?.user?.firstName || request?.user?.lastName || 'User';
+                const avatar = resolveMediaUrl(request?.user?.profileLogo);
+                const userId = request?.user?.id || '';
+                return (
+                  <JoinRequestCard key={request?.id || userId}>
+                    <JoinRequestUser>
+                      {avatar ? (
+                        <RequestAvatar src={avatar} alt={username} />
+                      ) : (
+                        <RequestAvatarFallback>{username.slice(0, 1).toUpperCase()}</RequestAvatarFallback>
+                      )}
+                      <div>
+                        <div style={{ fontWeight: 700 }}>{username}</div>
+                        <div style={{ opacity: 0.75, fontSize: '0.85rem' }}>
+                          Requested: {request?.requestedAt ? new Date(request.requestedAt).toLocaleString() : '—'}
+                        </div>
+                      </div>
+                    </JoinRequestUser>
+                    <JoinRequestActions>
+                      <Button
+                        variant="success"
+                        size="small"
+                        disabled={approveRequestMutation.isPending || rejectRequestMutation.isPending || !userId}
+                        onClick={() => approveRequestMutation.mutate(userId)}
+                      >
+                        {approveRequestMutation.isPending ? 'Approving...' : 'Approve'}
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="small"
+                        disabled={approveRequestMutation.isPending || rejectRequestMutation.isPending || !userId}
+                        onClick={() => rejectRequestMutation.mutate(userId)}
+                      >
+                        {rejectRequestMutation.isPending ? 'Rejecting...' : 'Reject'}
+                      </Button>
+                    </JoinRequestActions>
+                  </JoinRequestCard>
+                );
+              })}
+              {!joinRequests?.length && (
+                <div style={{ opacity: 0.75 }}>No pending requests.</div>
+              )}
+            </JoinRequestsList>
+          )}
+        </Section>
+      )}
 
       {/* Team Members */}
       <Section>

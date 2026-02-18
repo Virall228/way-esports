@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import Team, { ITeam } from '../models/Team';
 import User from '../models/User';
 import Tournament from '../models/Tournament';
@@ -62,6 +63,48 @@ const getTournamentParticipationTeamId = async (
   }).select('_id').lean();
 
   return legacyTeam?._id ? legacyTeam._id.toString() : null;
+};
+
+const getTournamentPendingRequestTeamId = async (
+  userId: string,
+  tournamentId: string,
+  excludeTeamId?: string | null
+): Promise<string | null> => {
+  const query: any = {
+    tournamentId,
+    joinRequests: {
+      $elemMatch: {
+        user: userId,
+        status: 'pending'
+      }
+    }
+  };
+
+  if (excludeTeamId) {
+    query._id = { $ne: excludeTeamId };
+  }
+
+  const pendingTeam: any = await Team.findOne(query).select('_id').lean();
+  return pendingTeam?._id ? pendingTeam._id.toString() : null;
+};
+
+const updateJoinRequestStatus = (
+  team: any,
+  targetUserId: string,
+  status: 'approved' | 'rejected',
+  reviewerId: string
+): boolean => {
+  if (!Array.isArray(team.joinRequests)) return false;
+  const entry = team.joinRequests.find(
+    (request: any) =>
+      request?.status === 'pending' &&
+      request?.user?.toString?.() === targetUserId
+  );
+  if (!entry) return false;
+  entry.status = status;
+  entry.reviewedAt = new Date();
+  entry.reviewedBy = reviewerId as any;
+  return true;
 };
 
 const consumeTournamentEntry = async (req: any) => {
@@ -217,6 +260,14 @@ router.post('/create',
         });
       }
 
+      const pendingRequestTeamId = await getTournamentPendingRequestTeamId(userId, tournamentId);
+      if (pendingRequestTeamId) {
+        return res.status(409).json({
+          success: false,
+          error: 'You already have a pending team request in this tournament'
+        });
+      }
+
       const existingTeam = await Team.findOne({
         $or: [
           { name: teamInput.name },
@@ -348,8 +399,51 @@ router.post('/join',
         });
       }
 
+      const pendingRequestTeamId = await getTournamentPendingRequestTeamId(userId, resolvedTournamentId, team.id);
+      if (pendingRequestTeamId) {
+        return res.status(409).json({
+          success: false,
+          error: 'You already have a pending team request in this tournament'
+        });
+      }
+
       if (team.members.some((member: any) => member.toString() === userId)) {
         return res.status(400).json({ success: false, error: 'User is already a team member' });
+      }
+
+      if (team.requiresApproval !== false) {
+        const hasPendingRequest = Array.isArray(team.joinRequests) && team.joinRequests.some(
+          (request: any) =>
+            request?.status === 'pending' &&
+            request?.user?.toString?.() === userId
+        );
+
+        if (hasPendingRequest) {
+          return res.status(409).json({
+            success: false,
+            error: 'Join request is already pending approval'
+          });
+        }
+
+        if (!Array.isArray(team.joinRequests)) {
+          team.joinRequests = [];
+        }
+        team.joinRequests.push({
+          user: userId,
+          status: 'pending',
+          requestedAt: new Date()
+        } as any);
+        await team.save();
+
+        return res.json({
+          success: true,
+          pendingApproval: true,
+          message: 'Join request sent. Waiting for team owner approval.',
+          data: {
+            teamId: String(team._id),
+            tournamentId: resolvedTournamentId
+          }
+        });
       }
 
       team.members.push(userId as any);
@@ -409,6 +503,230 @@ router.post('/join',
     }
   }
 );
+
+// Get pending join requests for team (captain/admin only)
+router.get('/:id/join-requests', authenticateJWT, async (req: any, res: any) => {
+  try {
+    const requesterId = getUserId(req);
+    if (!requesterId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+
+    const team: any = await Team.findById(req.params.id)
+      .populate('joinRequests.user', 'username firstName lastName profileLogo telegramId')
+      .select('captain joinRequests')
+      .lean();
+
+    if (!team) {
+      return res.status(404).json({ success: false, error: 'Team not found' });
+    }
+
+    if (!isAdminUser(req) && team.captain?.toString?.() !== requesterId) {
+      return res.status(403).json({ success: false, error: 'Not authorized to view join requests' });
+    }
+
+    const pendingRequests = (Array.isArray(team.joinRequests) ? team.joinRequests : [])
+      .filter((request: any) => request?.status === 'pending')
+      .map((request: any) => ({
+        id: request?._id?.toString?.() || '',
+        requestedAt: request?.requestedAt?.toISOString?.() || new Date().toISOString(),
+        user: {
+          id: request?.user?._id?.toString?.() || request?.user?.toString?.() || '',
+          username: request?.user?.username || '',
+          firstName: request?.user?.firstName || '',
+          lastName: request?.user?.lastName || '',
+          profileLogo: request?.user?.profileLogo || '',
+          telegramId: request?.user?.telegramId || ''
+        }
+      }));
+
+    return res.json({ success: true, data: pendingRequests });
+  } catch (error) {
+    console.error('Error fetching team join requests:', error);
+    return res.status(500).json({ success: false, error: 'Failed to fetch join requests' });
+  }
+});
+
+// Approve pending join request (captain/admin only)
+router.post('/:id/join-requests/:userId/approve', authenticateJWT, async (req: any, res: any) => {
+  try {
+    const requesterId = getUserId(req);
+    if (!requesterId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+
+    const targetUserId = req.params.userId;
+    if (!mongoose.Types.ObjectId.isValid(targetUserId)) {
+      return res.status(400).json({ success: false, error: 'Invalid user ID' });
+    }
+
+    const team: any = await Team.findById(req.params.id);
+    if (!team) {
+      return res.status(404).json({ success: false, error: 'Team not found' });
+    }
+
+    if (!isAdminUser(req) && team.captain?.toString?.() !== requesterId) {
+      return res.status(403).json({ success: false, error: 'Not authorized to approve join requests' });
+    }
+
+    const hasPendingRequest = Array.isArray(team.joinRequests) && team.joinRequests.some(
+      (request: any) =>
+        request?.status === 'pending' &&
+        request?.user?.toString?.() === targetUserId
+    );
+    if (!hasPendingRequest) {
+      return res.status(404).json({ success: false, error: 'Pending join request not found' });
+    }
+
+    const targetUser: any = await User.findById(targetUserId);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    if (targetUser.isBanned) {
+      return res.status(403).json({ success: false, error: 'User account is banned' });
+    }
+
+    if (team.tournamentId) {
+      const tournament = await Tournament.findById(team.tournamentId).select('_id isRegistrationOpen status');
+      if (!tournament) {
+        return res.status(404).json({ success: false, error: 'Tournament not found' });
+      }
+      if (tournament.isRegistrationOpen === false || tournament.status !== 'upcoming') {
+        return res.status(400).json({ success: false, error: 'Tournament registration is closed' });
+      }
+
+      if (!targetUser.canJoinTournament()) {
+        return res.status(402).json({
+          error: 'Subscription required',
+          message: 'User needs an active subscription or free entries to join tournaments',
+          redirectTo: '/billing',
+          requiresSubscription: true,
+          freeEntriesCount: targetUser.freeEntriesCount,
+          isSubscribed: targetUser.isSubscribed,
+          subscriptionExpiresAt: targetUser.subscriptionExpiresAt
+        });
+      }
+
+      const participationTeamId = await getTournamentParticipationTeamId(targetUserId, team.tournamentId.toString());
+      if (participationTeamId && participationTeamId !== team.id) {
+        return res.status(409).json({
+          success: false,
+          error: 'User is already participating in this tournament'
+        });
+      }
+    }
+
+    if (!team.members.some((member: any) => member.toString() === targetUserId)) {
+      team.members.push(targetUserId as any);
+    }
+    if (!Array.isArray(team.players)) {
+      team.players = [];
+    }
+    if (!team.players.some((player: any) => player.toString() === targetUserId)) {
+      team.players.push(targetUserId as any);
+    }
+
+    const updatedRequest = updateJoinRequestStatus(team, targetUserId, 'approved', requesterId);
+    if (!updatedRequest) {
+      return res.status(404).json({ success: false, error: 'Pending join request not found' });
+    }
+
+    await team.save();
+
+    await User.findByIdAndUpdate(targetUserId, {
+      $addToSet: { teams: team._id }
+    });
+
+    if (team.tournamentId) {
+      await TournamentRegistration.findOneAndUpdate(
+        { userId: targetUserId, tournamentId: team.tournamentId },
+        {
+          $set: {
+            teamId: team._id,
+            role: 'member',
+            status: 'active'
+          }
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+
+      await User.findByIdAndUpdate(targetUserId, {
+        $addToSet: { participatingTournaments: team.tournamentId }
+      });
+
+      await Tournament.findByIdAndUpdate(team.tournamentId, {
+        $addToSet: { registeredTeams: team._id }
+      });
+
+      if (!targetUser.hasActiveSubscription()) {
+        try {
+          await targetUser.useFreeEntry();
+        } catch (entryError) {
+          console.error('Failed to consume tournament entry after join approval:', entryError);
+        }
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: 'Join request approved',
+      data: {
+        teamId: String(team._id),
+        userId: targetUserId
+      }
+    });
+  } catch (error: any) {
+    console.error('Error approving team join request:', error);
+    if (error?.code === 11000) {
+      return res.status(409).json({ success: false, error: 'User is already participating in this tournament' });
+    }
+    return res.status(500).json({ success: false, error: 'Failed to approve join request' });
+  }
+});
+
+// Reject pending join request (captain/admin only)
+router.post('/:id/join-requests/:userId/reject', authenticateJWT, async (req: any, res: any) => {
+  try {
+    const requesterId = getUserId(req);
+    if (!requesterId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+
+    const targetUserId = req.params.userId;
+    if (!mongoose.Types.ObjectId.isValid(targetUserId)) {
+      return res.status(400).json({ success: false, error: 'Invalid user ID' });
+    }
+
+    const team: any = await Team.findById(req.params.id);
+    if (!team) {
+      return res.status(404).json({ success: false, error: 'Team not found' });
+    }
+
+    if (!isAdminUser(req) && team.captain?.toString?.() !== requesterId) {
+      return res.status(403).json({ success: false, error: 'Not authorized to reject join requests' });
+    }
+
+    const updatedRequest = updateJoinRequestStatus(team, targetUserId, 'rejected', requesterId);
+    if (!updatedRequest) {
+      return res.status(404).json({ success: false, error: 'Pending join request not found' });
+    }
+
+    await team.save();
+
+    return res.json({
+      success: true,
+      message: 'Join request rejected',
+      data: {
+        teamId: String(team._id),
+        userId: targetUserId
+      }
+    });
+  } catch (error) {
+    console.error('Error rejecting team join request:', error);
+    return res.status(500).json({ success: false, error: 'Failed to reject join request' });
+  }
+});
 
 // Get team by ID
 router.get('/:id', async (req, res) => {
@@ -934,6 +1252,7 @@ router.post('/:id/members', authenticateJWT, async (req, res) => {
     if (!team.players.some((player: any) => player.toString() === userId)) {
       team.players.push(userId as any);
     }
+    updateJoinRequestStatus(team, userId, 'approved', requesterId);
     await team.save();
 
     // Add team to user's teams

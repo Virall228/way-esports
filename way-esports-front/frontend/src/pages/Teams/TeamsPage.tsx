@@ -414,6 +414,7 @@ const TeamsPage: React.FC = () => {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionInfo, setActionInfo] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: teamsRaw = [], isLoading: loading, error: queryError } = useQuery({
@@ -494,6 +495,7 @@ const TeamsPage: React.FC = () => {
   const createTeamMutation = useMutation({
     mutationFn: (payload: any) => teamsService.create(payload),
     onSuccess: async () => {
+      setActionInfo('Team created successfully');
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['teams'] }),
         queryClient.invalidateQueries({ queryKey: ['rankings'] }),
@@ -522,6 +524,7 @@ const TeamsPage: React.FC = () => {
   const updateTeamMutation = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: any }) => teamsService.update(id, payload),
     onSuccess: async () => {
+      setActionInfo('Team updated successfully');
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['teams'] }),
         queryClient.invalidateQueries({ queryKey: ['team'] }),
@@ -537,6 +540,7 @@ const TeamsPage: React.FC = () => {
   const deleteTeamMutation = useMutation({
     mutationFn: (id: string) => teamsService.remove(id),
     onSuccess: async () => {
+      setActionInfo('Team deleted successfully');
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['teams'] }),
         queryClient.invalidateQueries({ queryKey: ['rankings'] }),
@@ -552,6 +556,7 @@ const TeamsPage: React.FC = () => {
 
   const handleCreateTeam = async (teamData: any) => {
     try {
+      setActionInfo(null);
       setActionError(null);
       await createTeamMutation.mutateAsync({
         name: teamData?.name,
@@ -574,11 +579,17 @@ const TeamsPage: React.FC = () => {
         setActionError('This team is not linked to a tournament');
         return;
       }
+      setActionInfo(null);
       setActionError(null);
-      await joinTeamMutation.mutateAsync({
+      const joinResult: any = await joinTeamMutation.mutateAsync({
         teamId: team.id,
         tournamentId: team.tournamentId
       });
+      if (joinResult?.pendingApproval) {
+        setActionInfo('Join request sent. Waiting for team owner approval.');
+      } else {
+        setActionInfo('You joined the team successfully');
+      }
     } catch (e: any) {
       setActionError(e?.message || 'Failed to join team');
     }
@@ -610,6 +621,7 @@ const TeamsPage: React.FC = () => {
   const handleDeleteTeam = async (teamId: string) => {
     const confirmed = window.confirm('Delete this team? This action cannot be undone.');
     if (!confirmed) return;
+    setActionInfo(null);
     setActionError(null);
     await deleteTeamMutation.mutateAsync(teamId);
   };
@@ -634,6 +646,7 @@ const TeamsPage: React.FC = () => {
     if (!file) return;
 
     try {
+      setActionInfo(null);
       setActionError(null);
       setIsUploadingLogo(true);
       const uploaded = await api.uploadImage(file);
@@ -672,6 +685,7 @@ const TeamsPage: React.FC = () => {
       return;
     }
 
+    setActionInfo(null);
     setActionError(null);
     await updateTeamMutation.mutateAsync({
       id: editTeamForm.id,
@@ -740,6 +754,12 @@ const TeamsPage: React.FC = () => {
           {error && (
             <div style={{ textAlign: 'center', padding: '40px 20px', color: '#e57373' }}>
               {error}
+            </div>
+          )}
+
+          {!error && actionInfo && (
+            <div style={{ textAlign: 'center', padding: '16px 20px', color: '#81c784' }}>
+              {actionInfo}
             </div>
           )}
 

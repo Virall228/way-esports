@@ -13,6 +13,13 @@ export interface ITeam extends Document<mongoose.Types.ObjectId> {
   captain?: mongoose.Types.ObjectId;
   members: mongoose.Types.ObjectId[];
   players?: mongoose.Types.ObjectId[]; // Alias for members for compatibility
+  joinRequests?: {
+    user: mongoose.Types.ObjectId;
+    status: 'pending' | 'approved' | 'rejected';
+    requestedAt: Date;
+    reviewedAt?: Date;
+    reviewedBy?: mongoose.Types.ObjectId;
+  }[];
   achievements: {
     tournamentId: mongoose.Types.ObjectId;
     position: number;
@@ -82,6 +89,29 @@ const teamSchema = new Schema<ITeam>({
     type: Schema.Types.ObjectId,
     ref: 'User'
   }],
+  joinRequests: [{
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending'
+    },
+    requestedAt: {
+      type: Date,
+      default: Date.now
+    },
+    reviewedAt: {
+      type: Date
+    },
+    reviewedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User'
+    }
+  }],
   achievements: [{
     tournamentId: {
       type: Schema.Types.ObjectId,
@@ -127,6 +157,7 @@ teamSchema.index({ game: 1, status: 1 });
 teamSchema.index({ name: 1 }, { unique: true });
 teamSchema.index({ tag: 1 }, { unique: true });
 teamSchema.index({ tournamentId: 1, status: 1 });
+teamSchema.index({ 'joinRequests.user': 1, 'joinRequests.status': 1 });
 
 // Pre-save middleware to calculate win rate
 teamSchema.pre('save', function(next) {
