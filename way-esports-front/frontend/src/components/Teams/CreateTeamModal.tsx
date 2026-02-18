@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import styled, { css } from 'styled-components';
 import { api } from '../../services/api';
 import { resolveTeamLogoUrl } from '../../utils/media';
@@ -207,6 +207,9 @@ const UploadRow = styled.div`
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
 `;
 
 const LogoPreview = styled.div<{ $imageUrl?: string }>`
@@ -235,6 +238,7 @@ interface CreateTeamModalProps {
 }
 
 const CreateTeamModal: React.FC<CreateTeamModalProps> = ({ isOpen, onClose, onCreateTeam, tournaments }) => {
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     tag: '',
@@ -316,8 +320,12 @@ const CreateTeamModal: React.FC<CreateTeamModalProps> = ({ isOpen, onClose, onCr
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    await uploadLogoFile(file);
+    e.target.value = '';
+  };
 
+  const uploadLogoFile = async (file?: File | null) => {
+    if (!file) return;
     try {
       setIsUploadingLogo(true);
       const result = await api.uploadImage(file);
@@ -333,8 +341,24 @@ const CreateTeamModal: React.FC<CreateTeamModalProps> = ({ isOpen, onClose, onCr
       }));
     } finally {
       setIsUploadingLogo(false);
-      e.target.value = '';
     }
+  };
+
+  const handleOpenLogoPicker = () => {
+    if (isUploadingLogo) return;
+    logoInputRef.current?.click();
+  };
+
+  const handleDropLogo = async (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (isUploadingLogo) return;
+    const file = event.dataTransfer?.files?.[0];
+    await uploadLogoFile(file);
+  };
+
+  const handleDragOverLogo = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
   };
 
   return (
@@ -425,21 +449,21 @@ const CreateTeamModal: React.FC<CreateTeamModalProps> = ({ isOpen, onClose, onCr
 
           <FormGroup>
             <Label>Team Logo (optional)</Label>
-            <UploadRow>
+            <UploadRow onDrop={handleDropLogo} onDragOver={handleDragOverLogo}>
               <LogoPreview $imageUrl={resolveTeamLogoUrl(formData.logo)}>
                 {!formData.logo ? (formData.tag || 'LOGO').slice(0, 2).toUpperCase() : null}
               </LogoPreview>
-              <label>
-                <Button type="button" $variant="secondary" disabled={isUploadingLogo}>
-                  {isUploadingLogo ? 'Uploading...' : formData.logo ? 'Change Logo' : 'Upload Logo'}
-                </Button>
-                <HiddenFileInput
-                  type="file"
-                  accept="image/*"
-                  onChange={handleLogoUpload}
-                  disabled={isUploadingLogo}
-                />
-              </label>
+              <Button type="button" $variant="secondary" disabled={isUploadingLogo} onClick={handleOpenLogoPicker}>
+                {isUploadingLogo ? 'Uploading...' : formData.logo ? 'Change Logo' : 'Upload Logo'}
+              </Button>
+              <div style={{ color: '#bdbdbd', fontSize: '0.8rem' }}>or drag & drop image here</div>
+              <HiddenFileInput
+                ref={logoInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleLogoUpload}
+                disabled={isUploadingLogo}
+              />
             </UploadRow>
             {errors.logo && <ErrorMessage>{errors.logo}</ErrorMessage>}
           </FormGroup>

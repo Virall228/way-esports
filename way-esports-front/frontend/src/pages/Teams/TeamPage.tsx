@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { useQuery } from '@tanstack/react-query';
@@ -71,6 +71,9 @@ const TeamTag = styled.span`
 
 const TeamLogoActions = styled.div`
   margin-top: 0.25rem;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
 `;
 
 const HiddenFileInput = styled.input`
@@ -178,6 +181,7 @@ const AchievementCard = styled(Card)`
 const TeamPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [logoError, setLogoError] = useState<string | null>(null);
   const { data: team, isLoading, error, refetch } = useQuery({
@@ -218,6 +222,12 @@ const TeamPage: React.FC = () => {
 
   const handleTeamLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    if (!file) return;
+    await uploadTeamLogo(file);
+    e.target.value = '';
+  };
+
+  const uploadTeamLogo = async (file?: File | null) => {
     if (!file || !id) return;
 
     try {
@@ -230,8 +240,24 @@ const TeamPage: React.FC = () => {
       setLogoError(uploadError?.message || 'Failed to update team logo');
     } finally {
       setIsUploadingLogo(false);
-      e.target.value = '';
     }
+  };
+
+  const openTeamLogoPicker = () => {
+    if (isUploadingLogo) return;
+    logoInputRef.current?.click();
+  };
+
+  const handleDropTeamLogo = async (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (isUploadingLogo) return;
+    const file = event.dataTransfer?.files?.[0];
+    await uploadTeamLogo(file);
+  };
+
+  const handleDragOverTeamLogo = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
   };
 
   return (
@@ -251,18 +277,18 @@ const TeamPage: React.FC = () => {
           </TeamTitle>
           <p style={{ margin: '0.5rem 0', opacity: 0.8 }}>{team.game}</p>
           {canManageLogo && (
-            <TeamLogoActions>
-              <label>
-                <UploadLogoButton disabled={isUploadingLogo}>
-                  {isUploadingLogo ? 'Uploading...' : teamLogo ? 'Change Team Logo' : 'Upload Team Logo'}
-                </UploadLogoButton>
-                <HiddenFileInput
-                  type="file"
-                  accept="image/*"
-                  onChange={handleTeamLogoUpload}
-                  disabled={isUploadingLogo}
-                />
-              </label>
+            <TeamLogoActions onDrop={handleDropTeamLogo} onDragOver={handleDragOverTeamLogo}>
+              <UploadLogoButton type="button" disabled={isUploadingLogo} onClick={openTeamLogoPicker}>
+                {isUploadingLogo ? 'Uploading...' : teamLogo ? 'Change Team Logo' : 'Upload Team Logo'}
+              </UploadLogoButton>
+              <HiddenFileInput
+                ref={logoInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleTeamLogoUpload}
+                disabled={isUploadingLogo}
+              />
+              <div style={{ marginTop: '8px', color: '#c9c9c9', fontSize: '0.8rem' }}>or drag & drop image here</div>
               {logoError && (
                 <div style={{ marginTop: '8px', color: '#ff6b6b', fontSize: '0.9rem' }}>
                   {logoError}

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import CreateTeamModal from '../../components/Teams/CreateTeamModal';
@@ -346,6 +346,9 @@ const UploadRow = styled.div`
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
 `;
 
 const LogoPreview = styled.div<{ $imageUrl?: string }>`
@@ -402,6 +405,7 @@ type EditTeamFormState = {
 const TeamsPage: React.FC = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const editLogoInputRef = useRef<HTMLInputElement | null>(null);
   const [activeFilter, setActiveFilter] = useState('teams');
   const [selectedGame, setSelectedGame] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -622,6 +626,11 @@ const TeamsPage: React.FC = () => {
 
   const handleEditLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    await uploadEditLogoFile(file);
+    e.target.value = '';
+  };
+
+  const uploadEditLogoFile = async (file?: File | null) => {
     if (!file) return;
 
     try {
@@ -633,8 +642,24 @@ const TeamsPage: React.FC = () => {
       setActionError(uploadError?.message || 'Failed to upload team logo');
     } finally {
       setIsUploadingLogo(false);
-      e.target.value = '';
     }
+  };
+
+  const openEditLogoPicker = () => {
+    if (isUploadingLogo) return;
+    editLogoInputRef.current?.click();
+  };
+
+  const handleDropEditLogo = async (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (isUploadingLogo) return;
+    const file = event.dataTransfer?.files?.[0];
+    await uploadEditLogoFile(file);
+  };
+
+  const handleDragOverEditLogo = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
   };
 
   const handleSaveTeamEdit = async () => {
@@ -823,22 +848,22 @@ const TeamsPage: React.FC = () => {
 
             <ModalField>
               <ModalLabel>Team Logo</ModalLabel>
-              <UploadRow>
+              <UploadRow onDrop={handleDropEditLogo} onDragOver={handleDragOverEditLogo}>
                 <LogoPreview $imageUrl={editTeamForm.logo}>
                   {!editTeamForm.logo ? (editTeamForm.tag || '?').slice(0, 2).toUpperCase() : null}
                 </LogoPreview>
-                <label htmlFor="team-edit-logo-input">
-                  <ActionButton $variant="secondary" disabled={isUploadingLogo}>
-                    {isUploadingLogo ? 'Uploading...' : 'Upload Logo'}
-                  </ActionButton>
-                  <HiddenFileInput
-                    id="team-edit-logo-input"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleEditLogoUpload}
-                    disabled={isUploadingLogo}
-                  />
-                </label>
+                <ActionButton $variant="secondary" disabled={isUploadingLogo} onClick={openEditLogoPicker}>
+                  {isUploadingLogo ? 'Uploading...' : 'Upload Logo'}
+                </ActionButton>
+                <HiddenFileInput
+                  ref={editLogoInputRef}
+                  id="team-edit-logo-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleEditLogoUpload}
+                  disabled={isUploadingLogo}
+                />
+                <div style={{ color: '#c9c9c9', fontSize: '0.8rem' }}>or drag & drop image here</div>
               </UploadRow>
             </ModalField>
 
