@@ -3,6 +3,8 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface ITournament extends Document<mongoose.Types.ObjectId> {
   name: string;
   game: string;
+  image?: string;
+  coverImage?: string;
   startDate: Date;
   endDate: Date;
   prizePool: number;
@@ -45,6 +47,14 @@ const tournamentSchema = new Schema<ITournament>({
   game: {
     type: String,
     required: true,
+    trim: true
+  },
+  image: {
+    type: String,
+    trim: true
+  },
+  coverImage: {
+    type: String,
     trim: true
   },
   startDate: { type: Date, required: true },

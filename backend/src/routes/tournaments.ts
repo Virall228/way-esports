@@ -53,6 +53,23 @@ const normalizeMatchGame = (game: string | undefined): 'Critical Ops' | 'CS2' | 
   return 'CS2';
 };
 
+const normalizeTournamentImageUrl = (input: unknown): string => {
+  if (typeof input !== 'string') return '';
+  const trimmed = input.trim();
+  if (!trimmed) return '';
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  const normalized = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  if (normalized.startsWith('/api/uploads/') || normalized.startsWith('/uploads/')) {
+    return normalized;
+  }
+
+  throw new Error('Tournament image must be an uploaded image URL');
+};
+
 const generateBracketMatches = async (tournament: any) => {
   if (!tournament || tournament.type !== 'team') return [];
   if (Array.isArray(tournament.matches) && tournament.matches.length > 0) return tournament.matches;
@@ -359,6 +376,8 @@ router.get('/', async (req, res) => {
       name: t.name,
       title: t.name,
       game: t.game,
+      image: t.image || t.coverImage || '',
+      coverImage: t.coverImage || t.image || '',
       status: t.status,
       startDate: t.startDate,
       date: t.startDate ? new Date(t.startDate).toLocaleDateString() : 'TBD',
@@ -403,6 +422,8 @@ router.get('/:id', async (req, res) => {
       name: tournament.name,
       title: tournament.name,
       game: tournament.game,
+      image: tournament.image || tournament.coverImage || '',
+      coverImage: tournament.coverImage || tournament.image || '',
       status: tournament.status === 'ongoing' ? 'in_progress' : tournament.status,
       startDate: tournament.startDate?.toISOString() || new Date().toISOString(),
       endDate: tournament.endDate?.toISOString() || new Date().toISOString(),
@@ -470,6 +491,15 @@ router.post('/',
   validateRequest,
   async (req: any, res: any) => {
     try {
+      let normalizedImage: string | undefined;
+      if (typeof req.body.image !== 'undefined') {
+        try {
+          normalizedImage = normalizeTournamentImageUrl(req.body.image);
+        } catch (error: any) {
+          return res.status(400).json({ success: false, error: error?.message || 'Invalid tournament image' });
+        }
+      }
+
       // Parse and validate dates
       const startDate = req.body.startDate ? new Date(req.body.startDate) : new Date();
       const endDate = req.body.endDate ? new Date(req.body.endDate) : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
@@ -495,6 +525,10 @@ router.post('/',
         status: req.body.status || 'upcoming',
         format: req.body.format || 'single_elimination',
         type: req.body.type || 'team',
+        ...(typeof normalizedImage !== 'undefined' ? {
+          image: normalizedImage,
+          coverImage: normalizedImage
+        } : {}),
         description: req.body.description || 'TBD',
         rules: req.body.rules || 'TBD',
         isRegistrationOpen: req.body.isRegistrationOpen ?? true,
@@ -520,6 +554,8 @@ router.post('/',
         name: tournament.name,
         title: tournament.name,
         game: tournament.game,
+        image: tournament.image || tournament.coverImage || '',
+        coverImage: tournament.coverImage || tournament.image || '',
         status: tournament.status === 'ongoing' ? 'in_progress' : tournament.status,
         startDate: tournament.startDate?.toISOString() || new Date().toISOString(),
         endDate: tournament.endDate?.toISOString() || new Date().toISOString(),
@@ -685,6 +721,7 @@ router.put('/:id',
         skillLevel,
         format,
         type,
+        image,
         description,
         rules
       } = req.body;
@@ -701,6 +738,10 @@ router.put('/:id',
       if (skillLevel) tournament.skillLevel = skillLevel;
       if (format) tournament.format = format;
       if (type) tournament.type = type;
+      if (typeof image !== 'undefined') {
+        tournament.image = normalizeTournamentImageUrl(image);
+        tournament.coverImage = tournament.image;
+      }
       if (description !== undefined) tournament.description = description;
       if (rules !== undefined) tournament.rules = rules;
 
@@ -716,6 +757,8 @@ router.put('/:id',
         name: populatedTournament.name,
         title: populatedTournament.name,
         game: populatedTournament.game,
+        image: populatedTournament.image || populatedTournament.coverImage || '',
+        coverImage: populatedTournament.coverImage || populatedTournament.image || '',
         status: populatedTournament.status === 'ongoing' ? 'in_progress' : populatedTournament.status,
         startDate: populatedTournament.startDate?.toISOString() || new Date().toISOString(),
         endDate: populatedTournament.endDate?.toISOString() || new Date().toISOString(),
@@ -746,8 +789,14 @@ router.put('/:id',
         success: true,
         data: transformed
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating tournament:', error);
+      if (error?.message === 'Tournament image must be an uploaded image URL') {
+        return res.status(400).json({
+          success: false,
+          error: error.message
+        });
+      }
       res.status(500).json({
         success: false,
         error: 'Failed to update tournament'

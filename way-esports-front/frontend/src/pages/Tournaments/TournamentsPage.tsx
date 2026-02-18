@@ -8,6 +8,7 @@ import { tournamentService } from '../../services/tournamentService';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { resolveMediaUrl } from '../../utils/media';
 
 const Container = styled.div`
   padding: 1rem;
@@ -213,6 +214,7 @@ const EmptyState = styled.div`
 interface Tournament {
   id: string;
   title: string;
+  image?: string;
   game: string;
   status: 'live' | 'upcoming' | 'completed' | 'comingSoon';
   prizePool: string;
@@ -261,6 +263,7 @@ const TournamentsPage: React.FC = () => {
       return {
         id: (t.id || t._id || '').toString(),
         title: t.title || t.name || '',
+        image: resolveMediaUrl(t.image || t.coverImage || ''),
         game: t.game || 'Unknown',
         status,
         prizePool: prize ? `$${prize.toLocaleString()}` : 'TBD',
@@ -289,6 +292,10 @@ const TournamentsPage: React.FC = () => {
       valorantmobile: '/images/main.png'
     };
     return map[normalized] || '/images/main.png';
+  };
+
+  const getTournamentCardImage = (tournament: Tournament) => {
+    return tournament.image || getGameIcon(tournament.game);
   };
 
   const getStatusLabel = (status: Tournament['status']) => {
@@ -357,7 +364,7 @@ const TournamentsPage: React.FC = () => {
         <TournamentsGrid>
           {filteredTournaments.map((tournament) => (
             <TournamentCard key={tournament.id} $status={tournament.status} onClick={() => handleTournamentClick(tournament)}>
-              <GameIcon src={getGameIcon(tournament.game)} alt={tournament.game} />
+              <GameIcon src={getTournamentCardImage(tournament)} alt={tournament.title || tournament.game} />
               <StatusBadge $status={tournament.status}>{getStatusLabel(tournament.status)}</StatusBadge>
               <TournamentTitle>{tournament.title}</TournamentTitle>
 

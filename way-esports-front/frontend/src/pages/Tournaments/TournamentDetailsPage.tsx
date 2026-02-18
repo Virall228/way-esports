@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { tournamentService } from '../../services/tournamentService';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
-import { resolveTeamLogoUrl } from '../../utils/media';
+import { resolveMediaUrl, resolveTeamLogoUrl } from '../../utils/media';
 
 type MatchItem = {
   id?: string;
@@ -229,6 +229,7 @@ const TournamentDetailsPage: React.FC = () => {
   const error = (tournamentError as Error | null)?.message || (matchesError as Error | null)?.message || null;
 
   const title = tournament?.title || tournament?.name || 'Tournament';
+  const tournamentBanner = resolveMediaUrl(tournament?.image || tournament?.coverImage || '');
 
   const filteredMatches = useMemo(() => {
     const list = Array.isArray(matches) ? matches : [];
@@ -273,7 +274,7 @@ const TournamentDetailsPage: React.FC = () => {
 
   return (
     <Container>
-      <Banner $src={tournament?.image || tournament?.coverImage}>
+      <Banner $src={tournamentBanner || '/images/main.png'}>
         <div>
           <Title style={{ color: '#fff', marginBottom: '0.25rem' }}>{title}</Title>
           <Subtitle>

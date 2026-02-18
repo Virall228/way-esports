@@ -835,6 +835,7 @@ const AdminPage: React.FC = () => {
       id: (t.id || t._id || '').toString(),
       name: t.name || t.title || '',
       game: t.game || '',
+      image: t.image || t.coverImage || '',
       status: t.status || 'upcoming',
       participants: Number(t.participants ?? t.currentParticipants ?? 0),
       prizePool: Number(t.prizePool ?? 0)
@@ -1182,6 +1183,7 @@ const AdminPage: React.FC = () => {
       return {
         name: item?.name || '',
         game: item?.game || 'CS2',
+        image: item?.image || item?.coverImage || '',
         prizePool: item?.prizePool ?? 0,
         maxTeams: item?.maxTeams ?? item?.maxParticipants ?? 16,
         status: item?.status || 'upcoming',
@@ -1536,6 +1538,7 @@ const AdminPage: React.FC = () => {
         const payload: any = {
           name: modalData.name,
           game: modalData.game,
+          image: modalData.image || '',
           prizePool: Number(modalData.prizePool || 0),
           maxTeams: Number(modalData.maxTeams || 0),
           status: statusMap[modalData.status] || modalData.status || 'upcoming',
