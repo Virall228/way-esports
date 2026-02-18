@@ -22,5 +22,6 @@ export const teamsService = {
   create: async (payload: CreateTeamPayload) => api.post('/api/teams/create', payload),
   join: async (payload: JoinTeamPayload) => api.post('/api/teams/join', payload),
   update: async (id: string, payload: Partial<CreateTeamPayload>) => api.put(`/api/teams/${id}`, payload),
-  updateLogo: async (id: string, logoUrl: string) => api.post(`/api/teams/${id}/logo`, { logoUrl })
+  updateLogo: async (id: string, logoUrl: string) => api.post(`/api/teams/${id}/logo`, { logoUrl }),
+  remove: async (id: string) => api.delete(`/api/teams/${id}`)
 };

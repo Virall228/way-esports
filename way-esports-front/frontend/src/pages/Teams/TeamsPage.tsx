@@ -8,6 +8,8 @@ import { tournamentService } from '../../services/tournamentService';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { api } from '../../services/api';
 import { resolveTeamLogoUrl } from '../../utils/media';
 
 const Container = styled.div`
@@ -273,6 +275,101 @@ const ActionButton = styled(Button).attrs<{ $variant: 'brand' | 'secondary' | 'd
   min-height: 44px;
 `;
 
+const ModalOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 16px;
+`;
+
+const ModalCard = styled(Card).attrs({ variant: 'elevated' })`
+  width: min(640px, 100%);
+  background: ${({ theme }) => theme.colors.bg.secondary};
+  border-radius: 16px;
+  padding: 1rem;
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    padding: 1.25rem;
+  }
+`;
+
+const ModalTitle = styled.h3`
+  margin: 0 0 1rem 0;
+  color: #fff;
+`;
+
+const ModalField = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+`;
+
+const ModalLabel = styled.label`
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 0.85rem;
+`;
+
+const ModalInput = styled.input`
+  min-height: 42px;
+  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
+  background: ${({ theme }) => theme.colors.bg.primary};
+  color: #fff;
+  padding: 0 12px;
+`;
+
+const ModalTextarea = styled.textarea`
+  min-height: 96px;
+  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
+  background: ${({ theme }) => theme.colors.bg.primary};
+  color: #fff;
+  padding: 10px 12px;
+  resize: vertical;
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-top: 12px;
+`;
+
+const UploadRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+`;
+
+const LogoPreview = styled.div<{ $imageUrl?: string }>`
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: ${({ $imageUrl, theme }) => (
+    $imageUrl
+      ? `url(${$imageUrl}) center/cover no-repeat`
+      : `linear-gradient(135deg, ${theme.colors.gray[700]}, ${theme.colors.gray[900]})`
+  )};
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.8rem;
+`;
+
+const HiddenFileInput = styled.input`
+  display: none;
+`;
+
 interface Team {
   id: string;
   name: string;
@@ -281,6 +378,9 @@ interface Team {
   game: string;
   tournamentId?: string | null;
   description: string;
+  captainId?: string;
+  isPrivate?: boolean;
+  requiresApproval?: boolean;
   members: Array<{ name: string; role: 'captain' | 'player' }>;
   tournaments: number;
   wins: number;
@@ -288,11 +388,26 @@ interface Team {
   isOwner?: boolean;
 }
 
+type EditTeamFormState = {
+  id: string;
+  name: string;
+  tag: string;
+  game: string;
+  description: string;
+  logo: string;
+  isPrivate: boolean;
+  requiresApproval: boolean;
+};
+
 const TeamsPage: React.FC = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [activeFilter, setActiveFilter] = useState('teams');
   const [selectedGame, setSelectedGame] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editTeamForm, setEditTeamForm] = useState<EditTeamFormState | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   const [actionError, setActionError] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -343,14 +458,23 @@ const TeamsPage: React.FC = () => {
         game: t.game || '',
         tournamentId: t.tournamentId || null,
         description: t.description || '',
+        captainId,
+        isPrivate: Boolean(t.isPrivate),
+        requiresApproval: Boolean(t.requiresApproval),
         members,
         tournaments: Number(t.tournaments) || 0,
         wins: Number(t.stats?.wins) || Number(t.wins) || 0,
         winRate: Number(t.stats?.winRate) || Number(t.winRate) || 0,
-        isOwner: false
+        isOwner: Boolean(
+          user?.id && (
+            user.id === captainId ||
+            user.role === 'admin' ||
+            user.role === 'developer'
+          )
+        )
       } as Team;
     });
-  }, [teamsRaw]);
+  }, [teamsRaw, user?.id, user?.role]);
 
   const tournaments = useMemo(() => {
     const items: any[] = Array.isArray(tournamentsRaw) ? tournamentsRaw : [];
@@ -366,7 +490,11 @@ const TeamsPage: React.FC = () => {
   const createTeamMutation = useMutation({
     mutationFn: (payload: any) => teamsService.create(payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['teams'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['teams'] }),
+        queryClient.invalidateQueries({ queryKey: ['rankings'] }),
+        queryClient.invalidateQueries({ queryKey: ['tournaments'] })
+      ]);
     },
     onError: (e: any) => {
       setActionError(e?.message || 'Failed to create team');
@@ -376,10 +504,43 @@ const TeamsPage: React.FC = () => {
   const joinTeamMutation = useMutation({
     mutationFn: (payload: any) => teamsService.join(payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['teams'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['teams'] }),
+        queryClient.invalidateQueries({ queryKey: ['rankings'] }),
+        queryClient.invalidateQueries({ queryKey: ['tournaments'] })
+      ]);
     },
     onError: (e: any) => {
       setActionError(e?.message || 'Failed to join team');
+    }
+  });
+
+  const updateTeamMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: any }) => teamsService.update(id, payload),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['teams'] }),
+        queryClient.invalidateQueries({ queryKey: ['team'] }),
+        queryClient.invalidateQueries({ queryKey: ['rankings'] }),
+        queryClient.invalidateQueries({ queryKey: ['tournaments'] })
+      ]);
+    },
+    onError: (e: any) => {
+      setActionError(e?.message || 'Failed to update team');
+    }
+  });
+
+  const deleteTeamMutation = useMutation({
+    mutationFn: (id: string) => teamsService.remove(id),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['teams'] }),
+        queryClient.invalidateQueries({ queryKey: ['rankings'] }),
+        queryClient.invalidateQueries({ queryKey: ['tournaments'] })
+      ]);
+    },
+    onError: (e: any) => {
+      setActionError(e?.message || 'Failed to delete team');
     }
   });
 
@@ -424,13 +585,83 @@ const TeamsPage: React.FC = () => {
   };
 
   const handleEditTeam = (teamId: string) => {
-    console.log('Editing team:', teamId);
-    // Handle edit team logic
+    const team = teams.find((item) => item.id === teamId);
+    if (!team) {
+      setActionError('Team not found');
+      return;
+    }
+    setEditTeamForm({
+      id: team.id,
+      name: team.name,
+      tag: team.tag,
+      game: team.game,
+      description: team.description || '',
+      logo: team.logo || '',
+      isPrivate: Boolean(team.isPrivate),
+      requiresApproval: Boolean(team.requiresApproval)
+    });
+    setIsEditModalOpen(true);
   };
 
-  const handleDeleteTeam = (teamId: string) => {
-    console.log('Deleting team:', teamId);
-    // Handle delete team logic
+  const handleDeleteTeam = async (teamId: string) => {
+    const confirmed = window.confirm('Delete this team? This action cannot be undone.');
+    if (!confirmed) return;
+    setActionError(null);
+    await deleteTeamMutation.mutateAsync(teamId);
+  };
+
+  const handleEditField = (field: keyof EditTeamFormState, value: string | boolean) => {
+    setEditTeamForm((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        [field]: value
+      };
+    });
+  };
+
+  const handleEditLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setActionError(null);
+      setIsUploadingLogo(true);
+      const uploaded = await api.uploadImage(file);
+      handleEditField('logo', resolveTeamLogoUrl(uploaded.url));
+    } catch (uploadError: any) {
+      setActionError(uploadError?.message || 'Failed to upload team logo');
+    } finally {
+      setIsUploadingLogo(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleSaveTeamEdit = async () => {
+    if (!editTeamForm) return;
+    const safeName = editTeamForm.name.trim();
+    const safeTag = editTeamForm.tag.trim();
+    const safeDescription = editTeamForm.description.trim();
+    if (!safeName || !safeTag || !editTeamForm.game.trim()) {
+      setActionError('Name, tag and game are required');
+      return;
+    }
+
+    setActionError(null);
+    await updateTeamMutation.mutateAsync({
+      id: editTeamForm.id,
+      payload: {
+        name: safeName,
+        tag: safeTag,
+        game: editTeamForm.game.trim(),
+        description: safeDescription,
+        logo: editTeamForm.logo,
+        isPrivate: Boolean(editTeamForm.isPrivate),
+        requiresApproval: Boolean(editTeamForm.requiresApproval)
+      }
+    });
+    setIsEditModalOpen(false);
+    setEditTeamForm(null);
   };
 
   return (
@@ -550,8 +781,12 @@ const TeamsPage: React.FC = () => {
                           <ActionButton $variant="brand" onClick={() => handleViewDetails(team.id)}>
                             {t('viewDetails')}
                           </ActionButton>
-                          <ActionButton $variant="danger" onClick={() => handleDeleteTeam(team.id)}>
-                            {t('delete')}
+                          <ActionButton
+                            $variant="danger"
+                            onClick={() => handleDeleteTeam(team.id)}
+                            disabled={deleteTeamMutation.isPending}
+                          >
+                            {deleteTeamMutation.isPending ? 'Deleting...' : t('delete')}
                           </ActionButton>
                         </>
                       ) : (
@@ -559,8 +794,12 @@ const TeamsPage: React.FC = () => {
                           <ActionButton $variant="secondary" onClick={() => handleViewDetails(team.id)}>
                             {t('viewDetails')}
                           </ActionButton>
-                          <ActionButton $variant="brand" onClick={() => handleJoinTeam(team)}>
-                            {t('joinTeam')}
+                          <ActionButton
+                            $variant="brand"
+                            onClick={() => handleJoinTeam(team)}
+                            disabled={joinTeamMutation.isPending || !team.tournamentId}
+                          >
+                            {joinTeamMutation.isPending ? 'Joining...' : t('joinTeam')}
                           </ActionButton>
                         </>
                       )}
@@ -574,6 +813,113 @@ const TeamsPage: React.FC = () => {
 
       {activeFilter === 'rankings' && (
         <RankingsPage />
+      )}
+
+      {isEditModalOpen && editTeamForm && (
+        <ModalOverlay onClick={() => { setIsEditModalOpen(false); }}>
+          <div onClick={(e) => e.stopPropagation()}>
+            <ModalCard>
+            <ModalTitle>Manage Team</ModalTitle>
+
+            <ModalField>
+              <ModalLabel>Team Logo</ModalLabel>
+              <UploadRow>
+                <LogoPreview $imageUrl={editTeamForm.logo}>
+                  {!editTeamForm.logo ? (editTeamForm.tag || '?').slice(0, 2).toUpperCase() : null}
+                </LogoPreview>
+                <label htmlFor="team-edit-logo-input">
+                  <ActionButton $variant="secondary" disabled={isUploadingLogo}>
+                    {isUploadingLogo ? 'Uploading...' : 'Upload Logo'}
+                  </ActionButton>
+                  <HiddenFileInput
+                    id="team-edit-logo-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleEditLogoUpload}
+                    disabled={isUploadingLogo}
+                  />
+                </label>
+              </UploadRow>
+            </ModalField>
+
+            <ModalField>
+              <ModalLabel>Team Name</ModalLabel>
+              <ModalInput
+                value={editTeamForm.name}
+                onChange={(e) => handleEditField('name', e.target.value)}
+                maxLength={50}
+              />
+            </ModalField>
+
+            <ModalField>
+              <ModalLabel>Tag</ModalLabel>
+              <ModalInput
+                value={editTeamForm.tag}
+                onChange={(e) => handleEditField('tag', e.target.value.toUpperCase())}
+                maxLength={5}
+              />
+            </ModalField>
+
+            <ModalField>
+              <ModalLabel>Game</ModalLabel>
+              <ModalInput
+                value={editTeamForm.game}
+                onChange={(e) => handleEditField('game', e.target.value)}
+              />
+            </ModalField>
+
+            <ModalField>
+              <ModalLabel>Description</ModalLabel>
+              <ModalTextarea
+                value={editTeamForm.description}
+                onChange={(e) => handleEditField('description', e.target.value)}
+                maxLength={500}
+              />
+            </ModalField>
+
+            <ModalField>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#fff' }}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(editTeamForm.isPrivate)}
+                  onChange={(e) => handleEditField('isPrivate', e.target.checked)}
+                />
+                Private team (invite only)
+              </label>
+            </ModalField>
+
+            <ModalField>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#fff' }}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(editTeamForm.requiresApproval)}
+                  onChange={(e) => handleEditField('requiresApproval', e.target.checked)}
+                />
+                Require approval for joining
+              </label>
+            </ModalField>
+
+            <ModalActions>
+              <ActionButton
+                $variant="secondary"
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditTeamForm(null);
+                }}
+              >
+                Cancel
+              </ActionButton>
+              <ActionButton
+                $variant="brand"
+                onClick={handleSaveTeamEdit}
+                disabled={updateTeamMutation.isPending}
+              >
+                {updateTeamMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </ActionButton>
+            </ModalActions>
+            </ModalCard>
+          </div>
+        </ModalOverlay>
       )}
 
       <CreateTeamModal

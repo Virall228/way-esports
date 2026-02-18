@@ -715,7 +715,7 @@ router.put('/:id',
       const updatedTeam: any = await Team.findByIdAndUpdate(
         req.params.id,
         updatePayload,
-        { new: true }
+        { new: true, runValidators: true }
       ).populate('captain', 'username firstName lastName')
         .populate('members', 'username firstName lastName')
         .lean();
@@ -758,8 +758,20 @@ router.put('/:id',
         success: true,
         data: transformed
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating team:', error);
+      if (error?.code === 11000) {
+        return res.status(409).json({
+          success: false,
+          error: 'Team name or tag already exists'
+        });
+      }
+      if (error?.name === 'ValidationError') {
+        return res.status(400).json({
+          success: false,
+          error: error.message || 'Validation failed'
+        });
+      }
       res.status(500).json({
         success: false,
         error: 'Failed to update team'
