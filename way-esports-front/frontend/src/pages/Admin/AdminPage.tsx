@@ -776,6 +776,17 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const formatDateTime = (value: any) => {
+    try {
+      if (!value) return '-';
+      const d = new Date(value);
+      if (isNaN(d.getTime())) return '-';
+      return d.toLocaleString();
+    } catch {
+      return '-';
+    }
+  };
+
   const resolveMediaUrl = (value?: string | null) => {
     if (!value) return '';
     if (value.startsWith('http')) return value;
@@ -916,7 +927,9 @@ const AdminPage: React.FC = () => {
       maxTeams: Number(t.maxTeams ?? t.maxParticipants ?? 0),
       participants: Number(t.participants ?? t.currentParticipants ?? 0),
       pendingRequestsCount: Number(t.pendingRequestsCount || 0),
-      prizePool: Number(t.prizePool ?? 0)
+      prizePool: Number(t.prizePool ?? 0),
+      startDate: t.startDate || null,
+      endDate: t.endDate || null
     }));
   };
 
@@ -2486,6 +2499,7 @@ const AdminPage: React.FC = () => {
                 <Th>Name</Th>
                 <Th>Game</Th>
                 <Th>Status</Th>
+                <Th>Dates</Th>
                 <Th>Participants</Th>
                 <Th>Pending</Th>
                 <Th>Prize Pool</Th>
@@ -2498,6 +2512,12 @@ const AdminPage: React.FC = () => {
                   <Td>{tournament.name}</Td>
                   <Td>{tournament.game}</Td>
                   <Td>{tournament.status}</Td>
+                  <Td>
+                    <div style={{ display: 'grid', gap: '4px' }}>
+                      <span>Start: {formatDateTime(tournament.startDate)}</span>
+                      <span>End: {formatDateTime(tournament.endDate)}</span>
+                    </div>
+                  </Td>
                   <Td>{tournament.participants}/{tournament.maxTeams || '—'}</Td>
                   <Td>{tournament.pendingRequestsCount || 0}</Td>
                   <Td>${tournament.prizePool}</Td>
@@ -2530,6 +2550,11 @@ const AdminPage: React.FC = () => {
               <h4 style={{ margin: 0 }}>
                 Tournament Control: {selectedTournament?.name || selectedTournamentId}
               </h4>
+              {selectedTournament && (
+                <div style={{ color: '#cccccc', fontSize: '13px' }}>
+                  Start: {formatDateTime((selectedTournament as any).startDate)} | End: {formatDateTime((selectedTournament as any).endDate)}
+                </div>
+              )}
               <ActionsCell>
                 <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests', selectedTournamentId] })}>
                   Refresh Requests
