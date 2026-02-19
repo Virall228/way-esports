@@ -5,6 +5,15 @@ export interface ITournament extends Document<mongoose.Types.ObjectId> {
   game: string;
   image?: string;
   coverImage?: string;
+  registrationRequests?: {
+    team: mongoose.Types.ObjectId;
+    requestedBy: mongoose.Types.ObjectId;
+    status: 'pending' | 'approved' | 'rejected';
+    requestedAt: Date;
+    reviewedAt?: Date;
+    reviewedBy?: mongoose.Types.ObjectId;
+    note?: string;
+  }[];
   startDate: Date;
   endDate: Date;
   prizePool: number;
@@ -72,6 +81,39 @@ const tournamentSchema = new Schema<ITournament>({
   registeredPlayers: [{
     type: Schema.Types.ObjectId,
     ref: 'User'
+  }],
+  registrationRequests: [{
+    team: {
+      type: Schema.Types.ObjectId,
+      ref: 'Team',
+      required: true
+    },
+    requestedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending'
+    },
+    requestedAt: {
+      type: Date,
+      default: Date.now
+    },
+    reviewedAt: {
+      type: Date
+    },
+    reviewedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    note: {
+      type: String,
+      trim: true,
+      maxlength: 300
+    }
   }],
   status: {
     type: String,
@@ -239,5 +281,6 @@ async function distributePrizeToPlayer(
 // Indexes
 tournamentSchema.index({ game: 1, status: 1 });
 tournamentSchema.index({ startDate: 1 });
+tournamentSchema.index({ 'registrationRequests.team': 1, 'registrationRequests.status': 1 });
 
 export default mongoose.model<ITournament>('Tournament', tournamentSchema);

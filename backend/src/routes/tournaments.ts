@@ -131,27 +131,52 @@ const consumeTournamentEntry = async (user: any): Promise<boolean> => {
   }
 };
 
+const buildTeamParticipantRows = (team: any): Array<{ userId: string; role: 'owner' | 'member' }> => {
+  const rows = new Map<string, 'owner' | 'member'>();
+  const captainId = team?.captain?.toString?.();
+  if (captainId) {
+    rows.set(captainId, 'owner');
+  }
+
+  const addMember = (value: any) => {
+    const userId = value?.toString?.();
+    if (!userId) return;
+    if (!rows.has(userId)) {
+      rows.set(userId, 'member');
+    }
+  };
+
+  if (Array.isArray(team?.members)) {
+    team.members.forEach(addMember);
+  }
+  if (Array.isArray(team?.players)) {
+    team.players.forEach(addMember);
+  }
+
+  return Array.from(rows.entries()).map(([userId, role]) => ({ userId, role }));
+};
+
 const handleTournamentRegistration = async (req: any, res: any) => {
   try {
-    const user = req.tournamentUser || req.user; // fallback
+    const user = req.tournamentUser || req.user;
     const { teamId } = req.body;
     const userId = user?._id?.toString?.() || user?.id;
-    let teamForRegistration: any = null;
-
-    // 1. Prepare atomic update query
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
     const tournamentId = req.params.id;
+    let teamForRegistration: any = null;
+    const isAdminRole = (req.user as any)?.role === 'admin' || (req.user as any)?.role === 'developer';
 
-    // Check if duplicate registration first (read-only check is fine for user experience, meaningful check is in update)
     const existing: any = await Tournament.findById(tournamentId).lean();
     if (!existing) return res.status(404).json({ success: false, error: 'Tournament not found' });
 
-    // Validation logic (can be moved to middleware but kept here for clarity in atomic transition)
     if (existing.status !== 'upcoming' && existing.status !== 'open') {
       return res.status(400).json({ success: false, error: 'Tournament registration is closed' });
     }
 
     if (teamId) {
-      const team: any = await Team.findById(teamId).select('captain members tournamentId').lean();
+      const team: any = await Team.findById(teamId).select('captain members players tournamentId').lean();
       if (!team) {
         return res.status(404).json({ success: false, error: 'Team not found' });
       }
@@ -166,10 +191,10 @@ const handleTournamentRegistration = async (req: any, res: any) => {
         return res.status(400).json({ success: false, error: 'Team is linked to a different tournament' });
       }
 
-      const isAdminRole = (req.user as any)?.role === 'admin' || (req.user as any)?.role === 'developer';
       const isMember = !!userId && (
         team.captain?.toString?.() === userId ||
-        (Array.isArray(team.members) && team.members.some((m: any) => m.toString?.() === userId))
+        (Array.isArray(team.members) && team.members.some((m: any) => m.toString?.() === userId)) ||
+        (Array.isArray(team.players) && team.players.some((p: any) => p.toString?.() === userId))
       );
 
       if (!isAdminRole && !isMember) {
@@ -180,64 +205,142 @@ const handleTournamentRegistration = async (req: any, res: any) => {
         const existingRegistration: any = await TournamentRegistration.findOne({
           userId,
           tournamentId,
-          status: 'active'
+          status: { $in: ['active', 'pending'] }
         }).select('teamId').lean();
 
         if (existingRegistration?.teamId && existingRegistration.teamId.toString() !== teamId) {
           return res.status(409).json({ success: false, error: 'You are already participating in this tournament' });
         }
       }
+
+      const isAlreadyRegistered = Array.isArray(existing.registeredTeams) &&
+        existing.registeredTeams.some((value: any) => value.toString() === teamId);
+      if (isAlreadyRegistered) {
+        return res.status(400).json({ success: false, error: 'Your team is already registered for this tournament' });
+      }
+
+      const hasPendingRequest = Array.isArray(existing.registrationRequests) && existing.registrationRequests.some((entry: any) => (
+        entry?.status === 'pending' && entry?.team?.toString?.() === teamId
+      ));
+      if (hasPendingRequest) {
+        return res.status(409).json({ success: false, error: 'Team request already pending admin approval' });
+      }
+    }
+
+    const needsAdminApproval = Boolean(teamId && existing.type === 'team' && !isAdminRole);
+    if (needsAdminApproval) {
+      const teamLimit = Number(existing.maxTeams || 0);
+      const approvedCount = Array.isArray(existing.registeredTeams) ? existing.registeredTeams.length : 0;
+      if (teamLimit > 0 && approvedCount >= teamLimit) {
+        return res.status(400).json({ success: false, error: 'Tournament is full' });
+      }
+
+      const pendingRequestPayload = {
+        team: new mongoose.Types.ObjectId(teamId),
+        requestedBy: new mongoose.Types.ObjectId(userId),
+        status: 'pending' as const,
+        requestedAt: new Date()
+      };
+
+      const pendingTournament: any = await Tournament.findOneAndUpdate(
+        {
+          _id: tournamentId,
+          registeredTeams: { $ne: teamId },
+          registrationRequests: {
+            $not: {
+              $elemMatch: {
+                team: new mongoose.Types.ObjectId(teamId),
+                status: 'pending'
+              }
+            }
+          }
+        },
+        {
+          $push: {
+            registrationRequests: pendingRequestPayload
+          }
+        },
+        { new: true }
+      ).lean();
+
+      if (!pendingTournament) {
+        return res.status(409).json({
+          success: false,
+          error: 'Team request already pending admin approval'
+        });
+      }
+
+      if (userId) {
+        const role = teamForRegistration?.captain?.toString?.() === userId ? 'owner' : 'member';
+        await TournamentRegistration.findOneAndUpdate(
+          { userId, tournamentId },
+          {
+            $set: {
+              teamId,
+              role,
+              status: 'pending'
+            }
+          },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+      }
+
+      await cacheService.invalidateTournamentCaches();
+
+      return res.json({
+        success: true,
+        pendingApproval: true,
+        message: 'Team registration request submitted. Waiting for admin approval.',
+        data: {
+          tournamentId,
+          teamId,
+          status: 'pending'
+        }
+      });
     }
 
     const conditions: any = {
       _id: tournamentId,
-      registeredPlayers: { $ne: user._id } // Prevent duplicate player registration
+      registeredPlayers: { $ne: user._id }
     };
 
     const update: any = {
       $addToSet: { registeredPlayers: user._id }
     };
 
-    // If team registration, also register team
     if (teamId && existing.type === 'team') {
-      // Add condition for team slot availability
-      conditions['$expr'] = { $lt: [{ $size: "$registeredTeams" }, "$maxTeams"] }; // Concurrency Guard for teams
-      conditions['registeredTeams'] = { $ne: teamId }; // Prevent duplicate team
+      conditions['$expr'] = { $lt: [{ $size: '$registeredTeams' }, '$maxTeams'] };
+      conditions['registeredTeams'] = { $ne: teamId };
       update['$addToSet']['registeredTeams'] = teamId;
     } else if (existing.type === 'solo') {
-      // For solo tournaments, maxParticipants should be used. If not defined, fallback to maxTeams.
       conditions['$expr'] = {
         $lt: [
-          { $size: "$registeredPlayers" },
-          { $ifNull: ["$maxParticipants", "$maxTeams"] }
+          { $size: '$registeredPlayers' },
+          { $ifNull: ['$maxParticipants', '$maxTeams'] }
         ]
       };
     } else {
-      // Default or mixed type, use maxTeams as a general capacity limit if maxParticipants is not explicitly for solo
-      conditions['$expr'] = { $lt: [{ $size: "$registeredTeams" }, "$maxTeams"] };
+      conditions['$expr'] = { $lt: [{ $size: '$registeredTeams' }, '$maxTeams'] };
     }
 
-    // Atomic Update
     const updatedTournament: any = await Tournament.findOneAndUpdate(
       conditions,
       update,
       { new: true }
-    )
-      .populate('registeredTeams', 'name tag logo members')
-      .populate('registeredPlayers', 'username firstName lastName');
+    ).lean();
 
     if (!updatedTournament) {
-      // If update failed, it means either ID wrong OR condition failed (Full or Duplicate)
-      // We re-fetch to see why
-      const current = await Tournament.findById(tournamentId);
+      const current = await Tournament.findById(tournamentId).lean();
       if (!current) return res.status(404).json({ success: false, error: 'Tournament not found' });
 
-      const isPlayerRegistered = current.registeredPlayers?.includes(user._id);
+      const isPlayerRegistered = Array.isArray(current.registeredPlayers) &&
+        current.registeredPlayers.some((value: any) => value.toString() === user._id?.toString?.());
       if (isPlayerRegistered) {
         return res.status(400).json({ success: false, error: 'You are already registered for this tournament' });
       }
 
-      const isTeamRegistered = teamId && current.registeredTeams?.includes(teamId);
+      const isTeamRegistered = teamId && Array.isArray(current.registeredTeams) &&
+        current.registeredTeams.some((value: any) => value.toString() === teamId);
       if (isTeamRegistered) {
         return res.status(400).json({ success: false, error: 'Your team is already registered for this tournament' });
       }
@@ -258,76 +361,91 @@ const handleTournamentRegistration = async (req: any, res: any) => {
       return res.status(400).json({ success: false, error: 'Registration failed or already registered' });
     }
 
-    // Success response
+    if (teamId && teamForRegistration) {
+      const participantRows = buildTeamParticipantRows(teamForRegistration);
+      const participantIds = participantRows.map((row) => row.userId);
+
+      if (participantIds.length) {
+        await Tournament.findByIdAndUpdate(tournamentId, {
+          $addToSet: { registeredPlayers: { $each: participantIds } }
+        });
+
+        await Promise.all(
+          participantRows.map((row) => TournamentRegistration.findOneAndUpdate(
+            { userId: row.userId, tournamentId },
+            {
+              $set: {
+                teamId,
+                role: row.role,
+                status: 'active'
+              }
+            },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+          ))
+        );
+
+        await User.updateMany(
+          { _id: { $in: participantIds.map((value) => new mongoose.Types.ObjectId(value)) } },
+          { $addToSet: { participatingTournaments: tournamentId } }
+        );
+      }
+    } else if (userId) {
+      await User.findByIdAndUpdate(userId, {
+        $addToSet: { participatingTournaments: tournamentId }
+      });
+    }
+
+    const freshTournament: any = await Tournament.findById(tournamentId)
+      .populate('registeredTeams', 'name tag logo members')
+      .populate('registeredPlayers', 'username firstName lastName')
+      .lean();
+
     const transformed = {
-      id: String(updatedTournament._id),
-      name: updatedTournament.name,
-      title: updatedTournament.name,
-      game: updatedTournament.game,
-      status: updatedTournament.status === 'ongoing' ? 'in_progress' : updatedTournament.status,
-      startDate: updatedTournament.startDate?.toISOString(),
-      endDate: updatedTournament.endDate?.toISOString(),
-      prizePool: updatedTournament.prizePool || 0,
-      maxTeams: updatedTournament.maxTeams || 0,
-      maxParticipants: updatedTournament.maxParticipants ?? updatedTournament.maxTeams ?? 0,
-      registeredTeams: (updatedTournament.registeredTeams || []).map((team: any) => ({
+      id: String(freshTournament._id),
+      name: freshTournament.name,
+      title: freshTournament.name,
+      game: freshTournament.game,
+      status: freshTournament.status === 'ongoing' ? 'in_progress' : freshTournament.status,
+      startDate: freshTournament.startDate?.toISOString(),
+      endDate: freshTournament.endDate?.toISOString(),
+      prizePool: freshTournament.prizePool || 0,
+      maxTeams: freshTournament.maxTeams || 0,
+      maxParticipants: freshTournament.maxParticipants ?? freshTournament.maxTeams ?? 0,
+      registeredTeams: (freshTournament.registeredTeams || []).map((team: any) => ({
         id: team._id?.toString() || team.toString(),
         name: team.name || '',
         tag: team.tag || '',
         logo: team.logo || '',
         players: team.members?.map((m: any) => m.toString()) || []
       })),
-      registeredPlayers: (updatedTournament.registeredPlayers || []).map((player: any) => ({
+      registeredPlayers: (freshTournament.registeredPlayers || []).map((player: any) => ({
         id: player._id?.toString() || player.toString(),
         username: player.username || '',
         firstName: player.firstName || '',
         lastName: player.lastName || ''
       })),
-      participants: updatedTournament.registeredPlayers?.length || 0,
-      currentParticipants: updatedTournament.registeredPlayers?.length || 0
+      participants: freshTournament.registeredPlayers?.length || 0,
+      currentParticipants: freshTournament.registeredPlayers?.length || 0
     };
 
     const usedFreeEntry = await consumeTournamentEntry(user);
 
-    if (teamId && userId) {
-      const role = teamForRegistration?.captain?.toString?.() === userId ? 'owner' : 'member';
-      await TournamentRegistration.findOneAndUpdate(
-        { userId, tournamentId },
-        {
-          $set: {
-            teamId,
-            role,
-            status: 'active'
-          }
-        },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
-    }
-
-    if (userId) {
-      await User.findByIdAndUpdate(userId, {
-        $addToSet: { participatingTournaments: tournamentId }
-      });
-    }
-
     res.json({
       success: true,
-      message: usedFreeEntry ?
-        'Successfully registered using free entry' :
-        'Successfully registered for tournament',
+      message: usedFreeEntry
+        ? 'Successfully registered using free entry'
+        : 'Successfully registered for tournament',
       usedFreeEntry,
       data: transformed
     });
 
-    // Log tournament registration event
     logTournamentEvent('registration_completed', {
-      tournamentId: updatedTournament._id,
+      tournamentId: freshTournament._id,
       userId: user._id,
       usedFreeEntry,
-      currentParticipants: updatedTournament.registeredPlayers?.length || 0
+      currentParticipants: freshTournament.registeredPlayers?.length || 0
     });
 
-    // Invalidate tournament caches
     await cacheService.invalidateTournamentCaches();
     await cacheService.invalidateUserCaches(user._id.toString());
   } catch (error) {
@@ -379,12 +497,16 @@ router.get('/', async (req, res) => {
       image: t.image || t.coverImage || '',
       coverImage: t.coverImage || t.image || '',
       status: t.status,
+      type: t.type || 'team',
       startDate: t.startDate,
       date: t.startDate ? new Date(t.startDate).toLocaleDateString() : 'TBD',
       prizePool: Number(t.prizePool || 0),
       participants: Number(t.participants ?? t.currentParticipants ?? 0),
       maxParticipants: Number(t.maxParticipants ?? t.maxTeams ?? 0),
-      skillLevel: t.skillLevel || 'All Levels'
+      skillLevel: t.skillLevel || 'All Levels',
+      pendingRequestsCount: Array.isArray(t.registrationRequests)
+        ? t.registrationRequests.filter((entry: any) => entry?.status === 'pending').length
+        : 0
     }));
 
     res.json({
@@ -440,6 +562,9 @@ router.get('/:id', async (req, res) => {
       })),
       participants: tournament.registeredTeams?.length || 0,
       currentParticipants: tournament.registeredTeams?.length || 0,
+      pendingRequestsCount: Array.isArray(tournament.registrationRequests)
+        ? tournament.registrationRequests.filter((entry: any) => entry?.status === 'pending').length
+        : 0,
       format: tournament.format || 'single_elimination',
       type: tournament.type || 'team',
       description: tournament.description || '',
@@ -565,6 +690,7 @@ router.post('/',
         registeredTeams: [],
         participants: 0,
         currentParticipants: 0,
+        pendingRequestsCount: 0,
         format: tournament.format || 'single_elimination',
         type: tournament.type || 'team',
         description: tournament.description || '',
@@ -647,6 +773,326 @@ router.post('/:id/join',
   rateLimitRegistration(5, 60000),
   checkTournamentAccess,
   handleTournamentRegistration);
+
+// Admin: list team registration requests for tournament
+router.get('/:id/requests', authenticateJWT, isAdmin, async (req: any, res: any) => {
+  try {
+    const statusFilter = typeof req.query.status === 'string' ? req.query.status.trim() : 'pending';
+    const tournament: any = await Tournament.findById(req.params.id)
+      .populate('registrationRequests.team', 'name tag logo members captain stats')
+      .populate('registrationRequests.requestedBy', 'username firstName lastName telegramId')
+      .lean();
+
+    if (!tournament) {
+      return res.status(404).json({ success: false, error: 'Tournament not found' });
+    }
+
+    const requests = Array.isArray(tournament.registrationRequests) ? tournament.registrationRequests : [];
+    const filtered = requests.filter((entry: any) => {
+      if (!statusFilter || statusFilter === 'all') return true;
+      return entry?.status === statusFilter;
+    });
+
+    const data = filtered.map((entry: any) => ({
+      id: `${entry?.team?._id?.toString?.() || entry?.team?.toString?.() || ''}:${entry?.requestedAt || ''}`,
+      teamId: entry?.team?._id?.toString?.() || entry?.team?.toString?.() || '',
+      teamName: entry?.team?.name || '',
+      teamTag: entry?.team?.tag || '',
+      teamLogo: entry?.team?.logo || '',
+      membersCount: Array.isArray(entry?.team?.members) ? entry.team.members.length : 0,
+      stats: {
+        wins: Number(entry?.team?.stats?.wins || 0),
+        losses: Number(entry?.team?.stats?.losses || 0),
+        winRate: Number(entry?.team?.stats?.winRate || 0)
+      },
+      requestedBy: entry?.requestedBy ? {
+        id: entry.requestedBy._id?.toString?.() || '',
+        username: entry.requestedBy.username || '',
+        firstName: entry.requestedBy.firstName || '',
+        lastName: entry.requestedBy.lastName || '',
+        telegramId: entry.requestedBy.telegramId || null
+      } : null,
+      status: entry?.status || 'pending',
+      requestedAt: entry?.requestedAt?.toISOString?.() || null,
+      reviewedAt: entry?.reviewedAt?.toISOString?.() || null,
+      note: entry?.note || ''
+    }));
+
+    return res.json({
+      success: true,
+      data
+    });
+  } catch (error) {
+    console.error('Error fetching tournament requests:', error);
+    return res.status(500).json({ success: false, error: 'Failed to fetch tournament requests' });
+  }
+});
+
+// Admin: approve team registration request
+router.post('/:id/requests/:teamId/approve', authenticateJWT, isAdmin, idempotency({ required: true }), async (req: any, res: any) => {
+  try {
+    const { id: tournamentId, teamId } = req.params;
+    const reviewerId = req.user?._id?.toString?.() || req.user?.id;
+    const note = typeof req.body?.note === 'string' ? req.body.note.trim().slice(0, 300) : '';
+
+    const tournament: any = await Tournament.findById(tournamentId);
+    if (!tournament) {
+      return res.status(404).json({ success: false, error: 'Tournament not found' });
+    }
+
+    const requestEntry = Array.isArray(tournament.registrationRequests)
+      ? tournament.registrationRequests.find((entry: any) =>
+        entry?.status === 'pending' &&
+        entry?.team?.toString?.() === teamId
+      )
+      : null;
+
+    if (!requestEntry) {
+      return res.status(404).json({ success: false, error: 'Pending request not found' });
+    }
+
+    const team: any = await Team.findById(teamId).select('captain members players tournamentId');
+    if (!team) {
+      return res.status(404).json({ success: false, error: 'Team not found' });
+    }
+
+    if (!team.tournamentId || team.tournamentId.toString() !== tournamentId) {
+      return res.status(400).json({ success: false, error: 'Team is linked to a different tournament' });
+    }
+
+    const isAlreadyRegistered = Array.isArray(tournament.registeredTeams) &&
+      tournament.registeredTeams.some((value: any) => value.toString() === teamId);
+
+    const teamLimit = Number(tournament.maxTeams || 0);
+    if (!isAlreadyRegistered && teamLimit > 0 && (tournament.registeredTeams?.length || 0) >= teamLimit) {
+      return res.status(400).json({ success: false, error: 'Tournament is full' });
+    }
+
+    if (!isAlreadyRegistered) {
+      tournament.registeredTeams.push(team._id);
+    }
+
+    const participantRows = buildTeamParticipantRows(team);
+    const participantIds = participantRows.map((row) => row.userId);
+    const existingPlayers = new Set((tournament.registeredPlayers || []).map((value: any) => value.toString()));
+    participantIds.forEach((value) => {
+      if (!existingPlayers.has(value)) {
+        tournament.registeredPlayers.push(new mongoose.Types.ObjectId(value));
+      }
+    });
+
+    requestEntry.status = 'approved';
+    requestEntry.reviewedAt = new Date();
+    requestEntry.reviewedBy = new mongoose.Types.ObjectId(reviewerId);
+    requestEntry.note = note;
+
+    await tournament.save();
+
+    await Promise.all(
+      participantRows.map((row) => TournamentRegistration.findOneAndUpdate(
+        { userId: row.userId, tournamentId },
+        {
+          $set: {
+            teamId,
+            role: row.role,
+            status: 'active'
+          }
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      ))
+    );
+
+    if (participantIds.length) {
+      await User.updateMany(
+        { _id: { $in: participantIds.map((value) => new mongoose.Types.ObjectId(value)) } },
+        { $addToSet: { participatingTournaments: tournament._id } }
+      );
+    }
+
+    await cacheService.invalidateTournamentCaches();
+
+    return res.json({
+      success: true,
+      message: 'Team request approved',
+      data: {
+        tournamentId,
+        teamId,
+        participants: participantIds.length
+      }
+    });
+  } catch (error) {
+    console.error('Error approving tournament request:', error);
+    return res.status(500).json({ success: false, error: 'Failed to approve tournament request' });
+  }
+});
+
+// Admin: reject team registration request
+router.post('/:id/requests/:teamId/reject', authenticateJWT, isAdmin, idempotency({ required: true }), async (req: any, res: any) => {
+  try {
+    const { id: tournamentId, teamId } = req.params;
+    const reviewerId = req.user?._id?.toString?.() || req.user?.id;
+    const note = typeof req.body?.note === 'string' ? req.body.note.trim().slice(0, 300) : '';
+
+    const tournament: any = await Tournament.findById(tournamentId);
+    if (!tournament) {
+      return res.status(404).json({ success: false, error: 'Tournament not found' });
+    }
+
+    const requestEntry = Array.isArray(tournament.registrationRequests)
+      ? tournament.registrationRequests.find((entry: any) =>
+        entry?.status === 'pending' &&
+        entry?.team?.toString?.() === teamId
+      )
+      : null;
+
+    if (!requestEntry) {
+      return res.status(404).json({ success: false, error: 'Pending request not found' });
+    }
+
+    requestEntry.status = 'rejected';
+    requestEntry.reviewedAt = new Date();
+    requestEntry.reviewedBy = new mongoose.Types.ObjectId(reviewerId);
+    requestEntry.note = note;
+    await tournament.save();
+
+    await TournamentRegistration.updateMany(
+      { tournamentId, teamId, status: 'pending' },
+      { $set: { status: 'rejected' } }
+    );
+
+    await cacheService.invalidateTournamentCaches();
+
+    return res.json({
+      success: true,
+      message: 'Team request rejected',
+      data: {
+        tournamentId,
+        teamId
+      }
+    });
+  } catch (error) {
+    console.error('Error rejecting tournament request:', error);
+    return res.status(500).json({ success: false, error: 'Failed to reject tournament request' });
+  }
+});
+
+// Admin: tournament overview (participants, pending requests, matches, bracket)
+router.get('/:id/admin-overview', authenticateJWT, isAdmin, async (req, res) => {
+  try {
+    const tournamentId = req.params.id;
+    const tournament: any = await Tournament.findById(tournamentId)
+      .populate('registeredTeams', 'name tag logo stats members captain')
+      .populate('registrationRequests.team', 'name tag logo stats members captain')
+      .populate('registrationRequests.requestedBy', 'username firstName lastName')
+      .lean();
+
+    if (!tournament) {
+      return res.status(404).json({ success: false, error: 'Tournament not found' });
+    }
+
+    const matches: any[] = await Match.find({ tournament: tournamentId })
+      .populate('team1', 'name tag logo')
+      .populate('team2', 'name tag logo')
+      .populate('winner', 'name tag logo')
+      .sort({ startTime: 1 })
+      .lean();
+
+    const teams = (tournament.registeredTeams || []).map((team: any) => ({
+      id: team?._id?.toString?.() || '',
+      name: team?.name || '',
+      tag: team?.tag || '',
+      logo: team?.logo || '',
+      membersCount: Array.isArray(team?.members) ? team.members.length : 0,
+      stats: {
+        wins: Number(team?.stats?.wins || 0),
+        losses: Number(team?.stats?.losses || 0),
+        winRate: Number(team?.stats?.winRate || 0),
+        totalMatches: Number(team?.stats?.totalMatches || 0)
+      }
+    }));
+
+    const requests = (tournament.registrationRequests || []).map((entry: any) => ({
+      teamId: entry?.team?._id?.toString?.() || entry?.team?.toString?.() || '',
+      teamName: entry?.team?.name || '',
+      teamTag: entry?.team?.tag || '',
+      teamLogo: entry?.team?.logo || '',
+      status: entry?.status || 'pending',
+      requestedAt: entry?.requestedAt?.toISOString?.() || null,
+      reviewedAt: entry?.reviewedAt?.toISOString?.() || null
+    }));
+
+    const bracket: Record<string, any[]> = {};
+    matches.forEach((match: any) => {
+      const round = (match.round || 'Round').toString();
+      if (!bracket[round]) bracket[round] = [];
+      bracket[round].push({
+        id: match._id?.toString?.() || '',
+        team1: match.team1 ? {
+          id: match.team1._id?.toString?.() || '',
+          name: match.team1.name || '',
+          tag: match.team1.tag || '',
+          logo: match.team1.logo || ''
+        } : null,
+        team2: match.team2 ? {
+          id: match.team2._id?.toString?.() || '',
+          name: match.team2.name || '',
+          tag: match.team2.tag || '',
+          logo: match.team2.logo || ''
+        } : null,
+        status: match.status || 'scheduled',
+        score: {
+          team1: Number(match.score?.team1 || 0),
+          team2: Number(match.score?.team2 || 0)
+        },
+        winnerId: match.winner?._id?.toString?.() || match.winner?.toString?.() || null,
+        startTime: match.startTime?.toISOString?.() || null
+      });
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        tournament: {
+          id: tournament._id?.toString?.() || '',
+          name: tournament.name || '',
+          game: tournament.game || '',
+          status: tournament.status || 'upcoming',
+          maxTeams: Number(tournament.maxTeams || 0),
+          participants: teams.length
+        },
+        teams,
+        requests,
+        matches: matches.map((match: any) => ({
+          id: match._id?.toString?.() || '',
+          status: match.status || 'scheduled',
+          round: match.round || '',
+          startTime: match.startTime?.toISOString?.() || null,
+          team1: match.team1 ? {
+            id: match.team1._id?.toString?.() || '',
+            name: match.team1.name || '',
+            tag: match.team1.tag || '',
+            logo: match.team1.logo || ''
+          } : null,
+          team2: match.team2 ? {
+            id: match.team2._id?.toString?.() || '',
+            name: match.team2.name || '',
+            tag: match.team2.tag || '',
+            logo: match.team2.logo || ''
+          } : null,
+          score: {
+            team1: Number(match.score?.team1 || 0),
+            team2: Number(match.score?.team2 || 0)
+          },
+          winnerId: match.winner?._id?.toString?.() || match.winner?.toString?.() || null
+        })),
+        bracket
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching admin tournament overview:', error);
+    return res.status(500).json({ success: false, error: 'Failed to fetch admin tournament overview' });
+  }
+});
 
 // Start tournament manually (admin) and generate initial bracket
 router.post('/:id/start', authenticateJWT, isAdmin, async (req, res) => {
@@ -774,6 +1220,9 @@ router.put('/:id',
         })),
         participants: populatedTournament.registeredTeams?.length || 0,
         currentParticipants: populatedTournament.registeredTeams?.length || 0,
+        pendingRequestsCount: Array.isArray(populatedTournament.registrationRequests)
+          ? populatedTournament.registrationRequests.filter((entry: any) => entry?.status === 'pending').length
+          : 0,
         format: populatedTournament.format || 'single_elimination',
         type: populatedTournament.type || 'team',
         description: populatedTournament.description || '',

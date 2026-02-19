@@ -71,11 +71,11 @@ export const useTournamentAccess = () => {
     try {
       setError(null);
       
-      const response = await api.post(`/api/tournaments/${tournamentId}/register`, {
+      const response: any = await api.post(`/api/tournaments/${tournamentId}/register`, {
         teamId
       });
 
-      return response.data;
+      return response;
     } catch (err: any) {
       console.error('Failed to join tournament:', err);
       

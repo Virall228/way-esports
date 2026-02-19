@@ -451,6 +451,71 @@ interface AdminUserRow {
   createdAt: string;
 }
 
+interface AdminTournamentRequestRow {
+  id: string;
+  teamId: string;
+  teamName: string;
+  teamTag: string;
+  teamLogo?: string;
+  membersCount: number;
+  stats?: {
+    wins: number;
+    losses: number;
+    winRate: number;
+  };
+  requestedBy?: {
+    id: string;
+    username?: string;
+    firstName?: string;
+    lastName?: string;
+    telegramId?: number | null;
+  } | null;
+  status: 'pending' | 'approved' | 'rejected';
+  requestedAt?: string | null;
+}
+
+interface AdminTournamentOverview {
+  tournament: {
+    id: string;
+    name: string;
+    game: string;
+    status: string;
+    maxTeams: number;
+    participants: number;
+  };
+  teams: Array<{
+    id: string;
+    name: string;
+    tag: string;
+    logo?: string;
+    membersCount: number;
+    stats: {
+      wins: number;
+      losses: number;
+      winRate: number;
+      totalMatches: number;
+    };
+  }>;
+  requests: Array<{
+    teamId: string;
+    teamName: string;
+    teamTag: string;
+    teamLogo?: string;
+    status: string;
+    requestedAt?: string | null;
+  }>;
+  matches: Array<{
+    id: string;
+    status: string;
+    round?: string;
+    startTime?: string | null;
+    team1?: { id: string; name: string; tag?: string; logo?: string } | null;
+    team2?: { id: string; name: string; tag?: string; logo?: string } | null;
+    score: { team1: number; team2: number };
+    winnerId?: string | null;
+  }>;
+}
+
 const ModalActions = styled.div`
   display: flex;
   gap: 12px;
@@ -497,6 +562,7 @@ const AdminPage: React.FC = () => {
     status: '',
     search: ''
   });
+  const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
   const isOpsTab = activeTab === 'ops';
 
   const formatApiError = (e: any, fallback: string) => {
@@ -553,6 +619,8 @@ const AdminPage: React.FC = () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'news'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'achievements'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'rewards'] }),
@@ -837,9 +905,39 @@ const AdminPage: React.FC = () => {
       game: t.game || '',
       image: t.image || t.coverImage || '',
       status: t.status || 'upcoming',
+      maxTeams: Number(t.maxTeams ?? t.maxParticipants ?? 0),
       participants: Number(t.participants ?? t.currentParticipants ?? 0),
+      pendingRequestsCount: Number(t.pendingRequestsCount || 0),
       prizePool: Number(t.prizePool ?? 0)
     }));
+  };
+
+  const fetchTournamentRequests = async (): Promise<AdminTournamentRequestRow[]> => {
+    if (!selectedTournamentId) return [];
+    const result: any = await api.get(`/api/tournaments/${selectedTournamentId}/requests?status=pending`);
+    const items: any[] = (result && result.data) || [];
+    return items.map((item: any) => ({
+      id: String(item.id || ''),
+      teamId: String(item.teamId || ''),
+      teamName: String(item.teamName || ''),
+      teamTag: String(item.teamTag || ''),
+      teamLogo: item.teamLogo || '',
+      membersCount: Number(item.membersCount || 0),
+      stats: {
+        wins: Number(item.stats?.wins || 0),
+        losses: Number(item.stats?.losses || 0),
+        winRate: Number(item.stats?.winRate || 0)
+      },
+      requestedBy: item.requestedBy || null,
+      status: item.status || 'pending',
+      requestedAt: item.requestedAt || null
+    }));
+  };
+
+  const fetchTournamentOverview = async (): Promise<AdminTournamentOverview | null> => {
+    if (!selectedTournamentId) return null;
+    const result: any = await api.get(`/api/tournaments/${selectedTournamentId}/admin-overview`);
+    return (result?.data || result || null) as AdminTournamentOverview | null;
   };
 
   const fetchNews = async () => {
@@ -989,6 +1087,22 @@ const AdminPage: React.FC = () => {
     refetchOnWindowFocus: false
   });
 
+  const tournamentRequestsQuery = useQuery({
+    queryKey: ['admin', 'tournament-requests', selectedTournamentId],
+    queryFn: fetchTournamentRequests,
+    enabled: hasAdminAccess && activeTab === 'tournaments' && Boolean(selectedTournamentId),
+    staleTime: 5000,
+    refetchOnWindowFocus: false
+  });
+
+  const tournamentOverviewQuery = useQuery({
+    queryKey: ['admin', 'tournament-overview', selectedTournamentId],
+    queryFn: fetchTournamentOverview,
+    enabled: hasAdminAccess && activeTab === 'tournaments' && Boolean(selectedTournamentId),
+    staleTime: 5000,
+    refetchOnWindowFocus: false
+  });
+
   const newsQuery = useQuery({
     queryKey: ['admin', 'news'],
     queryFn: fetchNews,
@@ -1117,6 +1231,8 @@ const AdminPage: React.FC = () => {
   const users = usersQuery.data?.items || [];
   const usersPagination = usersQuery.data?.pagination || null;
   const tournaments = tournamentsQuery.data || [];
+  const tournamentRequests = tournamentRequestsQuery.data || [];
+  const tournamentOverview = tournamentOverviewQuery.data || null;
   const news = newsQuery.data || [];
   const achievements = achievementsQuery.data || [];
   const rewards = rewardsQuery.data || [];
@@ -1133,9 +1249,27 @@ const AdminPage: React.FC = () => {
   const dashboardStats = statsQuery.data || null;
   const analytics = analyticsQuery.data || null;
 
+  useEffect(() => {
+    if (activeTab !== 'tournaments') return;
+    if (!Array.isArray(tournaments) || !tournaments.length) {
+      setSelectedTournamentId(null);
+      return;
+    }
+
+    const stillExists = selectedTournamentId
+      ? tournaments.some((item: any) => item.id === selectedTournamentId)
+      : false;
+
+    if (!stillExists) {
+      setSelectedTournamentId(tournaments[0].id);
+    }
+  }, [activeTab, tournaments, selectedTournamentId]);
+
   const queryError =
     usersQuery.error ||
     tournamentsQuery.error ||
+    tournamentRequestsQuery.error ||
+    tournamentOverviewQuery.error ||
     newsQuery.error ||
     achievementsQuery.error ||
     rewardsQuery.error ||
@@ -1155,6 +1289,8 @@ const AdminPage: React.FC = () => {
   const isQueryLoading =
     usersQuery.isFetching ||
     tournamentsQuery.isFetching ||
+    tournamentRequestsQuery.isFetching ||
+    tournamentOverviewQuery.isFetching ||
     newsQuery.isFetching ||
     achievementsQuery.isFetching ||
     rewardsQuery.isFetching ||
@@ -1323,6 +1459,10 @@ const AdminPage: React.FC = () => {
         if (type === 'team') await queryClient.invalidateQueries({ queryKey: ['teams'] });
         if (type === 'news') await queryClient.invalidateQueries({ queryKey: ['news'] });
 
+        if (type === 'tournament' && selectedTournamentId === id) {
+          setSelectedTournamentId(null);
+        }
+
         notify('success', 'Deleted', `${type} deleted successfully`);
       } catch (e: any) {
         setError(formatApiError(e, 'Delete failed'));
@@ -1344,6 +1484,81 @@ const AdminPage: React.FC = () => {
       const message = formatApiError(e, 'Failed to start tournament');
       setError(message);
       notify('error', 'Start failed', message);
+    }
+  };
+
+  const handleApproveTournamentRequest = async (tournamentId: string, teamId: string) => {
+    try {
+      setError(null);
+      await api.post(`/api/tournaments/${tournamentId}/requests/${teamId}/approve`, {});
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests', tournamentId] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', tournamentId] }),
+        queryClient.invalidateQueries({ queryKey: ['tournaments'] }),
+        queryClient.invalidateQueries({ queryKey: ['matches'] })
+      ]);
+      notify('success', 'Request approved', 'Team has been added to tournament participants');
+    } catch (e: any) {
+      const message = formatApiError(e, 'Failed to approve request');
+      setError(message);
+      notify('error', 'Approve failed', message);
+    }
+  };
+
+  const handleRejectTournamentRequest = async (tournamentId: string, teamId: string) => {
+    try {
+      setError(null);
+      await api.post(`/api/tournaments/${tournamentId}/requests/${teamId}/reject`, {});
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests', tournamentId] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', tournamentId] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] })
+      ]);
+      notify('success', 'Request rejected', 'Team request was rejected');
+    } catch (e: any) {
+      const message = formatApiError(e, 'Failed to reject request');
+      setError(message);
+      notify('error', 'Reject failed', message);
+    }
+  };
+
+  const handleSaveMatchScore = async (match: any, team1ScoreRaw: string, team2ScoreRaw: string) => {
+    const team1Score = Number(team1ScoreRaw);
+    const team2Score = Number(team2ScoreRaw);
+
+    if (!Number.isFinite(team1Score) || !Number.isFinite(team2Score) || team1Score < 0 || team2Score < 0) {
+      notify('warning', 'Invalid score', 'Scores must be zero or positive numbers');
+      return;
+    }
+
+    const winnerId = team1Score === team2Score
+      ? null
+      : (team1Score > team2Score ? match?.team1?.id : match?.team2?.id);
+
+    try {
+      setError(null);
+      await api.put(`/api/matches/${match.id}/score`, {
+        score: {
+          team1: team1Score,
+          team2: team2Score
+        },
+        ...(winnerId ? { winner: winnerId } : {})
+      });
+
+      if (selectedTournamentId) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', selectedTournamentId] }),
+          queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
+          queryClient.invalidateQueries({ queryKey: ['tournaments'] }),
+          queryClient.invalidateQueries({ queryKey: ['matches'] })
+        ]);
+      }
+      notify('success', 'Match updated', 'Match score and winner were updated');
+    } catch (e: any) {
+      const message = formatApiError(e, 'Failed to update match');
+      setError(message);
+      notify('error', 'Match update failed', message);
     }
   };
 
@@ -2151,11 +2366,19 @@ const AdminPage: React.FC = () => {
   }
 
   function renderTournaments() {
+    const selectedTournament = tournaments.find((item: any) => item.id === selectedTournamentId) || null;
+    const overview = tournamentOverview;
+
     return (
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
           <h3>Tournament Management</h3>
-          <ActionButton onClick={() => handleCreate('tournament')}>Create Tournament</ActionButton>
+          <ActionsCell>
+            <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] })}>
+              Refresh
+            </ActionButton>
+            <ActionButton onClick={() => handleCreate('tournament')}>Create Tournament</ActionButton>
+          </ActionsCell>
         </div>
 
         <TableWrap>
@@ -2166,6 +2389,7 @@ const AdminPage: React.FC = () => {
                 <Th>Game</Th>
                 <Th>Status</Th>
                 <Th>Participants</Th>
+                <Th>Pending</Th>
                 <Th>Prize Pool</Th>
                 <Th>Actions</Th>
               </tr>
@@ -2176,10 +2400,17 @@ const AdminPage: React.FC = () => {
                   <Td>{tournament.name}</Td>
                   <Td>{tournament.game}</Td>
                   <Td>{tournament.status}</Td>
-                  <Td>{tournament.participants}</Td>
+                  <Td>{tournament.participants}/{tournament.maxTeams || '—'}</Td>
+                  <Td>{tournament.pendingRequestsCount || 0}</Td>
                   <Td>${tournament.prizePool}</Td>
                   <Td>
                     <ActionsCell>
+                      <ActionButton
+                        $variant="success"
+                        onClick={() => setSelectedTournamentId(tournament.id)}
+                      >
+                        Manage
+                      </ActionButton>
                       {(tournament.status === 'upcoming' || tournament.status === 'open') && (
                         <ActionButton $variant="success" onClick={() => handleStartTournament(tournament.id)}>
                           Start
@@ -2194,6 +2425,165 @@ const AdminPage: React.FC = () => {
             </tbody>
           </Table>
         </TableWrap>
+
+        {selectedTournamentId && (
+          <Card variant="outlined" style={{ marginTop: '20px', padding: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
+              <h4 style={{ margin: 0 }}>
+                Tournament Control: {selectedTournament?.name || selectedTournamentId}
+              </h4>
+              <ActionsCell>
+                <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests', selectedTournamentId] })}>
+                  Refresh Requests
+                </ActionButton>
+                <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', selectedTournamentId] })}>
+                  Refresh Overview
+                </ActionButton>
+              </ActionsCell>
+            </div>
+
+            <div style={{ marginBottom: '16px', color: '#cccccc', fontSize: '14px' }}>
+              Approved teams: <strong>{overview?.teams?.length || 0}</strong>
+              {' • '}
+              Pending requests: <strong>{tournamentRequests.length}</strong>
+              {' • '}
+              Matches: <strong>{overview?.matches?.length || 0}</strong>
+            </div>
+
+            <h5 style={{ marginTop: 0 }}>Pending Tournament Requests</h5>
+            {!tournamentRequests.length ? (
+              <div style={{ color: '#999', marginBottom: '18px' }}>No pending requests</div>
+            ) : (
+              <TableWrap>
+                <Table>
+                  <thead>
+                    <tr>
+                      <Th>Team</Th>
+                      <Th>Members</Th>
+                      <Th>Stats</Th>
+                      <Th>Requested By</Th>
+                      <Th>Requested At</Th>
+                      <Th>Actions</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tournamentRequests.map((request: AdminTournamentRequestRow) => (
+                      <tr key={request.id}>
+                        <Td>{request.teamName} {request.teamTag ? `(${request.teamTag})` : ''}</Td>
+                        <Td>{request.membersCount}</Td>
+                        <Td>{request.stats?.wins || 0}W / {request.stats?.losses || 0}L ({Number(request.stats?.winRate || 0).toFixed(1)}%)</Td>
+                        <Td>{request.requestedBy?.username || request.requestedBy?.firstName || 'Unknown'}</Td>
+                        <Td>{request.requestedAt ? new Date(request.requestedAt).toLocaleString() : '—'}</Td>
+                        <Td>
+                          <ActionsCell>
+                            <ActionButton
+                              $variant="success"
+                              onClick={() => handleApproveTournamentRequest(selectedTournamentId, request.teamId)}
+                            >
+                              Approve
+                            </ActionButton>
+                            <ActionButton
+                              $variant="danger"
+                              onClick={() => handleRejectTournamentRequest(selectedTournamentId, request.teamId)}
+                            >
+                              Reject
+                            </ActionButton>
+                          </ActionsCell>
+                        </Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </TableWrap>
+            )}
+
+            <h5>Approved Teams and Stats</h5>
+            {!overview?.teams?.length ? (
+              <div style={{ color: '#999', marginBottom: '18px' }}>No approved teams yet</div>
+            ) : (
+              <TableWrap>
+                <Table>
+                  <thead>
+                    <tr>
+                      <Th>Team</Th>
+                      <Th>Members</Th>
+                      <Th>Matches</Th>
+                      <Th>Wins</Th>
+                      <Th>Losses</Th>
+                      <Th>Win Rate</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {overview.teams.map((team: any) => (
+                      <tr key={team.id}>
+                        <Td>{team.name} {team.tag ? `(${team.tag})` : ''}</Td>
+                        <Td>{team.membersCount}</Td>
+                        <Td>{team.stats?.totalMatches || 0}</Td>
+                        <Td>{team.stats?.wins || 0}</Td>
+                        <Td>{team.stats?.losses || 0}</Td>
+                        <Td>{Number(team.stats?.winRate || 0).toFixed(1)}%</Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </TableWrap>
+            )}
+
+            <h5>Matches and Results</h5>
+            {!overview?.matches?.length ? (
+              <div style={{ color: '#999' }}>No matches generated yet</div>
+            ) : (
+              <TableWrap>
+                <Table>
+                  <thead>
+                    <tr>
+                      <Th>Round</Th>
+                      <Th>Team 1</Th>
+                      <Th>Team 2</Th>
+                      <Th>Score</Th>
+                      <Th>Status</Th>
+                      <Th>Winner</Th>
+                      <Th>Actions</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {overview.matches.map((match: any) => (
+                      <tr key={match.id}>
+                        <Td>{match.round || 'Round'}</Td>
+                        <Td>{match.team1?.name || 'TBD'}</Td>
+                        <Td>{match.team2?.name || 'TBD'}</Td>
+                        <Td>{Number(match.score?.team1 || 0)} : {Number(match.score?.team2 || 0)}</Td>
+                        <Td>{match.status || 'scheduled'}</Td>
+                        <Td>
+                          {match.winnerId === match.team1?.id
+                            ? (match.team1?.name || 'Team 1')
+                            : match.winnerId === match.team2?.id
+                              ? (match.team2?.name || 'Team 2')
+                              : '—'}
+                        </Td>
+                        <Td>
+                          <ActionsCell>
+                            <ActionButton
+                              onClick={() => {
+                                const nextTeam1 = window.prompt(`Score: ${match.team1?.name || 'Team 1'}`, String(match.score?.team1 ?? 0));
+                                if (nextTeam1 === null) return;
+                                const nextTeam2 = window.prompt(`Score: ${match.team2?.name || 'Team 2'}`, String(match.score?.team2 ?? 0));
+                                if (nextTeam2 === null) return;
+                                handleSaveMatchScore(match, nextTeam1, nextTeam2);
+                              }}
+                            >
+                              Edit Score
+                            </ActionButton>
+                          </ActionsCell>
+                        </Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </TableWrap>
+            )}
+          </Card>
+        )}
       </div>
     );
   }

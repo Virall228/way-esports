@@ -153,7 +153,31 @@ async function handleMatchCompleted(matchId: string, winnerTeamId?: string | nul
 
   const baseInc = incTournament ? { 'stats.tournamentsPlayed': incTournament } : {};
 
+  const updateTeamStats = async (teamId: string, result: 'win' | 'loss' | 'none') => {
+    const teamDoc: any = await Team.findById(teamId);
+    if (!teamDoc) return;
+
+    const currentStats = teamDoc.stats || {};
+    const totalMatches = Number(currentStats.totalMatches || 0) + 1;
+    const wins = Number(currentStats.wins || 0) + (result === 'win' ? 1 : 0);
+    const losses = Number(currentStats.losses || 0) + (result === 'loss' ? 1 : 0);
+
+    teamDoc.stats = {
+      ...currentStats,
+      totalMatches,
+      wins,
+      losses,
+      winRate: totalMatches > 0 ? (wins / totalMatches) * 100 : 0
+    };
+
+    await teamDoc.save();
+  };
+
   if (team1Won) {
+    await Promise.all([
+      updateTeamStats(team1Id, 'win'),
+      updateTeamStats(team2Id, 'loss')
+    ]);
     await updateUsers(team1Members, { ...baseInc, 'stats.wins': 1 });
     await updateUsers(team2Members, { ...baseInc, 'stats.losses': 1 });
     await distributeMatchWinnerPayout(matchId, winnerId);
@@ -161,6 +185,10 @@ async function handleMatchCompleted(matchId: string, winnerTeamId?: string | nul
   }
 
   if (team2Won) {
+    await Promise.all([
+      updateTeamStats(team1Id, 'loss'),
+      updateTeamStats(team2Id, 'win')
+    ]);
     await updateUsers(team2Members, { ...baseInc, 'stats.wins': 1 });
     await updateUsers(team1Members, { ...baseInc, 'stats.losses': 1 });
     await distributeMatchWinnerPayout(matchId, winnerId);
@@ -169,6 +197,10 @@ async function handleMatchCompleted(matchId: string, winnerTeamId?: string | nul
 
   // If match completed without a winner, only track tournament participation.
   if (incTournament) {
+    await Promise.all([
+      updateTeamStats(team1Id, 'none'),
+      updateTeamStats(team2Id, 'none')
+    ]);
     await updateUsers(team1Members, baseInc);
     await updateUsers(team2Members, baseInc);
   }

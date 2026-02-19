@@ -5,7 +5,7 @@ export interface ITournamentRegistration extends Document<mongoose.Types.ObjectI
   teamId: mongoose.Types.ObjectId;
   tournamentId: mongoose.Types.ObjectId;
   role: 'owner' | 'member';
-  status: 'active' | 'left' | 'removed';
+  status: 'pending' | 'active' | 'rejected' | 'left' | 'removed';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,8 +33,8 @@ const tournamentRegistrationSchema = new Schema<ITournamentRegistration>({
   },
   status: {
     type: String,
-    enum: ['active', 'left', 'removed'],
-    default: 'active'
+    enum: ['pending', 'active', 'rejected', 'left', 'removed'],
+    default: 'pending'
   }
 }, {
   timestamps: true

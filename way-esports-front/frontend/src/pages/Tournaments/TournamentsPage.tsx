@@ -5,9 +5,11 @@ import { useTournamentAccess } from '../../hooks/useTournamentAccess';
 import TournamentRegistrationGuard from '../../components/Tournament/TournamentRegistrationGuard';
 import navigationService from '../../services/NavigationService';
 import { tournamentService } from '../../services/tournamentService';
+import { teamsService } from '../../services/teamsService';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { resolveMediaUrl } from '../../utils/media';
 
 const Container = styled.div`
@@ -216,6 +218,7 @@ interface Tournament {
   title: string;
   image?: string;
   game: string;
+  type?: 'team' | 'solo';
   status: 'live' | 'upcoming' | 'completed' | 'comingSoon';
   prizePool: string;
   participants: number;
@@ -226,11 +229,13 @@ interface Tournament {
 
 const TournamentsPage: React.FC = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [activeFilter, setActiveFilter] = useState('all');
   const [activeGame] = useState('all');
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [showGuard, setShowGuard] = useState(false);
   const [pendingTournamentId, setPendingTournamentId] = useState<string | null>(null);
+  const [joinFeedback, setJoinFeedback] = useState<string | null>(null);
 
   const { joinTournament } = useTournamentAccess();
   const queryClient = useQueryClient();
@@ -265,6 +270,7 @@ const TournamentsPage: React.FC = () => {
         title: t.title || t.name || '',
         image: resolveMediaUrl(t.image || t.coverImage || ''),
         game: t.game || 'Unknown',
+        type: (t.type || 'team') as 'team' | 'solo',
         status,
         prizePool: prize ? `$${prize.toLocaleString()}` : 'TBD',
         participants: Number(t.participants ?? t.currentParticipants ?? 0),
@@ -324,10 +330,47 @@ const TournamentsPage: React.FC = () => {
   const onRegistrationConfirm = async () => {
     if (!pendingTournamentId) return;
     try {
-      await joinTournament(pendingTournamentId);
+      const selectedTournament = tournaments.find((item) => item.id === pendingTournamentId);
+      let teamId: string | undefined;
+
+      if (selectedTournament?.type === 'team') {
+        const teamsResponse: any = await teamsService.list();
+        const teamItems: any[] = Array.isArray(teamsResponse?.data)
+          ? teamsResponse.data
+          : (Array.isArray(teamsResponse) ? teamsResponse : []);
+        const currentUserId = user?.id || '';
+
+        const ownedOrMemberTeam = teamItems.find((team: any) => {
+          const teamTournamentId = String(team?.tournamentId || '');
+          if (!teamTournamentId || teamTournamentId !== pendingTournamentId) return false;
+
+          const captainId = String(team?.captain?.id || team?.captain?._id || team?.captain || '');
+          const memberIds = Array.isArray(team?.members)
+            ? team.members.map((member: any) => String(member?.id || member?._id || member))
+            : [];
+
+          return !!currentUserId && (captainId === currentUserId || memberIds.includes(currentUserId));
+        });
+
+        teamId = ownedOrMemberTeam?.id || ownedOrMemberTeam?._id;
+        if (!teamId) {
+          setJoinFeedback('Create or join a team for this tournament first, then request tournament entry.');
+          setShowGuard(false);
+          setPendingTournamentId(null);
+          return;
+        }
+      }
+
+      const result: any = await joinTournament(pendingTournamentId, teamId);
+      if (result?.pendingApproval) {
+        setJoinFeedback('Team request sent. Waiting for admin approval.');
+      } else {
+        setJoinFeedback('Tournament registration completed.');
+      }
       await queryClient.invalidateQueries({ queryKey: ['tournaments'] });
     } catch (e) {
       console.error('Join failed', e);
+      setJoinFeedback((e as any)?.message || 'Failed to register for tournament');
     } finally {
       setShowGuard(false);
       setPendingTournamentId(null);
@@ -355,6 +398,19 @@ const TournamentsPage: React.FC = () => {
           ))}
         </FilterTabs>
       </FilterSection>
+
+      {joinFeedback && (
+        <div style={{
+          marginBottom: '1rem',
+          padding: '10px 14px',
+          borderRadius: '10px',
+          background: 'rgba(255, 107, 0, 0.12)',
+          border: '1px solid rgba(255, 107, 0, 0.35)',
+          color: '#ffd3b1'
+        }}>
+          {joinFeedback}
+        </div>
+      )}
 
       {loading ? (
         <EmptyState>{t('loading')}</EmptyState>
