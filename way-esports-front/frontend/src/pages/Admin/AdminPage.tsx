@@ -367,6 +367,10 @@ interface AdminWalletTransaction {
   description: string;
   date: string;
   reference?: string;
+  walletAddress?: string;
+  network?: string;
+  txHash?: string;
+  processedAt?: string | null;
   balance: number;
 }
 
@@ -570,6 +574,7 @@ const AdminPage: React.FC = () => {
     status: '',
     search: ''
   });
+  const [paymentFilter, setPaymentFilter] = useState<'all' | 'pending_withdrawals'>('all');
   const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
   const isOpsTab = activeTab === 'ops';
 
@@ -1025,6 +1030,10 @@ const AdminPage: React.FC = () => {
       description: tx.description || '',
       date: tx.date ? new Date(tx.date).toISOString() : new Date().toISOString(),
       reference: tx.reference || '',
+      walletAddress: tx.walletAddress || '',
+      network: tx.network || '',
+      txHash: tx.txHash || '',
+      processedAt: tx.processedAt || null,
       balance: Number(tx.balance || 0)
     }));
   };
@@ -1810,6 +1819,7 @@ const AdminPage: React.FC = () => {
     try {
       setError(null);
       let subscriptionDays: number | undefined;
+      let txHash: string | undefined;
 
       if (tx.type === 'subscription' && nextStatus === 'completed') {
         const daysRaw = window.prompt('Subscription duration in days', '30');
@@ -1822,10 +1832,18 @@ const AdminPage: React.FC = () => {
         subscriptionDays = Math.trunc(parsed);
       }
 
+      if (tx.type === 'withdrawal' && nextStatus === 'completed') {
+        const hashInput = window.prompt('Blockchain TX hash (optional but recommended)', tx.txHash || '');
+        if (hashInput !== null) {
+          txHash = hashInput.trim() || undefined;
+        }
+      }
+
       await api.patch(`/api/admin/wallet/transactions/${tx.userId}/${tx.id}`, {
         status: nextStatus,
         source: tx.source,
-        subscriptionDays
+        subscriptionDays,
+        txHash
       });
 
       await queryClient.invalidateQueries({ queryKey: ['admin', 'wallet-transactions'] });
@@ -2322,7 +2340,11 @@ const AdminPage: React.FC = () => {
   }
 
   function renderPayments() {
-    const sorted = [...walletTransactions].sort((a, b) => {
+    const filtered = paymentFilter === 'pending_withdrawals'
+      ? walletTransactions.filter((tx) => tx.type === 'withdrawal' && tx.status === 'pending')
+      : walletTransactions;
+
+    const sorted = [...filtered].sort((a, b) => {
       const left = new Date(a.date).getTime();
       const right = new Date(b.date).getTime();
       return right - left;
@@ -2332,9 +2354,16 @@ const AdminPage: React.FC = () => {
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
           <h3>Payments & Wallet Transactions</h3>
-          <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'wallet-transactions'] })}>
-            Refresh
-          </ActionButton>
+          <ActionsCell>
+            <ActionButton
+              onClick={() => setPaymentFilter((prev) => (prev === 'pending_withdrawals' ? 'all' : 'pending_withdrawals'))}
+            >
+              {paymentFilter === 'pending_withdrawals' ? 'Show All' : 'Pending Withdrawals'}
+            </ActionButton>
+            <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'wallet-transactions'] })}>
+              Refresh
+            </ActionButton>
+          </ActionsCell>
         </div>
 
         <TableWrap>
@@ -2346,6 +2375,9 @@ const AdminPage: React.FC = () => {
                 <Th>Type</Th>
                 <Th>Amount</Th>
                 <Th>Status</Th>
+                <Th>Wallet</Th>
+                <Th>Network</Th>
+                <Th>TX Hash</Th>
                 <Th>Description</Th>
                 <Th>Date</Th>
                 <Th>Actions</Th>
@@ -2366,10 +2398,23 @@ const AdminPage: React.FC = () => {
                     <Td>{tx.type}</Td>
                     <Td>${tx.amount.toFixed(2)}</Td>
                     <Td>{tx.status}</Td>
+                    <Td>{tx.walletAddress || '-'}</Td>
+                    <Td>{tx.network || '-'}</Td>
+                    <Td>{tx.txHash || '-'}</Td>
                     <Td>{tx.description || '-'}</Td>
                     <Td>{formatDate(tx.date)}</Td>
                     <Td>
                       <ActionsCell>
+                        {tx.walletAddress && (
+                          <ActionButton onClick={() => copyText(tx.walletAddress || '', 'Wallet address copied')}>
+                            Copy Address
+                          </ActionButton>
+                        )}
+                        {tx.txHash && (
+                          <ActionButton onClick={() => copyText(tx.txHash || '', 'TX hash copied')}>
+                            Copy Hash
+                          </ActionButton>
+                        )}
                         {canApprove && (
                           <ActionButton $variant="success" onClick={() => handleWalletTransactionStatus(tx, 'completed')}>
                             Approve

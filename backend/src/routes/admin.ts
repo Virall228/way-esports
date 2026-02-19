@@ -715,6 +715,10 @@ router.get('/wallet/transactions', async (req, res) => {
           amount: Number(tx?.amount || 0),
           status: tx?.status || '',
           description: tx?.description || '',
+          walletAddress: tx?.walletAddress || '',
+          network: tx?.network || '',
+          txHash: tx?.txHash || '',
+          processedAt: tx?.processedAt || null,
           date: tx?.date || entry?.updatedAt || new Date(),
           reference: tx?.reference || '',
           balance: Number(entry?.wallet?.balance || 0)
@@ -743,6 +747,10 @@ router.get('/wallet/transactions', async (req, res) => {
           amount: Number(tx?.amount || 0),
           status: tx?.status || '',
           description: tx?.description || '',
+          walletAddress: tx?.walletAddress || '',
+          network: tx?.network || '',
+          txHash: tx?.txHash || '',
+          processedAt: tx?.processedAt || null,
           date: tx?.date || walletEntry?.updatedAt || new Date(),
           reference: tx?.reference || '',
           balance: Number(walletEntry?.balance || 0)
@@ -786,6 +794,7 @@ router.patch('/wallet/transactions/:userId/:transactionId', idempotency({ requir
     const statusValue = typeof req.body?.status === 'string' ? req.body.status.trim() : '';
     const source = typeof req.body?.source === 'string' ? req.body.source.trim() : 'user';
     const adminNote = typeof req.body?.note === 'string' ? req.body.note.trim() : '';
+    const payoutTxHash = typeof req.body?.txHash === 'string' ? req.body.txHash.trim() : '';
     const manualBalanceDelta = toNumber(req.body?.balanceDelta, 0);
     const subscriptionDays = Math.max(1, Math.trunc(toNumber(req.body?.subscriptionDays, 30)));
 
@@ -829,6 +838,10 @@ router.patch('/wallet/transactions/:userId/:transactionId', idempotency({ requir
       }
 
       tx.status = nextWalletStatus;
+      if (tx.type === 'withdrawal' && nextWalletStatus === 'completed') {
+        tx.processedAt = new Date();
+        if (payoutTxHash) tx.txHash = payoutTxHash;
+      }
       if (adminNote) {
         tx.description = `${tx.description} | Admin: ${adminNote}`;
       }
@@ -848,15 +861,32 @@ router.patch('/wallet/transactions/:userId/:transactionId', idempotency({ requir
       await wallet.save();
 
       const userSync: any = await User.findById(userId);
-      if (userSync && balanceDelta !== 0) {
-        userSync.wallet.balance += balanceDelta;
-        userSync.wallet.transactions.push({
-          type: balanceDelta > 0 ? 'deposit' : 'withdrawal',
-          amount: Math.abs(balanceDelta),
-          description: `Admin wallet sync for transaction ${transactionId}`,
-          status: 'completed',
-          date: new Date()
+      if (userSync) {
+        const userTx = userSync.wallet.transactions.find((item: any) => {
+          const txId = item?._id?.toString?.();
+          return txId === transactionId || item?.reference === tx.reference;
         });
+        if (userTx) {
+          userTx.status = statusValue as any;
+          if (userTx.type === 'withdrawal' && nextWalletStatus === 'completed') {
+            userTx.processedAt = tx.processedAt || new Date();
+            if (payoutTxHash) userTx.txHash = payoutTxHash;
+          }
+          if (adminNote) {
+            userTx.description = `${userTx.description} | Admin: ${adminNote}`;
+          }
+        }
+
+        if (balanceDelta !== 0) {
+          userSync.wallet.balance += balanceDelta;
+          userSync.wallet.transactions.push({
+            type: balanceDelta > 0 ? 'deposit' : 'withdrawal',
+            amount: Math.abs(balanceDelta),
+            description: `Admin wallet sync for transaction ${transactionId}`,
+            status: 'completed',
+            date: new Date()
+          });
+        }
         await userSync.save();
       }
 
@@ -908,6 +938,10 @@ router.patch('/wallet/transactions/:userId/:transactionId', idempotency({ requir
     }
 
     tx.status = nextStatus;
+    if (tx.type === 'withdrawal' && nextStatus === 'completed') {
+      tx.processedAt = new Date();
+      if (payoutTxHash) tx.txHash = payoutTxHash;
+    }
 
     if (adminNote) {
       tx.description = `${tx.description} | Admin: ${adminNote}`;
@@ -952,6 +986,10 @@ router.patch('/wallet/transactions/:userId/:transactionId', idempotency({ requir
       const walletTx = wallet.transactions.find((item: any) => item.reference === transactionReference);
       if (walletTx) {
         walletTx.status = toWalletStatus(nextStatus);
+        if (walletTx.type === 'withdrawal' && nextStatus === 'completed') {
+          walletTx.processedAt = tx.processedAt || new Date();
+          if (payoutTxHash) walletTx.txHash = payoutTxHash;
+        }
       }
     }
 

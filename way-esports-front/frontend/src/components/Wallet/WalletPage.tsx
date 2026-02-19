@@ -66,6 +66,22 @@ const Input = styled.input`
     }
 `;
 
+const Select = styled.select`
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border: 1px solid #333;
+    border-radius: 8px;
+    background-color: #333;
+    color: white;
+    font-size: 16px;
+
+    &:focus {
+        outline: none;
+        border-color: #FF6B00;
+    }
+`;
+
 const TransactionHistory = styled.div`
     margin-top: 20px;
 `;
@@ -83,6 +99,8 @@ const Transaction = styled.div`
 const WalletPage: React.FC = () => {
     const [balance, setBalance] = useState(0);
     const [withdrawAmount, setWithdrawAmount] = useState('');
+    const [withdrawAddress, setWithdrawAddress] = useState('');
+    const [withdrawNetwork, setWithdrawNetwork] = useState('USDT-TRC20');
     const [transactions, setTransactions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isWithdrawing, setIsWithdrawing] = useState(false);
@@ -141,8 +159,13 @@ const WalletPage: React.FC = () => {
         try {
             setError(null);
             const amount = Number(withdrawAmount);
+            const walletAddress = withdrawAddress.trim();
             if (!Number.isFinite(amount) || amount <= 0) {
                 setError('Please enter a valid amount');
+                return;
+            }
+            if (!walletAddress || walletAddress.length < 16) {
+                setError('Enter a valid USDT wallet address');
                 return;
             }
 
@@ -152,7 +175,11 @@ const WalletPage: React.FC = () => {
             }
 
             setIsWithdrawing(true);
-            const response: any = await api.post('/api/wallet/withdraw', { amount }, true);
+            const response: any = await api.post('/api/wallet/withdraw', {
+                amount,
+                walletAddress,
+                network: withdrawNetwork
+            }, true);
             const nextBalance = toNumber(response?.data?.balance ?? response?.balance, balance - amount);
             setBalance(nextBalance);
 
@@ -166,11 +193,25 @@ const WalletPage: React.FC = () => {
             }
 
             setWithdrawAmount('');
+            setWithdrawAddress('');
         } catch (err: any) {
             console.error('Error withdrawing:', err);
             setError(err?.message || 'Failed to process withdrawal. Please try again.');
         } finally {
             setIsWithdrawing(false);
+        }
+    };
+
+    const handlePasteAddress = async () => {
+        try {
+            if (!navigator?.clipboard?.readText) {
+                setError('Clipboard access is not available in this browser');
+                return;
+            }
+            const text = await navigator.clipboard.readText();
+            setWithdrawAddress((text || '').trim());
+        } catch {
+            setError('Failed to read clipboard');
         }
     };
 
@@ -187,6 +228,23 @@ const WalletPage: React.FC = () => {
                         value={withdrawAmount}
                         onChange={(e) => setWithdrawAmount(e.target.value)}
                     />
+                    <Input
+                        type="text"
+                        placeholder="USDT wallet address"
+                        value={withdrawAddress}
+                        onChange={(e) => setWithdrawAddress(e.target.value)}
+                    />
+                    <Select
+                        value={withdrawNetwork}
+                        onChange={(e) => setWithdrawNetwork(e.target.value)}
+                    >
+                        <option value="USDT-TRC20">USDT-TRC20</option>
+                        <option value="USDT-ERC20">USDT-ERC20</option>
+                        <option value="USDT-BEP20">USDT-BEP20</option>
+                    </Select>
+                    <Button variant="secondary" onClick={handlePasteAddress} disabled={isWithdrawing || loading}>
+                        Paste Address
+                    </Button>
                     <Button onClick={handleWithdraw} disabled={isWithdrawing || loading}>
                         {isWithdrawing ? 'Processing...' : 'Withdraw Funds'}
                     </Button>
@@ -224,6 +282,16 @@ const WalletPage: React.FC = () => {
                                         {(transaction.type || '').replace('_', ' ').toUpperCase()}
                                         {transaction.status ? ` \u2022 ${transaction.status}` : ''}
                                     </div>
+                                    {transaction.type === 'withdrawal' && transaction.walletAddress && (
+                                        <div style={{ fontSize: '12px', color: '#999' }}>
+                                            {transaction.network || 'USDT'}: {transaction.walletAddress}
+                                        </div>
+                                    )}
+                                    {transaction.txHash && (
+                                        <div style={{ fontSize: '12px', color: '#999' }}>
+                                            TX: {transaction.txHash}
+                                        </div>
+                                    )}
                                 </div>
                                 <div style={{ fontSize: '12px', color: '#888' }}>
                                     {displayDate}

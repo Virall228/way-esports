@@ -57,6 +57,10 @@ export interface IUser extends Document<mongoose.Types.ObjectId> {
       description: string;
       date: Date;
       reference?: string;
+      walletAddress?: string;
+      network?: string;
+      txHash?: string;
+      processedAt?: Date;
       status?: 'pending' | 'completed' | 'failed' | 'refund_pending' | 'refunded' | 'refund_denied';
       refundReason?: string;
       refundRequestedAt?: Date;
@@ -210,6 +214,22 @@ const userSchema = new Schema<IUser>({
         default: Date.now
       },
       reference: String,
+      walletAddress: {
+        type: String,
+        trim: true,
+        maxlength: 160
+      },
+      network: {
+        type: String,
+        trim: true,
+        maxlength: 32
+      },
+      txHash: {
+        type: String,
+        trim: true,
+        maxlength: 160
+      },
+      processedAt: Date,
       status: {
         type: String,
         enum: ['pending', 'completed', 'failed', 'refund_pending', 'refunded', 'refund_denied'],

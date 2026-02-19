@@ -5,6 +5,8 @@ import ReferralService from '../services/referralService';
 import { idempotency } from '../middleware/idempotency';
 
 const router = express.Router();
+const SUPPORTED_WITHDRAW_NETWORKS = ['USDT-TRC20', 'USDT-ERC20', 'USDT-BEP20'] as const;
+type SupportedWithdrawNetwork = (typeof SUPPORTED_WITHDRAW_NETWORKS)[number];
 
 const resolveUserId = (req: any): string | null => {
   const value = req.user?._id || req.user?.id;
@@ -22,6 +24,47 @@ const addSubscriptionPeriod = (user: any, days: number) => {
   user.subscriptionExpiresAt = nextExpiry;
   return nextExpiry;
 };
+
+const normalizeNetwork = (value: unknown): SupportedWithdrawNetwork => {
+  const raw = typeof value === 'string' ? value.trim().toUpperCase() : '';
+  const map: Record<string, SupportedWithdrawNetwork> = {
+    TRC20: 'USDT-TRC20',
+    'USDT-TRC20': 'USDT-TRC20',
+    ERC20: 'USDT-ERC20',
+    'USDT-ERC20': 'USDT-ERC20',
+    BEP20: 'USDT-BEP20',
+    'USDT-BEP20': 'USDT-BEP20'
+  };
+  return map[raw] || 'USDT-TRC20';
+};
+
+const normalizeWalletAddress = (value: unknown): string => {
+  const address = typeof value === 'string' ? value.trim() : '';
+  return address;
+};
+
+const isValidWalletAddress = (address: string, network: SupportedWithdrawNetwork): boolean => {
+  if (!address) return false;
+  if (address.length < 16 || address.length > 160) return false;
+  if (/\s/.test(address)) return false;
+
+  if (network === 'USDT-TRC20') {
+    return /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(address);
+  }
+
+  if (network === 'USDT-ERC20' || network === 'USDT-BEP20') {
+    return /^0x[a-fA-F0-9]{40}$/.test(address);
+  }
+
+  return false;
+};
+
+router.get('/withdraw/networks', (_req, res) => {
+  return res.json({
+    success: true,
+    data: SUPPORTED_WITHDRAW_NETWORKS
+  });
+});
 
 // Get wallet balance (alias for compatibility)
 router.get('/balance', async (req, res) => {
@@ -290,6 +333,8 @@ router.delete('/payment-methods/:id', async (req, res) => {
 router.post('/withdraw', async (req, res) => {
   try {
     const { amount, paymentMethodId } = req.body;
+    const walletAddress = normalizeWalletAddress(req.body?.walletAddress);
+    const network = normalizeNetwork(req.body?.network);
 
     const userId = resolveUserId(req);
     if (!userId) {
@@ -315,8 +360,23 @@ router.post('/withdraw', async (req, res) => {
       });
     }
 
+    if (!isValidWalletAddress(walletAddress, network)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid wallet address for ${network}`
+      });
+    }
+
+    const normalizedAmount = Number(amount);
+    if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Amount must be a positive number'
+      });
+    }
+
     // Check balance
-    if (wallet.balance < amount) {
+    if (wallet.balance < normalizedAmount) {
       return res.status(400).json({
         success: false,
         error: 'Insufficient balance'
@@ -340,14 +400,14 @@ router.post('/withdraw', async (req, res) => {
       t.date >= monthStart
     ).reduce((sum, t) => sum + t.amount, 0);
 
-    if (dailyWithdrawals + amount > wallet.withdrawalLimit.daily) {
+    if (dailyWithdrawals + normalizedAmount > wallet.withdrawalLimit.daily) {
       return res.status(400).json({
         success: false,
         error: 'Daily withdrawal limit exceeded'
       });
     }
 
-    if (monthlyWithdrawals + amount > wallet.withdrawalLimit.monthly) {
+    if (monthlyWithdrawals + normalizedAmount > wallet.withdrawalLimit.monthly) {
       return res.status(400).json({
         success: false,
         error: 'Monthly withdrawal limit exceeded'
@@ -355,22 +415,46 @@ router.post('/withdraw', async (req, res) => {
     }
 
     // Create withdrawal transaction
+    const reference = `WD${Date.now()}`;
     wallet.transactions.push({
       type: 'withdrawal',
-      amount,
-      description: 'Withdrawal request',
+      amount: normalizedAmount,
+      description: `Withdrawal request (${network})`,
       status: 'pending',
-      reference: `WD${Date.now()}`,
+      reference,
+      walletAddress,
+      network,
       date: new Date()
     });
 
-    wallet.balance -= amount;
+    wallet.balance -= normalizedAmount;
     wallet.lastWithdrawal = new Date();
     await wallet.save();
 
+    user.wallet.transactions.push({
+      type: 'withdrawal',
+      amount: normalizedAmount,
+      description: `Withdrawal request (${network})`,
+      status: 'pending',
+      reference,
+      walletAddress,
+      network,
+      date: new Date()
+    } as any);
+    user.wallet.balance = wallet.balance;
+    await user.save();
+
     res.json({
       success: true,
-      data: wallet
+      data: {
+        balance: wallet.balance,
+        withdrawalRequest: {
+          amount: normalizedAmount,
+          walletAddress,
+          network
+        },
+        transactions: wallet.transactions
+      }
     });
   } catch (error) {
     console.error('Error processing withdrawal:', error);

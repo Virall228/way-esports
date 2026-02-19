@@ -9,6 +9,10 @@ export interface IWallet extends Document<mongoose.Types.ObjectId> {
     description: string;
     status: 'pending' | 'completed' | 'failed';
     reference?: string;
+    walletAddress?: string;
+    network?: string;
+    txHash?: string;
+    processedAt?: Date;
     date: Date;
   }[];
   paymentMethods: {
@@ -63,6 +67,24 @@ const walletSchema = new Schema<IWallet>({
       default: 'pending'
     },
     reference: String,
+    walletAddress: {
+      type: String,
+      trim: true,
+      maxlength: 160
+    },
+    network: {
+      type: String,
+      trim: true,
+      maxlength: 32
+    },
+    txHash: {
+      type: String,
+      trim: true,
+      maxlength: 160
+    },
+    processedAt: {
+      type: Date
+    },
     date: {
       type: Date,
       default: Date.now
