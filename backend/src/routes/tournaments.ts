@@ -1046,7 +1046,10 @@ router.get('/:id/admin-overview', authenticateJWT, isAdmin, async (req, res) => 
           team2: Number(match.score?.team2 || 0)
         },
         winnerId: match.winner?._id?.toString?.() || match.winner?.toString?.() || null,
-        startTime: match.startTime?.toISOString?.() || null
+        startTime: match.startTime?.toISOString?.() || null,
+        hasRoomCredentials: Boolean(match.roomCredentials?.roomId && match.roomCredentials?.password),
+        roomVisibleAt: match.roomCredentials?.visibleAt?.toISOString?.() || null,
+        roomExpiresAt: match.roomCredentials?.expiresAt?.toISOString?.() || null
       });
     });
 
@@ -1084,7 +1087,17 @@ router.get('/:id/admin-overview', authenticateJWT, isAdmin, async (req, res) => 
             team1: Number(match.score?.team1 || 0),
             team2: Number(match.score?.team2 || 0)
           },
-          winnerId: match.winner?._id?.toString?.() || match.winner?.toString?.() || null
+          winnerId: match.winner?._id?.toString?.() || match.winner?.toString?.() || null,
+          hasRoomCredentials: Boolean(match.roomCredentials?.roomId && match.roomCredentials?.password),
+          roomCredentials: match.roomCredentials?.roomId && match.roomCredentials?.password
+            ? {
+              roomId: match.roomCredentials.roomId,
+              password: match.roomCredentials.password,
+              generatedAt: match.roomCredentials.generatedAt?.toISOString?.() || null,
+              visibleAt: match.roomCredentials.visibleAt?.toISOString?.() || null,
+              expiresAt: match.roomCredentials.expiresAt?.toISOString?.() || null
+            }
+            : null
         })),
         bracket
       }

@@ -1,11 +1,11 @@
 import Tournament from '../models/Tournament';
 import Match from '../models/Match';
 import PrizeDistributionService from './prizeDistribution';
+import { prepareMatchRoom } from './matchRoomService';
 
 const FIVE_MIN = 5 * 60 * 1000;
 const MATCH_INTERVAL_MIN = 30;
 const ROOM_VISIBILITY_WINDOW_MIN = 5;
-const ROOM_TTL_HOURS = 6;
 const SUPPORTED_MATCH_GAMES = new Set(['Critical Ops', 'CS2', 'PUBG Mobile']);
 
 interface ScheduledJob {
@@ -22,17 +22,6 @@ const normalizeMatchGame = (game: string | undefined): 'Critical Ops' | 'CS2' | 
   }
   return 'CS2';
 };
-
-const randomFrom = (chars: string, length: number): string => {
-  let result = '';
-  for (let i = 0; i < length; i += 1) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-};
-
-const generateRoomId = () => randomFrom('ABCDEFGHJKLMNPQRSTUVWXYZ23456789', 6);
-const generateRoomPassword = () => randomFrom('abcdefghjkmnpqrstuvwxyz23456789', 8);
 
 async function generateInitialBracketMatches(tournament: any) {
   if (!tournament || tournament.type !== 'team') return;
@@ -135,18 +124,16 @@ async function ensureUpcomingRoomCredentials() {
   });
 
   for (const match of matches) {
-    const visibleAt = new Date(Math.max(match.startTime.getTime() - ROOM_VISIBILITY_WINDOW_MIN * 60 * 1000, now.getTime()));
-    const expiresAt = new Date(match.startTime.getTime() + ROOM_TTL_HOURS * 60 * 60 * 1000);
-
-    match.roomCredentials = {
-      roomId: generateRoomId(),
-      password: generateRoomPassword(),
-      generatedAt: now,
-      visibleAt,
-      expiresAt
-    };
-
-    await match.save();
+    try {
+      // Pre-generate rooms shortly before match start.
+      // Credentials are still hidden until visibleAt.
+      await prepareMatchRoom(match, {
+        force: false,
+        visibilityWindowMinutes: ROOM_VISIBILITY_WINDOW_MIN
+      });
+    } catch (error) {
+      console.error('[scheduler] failed to prepare match room:', error);
+    }
   }
 }
 

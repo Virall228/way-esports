@@ -6,6 +6,7 @@ import User from '../models/User';
 import Wallet from '../models/Wallet';
 import { authenticateJWT, isAdmin } from '../middleware/auth';
 import { evaluateUserAchievements } from '../services/achievements/engine';
+import { hasRoomCredentials, prepareMatchRoom } from '../services/matchRoomService';
 
 const router = express.Router();
 
@@ -42,6 +43,22 @@ const isUserMatchParticipant = async (match: any, userId: string): Promise<boole
   };
 
   return isInTeam(team1) || isInTeam(team2);
+};
+
+const toIso = (value: any): string | null => {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+};
+
+const buildRoomMeta = (match: any) => {
+  const hasRoom = hasRoomCredentials(match);
+  return {
+    hasRoomCredentials: hasRoom,
+    roomVisibleAt: toIso(match?.roomCredentials?.visibleAt),
+    roomExpiresAt: toIso(match?.roomCredentials?.expiresAt),
+    roomGeneratedAt: toIso(match?.roomCredentials?.generatedAt)
+  };
 };
 
 async function distributeMatchWinnerPayout(matchId: string, winnerTeamId?: string | null) {
@@ -260,7 +277,7 @@ router.get('/', async (req, res) => {
         name: match.winner.name || '',
         tag: match.winner.tag || ''
       } : match.winner,
-      roomVisibleAt: match.roomCredentials?.visibleAt?.toISOString?.() || null,
+      ...buildRoomMeta(match),
       createdAt: match.createdAt?.toISOString(),
       updatedAt: match.updatedAt?.toISOString()
     }));
@@ -274,6 +291,155 @@ router.get('/', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch matches'
+    });
+  }
+});
+
+// Admin: bulk prepare room credentials for matches
+router.post('/rooms/prepare', authenticateJWT, isAdmin, async (req: any, res: any) => {
+  try {
+    const tournamentId = typeof req.body?.tournamentId === 'string' ? req.body.tournamentId.trim() : '';
+    const matchIds = Array.isArray(req.body?.matchIds)
+      ? req.body.matchIds.map((id: any) => String(id || '').trim()).filter(Boolean)
+      : [];
+    const statuses = Array.isArray(req.body?.statuses)
+      ? req.body.statuses.map((status: any) => String(status || '').trim()).filter(Boolean)
+      : [];
+
+    const force = Boolean(req.body?.force);
+    const onlyMissing = req.body?.onlyMissing !== false;
+    const visibilityWindowMinutes = Number(req.body?.visibilityWindowMinutes || 5);
+    const ttlHours = Number(req.body?.ttlHours || 6);
+
+    const query: any = {};
+    if (tournamentId) query.tournament = tournamentId;
+    if (matchIds.length) query._id = { $in: matchIds };
+    if (statuses.length) query.status = { $in: statuses };
+
+    if (onlyMissing && !force) {
+      query.$and = [
+        {
+          $or: [
+            { 'roomCredentials.roomId': { $exists: false } },
+            { 'roomCredentials.roomId': null },
+            { 'roomCredentials.roomId': '' },
+            { 'roomCredentials.password': { $exists: false } },
+            { 'roomCredentials.password': null },
+            { 'roomCredentials.password': '' }
+          ]
+        }
+      ];
+    }
+
+    const matches: any[] = await Match.find(query).sort({ startTime: 1 });
+
+    let created = 0;
+    let unchanged = 0;
+    const failed: Array<{ matchId: string; error: string }> = [];
+    const rooms: Array<{
+      matchId: string;
+      roomId: string | null;
+      password: string | null;
+      created: boolean;
+      updated: boolean;
+      hasRoomCredentials: boolean;
+      roomVisibleAt: string | null;
+      roomExpiresAt: string | null;
+      roomGeneratedAt: string | null;
+    }> = [];
+
+    for (const match of matches) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const result = await prepareMatchRoom(match, {
+          force,
+          visibilityWindowMinutes,
+          ttlHours
+        });
+
+        if (result.created) {
+          created += 1;
+        } else {
+          unchanged += 1;
+        }
+
+        rooms.push({
+          matchId: match._id.toString(),
+          roomId: match.roomCredentials?.roomId || null,
+          password: match.roomCredentials?.password || null,
+          created: result.created,
+          updated: result.updated,
+          ...buildRoomMeta(match)
+        });
+      } catch (error: any) {
+        failed.push({
+          matchId: match?._id?.toString?.() || '',
+          error: error?.message || 'Failed to prepare room'
+        });
+      }
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        total: matches.length,
+        created,
+        unchanged,
+        failed,
+        rooms
+      }
+    });
+  } catch (error) {
+    console.error('Error bulk preparing match rooms:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to prepare match rooms'
+    });
+  }
+});
+
+// Admin: prepare/regenerate room credentials for a single match
+router.post('/:id/room', authenticateJWT, isAdmin, async (req: any, res: any) => {
+  try {
+    const match: any = await Match.findById(req.params.id);
+    if (!match) {
+      return res.status(404).json({ success: false, error: 'Match not found' });
+    }
+
+    const force = Boolean(req.body?.force);
+    const roomId = typeof req.body?.roomId === 'string' ? req.body.roomId.trim().toUpperCase() : '';
+    const password = typeof req.body?.password === 'string' ? req.body.password.trim() : '';
+    const visibleAt = req.body?.visibleAt || null;
+    const expiresAt = req.body?.expiresAt || null;
+    const visibilityWindowMinutes = Number(req.body?.visibilityWindowMinutes || 5);
+    const ttlHours = Number(req.body?.ttlHours || 6);
+
+    const result = await prepareMatchRoom(match, {
+      force,
+      roomId: roomId || undefined,
+      password: password || undefined,
+      visibleAt,
+      expiresAt,
+      visibilityWindowMinutes,
+      ttlHours
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        matchId: match._id.toString(),
+        roomId: match.roomCredentials?.roomId || null,
+        password: match.roomCredentials?.password || null,
+        created: result.created,
+        updated: result.updated,
+        ...buildRoomMeta(match)
+      }
+    });
+  } catch (error: any) {
+    console.error('Error preparing match room:', error);
+    return res.status(400).json({
+      success: false,
+      error: error?.message || 'Failed to prepare match room'
     });
   }
 });
@@ -295,7 +461,8 @@ router.get('/:id/room', authenticateJWT, async (req: any, res: any) => {
       return res.status(401).json({ success: false, error: 'Authentication required' });
     }
 
-    if (!isAdminRole(req)) {
+    const adminAccess = isAdminRole(req);
+    if (!adminAccess) {
       const isParticipant = await isUserMatchParticipant(match, requesterId);
       if (!isParticipant) {
         return res.status(403).json({ success: false, error: 'Access denied for this match room' });
@@ -306,7 +473,7 @@ router.get('/:id/room', authenticateJWT, async (req: any, res: any) => {
     const expiresAt = match.roomCredentials.expiresAt ? new Date(match.roomCredentials.expiresAt) : null;
     const now = new Date();
 
-    if (visibleAt && now < visibleAt) {
+    if (!adminAccess && visibleAt && now < visibleAt) {
       return res.status(403).json({
         success: false,
         error: 'Room credentials will be available 5 minutes before match start',
@@ -314,7 +481,7 @@ router.get('/:id/room', authenticateJWT, async (req: any, res: any) => {
       });
     }
 
-    if (expiresAt && now > expiresAt) {
+    if (!adminAccess && expiresAt && now > expiresAt) {
       return res.status(410).json({ success: false, error: 'Room credentials expired' });
     }
 
@@ -390,7 +557,7 @@ router.get('/:id', async (req, res) => {
         tag: match.winner.tag || '',
         logo: match.winner.logo || ''
       } : match.winner,
-      roomVisibleAt: match.roomCredentials?.visibleAt?.toISOString?.() || null,
+      ...buildRoomMeta(match),
       createdAt: match.createdAt?.toISOString(),
       updatedAt: match.updatedAt?.toISOString()
     };

@@ -3,6 +3,9 @@ import styled from 'styled-components';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { tournamentService } from '../../services/tournamentService';
+import { api } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import { resolveMediaUrl, resolveTeamLogoUrl } from '../../utils/media';
@@ -17,6 +20,13 @@ type MatchItem = {
   endTime?: string;
   status?: string;
   score?: { team1?: number; team2?: number };
+};
+
+type RoomData = {
+  roomId: string;
+  password: string;
+  visibleAt?: string;
+  expiresAt?: string;
 };
 
 const Container = styled.div`
@@ -193,6 +203,10 @@ const Banner = styled.div<{ $src?: string }>`
 const TournamentDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [tab, setTab] = useState<'schedule' | 'live' | 'results' | 'bracket'>('schedule');
+  const { isAuthenticated } = useAuth();
+  const { addNotification } = useNotifications();
+  const [roomByMatch, setRoomByMatch] = useState<Record<string, RoomData>>({});
+  const [loadingRoomId, setLoadingRoomId] = useState<string | null>(null);
   const { data: tournament, isLoading: isTournamentLoading, error: tournamentError } = useQuery({
     queryKey: ['tournament', id],
     queryFn: async () => {
@@ -272,6 +286,36 @@ const TournamentDetailsPage: React.FC = () => {
     };
   };
 
+  const handleLoadRoom = async (matchId: string) => {
+    try {
+      setLoadingRoomId(matchId);
+      const response: any = await api.get(`/api/matches/${matchId}/room`, true);
+      const payload = response?.data || response;
+
+      if (!payload?.roomId || !payload?.password) {
+        throw new Error('Room credentials are not available yet');
+      }
+
+      setRoomByMatch((prev) => ({
+        ...prev,
+        [matchId]: {
+          roomId: payload.roomId,
+          password: payload.password,
+          visibleAt: payload.visibleAt,
+          expiresAt: payload.expiresAt
+        }
+      }));
+    } catch (err: any) {
+      addNotification({
+        type: 'warning',
+        title: 'Room Access',
+        message: err?.message || 'Room credentials are not available'
+      });
+    } finally {
+      setLoadingRoomId(null);
+    }
+  };
+
   return (
     <Container>
       <Banner $src={tournamentBanner || '/images/main.png'}>
@@ -349,6 +393,24 @@ const TournamentDetailsPage: React.FC = () => {
                   <Meta>Status: {m.status}</Meta>
                   <Meta>{m.endTime ? `End: ${new Date(m.endTime).toLocaleString()}` : ''}</Meta>
                 </Row>
+
+                {isAuthenticated && m.id && ['upcoming', 'scheduled', 'live'].includes(String(m.status || '').toLowerCase()) && (
+                  <Row style={{ justifyContent: 'flex-start', gap: '10px' }}>
+                    <Button
+                      variant="outline"
+                      size="small"
+                      onClick={() => handleLoadRoom(m.id!)}
+                      disabled={loadingRoomId === m.id}
+                    >
+                      {loadingRoomId === m.id ? 'Loading room...' : 'Show Room Credentials'}
+                    </Button>
+                    {roomByMatch[m.id] && (
+                      <Meta>
+                        Room: <strong>{roomByMatch[m.id].roomId}</strong> | Password: <strong>{roomByMatch[m.id].password}</strong>
+                      </Meta>
+                    )}
+                  </Row>
+                )}
               </SurfaceCard>
             );
           })}

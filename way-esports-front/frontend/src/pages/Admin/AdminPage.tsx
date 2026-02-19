@@ -513,6 +513,14 @@ interface AdminTournamentOverview {
     team2?: { id: string; name: string; tag?: string; logo?: string } | null;
     score: { team1: number; team2: number };
     winnerId?: string | null;
+    hasRoomCredentials?: boolean;
+    roomCredentials?: {
+      roomId: string;
+      password: string;
+      generatedAt?: string | null;
+      visibleAt?: string | null;
+      expiresAt?: string | null;
+    } | null;
   }>;
 }
 
@@ -1562,6 +1570,93 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const copyText = async (value: string, successTitle: string) => {
+    const text = String(value || '').trim();
+    if (!text) {
+      notify('warning', 'Nothing to copy', 'Value is empty');
+      return;
+    }
+
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const input = document.createElement('textarea');
+        input.value = text;
+        input.style.position = 'fixed';
+        input.style.opacity = '0';
+        document.body.appendChild(input);
+        input.focus();
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+      }
+      notify('success', successTitle, 'Copied to clipboard');
+    } catch (e) {
+      notify('error', 'Copy failed', formatApiError(e, 'Failed to copy value'));
+    }
+  };
+
+  const invalidateTournamentMatchViews = async (tournamentId: string) => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', tournamentId] }),
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
+      queryClient.invalidateQueries({ queryKey: ['matches'] }),
+      queryClient.invalidateQueries({ queryKey: ['tournament', tournamentId, 'matches', 'schedule'] }),
+      queryClient.invalidateQueries({ queryKey: ['tournament', tournamentId, 'matches', 'live'] }),
+      queryClient.invalidateQueries({ queryKey: ['tournament', tournamentId, 'matches', 'results'] }),
+      queryClient.invalidateQueries({ queryKey: ['tournament', tournamentId, 'matches', 'bracket'] })
+    ]);
+  };
+
+  const handlePrepareSingleMatchRoom = async (matchId: string, force = false) => {
+    if (!selectedTournamentId) return;
+    try {
+      setError(null);
+      const result: any = await api.post(`/api/matches/${matchId}/room`, { force });
+      const payload = result?.data || result || {};
+
+      await invalidateTournamentMatchViews(selectedTournamentId);
+      notify(
+        'success',
+        force ? 'Room regenerated' : 'Room prepared',
+        payload?.roomId ? `Room ${payload.roomId} is ready` : 'Room credentials updated'
+      );
+    } catch (e: any) {
+      const message = formatApiError(e, 'Failed to prepare room');
+      setError(message);
+      notify('error', 'Room preparation failed', message);
+    }
+  };
+
+  const handlePrepareTournamentRooms = async (force = false) => {
+    if (!selectedTournamentId) return;
+    try {
+      setError(null);
+      const result: any = await api.post('/api/matches/rooms/prepare', {
+        tournamentId: selectedTournamentId,
+        statuses: ['scheduled', 'live'],
+        force,
+        onlyMissing: !force
+      });
+      const payload = result?.data || result || {};
+      const created = Number(payload.created || 0);
+      const unchanged = Number(payload.unchanged || 0);
+      const failedCount = Array.isArray(payload.failed) ? payload.failed.length : 0;
+
+      await invalidateTournamentMatchViews(selectedTournamentId);
+      notify(
+        'success',
+        force ? 'Rooms regenerated' : 'Rooms prepared',
+        `Created: ${created}, unchanged: ${unchanged}, failed: ${failedCount}`
+      );
+    } catch (e: any) {
+      const message = formatApiError(e, 'Failed to prepare tournament rooms');
+      setError(message);
+      notify('error', 'Room preparation failed', message);
+    }
+  };
+
   const handleWalletAdjust = async (targetUserId: string, username: string) => {
     const amountRaw = window.prompt(`Adjust balance for ${username}. Use + for credit, - for debit`, '0');
     if (!amountRaw) return;
@@ -2368,6 +2463,9 @@ const AdminPage: React.FC = () => {
   function renderTournaments() {
     const selectedTournament = tournaments.find((item: any) => item.id === selectedTournamentId) || null;
     const overview = tournamentOverview;
+    const preparedRoomsCount = Array.isArray(overview?.matches)
+      ? overview.matches.filter((match: any) => Boolean(match?.hasRoomCredentials)).length
+      : 0;
 
     return (
       <div>
@@ -2439,15 +2537,23 @@ const AdminPage: React.FC = () => {
                 <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', selectedTournamentId] })}>
                   Refresh Overview
                 </ActionButton>
+                <ActionButton onClick={() => handlePrepareTournamentRooms(false)}>
+                  Prepare Missing Rooms
+                </ActionButton>
+                <ActionButton onClick={() => handlePrepareTournamentRooms(true)}>
+                  Regenerate Rooms
+                </ActionButton>
               </ActionsCell>
             </div>
 
             <div style={{ marginBottom: '16px', color: '#cccccc', fontSize: '14px' }}>
               Approved teams: <strong>{overview?.teams?.length || 0}</strong>
-              {' • '}
+              {' | '}
               Pending requests: <strong>{tournamentRequests.length}</strong>
               {' • '}
               Matches: <strong>{overview?.matches?.length || 0}</strong>
+              {' • '}
+              Rooms prepared: <strong>{preparedRoomsCount}</strong>
             </div>
 
             <h5 style={{ marginTop: 0 }}>Pending Tournament Requests</h5>
@@ -2542,6 +2648,8 @@ const AdminPage: React.FC = () => {
                       <Th>Team 2</Th>
                       <Th>Score</Th>
                       <Th>Status</Th>
+                      <Th>Room</Th>
+                      <Th>Access Window</Th>
                       <Th>Winner</Th>
                       <Th>Actions</Th>
                     </tr>
@@ -2555,6 +2663,39 @@ const AdminPage: React.FC = () => {
                         <Td>{Number(match.score?.team1 || 0)} : {Number(match.score?.team2 || 0)}</Td>
                         <Td>{match.status || 'scheduled'}</Td>
                         <Td>
+                          {match.hasRoomCredentials && match.roomCredentials ? (
+                            <div style={{ display: 'grid', gap: '4px' }}>
+                              <div>
+                                <strong>{match.roomCredentials.roomId}</strong> / {match.roomCredentials.password}
+                              </div>
+                              <ActionsCell>
+                                <ActionButton onClick={() => copyText(match.roomCredentials.roomId, 'Room ID copied')}>
+                                  Copy ID
+                                </ActionButton>
+                                <ActionButton onClick={() => copyText(match.roomCredentials.password, 'Room password copied')}>
+                                  Copy Password
+                                </ActionButton>
+                              </ActionsCell>
+                            </div>
+                          ) : (
+                            <span style={{ color: '#999' }}>Not prepared</span>
+                          )}
+                        </Td>
+                        <Td>
+                          {match.hasRoomCredentials && match.roomCredentials ? (
+                            <div style={{ display: 'grid', gap: '4px' }}>
+                              <div>
+                                Visible: {match.roomCredentials.visibleAt ? new Date(match.roomCredentials.visibleAt).toLocaleString() : '-'}
+                              </div>
+                              <div>
+                                Expires: {match.roomCredentials.expiresAt ? new Date(match.roomCredentials.expiresAt).toLocaleString() : '-'}
+                              </div>
+                            </div>
+                          ) : (
+                            <span style={{ color: '#999' }}>-</span>
+                          )}
+                        </Td>
+                        <Td>
                           {match.winnerId === match.team1?.id
                             ? (match.team1?.name || 'Team 1')
                             : match.winnerId === match.team2?.id
@@ -2563,6 +2704,12 @@ const AdminPage: React.FC = () => {
                         </Td>
                         <Td>
                           <ActionsCell>
+                            <ActionButton onClick={() => handlePrepareSingleMatchRoom(match.id, false)}>
+                              Prepare Room
+                            </ActionButton>
+                            <ActionButton onClick={() => handlePrepareSingleMatchRoom(match.id, true)}>
+                              Regenerate
+                            </ActionButton>
                             <ActionButton
                               onClick={() => {
                                 const nextTeam1 = window.prompt(`Score: ${match.team1?.name || 'Team 1'}`, String(match.score?.team1 ?? 0));
