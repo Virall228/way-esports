@@ -7,6 +7,7 @@ import { idempotency } from '../middleware/idempotency';
 const router = express.Router();
 const SUPPORTED_WITHDRAW_NETWORKS = ['USDT-TRC20', 'USDT-ERC20', 'USDT-BEP20'] as const;
 type SupportedWithdrawNetwork = (typeof SUPPORTED_WITHDRAW_NETWORKS)[number];
+const MIN_WITHDRAWAL_USD = 10;
 
 const resolveUserId = (req: any): string | null => {
   const value = req.user?._id || req.user?.id;
@@ -57,6 +58,12 @@ const isValidWalletAddress = (address: string, network: SupportedWithdrawNetwork
   }
 
   return false;
+};
+
+const detectWalletNetwork = (address: string): SupportedWithdrawNetwork | null => {
+  if (/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(address)) return 'USDT-TRC20';
+  if (/^0x[a-fA-F0-9]{40}$/.test(address)) return 'USDT-ERC20';
+  return null;
 };
 
 router.get('/withdraw/networks', (_req, res) => {
@@ -332,7 +339,7 @@ router.delete('/payment-methods/:id', async (req, res) => {
 // Request withdrawal
 router.post('/withdraw', async (req, res) => {
   try {
-    const { amount, paymentMethodId } = req.body;
+    const { amount } = req.body;
     const walletAddress = normalizeWalletAddress(req.body?.walletAddress);
     const network = normalizeNetwork(req.body?.network);
 
@@ -361,9 +368,12 @@ router.post('/withdraw', async (req, res) => {
     }
 
     if (!isValidWalletAddress(walletAddress, network)) {
+      const detectedNetwork = detectWalletNetwork(walletAddress);
       return res.status(400).json({
         success: false,
-        error: `Invalid wallet address for ${network}`
+        error: detectedNetwork && detectedNetwork !== network
+          ? `Address looks like ${detectedNetwork}. Please select the correct network.`
+          : `Invalid wallet address for ${network}`
       });
     }
 
@@ -372,6 +382,12 @@ router.post('/withdraw', async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Amount must be a positive number'
+      });
+    }
+    if (normalizedAmount < MIN_WITHDRAWAL_USD) {
+      return res.status(400).json({
+        success: false,
+        error: `Minimum withdrawal amount is $${MIN_WITHDRAWAL_USD}`
       });
     }
 

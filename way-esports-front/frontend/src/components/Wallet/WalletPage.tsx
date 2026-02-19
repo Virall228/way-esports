@@ -97,6 +97,7 @@ const Transaction = styled.div`
 `;
 
 const WalletPage: React.FC = () => {
+    const MIN_WITHDRAW_USD = 10;
     const [balance, setBalance] = useState(0);
     const [withdrawAmount, setWithdrawAmount] = useState('');
     const [withdrawAddress, setWithdrawAddress] = useState('');
@@ -109,6 +110,13 @@ const WalletPage: React.FC = () => {
     const toNumber = (value: any, fallback = 0) => {
         const parsed = Number(value);
         return Number.isFinite(parsed) ? parsed : fallback;
+    };
+
+    const detectNetworkByAddress = (addressRaw: string): string | null => {
+        const address = (addressRaw || '').trim();
+        if (/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(address)) return 'USDT-TRC20';
+        if (/^0x[a-fA-F0-9]{40}$/.test(address)) return 'USDT-ERC20';
+        return null;
     };
 
     const loadWallet = async () => {
@@ -164,6 +172,10 @@ const WalletPage: React.FC = () => {
                 setError('Please enter a valid amount');
                 return;
             }
+            if (amount < MIN_WITHDRAW_USD) {
+                setError(`Minimum withdrawal amount is $${MIN_WITHDRAW_USD}`);
+                return;
+            }
             if (!walletAddress || walletAddress.length < 16) {
                 setError('Enter a valid USDT wallet address');
                 return;
@@ -209,7 +221,10 @@ const WalletPage: React.FC = () => {
                 return;
             }
             const text = await navigator.clipboard.readText();
-            setWithdrawAddress((text || '').trim());
+            const value = (text || '').trim();
+            setWithdrawAddress(value);
+            const detected = detectNetworkByAddress(value);
+            if (detected) setWithdrawNetwork(detected);
         } catch {
             setError('Failed to read clipboard');
         }
@@ -232,7 +247,12 @@ const WalletPage: React.FC = () => {
                         type="text"
                         placeholder="USDT wallet address"
                         value={withdrawAddress}
-                        onChange={(e) => setWithdrawAddress(e.target.value)}
+                        onChange={(e) => {
+                            const value = e.target.value;
+                            setWithdrawAddress(value);
+                            const detected = detectNetworkByAddress(value);
+                            if (detected) setWithdrawNetwork(detected);
+                        }}
                     />
                     <Select
                         value={withdrawNetwork}
