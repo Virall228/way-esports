@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import Tournament, { ITournament } from '../models/Tournament';
 import Match from '../models/Match';
 import Team from '../models/Team';
