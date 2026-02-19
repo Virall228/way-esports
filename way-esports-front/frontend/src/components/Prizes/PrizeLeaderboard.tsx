@@ -126,8 +126,9 @@ const PrizeLeaderboard: React.FC = () => {
     const loadLeaderboard = async () => {
       try {
         setLoading(true);
-        const response = await api.get('/api/prizes/leaderboard?limit=20');
-        setLeaderboard(response.data);
+        const response: any = await api.get('/api/prizes/leaderboard?limit=20');
+        const list = Array.isArray(response) ? response : (Array.isArray(response?.data) ? response.data : []);
+        setLeaderboard(list);
       } catch (err: any) {
         setError(err?.message || 'Failed to load leaderboard');
       } finally {
@@ -171,10 +172,10 @@ const PrizeLeaderboard: React.FC = () => {
               <PlayerInfo>
                 <PlayerName>{entry.username}</PlayerName>
                 <PlayerStats>
-                  {entry.stats.tournamentsWon} wins {'\u2022'} {entry.prizeCount} prizes
+                  {(entry.stats?.tournamentsWon ?? 0)} wins {'\u2022'} {(entry.prizeCount ?? 0)} prizes
                 </PlayerStats>
               </PlayerInfo>
-              <PrizeAmount>${entry.totalPrizes.toFixed(2)}</PrizeAmount>
+              <PrizeAmount>${Number(entry.totalPrizes || 0).toFixed(2)}</PrizeAmount>
             </LeaderboardItem>
           ))
         ) : (

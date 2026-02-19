@@ -135,8 +135,9 @@ const PrizeHistory: React.FC = () => {
     const loadPrizeHistory = async () => {
       try {
         setLoading(true);
-        const response = await api.get('/api/prizes/user/history');
-        setPrizeData(response.data);
+        const response: any = await api.get('/api/prizes/user/history');
+        const normalized = response?.data || response || null;
+        setPrizeData(normalized);
       } catch (err: any) {
         setError(err?.message || 'Failed to load prize history');
       } finally {

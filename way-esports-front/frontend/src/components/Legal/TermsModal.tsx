@@ -184,8 +184,8 @@ const TermsModal: React.FC<TermsModalProps> = ({
   const loadTerms = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/terms/current');
-      setTerms(response.data);
+      const response: any = await api.get('/api/terms/current');
+      setTerms((response?.data || response) as TermsData);
     } catch (error) {
       console.error('Failed to load terms:', error);
     } finally {
