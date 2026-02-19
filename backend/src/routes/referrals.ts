@@ -3,6 +3,10 @@ import { authenticateJWT, isAdmin } from '../middleware/auth';
 import ReferralService from '../services/referralService';
 
 const router = express.Router();
+const DEFAULT_SUBSCRIPTION_PAYMENT_ADDRESS =
+  process.env.SUBSCRIPTION_USDT_TRC20_ADDRESS ||
+  process.env.USDT_TRC20_ADDRESS ||
+  'TAoLXyWNAZoxYCkYu4iEuk6N6jUhhDyXHU';
 
 /**
  * GET /api/referrals/stats
@@ -32,7 +36,9 @@ router.get('/public-settings', async (_req, res) => {
       referralBonusThreshold: settings?.referralBonusThreshold ?? 3,
       refereeBonus: settings?.refereeBonus ?? 1,
       referrerBonus: settings?.referrerBonus ?? 1,
-      subscriptionPrice: settings?.subscriptionPrice ?? 9.99
+      subscriptionPrice: settings?.subscriptionPrice ?? 9.99,
+      subscriptionPaymentNetwork: 'USDT-TRC20',
+      subscriptionPaymentAddress: DEFAULT_SUBSCRIPTION_PAYMENT_ADDRESS
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

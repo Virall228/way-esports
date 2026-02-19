@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import WalletModal from '../../components/Wallet/WalletModal';
 import SubscriptionModal from '../../components/Subscription/SubscriptionModal';
 import PhotoUploadModal from '../../components/Profile/PhotoUploadModal';
 import AchievementsSection from '../../components/Profile/AchievementsSection';
@@ -107,17 +106,6 @@ const UserOrg = styled.div`
   margin-bottom: 15px;
 `;
 
-const SubscriptionButton = styled(Button).attrs({ variant: 'brand', size: 'small' })`
-  font-size: 12px;
-  min-height: 40px;
-`;
-
-const WalletButton = styled(Button).attrs({ variant: 'secondary', size: 'small' })`
-  font-size: 12px;
-  min-height: 40px;
-  margin-left: 10px;
-`;
-
 const UserStats = styled.div`
   display: flex;
   gap: 30px;
@@ -201,7 +189,6 @@ const ProfilePage: React.FC = () => {
   const { addNotification } = useNotifications();
   const { data: profileData, refetch: refetchProfile } = useProfileQuery();
   const profile = profileData || user;
-  const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [isSubscriptionOpen, setIsSubscriptionOpen] = useState(false);
   const [isPhotoUploadOpen, setIsPhotoUploadOpen] = useState(false);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
@@ -348,14 +335,6 @@ const ProfilePage: React.FC = () => {
                 {'\u{1F517}'} {t('viewPublicProfile')}
               </Link>
             </div>
-            <div>
-              <SubscriptionButton onClick={() => setIsSubscriptionOpen(true)}>
-                {profile?.isSubscribed ? t('manageSubscription') : t('getSubscription')}
-              </SubscriptionButton>
-              <WalletButton onClick={() => setIsWalletOpen(true)}>
-                {'\u{1F4B0}'} {profile?.balance?.toFixed(2) || '0.00'}
-              </WalletButton>
-            </div>
           </ProfileTop>
           <UserStats>
             <StatItem>
@@ -454,14 +433,9 @@ const ProfilePage: React.FC = () => {
       <AchievementsSection />
 
       <ReferralCard />
-      <SubscriptionCard />
+      <SubscriptionCard onManageSubscription={() => setIsSubscriptionOpen(true)} />
 
       {/* Modals */}
-      <WalletModal
-        isOpen={isWalletOpen}
-        onClose={() => setIsWalletOpen(false)}
-      />
-
       <SubscriptionModal
         isOpen={isSubscriptionOpen}
         onClose={() => setIsSubscriptionOpen(false)}

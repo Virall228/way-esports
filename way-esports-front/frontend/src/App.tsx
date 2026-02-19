@@ -109,13 +109,6 @@ const Logo = styled.div`
   color: ${({ theme }) => theme.colors.text.primary};
 `;
 
-const BrandSub = styled.div`
-  font-size: 0.75rem;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-`;
-
 const SidebarNav = styled.nav`
   display: flex;
   flex-direction: column;
@@ -210,13 +203,6 @@ const TopBarTitle = styled.div`
   gap: 2px;
   min-width: 0;
   flex: 1;
-`;
-
-const TopBarBadge = styled.span`
-  font-size: 0.7rem;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  text-transform: uppercase;
-  letter-spacing: 1px;
 `;
 
 const BurgerButton = styled.button`
@@ -569,7 +555,6 @@ const AppContent: React.FC = () => {
       <Sidebar>
         <SidebarBrand>
           <Logo>WAY ESPORTS</Logo>
-          <BrandSub>Unified Arena</BrandSub>
         </SidebarBrand>
         <SidebarNav>
           {navItems.map((item) => (
@@ -585,7 +570,6 @@ const AppContent: React.FC = () => {
         <TopBar>
           <TopBarTitle>
             <Logo>WAY ESPORTS</Logo>
-            <TopBarBadge>{t('onePlatformOneUi')}</TopBarBadge>
           </TopBarTitle>
           <TopBarActions>
             {!isAuthenticated && (

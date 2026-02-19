@@ -133,7 +133,11 @@ interface SubscriptionData {
   subscriptionPrice: number;
 }
 
-const SubscriptionCard: React.FC = () => {
+interface SubscriptionCardProps {
+  onManageSubscription?: () => void;
+}
+
+const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ onManageSubscription }) => {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -287,7 +291,7 @@ const SubscriptionCard: React.FC = () => {
         </>
       ) : (
         <>
-          <ActionButton $variant="secondary">
+          <ActionButton $variant="secondary" onClick={onManageSubscription}>
             Manage Subscription
           </ActionButton>
           

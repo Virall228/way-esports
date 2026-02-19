@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
+import { api } from '../../services/api';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -219,8 +220,33 @@ interface SubscriptionModalProps {
   onClose: () => void;
 }
 
+const FALLBACK_PAYMENT_ADDRESS =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUBSCRIPTION_USDT_TRC20_ADDRESS)
+    ? import.meta.env.VITE_SUBSCRIPTION_USDT_TRC20_ADDRESS
+    : 'TAoLXyWNAZoxYCkYu4iEuk6N6jUhhDyXHU';
+
 const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }) => {
   const [selectedPlan, setSelectedPlan] = useState<'premium' | 'pro' | null>(null);
+  const [paymentAddress, setPaymentAddress] = useState(FALLBACK_PAYMENT_ADDRESS);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let active = true;
+    (async () => {
+      try {
+        const settings: any = await api.get('/api/referrals/public-settings');
+        const address = settings?.subscriptionPaymentAddress;
+        if (active && typeof address === 'string' && address.trim()) {
+          setPaymentAddress(address.trim());
+        } else if (active) {
+          setPaymentAddress(FALLBACK_PAYMENT_ADDRESS);
+        }
+      } catch {
+        if (active) setPaymentAddress(FALLBACK_PAYMENT_ADDRESS);
+      }
+    })();
+    return () => { active = false; };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -296,8 +322,8 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }
               {'\u{1F4B0}'} USDT TRC20
             </PaymentTitle>
             <CryptoAddress>
-              TAoLXyWNA2oXCkYu4iEuk6N6jUhDyXHU
-              <CopyButton onClick={() => copyToClipboard('TAoLXyWNA2oXCkYu4iEuk6N6jUhDyXHU')}>
+              {paymentAddress}
+              <CopyButton onClick={() => copyToClipboard(paymentAddress)}>
                 Copy
               </CopyButton>
             </CryptoAddress>
