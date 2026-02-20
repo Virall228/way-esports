@@ -29,8 +29,10 @@ services:
       retries: 5
       start_period: 20s
     depends_on:
-      - mongo
-      - redis
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       default:
         aliases:
@@ -80,8 +82,10 @@ services:
       - "80:80"
       - "443:443"
     depends_on:
-      - web
-      - api
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "sh", "-c", "test -s /var/run/nginx.pid"]
       interval: 30s
@@ -114,6 +118,12 @@ services:
       - MONGO_INITDB_DATABASE=${MONGO_INITDB_DATABASE}
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped
 
   redis:
@@ -121,6 +131,12 @@ services:
     container_name: way-esports-redis
     expose:
       - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
 
 volumes:
