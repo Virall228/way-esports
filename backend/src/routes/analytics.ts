@@ -13,6 +13,21 @@ const logInfo = (event: string, data: any) => {
 
 const router = express.Router();
 
+const buildEventDedupeKey = (params: {
+  matchId: string;
+  playerId: string;
+  eventType: string;
+  coordinateX: number;
+  coordinateY: number;
+  timestamp?: string | number | Date;
+}) => {
+  const x = Math.round(Number(params.coordinateX) * 1000);
+  const y = Math.round(Number(params.coordinateY) * 1000);
+  const baseTime = params.timestamp ? new Date(params.timestamp).getTime() : Date.now();
+  const bucket = Number.isFinite(baseTime) ? Math.floor(baseTime / 5000) : Math.floor(Date.now() / 5000);
+  return `${params.matchId}:${params.playerId}:${params.eventType}:${x}:${y}:${bucket}`;
+};
+
 /**
  * Track funnel conversion events
  */
@@ -155,21 +170,105 @@ router.post('/events', authenticateJWT, async (req, res) => {
       return res.status(400).json({ error: 'matchId, eventType, coordinateX, coordinateY are required' });
     }
 
-    const event = await MatchEvent.create({
-      matchId,
-      tournamentId,
-      playerId: userId,
-      teamId,
-      eventType,
-      coordinateX,
-      coordinateY,
-      map,
-      metadata
+    const dedupeKey = buildEventDedupeKey({
+      matchId: String(matchId),
+      playerId: String(userId),
+      eventType: String(eventType),
+      coordinateX: Number(coordinateX),
+      coordinateY: Number(coordinateY),
+      timestamp: metadata?.timestamp
     });
+
+    const event = await MatchEvent.findOneAndUpdate(
+      { dedupeKey },
+      {
+        $setOnInsert: {
+          matchId,
+          tournamentId,
+          playerId: userId,
+          teamId,
+          eventType,
+          coordinateX,
+          coordinateY,
+          map,
+          metadata,
+          dedupeKey
+        }
+      },
+      { upsert: true, new: true }
+    );
 
     return res.status(201).json({ success: true, data: event });
   } catch (error: any) {
     return res.status(500).json({ error: error.message || 'Failed to store match event' });
+  }
+});
+
+/**
+ * POST /api/analytics/events/bulk
+ * Store match events batch for heatmap/advanced analytics
+ */
+router.post('/events/bulk', authenticateJWT, async (req, res) => {
+  try {
+    const userId = (req as any).user?._id?.toString?.() || (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const events = Array.isArray(req.body?.events) ? req.body.events : [];
+    if (!events.length) {
+      return res.status(400).json({ error: 'events array is required' });
+    }
+    if (events.length > 1000) {
+      return res.status(400).json({ error: 'events batch too large (max 1000)' });
+    }
+
+    const docs = events
+      .map((item: any) => ({
+        matchId: item?.matchId,
+        tournamentId: item?.tournamentId,
+        playerId: userId,
+        teamId: item?.teamId,
+        eventType: item?.eventType,
+        coordinateX: item?.coordinateX,
+        coordinateY: item?.coordinateY,
+        map: item?.map,
+        metadata: item?.metadata,
+        dedupeKey: buildEventDedupeKey({
+          matchId: String(item?.matchId || ''),
+          playerId: String(userId),
+          eventType: String(item?.eventType || ''),
+          coordinateX: Number(item?.coordinateX),
+          coordinateY: Number(item?.coordinateY),
+          timestamp: item?.metadata?.timestamp || item?.timestamp
+        })
+      }))
+      .filter((item: any) => (
+        item.matchId &&
+        item.eventType &&
+        typeof item.coordinateX === 'number' &&
+        typeof item.coordinateY === 'number'
+      ));
+
+    if (!docs.length) {
+      return res.status(400).json({ error: 'No valid events in payload' });
+    }
+
+    const ops = docs.map((doc: any) => ({
+      updateOne: {
+        filter: { dedupeKey: doc.dedupeKey },
+        update: { $setOnInsert: doc },
+        upsert: true
+      }
+    }));
+    const bulk = await MatchEvent.bulkWrite(ops, { ordered: false });
+    const inserted = Number((bulk as any)?.upsertedCount || 0);
+    return res.status(201).json({
+      success: true,
+      inserted
+    });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message || 'Failed to store match events' });
   }
 });
 

@@ -4,6 +4,7 @@ import Tournament from '../models/Tournament';
 import Team from '../models/Team';
 import User from '../models/User';
 import Wallet from '../models/Wallet';
+import MatchEvent from '../models/MatchEvent';
 import { authenticateJWT, isAdmin } from '../middleware/auth';
 import { evaluateUserAchievements } from '../services/achievements/engine';
 import { hasRoomCredentials, prepareMatchRoom } from '../services/matchRoomService';
@@ -59,6 +60,21 @@ const buildRoomMeta = (match: any) => {
     roomExpiresAt: toIso(match?.roomCredentials?.expiresAt),
     roomGeneratedAt: toIso(match?.roomCredentials?.generatedAt)
   };
+};
+
+const buildEventDedupeKey = (params: {
+  matchId: string;
+  playerId: string;
+  eventType: string;
+  coordinateX: number;
+  coordinateY: number;
+  timestamp?: string | number | Date;
+}) => {
+  const x = Math.round(Number(params.coordinateX) * 1000);
+  const y = Math.round(Number(params.coordinateY) * 1000);
+  const baseTime = params.timestamp ? new Date(params.timestamp).getTime() : Date.now();
+  const bucket = Number.isFinite(baseTime) ? Math.floor(baseTime / 5000) : Math.floor(Date.now() / 5000);
+  return `${params.matchId}:${params.playerId}:${params.eventType}:${x}:${y}:${bucket}`;
 };
 
 async function distributeMatchWinnerPayout(matchId: string, winnerTeamId?: string | null) {
@@ -688,7 +704,7 @@ router.put('/:id/score', authenticateJWT, isAdmin, async (req, res) => {
 
     const wasCompleted = match.status === 'completed';
 
-    const { score, stats, winner } = req.body;
+    const { score, stats, winner, matchEvents } = req.body;
 
     match.score = score;
     match.stats = stats;
@@ -699,6 +715,48 @@ router.put('/:id/score', authenticateJWT, isAdmin, async (req, res) => {
     }
 
     await match.save();
+
+    if (Array.isArray(matchEvents) && matchEvents.length > 0) {
+      const validEvents = matchEvents
+        .map((item: any) => ({
+          matchId: String((match as any)._id),
+          tournamentId: match.tournament,
+          playerId: item?.playerId,
+          teamId: item?.teamId,
+          eventType: item?.eventType,
+          coordinateX: item?.coordinateX,
+          coordinateY: item?.coordinateY,
+          map: item?.map || match.map,
+          metadata: item?.metadata
+        }))
+        .filter((item: any) => (
+          item.playerId &&
+          item.eventType &&
+          typeof item.coordinateX === 'number' &&
+          typeof item.coordinateY === 'number'
+        ));
+
+      if (validEvents.length > 0) {
+        const ops = validEvents.map((item: any) => {
+          const dedupeKey = buildEventDedupeKey({
+            matchId: item.matchId,
+            playerId: String(item.playerId),
+            eventType: String(item.eventType),
+            coordinateX: Number(item.coordinateX),
+            coordinateY: Number(item.coordinateY),
+            timestamp: item.metadata?.timestamp
+          });
+          return {
+            updateOne: {
+              filter: { dedupeKey },
+              update: { $setOnInsert: { ...item, dedupeKey } },
+              upsert: true
+            }
+          };
+        });
+        await MatchEvent.bulkWrite(ops, { ordered: false });
+      }
+    }
 
     const nowCompleted = match.status === 'completed';
     if (!wasCompleted && nowCompleted) {

@@ -456,6 +456,24 @@ interface ProspectRow {
   weekKey: string;
 }
 
+interface AnomalyAlertRow {
+  userId: string;
+  username: string;
+  type: string;
+  severity: 'low' | 'medium' | 'high';
+  message: string;
+  impactRating: number;
+}
+
+interface WatchlistRow {
+  userId: string;
+  username: string;
+  role: string;
+  impactRating: number;
+  reason: string;
+  addedAt?: string;
+}
+
 interface AdminUserRow {
   id: string;
   username: string;
@@ -593,6 +611,7 @@ const AdminPage: React.FC = () => {
     search: ''
   });
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'pending_withdrawals'>('all');
+  const [prospectsFilter, setProspectsFilter] = useState<'all' | 'hidden_gem'>('all');
   const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
   const isOpsTab = activeTab === 'ops';
 
@@ -664,6 +683,8 @@ const AdminPage: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: ['admin', 'analytics'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'scouting-provider'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'scouting-prospects'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'scouting-anomalies'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'scouting-watchlist'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'ops-metrics'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'ops-queue'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'ops-backups'] }),
@@ -860,6 +881,36 @@ const AdminPage: React.FC = () => {
         tag: row.tag || 'Prospect',
         summary: row.summary || '',
         weekKey: row.weekKey || ''
+      }))
+      : [];
+  };
+
+  const fetchAnomalyAlerts = async (): Promise<AnomalyAlertRow[]> => {
+    const result: any = await api.get('/api/scouting/anomalies?limit=20');
+    const rows = result?.data || result || [];
+    return Array.isArray(rows)
+      ? rows.map((row: any) => ({
+        userId: String(row.userId || ''),
+        username: row.username || 'unknown',
+        type: row.type || 'unknown',
+        severity: row.severity || 'low',
+        message: row.message || '',
+        impactRating: Number(row.impactRating || 0)
+      }))
+      : [];
+  };
+
+  const fetchWatchlist = async (): Promise<WatchlistRow[]> => {
+    const result: any = await api.get('/api/scouting/watchlist?limit=100');
+    const rows = result?.data || result || [];
+    return Array.isArray(rows)
+      ? rows.map((row: any) => ({
+        userId: String(row.userId || ''),
+        username: row.username || 'unknown',
+        role: row.role || 'Flex',
+        impactRating: Number(row.impactRating || 0),
+        reason: row.reason || '',
+        addedAt: row.addedAt
       }))
       : [];
   };
@@ -1264,6 +1315,22 @@ const AdminPage: React.FC = () => {
     refetchOnWindowFocus: false
   });
 
+  const anomaliesQuery = useQuery({
+    queryKey: ['admin', 'scouting-anomalies'],
+    queryFn: fetchAnomalyAlerts,
+    enabled: hasAdminAccess,
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
+
+  const watchlistQuery = useQuery({
+    queryKey: ['admin', 'scouting-watchlist'],
+    queryFn: fetchWatchlist,
+    enabled: hasAdminAccess,
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
+
   const walletTransactionsQuery = useQuery({
     queryKey: ['admin', 'wallet-transactions'],
     queryFn: fetchWalletTransactions,
@@ -1339,6 +1406,8 @@ const AdminPage: React.FC = () => {
   const analytics = analyticsQuery.data || null;
   const scoutProvider = scoutProviderQuery.data || null;
   const prospects = prospectsQuery.data || [];
+  const anomalies = anomaliesQuery.data || [];
+  const watchlist = watchlistQuery.data || [];
 
   useEffect(() => {
     if (activeTab !== 'tournaments') return;
@@ -3053,13 +3122,35 @@ const AdminPage: React.FC = () => {
 
   function renderAnalytics() {
     const growth = Array.isArray(analytics?.userGrowth) ? analytics.userGrowth : [];
+    const filteredProspects = prospectsFilter === 'hidden_gem'
+      ? prospects.filter((row: ProspectRow) => String(row.tag).toLowerCase() === 'hidden gem')
+      : prospects;
+    const severityStyle = (severity: string) => {
+      if (severity === 'high') return { color: '#ff6b6b', border: '1px solid rgba(255,107,107,0.45)', padding: '4px 8px', borderRadius: 999 };
+      if (severity === 'medium') return { color: '#ffb74d', border: '1px solid rgba(255,183,77,0.45)', padding: '4px 8px', borderRadius: 999 };
+      return { color: '#b0bec5', border: '1px solid rgba(176,190,197,0.35)', padding: '4px 8px', borderRadius: 999 };
+    };
     const providerLabel = scoutProvider?.provider || 'unknown';
+    const addToWatchlist = async (row: AnomalyAlertRow) => {
+      try {
+        await api.post('/api/scouting/watchlist', {
+          userId: row.userId,
+          reason: row.message
+        });
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'scouting-watchlist'] });
+        notify('success', 'Watchlist updated', `@${row.username} added to watchlist`);
+      } catch (e: any) {
+        notify('error', 'Watchlist update failed', formatApiError(e, 'Failed to update watchlist'));
+      }
+    };
     const refreshScouting = async () => {
       try {
         await api.post('/api/scouting/refresh', { limit: 10 });
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['admin', 'scouting-prospects'] }),
-          queryClient.invalidateQueries({ queryKey: ['admin', 'scouting-provider'] })
+          queryClient.invalidateQueries({ queryKey: ['admin', 'scouting-provider'] }),
+          queryClient.invalidateQueries({ queryKey: ['admin', 'scouting-anomalies'] }),
+          queryClient.invalidateQueries({ queryKey: ['admin', 'scouting-watchlist'] })
         ]);
         notify('success', 'AI scouting', 'Prospects refreshed');
       } catch (e: any) {
@@ -3113,7 +3204,13 @@ const AdminPage: React.FC = () => {
           <div style={{ color: '#cccccc', padding: '16px 0' }}>No analytics data yet.</div>
         )}
 
-        <h4 style={{ marginTop: '20px' }}>AI Insights (Top Prospects)</h4>
+        <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <h4 style={{ margin: 0 }}>AI Insights (Top Prospects)</h4>
+          <Select value={prospectsFilter} onChange={(e) => setProspectsFilter(e.target.value as any)} style={{ minWidth: 180 }}>
+            <option value="all">All prospects</option>
+            <option value="hidden_gem">Hidden Gem only</option>
+          </Select>
+        </div>
         <TableWrap>
           <Table>
             <thead>
@@ -3127,7 +3224,7 @@ const AdminPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {prospects.map((row: ProspectRow) => (
+              {filteredProspects.map((row: ProspectRow) => (
                 <tr key={row.id || `${row.userId}-${row.username}`}>
                   <Td>@{row.username}</Td>
                   <Td>{row.role}</Td>
@@ -3141,8 +3238,70 @@ const AdminPage: React.FC = () => {
           </Table>
         </TableWrap>
 
-        {!prospects.length && (
+        {!filteredProspects.length && (
           <div style={{ color: '#cccccc', padding: '16px 0' }}>No AI insights yet.</div>
+        )}
+
+        <h4 style={{ marginTop: '20px' }}>AI Anomaly Alerts</h4>
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Player</Th>
+                <Th>Type</Th>
+                <Th>Severity</Th>
+                <Th>Impact</Th>
+                <Th>Message</Th>
+                <Th>Action</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {anomalies.map((row: AnomalyAlertRow, idx: number) => (
+                <tr key={`${row.userId}-${row.type}-${idx}`}>
+                  <Td>@{row.username}</Td>
+                  <Td>{row.type}</Td>
+                  <Td><span style={severityStyle(row.severity)}>{row.severity}</span></Td>
+                  <Td>{row.impactRating.toFixed(1)}</Td>
+                  <Td>{row.message}</Td>
+                  <Td>
+                    <ActionButton onClick={() => addToWatchlist(row)}>Promote</ActionButton>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
+        {!anomalies.length && (
+          <div style={{ color: '#cccccc', padding: '16px 0' }}>No anomaly alerts.</div>
+        )}
+
+        <h4 style={{ marginTop: '20px' }}>Watchlist</h4>
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Player</Th>
+                <Th>Role</Th>
+                <Th>Impact</Th>
+                <Th>Reason</Th>
+                <Th>Added</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {watchlist.map((row: WatchlistRow, idx: number) => (
+                <tr key={`${row.userId}-${idx}`}>
+                  <Td>@{row.username}</Td>
+                  <Td>{row.role}</Td>
+                  <Td>{row.impactRating.toFixed(1)}</Td>
+                  <Td>{row.reason || '-'}</Td>
+                  <Td>{row.addedAt ? formatDate(row.addedAt) : '-'}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
+        {!watchlist.length && (
+          <div style={{ color: '#cccccc', padding: '16px 0' }}>Watchlist is empty.</div>
         )}
       </div>
     );

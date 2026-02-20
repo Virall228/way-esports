@@ -24,6 +24,9 @@ export interface IUserStats extends Document<mongoose.Types.ObjectId> {
   }>;
   hiddenGem: boolean;
   hiddenGemReason?: string;
+  watchlist: boolean;
+  watchlistReason?: string;
+  watchlistAddedAt?: Date;
   updatedAt: Date;
   createdAt: Date;
 }
@@ -59,7 +62,10 @@ const userStatsSchema = new Schema<IUserStats>(
     impactRating: { type: Number, default: 0, min: 0, max: 100 },
     trend30d: { type: [trendPointSchema], default: [] },
     hiddenGem: { type: Boolean, default: false },
-    hiddenGemReason: { type: String, trim: true, maxlength: 280 }
+    hiddenGemReason: { type: String, trim: true, maxlength: 280 },
+    watchlist: { type: Boolean, default: false },
+    watchlistReason: { type: String, trim: true, maxlength: 280 },
+    watchlistAddedAt: { type: Date }
   },
   { timestamps: true }
 );
@@ -69,4 +75,3 @@ userStatsSchema.index({ hiddenGem: 1, impactRating: -1 });
 userStatsSchema.index({ primaryRole: 1 });
 
 export default mongoose.model<IUserStats>('UserStats', userStatsSchema);
-

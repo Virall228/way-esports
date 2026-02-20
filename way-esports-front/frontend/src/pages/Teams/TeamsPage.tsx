@@ -384,12 +384,23 @@ interface Team {
   captainId?: string;
   isPrivate?: boolean;
   requiresApproval?: boolean;
-  members: Array<{ name: string; role: 'captain' | 'player' }>;
+  members: Array<{ id?: string; name: string; role: 'captain' | 'player' }>;
   tournaments: number;
   wins: number;
   winRate: number;
   isOwner?: boolean;
 }
+
+type MatchmakingSuggestion = {
+  roleCounts?: Record<string, number>;
+  teamMetrics?: {
+    avgConflict: number;
+    avgChill: number;
+    avgLeadership: number;
+  };
+  warnings?: string[];
+  recommendations?: string[];
+};
 
 type EditTeamFormState = {
   id: string;
@@ -412,6 +423,8 @@ const TeamsPage: React.FC = () => {
   const [editTeamForm, setEditTeamForm] = useState<EditTeamFormState | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [matchmakingByTeam, setMatchmakingByTeam] = useState<Record<string, MatchmakingSuggestion>>({});
+  const [matchmakingLoadingTeamId, setMatchmakingLoadingTeamId] = useState<string | null>(null);
 
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionInfo, setActionInfo] = useState<string | null>(null);
@@ -443,16 +456,16 @@ const TeamsPage: React.FC = () => {
       const captainId = t.captain?.id?.toString?.() || t.captain?.toString?.() || '';
       const membersRaw: any[] = Array.isArray(t.members) ? t.members : [];
 
-      const members: Array<{ name: string; role: 'captain' | 'player' }> = membersRaw.map((m: any) => {
+      const members: Array<{ id?: string; name: string; role: 'captain' | 'player' }> = membersRaw.map((m: any) => {
         const id = (m?.id || m?._id || '').toString();
         const label = (m?.username || m?.firstName || m?.lastName || id || 'Member').toString();
         const role: 'captain' | 'player' = captainId && id === captainId ? 'captain' : 'player';
-        return { name: label, role };
+        return { id, name: label, role };
       });
 
       if (t.captain && captainId && !members.some((m: any) => m.role === 'captain')) {
         const captainName = (t.captain.username || t.captain.firstName || t.captain.lastName || 'Captain').toString();
-        members.unshift({ name: captainName, role: 'captain' });
+        members.unshift({ id: captainId, name: captainName, role: 'captain' });
       }
 
       return {
@@ -592,6 +605,28 @@ const TeamsPage: React.FC = () => {
       }
     } catch (e: any) {
       setActionError(e?.message || 'Failed to join team');
+    }
+  };
+
+  const handleAnalyzeTeam = async (team: Team) => {
+    try {
+      setActionInfo(null);
+      setActionError(null);
+      setMatchmakingLoadingTeamId(team.id);
+      const playerIds = team.members.map((m) => m.id).filter((id): id is string => Boolean(id));
+      if (playerIds.length < 2) {
+        setActionError('Need at least 2 identified players to run AI composition check');
+        return;
+      }
+
+      const result: any = await api.post('/api/matchmaking/suggest-team', { playerIds });
+      const suggestion = result?.data || result || {};
+      setMatchmakingByTeam((prev) => ({ ...prev, [team.id]: suggestion }));
+      setActionInfo(`AI team analysis updated for ${team.name}`);
+    } catch (e: any) {
+      setActionError(e?.message || 'Failed to analyze team composition');
+    } finally {
+      setMatchmakingLoadingTeamId(null);
     }
   };
 
@@ -833,6 +868,13 @@ const TeamsPage: React.FC = () => {
                           >
                             {deleteTeamMutation.isPending ? 'Deleting...' : t('delete')}
                           </ActionButton>
+                          <ActionButton
+                            $variant="secondary"
+                            onClick={() => handleAnalyzeTeam(team)}
+                            disabled={matchmakingLoadingTeamId === team.id}
+                          >
+                            {matchmakingLoadingTeamId === team.id ? 'Analyzing...' : 'AI Fit'}
+                          </ActionButton>
                         </>
                       ) : (
                         <>
@@ -846,9 +888,36 @@ const TeamsPage: React.FC = () => {
                           >
                             {joinTeamMutation.isPending ? 'Joining...' : t('joinTeam')}
                           </ActionButton>
+                          <ActionButton
+                            $variant="secondary"
+                            onClick={() => handleAnalyzeTeam(team)}
+                            disabled={matchmakingLoadingTeamId === team.id}
+                          >
+                            {matchmakingLoadingTeamId === team.id ? 'Analyzing...' : 'AI Fit'}
+                          </ActionButton>
                         </>
                       )}
                     </ActionButtons>
+
+                    {matchmakingByTeam[team.id] && (
+                      <div style={{ marginTop: 12, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 10 }}>
+                        {Array.isArray(matchmakingByTeam[team.id].warnings) && matchmakingByTeam[team.id].warnings!.length > 0 && (
+                          <div style={{ color: '#ffb4b4', fontSize: 12, marginBottom: 8 }}>
+                            Warnings: {matchmakingByTeam[team.id].warnings!.join(' | ')}
+                          </div>
+                        )}
+                        {Array.isArray(matchmakingByTeam[team.id].recommendations) && matchmakingByTeam[team.id].recommendations!.length > 0 && (
+                          <div style={{ color: '#cfd8dc', fontSize: 12, marginBottom: 8 }}>
+                            Recommendations: {matchmakingByTeam[team.id].recommendations!.join(' | ')}
+                          </div>
+                        )}
+                        {matchmakingByTeam[team.id].teamMetrics && (
+                          <div style={{ color: '#cfd8dc', fontSize: 12 }}>
+                            Team metrics: Chill {matchmakingByTeam[team.id].teamMetrics!.avgChill.toFixed(1)} · Leadership {matchmakingByTeam[team.id].teamMetrics!.avgLeadership.toFixed(1)} · Conflict {matchmakingByTeam[team.id].teamMetrics!.avgConflict.toFixed(1)}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </TeamCard>
                 ))}
             </TeamsGrid>

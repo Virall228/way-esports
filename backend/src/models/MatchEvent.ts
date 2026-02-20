@@ -12,6 +12,7 @@ export interface IMatchEvent extends Document<mongoose.Types.ObjectId> {
   coordinateY: number;
   map?: string;
   metadata?: Record<string, any>;
+  dedupeKey?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,7 +31,8 @@ const matchEventSchema = new Schema<IMatchEvent>(
     coordinateX: { type: Number, required: true, min: 0, max: 1 },
     coordinateY: { type: Number, required: true, min: 0, max: 1 },
     map: { type: String, trim: true, maxlength: 80 },
-    metadata: { type: Schema.Types.Mixed, default: undefined }
+    metadata: { type: Schema.Types.Mixed, default: undefined },
+    dedupeKey: { type: String, trim: true, maxlength: 220 }
   },
   { timestamps: true }
 );
@@ -39,6 +41,6 @@ matchEventSchema.index({ playerId: 1, createdAt: -1 });
 matchEventSchema.index({ matchId: 1, playerId: 1 });
 matchEventSchema.index({ tournamentId: 1, createdAt: -1 });
 matchEventSchema.index({ eventType: 1, createdAt: -1 });
+matchEventSchema.index({ dedupeKey: 1 }, { unique: true, sparse: true });
 
 export default mongoose.model<IMatchEvent>('MatchEvent', matchEventSchema);
-
