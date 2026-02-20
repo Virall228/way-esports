@@ -3,6 +3,9 @@ import User from '../models/User';
 import Tournament from '../models/Tournament';
 import AnalyticsEvent from '../models/AnalyticsEvent';
 import Referral from '../models/Referral';
+import MatchEvent from '../models/MatchEvent';
+import { getAnalyticsForUser } from '../services/analyticsEngine';
+import { authenticateJWT } from '../middleware/auth';
 
 const logInfo = (event: string, data: any) => {
   console.log(`Analytics: ${event}`, data);
@@ -123,6 +126,50 @@ router.get('/tournaments', async (req, res) => {
   } catch (error) {
     console.error('Failed to get tournament metrics:', error);
     res.status(500).json({ error: 'Failed to get metrics' });
+  }
+});
+
+/**
+ * POST /api/analytics/events
+ * Store match events for heatmap/advanced analytics
+ */
+router.post('/events', authenticateJWT, async (req, res) => {
+  try {
+    const userId = (req as any).user?._id?.toString?.() || (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const {
+      matchId,
+      tournamentId,
+      teamId,
+      eventType,
+      coordinateX,
+      coordinateY,
+      map,
+      metadata
+    } = req.body || {};
+
+    if (!matchId || !eventType || typeof coordinateX !== 'number' || typeof coordinateY !== 'number') {
+      return res.status(400).json({ error: 'matchId, eventType, coordinateX, coordinateY are required' });
+    }
+
+    const event = await MatchEvent.create({
+      matchId,
+      tournamentId,
+      playerId: userId,
+      teamId,
+      eventType,
+      coordinateX,
+      coordinateY,
+      map,
+      metadata
+    });
+
+    return res.status(201).json({ success: true, data: event });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message || 'Failed to store match event' });
   }
 });
 
@@ -376,5 +423,22 @@ async function getTournamentMetrics(timeframe: string) {
 
   return metrics;
 }
+
+/**
+ * GET /api/analytics/:userId
+ * Digital Athlete analytics payload
+ */
+router.get('/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const analytics = await getAnalyticsForUser(userId);
+    if (!analytics) {
+      return res.status(404).json({ error: 'User analytics not found' });
+    }
+    return res.json({ success: true, data: analytics });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message || 'Failed to load analytics' });
+  }
+});
 
 export default router;

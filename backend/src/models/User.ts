@@ -22,6 +22,7 @@ export interface IUser extends Document<mongoose.Types.ObjectId> {
   profileLogo?: string;
   teams: mongoose.Types.ObjectId[];
   role: 'user' | 'admin' | 'developer';
+  primaryRole?: 'Entry' | 'Sniper' | 'Support' | 'Lurker' | 'Flex';
   isBanned: boolean;
 
   // Subscription fields
@@ -146,6 +147,11 @@ const userSchema = new Schema<IUser>({
     type: String,
     enum: ['user', 'admin', 'developer'],
     default: 'user'
+  },
+  primaryRole: {
+    type: String,
+    enum: ['Entry', 'Sniper', 'Support', 'Lurker', 'Flex'],
+    default: 'Flex'
   },
   isBanned: {
     type: Boolean,
@@ -308,6 +314,7 @@ userSchema.index(
 );
 userSchema.index({ username: 1 });
 userSchema.index({ role: 1 });
+userSchema.index({ primaryRole: 1 });
 userSchema.index(
   { referralCode: 1 },
   { unique: true, partialFilterExpression: { referralCode: { $type: 'string' } } }

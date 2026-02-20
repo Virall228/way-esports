@@ -438,6 +438,24 @@ interface ReferralSettingsRow {
   subscriptionPrice: number;
 }
 
+interface ScoutProviderStatus {
+  provider: string;
+  geminiEnabled: boolean;
+  openAiEnabled: boolean;
+}
+
+interface ProspectRow {
+  id: string;
+  userId: string;
+  username: string;
+  role: string;
+  score: number;
+  impactRating: number;
+  tag: string;
+  summary: string;
+  weekKey: string;
+}
+
 interface AdminUserRow {
   id: string;
   username: string;
@@ -644,6 +662,8 @@ const AdminPage: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: ['admin', 'wallet-transactions'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'analytics'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'scouting-provider'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'scouting-prospects'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'ops-metrics'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'ops-queue'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'ops-backups'] }),
@@ -819,6 +839,29 @@ const AdminPage: React.FC = () => {
       console.error('Failed to fetch analytics:', e);
       throw e;
     }
+  };
+
+  const fetchScoutProviderStatus = async (): Promise<ScoutProviderStatus> => {
+    const result: any = await api.get('/api/scouting/provider-status');
+    return result?.data || result;
+  };
+
+  const fetchTopProspects = async (): Promise<ProspectRow[]> => {
+    const result: any = await api.get('/api/scouting/top-prospects?limit=10');
+    const rows = result?.data || result || [];
+    return Array.isArray(rows)
+      ? rows.map((row: any) => ({
+        id: String(row.id || ''),
+        userId: String(row.userId || ''),
+        username: row.username || 'unknown',
+        role: row.role || 'Flex',
+        score: Number(row.score || 0),
+        impactRating: Number(row.impactRating || 0),
+        tag: row.tag || 'Prospect',
+        summary: row.summary || '',
+        weekKey: row.weekKey || ''
+      }))
+      : [];
   };
 
   const fetchUsers = async (): Promise<{ items: AdminUserRow[]; pagination: PaginationMeta | null }> => {
@@ -1205,6 +1248,22 @@ const AdminPage: React.FC = () => {
     refetchOnWindowFocus: false
   });
 
+  const scoutProviderQuery = useQuery({
+    queryKey: ['admin', 'scouting-provider'],
+    queryFn: fetchScoutProviderStatus,
+    enabled: hasAdminAccess,
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
+
+  const prospectsQuery = useQuery({
+    queryKey: ['admin', 'scouting-prospects'],
+    queryFn: fetchTopProspects,
+    enabled: hasAdminAccess,
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
+
   const walletTransactionsQuery = useQuery({
     queryKey: ['admin', 'wallet-transactions'],
     queryFn: fetchWalletTransactions,
@@ -1278,6 +1337,8 @@ const AdminPage: React.FC = () => {
   const opsBackups = opsBackupsQuery.data || [];
   const dashboardStats = statsQuery.data || null;
   const analytics = analyticsQuery.data || null;
+  const scoutProvider = scoutProviderQuery.data || null;
+  const prospects = prospectsQuery.data || [];
 
   useEffect(() => {
     if (activeTab !== 'tournaments') return;
@@ -2992,9 +3053,26 @@ const AdminPage: React.FC = () => {
 
   function renderAnalytics() {
     const growth = Array.isArray(analytics?.userGrowth) ? analytics.userGrowth : [];
+    const providerLabel = scoutProvider?.provider || 'unknown';
+    const refreshScouting = async () => {
+      try {
+        await api.post('/api/scouting/refresh', { limit: 10 });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['admin', 'scouting-prospects'] }),
+          queryClient.invalidateQueries({ queryKey: ['admin', 'scouting-provider'] })
+        ]);
+        notify('success', 'AI scouting', 'Prospects refreshed');
+      } catch (e: any) {
+        notify('error', 'AI scouting failed', formatApiError(e, 'Failed to refresh prospects'));
+      }
+    };
+
     return (
       <div>
-        <h3>Analytics Dashboard</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <h3>Analytics Dashboard</h3>
+          <ActionButton onClick={refreshScouting}>Refresh AI Insights</ActionButton>
+        </div>
         <StatsGrid>
           <StatCard>
             <StatValue>{analytics?.activeSubscriptions ?? 0}</StatValue>
@@ -3003,6 +3081,12 @@ const AdminPage: React.FC = () => {
           <StatCard>
             <StatValue>{growth.reduce((acc: number, item: any) => acc + (item?.count || 0), 0)}</StatValue>
             <StatLabel>New Users (30d)</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>{providerLabel}</StatValue>
+            <StatLabel>
+              AI: Gemini {scoutProvider?.geminiEnabled ? 'on' : 'off'} · OpenAI {scoutProvider?.openAiEnabled ? 'on' : 'off'}
+            </StatLabel>
           </StatCard>
         </StatsGrid>
 
@@ -3027,6 +3111,38 @@ const AdminPage: React.FC = () => {
 
         {!growth.length && (
           <div style={{ color: '#cccccc', padding: '16px 0' }}>No analytics data yet.</div>
+        )}
+
+        <h4 style={{ marginTop: '20px' }}>AI Insights (Top Prospects)</h4>
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Player</Th>
+                <Th>Role</Th>
+                <Th>Tag</Th>
+                <Th>Score</Th>
+                <Th>Impact</Th>
+                <Th>Summary</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {prospects.map((row: ProspectRow) => (
+                <tr key={row.id || `${row.userId}-${row.username}`}>
+                  <Td>@{row.username}</Td>
+                  <Td>{row.role}</Td>
+                  <Td>{row.tag}</Td>
+                  <Td>{row.score.toFixed(1)}</Td>
+                  <Td>{row.impactRating.toFixed(1)}</Td>
+                  <Td>{row.summary}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
+
+        {!prospects.length && (
+          <div style={{ color: '#cccccc', padding: '16px 0' }}>No AI insights yet.</div>
         )}
       </div>
     );

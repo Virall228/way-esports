@@ -2,6 +2,7 @@ import Tournament from '../models/Tournament';
 import Match from '../models/Match';
 import PrizeDistributionService from './prizeDistribution';
 import { prepareMatchRoom } from './matchRoomService';
+import { refreshWeeklyTopProspects, scoutingUtils } from './scoutingEngine';
 
 const FIVE_MIN = 5 * 60 * 1000;
 const MATCH_INTERVAL_MIN = 30;
@@ -15,6 +16,7 @@ interface ScheduledJob {
 }
 
 const scheduledJobs = new Map<string, ScheduledJob>();
+let lastScoutingWeekKey = '';
 
 const normalizeMatchGame = (game: string | undefined): 'Critical Ops' | 'CS2' | 'PUBG Mobile' => {
   if (game && SUPPORTED_MATCH_GAMES.has(game)) {
@@ -160,6 +162,13 @@ async function executeScheduledJobs() {
   }
 }
 
+async function runWeeklyScoutingRefresh() {
+  const weekKey = scoutingUtils.getWeekKey();
+  if (weekKey === lastScoutingWeekKey) return;
+  await refreshWeeklyTopProspects(10);
+  lastScoutingWeekKey = weekKey;
+}
+
 export function startSchedulers() {
   // Run immediately on boot, then on interval
   const run = async () => {
@@ -169,7 +178,8 @@ export function startSchedulers() {
         completeFinishedTournaments(),
         closeStaleMatches(),
         ensureUpcomingRoomCredentials(),
-        executeScheduledJobs()
+        executeScheduledJobs(),
+        runWeeklyScoutingRefresh()
       ]);
     } catch (err) {
       console.error('[scheduler] error', err);

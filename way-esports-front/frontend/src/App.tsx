@@ -30,6 +30,7 @@ import Prizes from './pages/Prizes';
 import Matches from './pages/Matches';
 import Wallet from './pages/Wallet';
 import Settings from './pages/Settings';
+import AnalyticsPage from './pages/Analytics/AnalyticsPage';
 import AdminPage from './pages/Admin/AdminPage';
 import AdminAccessPage from './pages/Admin/AdminAccessPage';
 import AuthPage from './pages/Auth/AuthPage';
@@ -489,6 +490,7 @@ const AppContent: React.FC = () => {
       items.push(
         { label: t('wallet'), to: '/wallet', icon: <CreditCard {...iconProps} /> },
         { label: t('profile'), to: '/profile', icon: <User {...iconProps} /> },
+        { label: 'Analytics', to: '/analytics', icon: <BarChart2 {...iconProps} /> },
         { label: t('settings'), to: '/settings', icon: <SettingsIcon {...iconProps} /> }
       );
     }
@@ -605,6 +607,7 @@ const AppContent: React.FC = () => {
               <Route path="/news" element={<News />} />
               <Route path="/wallet" element={<RequireAuth><Wallet /></RequireAuth>} />
               <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
+              <Route path="/analytics" element={<RequireAuth><AnalyticsPage /></RequireAuth>} />
               <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
               <Route path="/profile/:id" element={<PublicProfilePage />} />
               <Route path="/user/:id" element={<PublicProfilePage />} />
