@@ -325,6 +325,7 @@ type TabType =
   | 'analytics'
   | 'referrals'
   | 'teams'
+  | 'support'
   | 'contacts'
   | 'payments'
   | 'ops';
@@ -352,6 +353,33 @@ interface ContactMessage {
   message: string;
   userId?: string;
   createdAt: string;
+}
+
+interface SupportConversationRow {
+  id: string;
+  userId: string;
+  username: string;
+  email: string;
+  teamId?: string | null;
+  teamName?: string | null;
+  subject: string;
+  source: string;
+  status: 'open' | 'waiting_user' | 'waiting_admin' | 'resolved';
+  priority: 'normal' | 'high' | 'urgent';
+  unreadForUser: number;
+  unreadForAdmin: number;
+  lastMessagePreview: string;
+  lastMessageAt?: string | null;
+}
+
+interface SupportMessageRow {
+  id: string;
+  conversationId: string;
+  senderType: 'user' | 'ai' | 'admin' | 'system';
+  senderId?: string | null;
+  content: string;
+  provider?: string | null;
+  createdAt?: string | null;
 }
 
 interface AdminWalletTransaction {
@@ -613,6 +641,9 @@ const AdminPage: React.FC = () => {
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'pending_withdrawals'>('all');
   const [prospectsFilter, setProspectsFilter] = useState<'all' | 'hidden_gem'>('all');
   const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
+  const [supportStatusFilter, setSupportStatusFilter] = useState<'all' | 'open' | 'waiting_user' | 'waiting_admin' | 'resolved'>('all');
+  const [selectedSupportConversationId, setSelectedSupportConversationId] = useState<string | null>(null);
+  const [supportReply, setSupportReply] = useState('');
   const isOpsTab = activeTab === 'ops';
 
   const formatApiError = (e: any, fallback: string) => {
@@ -677,6 +708,8 @@ const AdminPage: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: ['admin', 'teams'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'referrals'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'referral-settings'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'support-conversations'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'support-messages'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'contacts'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'wallet-transactions'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] }),
@@ -1014,6 +1047,50 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const fetchSupportConversations = async (): Promise<SupportConversationRow[]> => {
+    const params = new URLSearchParams();
+    if (supportStatusFilter !== 'all') params.set('status', supportStatusFilter);
+    const result: any = await api.get(`/api/support/admin/conversations?${params.toString()}`);
+    const items: any[] = Array.isArray(result) ? result : (result?.data || []);
+
+    return items.map((row: any) => ({
+      id: String(row?.id || row?._id || ''),
+      userId: String(row?.userId || ''),
+      username: String(row?.username || ''),
+      email: String(row?.email || ''),
+      teamId: row?.teamId ? String(row.teamId) : null,
+      teamName: row?.teamName || null,
+      subject: String(row?.subject || 'Emergency Support'),
+      source: String(row?.source || 'settings'),
+      status: (row?.status || 'open') as SupportConversationRow['status'],
+      priority: (row?.priority || 'normal') as SupportConversationRow['priority'],
+      unreadForUser: Number(row?.unreadForUser || 0),
+      unreadForAdmin: Number(row?.unreadForAdmin || 0),
+      lastMessagePreview: String(row?.lastMessagePreview || ''),
+      lastMessageAt: row?.lastMessageAt || null
+    }));
+  };
+
+  const fetchSupportMessages = async (): Promise<SupportMessageRow[]> => {
+    if (!selectedSupportConversationId) return [];
+    const result: any = await api.get(`/api/support/admin/conversations/${selectedSupportConversationId}/messages`);
+    const items: any[] = Array.isArray(result?.data?.messages)
+      ? result.data.messages
+      : Array.isArray(result?.messages)
+        ? result.messages
+        : [];
+
+    return items.map((row: any) => ({
+      id: String(row?.id || row?._id || ''),
+      conversationId: String(row?.conversationId || selectedSupportConversationId),
+      senderType: (row?.senderType || 'system') as SupportMessageRow['senderType'],
+      senderId: row?.senderId ? String(row.senderId) : null,
+      content: String(row?.content || ''),
+      provider: row?.provider || null,
+      createdAt: row?.createdAt || null
+    }));
+  };
+
   const fetchTournaments = async () => {
     const result: any = await api.get('/api/tournaments');
     const items: any[] = (result && (result.data || result.tournaments)) || [];
@@ -1283,6 +1360,22 @@ const AdminPage: React.FC = () => {
     refetchOnWindowFocus: false
   });
 
+  const supportConversationsQuery = useQuery({
+    queryKey: ['admin', 'support-conversations', supportStatusFilter],
+    queryFn: fetchSupportConversations,
+    enabled: hasAdminAccess,
+    staleTime: 10000,
+    refetchOnWindowFocus: false
+  });
+
+  const supportMessagesQuery = useQuery({
+    queryKey: ['admin', 'support-messages', selectedSupportConversationId],
+    queryFn: fetchSupportMessages,
+    enabled: hasAdminAccess && Boolean(selectedSupportConversationId),
+    staleTime: 5000,
+    refetchOnWindowFocus: false
+  });
+
   const statsQuery = useQuery({
     queryKey: ['admin', 'stats'],
     queryFn: fetchDashboardStats,
@@ -1396,6 +1489,8 @@ const AdminPage: React.FC = () => {
   const referrals = referralsQuery.data || [];
   const referralSettings = referralSettingsQuery.data || null;
   const contacts = contactsQuery.data || [];
+  const supportConversations = supportConversationsQuery.data || [];
+  const supportMessages = supportMessagesQuery.data || [];
   const walletTransactions = walletTransactionsQuery.data || [];
   const auditLogs = auditLogsQuery.data || [];
   const authLogs = authLogsQuery.data || [];
@@ -1425,6 +1520,20 @@ const AdminPage: React.FC = () => {
     }
   }, [activeTab, tournaments, selectedTournamentId]);
 
+  useEffect(() => {
+    if (activeTab !== 'support') return;
+    if (!supportConversations.length) {
+      setSelectedSupportConversationId(null);
+      return;
+    }
+    const exists = selectedSupportConversationId
+      ? supportConversations.some((row: SupportConversationRow) => row.id === selectedSupportConversationId)
+      : false;
+    if (!exists) {
+      setSelectedSupportConversationId(supportConversations[0].id);
+    }
+  }, [activeTab, supportConversations, selectedSupportConversationId]);
+
   const queryError =
     usersQuery.error ||
     tournamentsQuery.error ||
@@ -1436,6 +1545,8 @@ const AdminPage: React.FC = () => {
     teamsQuery.error ||
     referralsQuery.error ||
     referralSettingsQuery.error ||
+    supportConversationsQuery.error ||
+    supportMessagesQuery.error ||
     contactsQuery.error ||
     walletTransactionsQuery.error ||
     auditLogsQuery.error ||
@@ -1457,6 +1568,8 @@ const AdminPage: React.FC = () => {
     teamsQuery.isFetching ||
     referralsQuery.isFetching ||
     referralSettingsQuery.isFetching ||
+    supportConversationsQuery.isFetching ||
+    supportMessagesQuery.isFetching ||
     contactsQuery.isFetching ||
     walletTransactionsQuery.isFetching ||
     auditLogsQuery.isFetching ||
@@ -3069,6 +3182,130 @@ const AdminPage: React.FC = () => {
     );
   }
 
+  function renderSupport() {
+    const selectedConversation = supportConversations.find((row: SupportConversationRow) => row.id === selectedSupportConversationId) || null;
+
+    const sendReply = async () => {
+      const message = supportReply.trim();
+      if (!selectedSupportConversationId || !message) return;
+
+      try {
+        await api.post(`/api/support/admin/conversations/${selectedSupportConversationId}/reply`, { message });
+        setSupportReply('');
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['admin', 'support-conversations'] }),
+          queryClient.invalidateQueries({ queryKey: ['admin', 'support-messages', selectedSupportConversationId] })
+        ]);
+        notify('success', 'Support', 'Reply sent');
+      } catch (e: any) {
+        notify('error', 'Support reply failed', formatApiError(e, 'Failed to send reply'));
+      }
+    };
+
+    const updateStatus = async (status: 'open' | 'waiting_user' | 'waiting_admin' | 'resolved') => {
+      if (!selectedSupportConversationId) return;
+      try {
+        await api.patch(`/api/support/admin/conversations/${selectedSupportConversationId}/status`, { status });
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'support-conversations'] });
+        notify('success', 'Support', `Status updated to ${status}`);
+      } catch (e: any) {
+        notify('error', 'Status update failed', formatApiError(e, 'Failed to update support status'));
+      }
+    };
+
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+          <h3>Emergency Support Inbox</h3>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <Select value={supportStatusFilter} onChange={(e) => setSupportStatusFilter(e.target.value as any)}>
+              <option value="all">All</option>
+              <option value="open">Open</option>
+              <option value="waiting_admin">Waiting Admin</option>
+              <option value="waiting_user">Waiting User</option>
+              <option value="resolved">Resolved</option>
+            </Select>
+            <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'support-conversations'] })}>
+              Refresh
+            </ActionButton>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) 2fr', gap: '14px' }}>
+          <div style={{ border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, maxHeight: 640, overflowY: 'auto' }}>
+            {supportConversations.map((row: SupportConversationRow) => (
+              <button
+                key={row.id}
+                onClick={() => setSelectedSupportConversationId(row.id)}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  textAlign: 'left',
+                  border: 'none',
+                  background: row.id === selectedSupportConversationId ? 'rgba(255,107,0,0.18)' : 'transparent',
+                  borderBottom: '1px solid rgba(255,255,255,0.08)',
+                  padding: '10px 12px',
+                  color: '#fff',
+                  cursor: 'pointer'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                  <strong>{row.username || row.email || row.userId}</strong>
+                  <span style={{ fontSize: 12, color: '#ffb280' }}>{row.status}</span>
+                </div>
+                <div style={{ fontSize: 12, color: '#bbb', marginTop: 4 }}>
+                  {row.subject} {row.teamName ? `• Team: ${row.teamName}` : ''}
+                </div>
+                <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>{row.lastMessagePreview || '-'}</div>
+              </button>
+            ))}
+            {!supportConversations.length && (
+              <div style={{ color: '#ccc', padding: 12 }}>No support conversations</div>
+            )}
+          </div>
+
+          <div style={{ border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: 12, minHeight: 500, display: 'grid', gridTemplateRows: 'auto 1fr auto' }}>
+            <div style={{ marginBottom: 10 }}>
+              <strong>{selectedConversation ? `${selectedConversation.username || selectedConversation.email}` : 'Select conversation'}</strong>
+              {selectedConversation && (
+                <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <ActionButton onClick={() => updateStatus('open')}>Open</ActionButton>
+                  <ActionButton onClick={() => updateStatus('waiting_admin')}>Waiting Admin</ActionButton>
+                  <ActionButton onClick={() => updateStatus('waiting_user')}>Waiting User</ActionButton>
+                  <ActionButton $variant="success" onClick={() => updateStatus('resolved')}>Resolved</ActionButton>
+                </div>
+              )}
+            </div>
+
+            <div style={{ overflowY: 'auto', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: 10, background: 'rgba(0,0,0,0.15)' }}>
+              {!selectedSupportConversationId && <div style={{ color: '#999' }}>Choose conversation on the left</div>}
+              {selectedSupportConversationId && supportMessages.map((msg: SupportMessageRow) => (
+                <div key={msg.id} style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 12, color: '#ffb280' }}>
+                    {msg.senderType.toUpperCase()} {msg.provider ? `• ${msg.provider}` : ''} {msg.createdAt ? `• ${new Date(msg.createdAt).toLocaleString()}` : ''}
+                  </div>
+                  <div style={{ whiteSpace: 'pre-wrap', color: '#fff' }}>{msg.content}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginTop: 10 }}>
+              <TextArea
+                value={supportReply}
+                onChange={(e) => setSupportReply(e.target.value)}
+                placeholder="Reply as admin..."
+                style={{ minHeight: 80 }}
+              />
+              <ActionButton onClick={sendReply} disabled={!selectedSupportConversationId || !supportReply.trim()}>
+                Send Reply
+              </ActionButton>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   function renderRewards() {
     return (
       <div>
@@ -4033,6 +4270,8 @@ const AdminPage: React.FC = () => {
         return renderReferrals();
       case 'teams':
         return renderTeams();
+      case 'support':
+        return renderSupport();
       case 'contacts':
         return renderContacts();
       case 'payments':
@@ -4104,6 +4343,9 @@ const AdminPage: React.FC = () => {
         </Tab>
         <Tab $active={activeTab === 'teams'} onClick={() => setActiveTab('teams')}>
           Teams
+        </Tab>
+        <Tab $active={activeTab === 'support'} onClick={() => setActiveTab('support')}>
+          Support
         </Tab>
         <Tab $active={activeTab === 'contacts'} onClick={() => setActiveTab('contacts')}>
           Contacts

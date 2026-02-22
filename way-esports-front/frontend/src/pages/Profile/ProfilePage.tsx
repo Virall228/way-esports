@@ -5,6 +5,7 @@ import PhotoUploadModal from '../../components/Profile/PhotoUploadModal';
 import AchievementsSection from '../../components/Profile/AchievementsSection';
 import ReferralCard from '../../components/Referral/ReferralCard';
 import SubscriptionCard from '../../components/Subscription/SubscriptionCard';
+import SupportChat from '../../components/Support/SupportChat';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -434,6 +435,11 @@ const ProfilePage: React.FC = () => {
 
       <ReferralCard />
       <SubscriptionCard onManageSubscription={() => setIsSubscriptionOpen(true)} />
+
+      <StatsCard>
+        <CardTitle>Emergency Support</CardTitle>
+        <SupportChat source="profile" subject="Profile Support" />
+      </StatsCard>
 
       {/* Modals */}
       <SubscriptionModal

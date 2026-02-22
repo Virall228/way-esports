@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 import { teamsService } from '../../services/teamsService';
 import { resolveMediaUrl, resolveTeamLogoUrl } from '../../utils/media';
+import SupportChat from '../../components/Support/SupportChat';
 
 const Container = styled.div`
   padding: 2rem 1rem;
@@ -527,6 +528,13 @@ const TeamPage: React.FC = () => {
           </div>
         </Section>
       )}
+
+      <Section>
+        <SectionTitle>Team Support</SectionTitle>
+        <Card>
+          <SupportChat teamId={team.id || team._id} source="team" subject={`Team Support: ${team.name || 'Team'}`} />
+        </Card>
+      </Section>
     </Container>
   );
 };
