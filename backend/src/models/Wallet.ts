@@ -4,7 +4,7 @@ export interface IWallet extends Document<mongoose.Types.ObjectId> {
   user: mongoose.Types.ObjectId;
   balance: number;
   transactions: {
-    type: 'deposit' | 'withdrawal' | 'prize' | 'fee';
+    type: 'deposit' | 'withdrawal' | 'prize' | 'fee' | 'subscription' | 'referral';
     amount: number;
     description: string;
     status: 'pending' | 'completed' | 'failed';
@@ -13,6 +13,10 @@ export interface IWallet extends Document<mongoose.Types.ObjectId> {
     network?: string;
     txHash?: string;
     processedAt?: Date;
+    planId?: 'player_pro' | 'elite_team';
+    billingCycle?: 'monthly' | 'yearly';
+    priceId?: string;
+    seats?: number;
     date: Date;
   }[];
   paymentMethods: {
@@ -50,7 +54,7 @@ const walletSchema = new Schema<IWallet>({
   transactions: [{
     type: {
       type: String,
-      enum: ['deposit', 'withdrawal', 'prize', 'fee'],
+      enum: ['deposit', 'withdrawal', 'prize', 'fee', 'subscription', 'referral'],
       required: true
     },
     amount: {
@@ -84,6 +88,24 @@ const walletSchema = new Schema<IWallet>({
     },
     processedAt: {
       type: Date
+    },
+    planId: {
+      type: String,
+      enum: ['player_pro', 'elite_team']
+    },
+    billingCycle: {
+      type: String,
+      enum: ['monthly', 'yearly']
+    },
+    priceId: {
+      type: String,
+      trim: true,
+      maxlength: 120
+    },
+    seats: {
+      type: Number,
+      min: 1,
+      max: 5
     },
     date: {
       type: Date,

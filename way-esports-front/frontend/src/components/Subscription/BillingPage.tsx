@@ -1,399 +1,317 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { api } from '../../services/api';
+import { BillingCycle, PlanId, PRICING_PLANS, equivalentMonthly, getPlanCycle } from '../../config/pricing';
 
 const Container = styled.div`
   min-height: 100vh;
-  background: #0a0a0a;
+  background: #000000;
   padding: 20px;
   width: 100%;
   max-width: 100%;
-  margin: 0;
 `;
 
 const Header = styled.div`
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 28px;
 `;
 
 const Title = styled.h1`
   color: #ffffff;
-  font-size: 2.5rem;
-  margin-bottom: 10px;
+  font-size: clamp(1.6rem, 5vw, 2.5rem);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 `;
 
 const Subtitle = styled.p`
-  color: #cccccc;
-  font-size: 1.1rem;
+  color: #9ca3af;
   margin: 0;
 `;
 
-const PricingCard = styled.div`
+const ToggleWrap = styled.div`
+  display: flex;
+  justify-content: center;
+  margin: 12px 0 24px;
+`;
+
+const Toggle = styled.div`
+  display: inline-flex;
   background: rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
-  padding: 30px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 30px;
-  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  padding: 4px;
+  gap: 4px;
+`;
+
+const ToggleButton = styled.button<{ $active: boolean }>`
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  color: ${({ $active }) => ($active ? '#000' : '#fff')};
+  background: ${({ $active }) => ($active ? '#FF6B00' : 'transparent')};
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.8px;
+  transition: all 180ms ease;
+`;
+
+const Grid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+`;
+
+const Card = styled.div<{ $highlight?: boolean }>`
+  background: #0a0a0a;
+  border: 1px solid ${({ $highlight }) => ($highlight ? 'rgba(255,107,0,0.8)' : 'rgba(148,163,184,0.35)')};
+  border-radius: 14px;
+  padding: 18px;
+  color: #fff;
+  transition: border-color 220ms ease, box-shadow 220ms ease;
+  box-shadow: ${({ $highlight }) => ($highlight ? '0 0 22px rgba(255,107,0,0.2)' : 'none')};
+`;
+
+const PlanTitle = styled.h3`
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+`;
+
+const Badge = styled.span`
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 107, 0, 0.7);
+  color: #ffb280;
+  padding: 4px 8px;
 `;
 
 const Price = styled.div`
-  font-size: 3rem;
-  font-weight: bold;
-  color: #ff6b00;
-  margin-bottom: 10px;
+  margin-top: 14px;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
+  animation: priceFade 220ms ease;
+
+  @keyframes priceFade {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 `;
 
-const PricePeriod = styled.div`
-  color: #cccccc;
-  font-size: 1rem;
-  margin-bottom: 30px;
+const Meta = styled.div`
+  color: #cbd5e1;
+  font-size: 13px;
+  margin-top: 4px;
+  min-height: 18px;
 `;
 
-const SubscribeButton = styled.button`
-  background: linear-gradient(135deg, #ff6b00, #ff8533);
-  color: white;
-  border: none;
-  padding: 16px 32px;
-  border-radius: 8px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
+const Features = styled.ul`
+  margin: 14px 0;
+  padding-left: 18px;
+  color: #e5e7eb;
+  display: grid;
+  gap: 6px;
+`;
+
+const Cta = styled.button`
   width: 100%;
-  margin-bottom: 20px;
+  min-height: 44px;
+  border: none;
+  border-radius: 10px;
+  background: #FF6B00;
+  color: #000;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 180ms ease, filter 180ms ease;
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(255, 107, 0, 0.3);
+    transform: translateY(-1px);
+    filter: brightness(1.05);
   }
 
   &:disabled {
-    opacity: 0.6;
+    opacity: 0.7;
     cursor: not-allowed;
-    transform: none;
   }
 `;
 
-const BenefitsList = styled.div`
-  text-align: left;
-  margin-top: 30px;
+const Message = styled.div<{ $error?: boolean }>`
+  margin-top: 14px;
+  color: ${({ $error }) => ($error ? '#f87171' : '#86efac')};
 `;
 
-const BenefitItem = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 15px;
-  color: #ffffff;
-  font-size: 1rem;
-`;
-
-const CheckIcon = styled.div`
-  color: #4CAF50;
-  font-size: 1.2rem;
-  font-weight: bold;
-`;
-
-const FreeEntriesSection = styled.div`
-  background: rgba(76, 175, 80, 0.1);
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 30px;
-  border: 1px solid rgba(76, 175, 80, 0.3);
-`;
-
-const FreeEntriesTitle = styled.h3`
-  color: #4CAF50;
-  margin: 0 0 15px 0;
-  font-size: 1.2rem;
-`;
-
-const FreeEntriesText = styled.p`
-  color: #cccccc;
-  margin: 0;
-  line-height: 1.5;
-`;
-
-const ReferralSection = styled.div`
-  background: rgba(255, 107, 0, 0.1);
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 30px;
-  border: 1px solid rgba(255, 107, 0, 0.3);
-  text-align: center;
-`;
-
-const ReferralText = styled.p`
-  color: #ffffff;
-  margin: 0 0 15px 0;
-  font-size: 1rem;
-`;
-
-const ReferralButton = styled.button`
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 12px 24px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.3s ease;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.2);
-  }
-`;
-
-const LoadingState = styled.div`
-  text-align: center;
-  padding: 40px;
-  color: #cccccc;
-`;
-
-const ErrorMessage = styled.div`
-  background: rgba(244, 67, 54, 0.1);
-  border: 1px solid rgba(244, 67, 54, 0.3);
-  color: #F44336;
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-`;
-
-const SuccessMessage = styled.div`
-  background: rgba(76, 175, 80, 0.1);
-  border: 1px solid rgba(76, 175, 80, 0.3);
-  color: #4CAF50;
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-`;
-
-interface BillingData {
+type BillingData = {
   isSubscribed: boolean;
-  subscriptionExpiresAt?: string;
-  freeEntriesCount: number;
-  subscriptionPrice: number;
-  referralCode?: string;
   pendingSubscriptionRequest?: boolean;
-}
+};
 
 const BillingPage: React.FC = () => {
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [billing, setBilling] = useState<BillingData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
+  const [processingPlan, setProcessingPlan] = useState<PlanId | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    loadBillingData();
-  }, []);
-
-  const loadBillingData = async () => {
-    if (!api.hasToken()) {
-      setBilling({
-        isSubscribed: false,
-        freeEntriesCount: 0,
-        subscriptionPrice: 9.99
-      });
-      setLoading(false);
-      setError(null);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const [referralResponse, publicSettingsResponse, transactionsResponse]: any[] = await Promise.all([
-        api.get('/api/referrals/stats'),
-        api.get('/api/referrals/public-settings'),
-        api.get('/api/wallet/transactions')
-      ]);
-
-      const stats = referralResponse?.data || referralResponse || {};
-      const publicSettings = publicSettingsResponse?.data || publicSettingsResponse || {};
-
-      let subscriptionPrice = 9.99;
-      try {
-        const parsedPrice = Number(publicSettings.subscriptionPrice);
-        if (Number.isFinite(parsedPrice) && parsedPrice > 0) {
-          subscriptionPrice = parsedPrice;
-        }
-      } catch {
-        // keep default price
-      }
-
-      const txList: any[] = Array.isArray(transactionsResponse?.data)
-        ? transactionsResponse.data
-        : (Array.isArray(transactionsResponse) ? transactionsResponse : []);
-
-      const pendingSubscriptionRequest = txList.some((tx: any) => (
-        tx?.type === 'subscription' && tx?.status === 'pending'
-      ));
-
-      setBilling({
-        isSubscribed: Boolean(stats.isSubscribed),
-        subscriptionExpiresAt: stats.subscriptionExpiresAt,
-        freeEntriesCount: Number(stats.freeEntriesCount || 0),
-        subscriptionPrice,
-        referralCode: stats.referralCode,
-        pendingSubscriptionRequest
-      });
-    } catch (error: any) {
-      if (error?.status === 401) {
-        setBilling({
-          isSubscribed: false,
-          freeEntriesCount: 0,
-          subscriptionPrice: 9.99
-        });
-        setError(null);
+    const load = async () => {
+      if (!api.hasToken()) {
+        setBilling({ isSubscribed: false, pendingSubscriptionRequest: false });
         return;
       }
-      console.error('Failed to load billing data:', error);
-      setError(error?.message || 'Failed to load billing information');
-    } finally {
-      setLoading(false);
+      try {
+        const [statsRes, txRes]: any[] = await Promise.all([
+          api.get('/api/referrals/stats'),
+          api.get('/api/wallet/transactions')
+        ]);
+        const stats = statsRes?.data || statsRes || {};
+        const txList: any[] = Array.isArray(txRes?.data) ? txRes.data : (Array.isArray(txRes) ? txRes : []);
+        const pending = txList.some((tx: any) => tx?.type === 'subscription' && tx?.status === 'pending');
+        setBilling({
+          isSubscribed: Boolean(stats.isSubscribed),
+          pendingSubscriptionRequest: pending
+        });
+      } catch {
+        setBilling({ isSubscribed: false, pendingSubscriptionRequest: false });
+      }
+    };
+    void load();
+  }, []);
+
+  const helperTextByPlan = useMemo(() => ({
+    player_pro: 'Equivalent: $4.16/mo, billed $49.99 yearly',
+    elite_team: 'Equivalent: $16.66/mo, billed $199.99 yearly'
+  }), []);
+
+  const trackPricingEvent = async (payload: { plan_id: PlanId; billing_cycle: BillingCycle; price_id: string; seats: number }) => {
+    try {
+      await api.post('/api/analytics/track', {
+        event: 'pricing_select_plan',
+        userId: 'self',
+        data: payload,
+        source: 'billing_page'
+      });
+    } catch {
+      // non-blocking
     }
   };
 
-  const handleSubscribe = async () => {
+  const handleCheckout = async (planId: PlanId) => {
     try {
-      setProcessing(true);
       setError(null);
       setSuccess(null);
+      setProcessingPlan(planId);
 
-      const response: any = await api.post('/api/wallet/subscribe', {
-        paymentMethod: 'manual'
+      const plan = PRICING_PLANS.find((p) => p.planId === planId);
+      if (!plan) throw new Error('Plan not found');
+      const cycle = getPlanCycle(plan, billingCycle);
+      const priceId = cycle.priceId;
+      if (!priceId) throw new Error('Missing price_id');
+
+      const payload = {
+        plan_id: plan.planId,
+        billing_cycle: billingCycle,
+        price_id: priceId,
+        seats: plan.seats
+      };
+
+      await trackPricingEvent(payload);
+
+      const checkoutRes: any = await api.post('/api/billing/checkout-session', payload);
+      const checkout = checkoutRes?.data || payload;
+
+      const subscribeRes: any = await api.post('/api/wallet/subscribe', {
+        paymentMethod: 'manual',
+        plan_id: checkout.plan_id,
+        billing_cycle: checkout.billing_cycle,
+        price_id: checkout.price_id,
+        seats: checkout.seats
       });
-      const payload = response?.data || response || {};
-      const status = payload?.status || 'pending';
-      const amount = Number(payload?.amount || billing?.subscriptionPrice || 0);
 
+      const status = subscribeRes?.data?.status || 'pending';
       if (status === 'completed') {
-        setSuccess(`Subscription activated successfully. Charged $${amount.toFixed(2)}.`);
+        setSuccess('Subscription activated');
       } else {
-        setSuccess(`Subscription request created for $${amount.toFixed(2)}. Awaiting admin confirmation.`);
+        setSuccess('Subscription request created. Awaiting admin confirmation.');
       }
-      
-      // Reload data
-      await loadBillingData();
-    } catch (error: any) {
-      console.error('Subscription failed:', error);
-      setError(error?.message || 'Subscription failed. Please try again.');
+    } catch (e: any) {
+      setError(e?.message || 'Failed to start checkout');
     } finally {
-      setProcessing(false);
+      setProcessingPlan(null);
     }
   };
-
-  const goToReferral = () => {
-    window.location.href = '/profile#referrals';
-  };
-
-  if (loading) {
-    return (
-      <Container>
-        <LoadingState>Loading billing information...</LoadingState>
-      </Container>
-    );
-  }
-
-  if (!billing) {
-    return (
-      <Container>
-        <ErrorMessage>Unable to load billing information</ErrorMessage>
-      </Container>
-    );
-  }
-
-  const isExpired = billing.subscriptionExpiresAt && 
-    new Date(billing.subscriptionExpiresAt) < new Date();
 
   return (
     <Container>
       <Header>
-        <Title>Billing & Subscription</Title>
-        <Subtitle>Manage your subscription and tournament access</Subtitle>
+        <Title>Pricing</Title>
+        <Subtitle>Choose your competitive plan</Subtitle>
       </Header>
 
-      {error && <ErrorMessage>{error}</ErrorMessage>}
-      {success && <SuccessMessage>{success}</SuccessMessage>}
+      <ToggleWrap>
+        <Toggle>
+          <ToggleButton $active={billingCycle === 'monthly'} onClick={() => setBillingCycle('monthly')}>
+            Billed Monthly
+          </ToggleButton>
+          <ToggleButton $active={billingCycle === 'yearly'} onClick={() => setBillingCycle('yearly')}>
+            Billed Yearly
+          </ToggleButton>
+        </Toggle>
+      </ToggleWrap>
 
-      {billing.freeEntriesCount > 0 && (
-        <FreeEntriesSection>
-          <FreeEntriesTitle>{'\u{1F381}'} You Have Free Entries!</FreeEntriesTitle>
-          <FreeEntriesText>
-            You currently have <strong>{billing.freeEntriesCount}</strong> free tournament entries available. 
-            You can use these to join tournaments without an active subscription.
-          </FreeEntriesText>
-        </FreeEntriesSection>
+      <Grid>
+        {PRICING_PLANS.map((plan) => {
+          const cycle = getPlanCycle(plan, billingCycle);
+          const monthlyEq = equivalentMonthly(plan.yearly.amount);
+          const isYearly = billingCycle === 'yearly';
+          const teamPerMember = isYearly && plan.planId === 'elite_team' ? equivalentMonthly(plan.yearly.amount / plan.seats) : null;
+          const badge = isYearly ? plan.badgeYearly : plan.badgeMonthly;
+
+          return (
+            <Card key={plan.planId} $highlight={Boolean(plan.highlight)}>
+              <PlanTitle>{plan.title}</PlanTitle>
+              {badge ? <Badge>{badge}</Badge> : null}
+              <Price key={`${plan.planId}-${billingCycle}`}>${cycle.amount.toFixed(2)}</Price>
+              <Meta>
+                {isYearly ? helperTextByPlan[plan.planId] : 'Billed monthly'}
+              </Meta>
+              {plan.planId === 'elite_team' && isYearly && (
+                <Meta>Only ${teamPerMember?.toFixed(2)}/member per month on annual billing</Meta>
+              )}
+              {isYearly && (
+                <Meta>Equivalent: ${monthlyEq.toFixed(2)}/mo</Meta>
+              )}
+              <Features>
+                {plan.features.map((feature) => <li key={feature}>{feature}</li>)}
+              </Features>
+              <Cta
+                onClick={() => handleCheckout(plan.planId)}
+                disabled={Boolean(processingPlan) || Boolean(billing?.pendingSubscriptionRequest)}
+              >
+                {processingPlan === plan.planId ? 'Processing...' : plan.cta}
+              </Cta>
+            </Card>
+          );
+        })}
+      </Grid>
+
+      {billing?.pendingSubscriptionRequest && (
+        <Message>Your previous subscription request is pending admin confirmation.</Message>
       )}
-
-      <PricingCard>
-        <h2 style={{ color: '#ffffff', marginBottom: '20px' }}>WAY Esports Premium</h2>
-        <Price>${billing.subscriptionPrice}</Price>
-        <PricePeriod>per month</PricePeriod>
-        
-        {(!billing.isSubscribed || isExpired) ? (
-          <>
-            <SubscribeButton 
-              onClick={handleSubscribe}
-              disabled={processing || billing.pendingSubscriptionRequest}
-            >
-              {billing.pendingSubscriptionRequest
-                ? 'Pending admin confirmation'
-                : processing
-                  ? 'Processing...'
-                  : 'Subscribe Now'}
-            </SubscribeButton>
-            {billing.pendingSubscriptionRequest && (
-              <div style={{ color: '#cccccc', fontSize: '0.9rem' }}>
-                Your payment request is pending review in admin panel.
-              </div>
-            )}
-          </>
-        ) : (
-          <SubscribeButton disabled>
-            {'\u2713'} Active Subscription
-          </SubscribeButton>
-        )}
-
-        <BenefitsList>
-          <BenefitItem>
-            <CheckIcon>{'\u2713'}</CheckIcon>
-            Unlimited tournament registrations
-          </BenefitItem>
-          <BenefitItem>
-            <CheckIcon>{'\u2713'}</CheckIcon>
-            Priority tournament access
-          </BenefitItem>
-          <BenefitItem>
-            <CheckIcon>{'\u2713'}</CheckIcon>
-            Exclusive premium tournaments
-          </BenefitItem>
-          <BenefitItem>
-            <CheckIcon>{'\u2713'}</CheckIcon>
-            Advanced statistics and analytics
-          </BenefitItem>
-          <BenefitItem>
-            <CheckIcon>{'\u2713'}</CheckIcon>
-            Priority customer support
-          </BenefitItem>
-          <BenefitItem>
-            <CheckIcon>{'\u2713'}</CheckIcon>
-            Custom profile badges
-          </BenefitItem>
-        </BenefitsList>
-      </PricingCard>
-
-      <ReferralSection>
-        <ReferralText>
-          {'\u{1F381}'} Get free tournament entries by referring friends!
-        </ReferralText>
-        <ReferralButton onClick={goToReferral}>
-          View Referral Program
-        </ReferralButton>
-      </ReferralSection>
+      {success && <Message>{success}</Message>}
+      {error && <Message $error>{error}</Message>}
     </Container>
   );
 };

@@ -62,6 +62,10 @@ export interface IUser extends Document<mongoose.Types.ObjectId> {
       network?: string;
       txHash?: string;
       processedAt?: Date;
+      planId?: 'player_pro' | 'elite_team';
+      billingCycle?: 'monthly' | 'yearly';
+      priceId?: string;
+      seats?: number;
       status?: 'pending' | 'completed' | 'failed' | 'refund_pending' | 'refunded' | 'refund_denied';
       refundReason?: string;
       refundRequestedAt?: Date;
@@ -236,6 +240,24 @@ const userSchema = new Schema<IUser>({
         maxlength: 160
       },
       processedAt: Date,
+      planId: {
+        type: String,
+        enum: ['player_pro', 'elite_team']
+      },
+      billingCycle: {
+        type: String,
+        enum: ['monthly', 'yearly']
+      },
+      priceId: {
+        type: String,
+        trim: true,
+        maxlength: 120
+      },
+      seats: {
+        type: Number,
+        min: 1,
+        max: 5
+      },
       status: {
         type: String,
         enum: ['pending', 'completed', 'failed', 'refund_pending', 'refunded', 'refund_denied'],

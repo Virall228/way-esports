@@ -46,6 +46,7 @@ router.post('/track', async (req, res) => {
       'registration_start',
       'registration_complete',
       'subscription_page_view',
+      'pricing_select_plan',
       'subscription_start',
       'subscription_complete',
       'tournament_page_view',

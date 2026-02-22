@@ -3,6 +3,7 @@ import Wallet from '../models/Wallet';
 import User from '../models/User';
 import ReferralService from '../services/referralService';
 import { idempotency } from '../middleware/idempotency';
+import { getPlanPricing, BillingCycle, PlanId } from '../config/pricing';
 
 const router = express.Router();
 const SUPPORTED_WITHDRAW_NETWORKS = ['USDT-TRC20', 'USDT-ERC20', 'USDT-BEP20'] as const;
@@ -512,7 +513,23 @@ router.post('/subscribe', idempotency({ required: true }), async (req, res) => {
     }
 
     const settings: any = await ReferralService.getReferralSettings();
-    const subscriptionPrice = Number(settings?.subscriptionPrice || 9.99);
+    const fallbackSubscriptionPrice = Number(settings?.subscriptionPrice || 9.99);
+    const planId = String(req.body?.plan_id || 'player_pro').trim() as PlanId;
+    const billingCycle = String(req.body?.billing_cycle || 'monthly').trim() as BillingCycle;
+    const incomingPriceId = typeof req.body?.price_id === 'string' ? req.body.price_id.trim() : '';
+    const incomingSeats = Number(req.body?.seats || 0);
+    const planPricing = getPlanPricing(planId, billingCycle);
+    const seats = incomingSeats > 0 ? incomingSeats : (planPricing?.seats || 1);
+    const priceId = incomingPriceId || planPricing?.priceId || '';
+    const subscriptionPrice = Number(planPricing?.amount ?? fallbackSubscriptionPrice);
+
+    if (!priceId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing price_id'
+      });
+    }
+
     const paymentMethod = typeof req.body?.paymentMethod === 'string' && req.body.paymentMethod.trim()
       ? req.body.paymentMethod.trim()
       : 'manual';
@@ -526,6 +543,10 @@ router.post('/subscribe', idempotency({ required: true }), async (req, res) => {
         : 'Subscription payment request',
       status: (autoActivate ? 'completed' : 'pending') as 'pending' | 'completed',
       reference: `SUB-${Date.now()}`,
+      planId,
+      billingCycle,
+      priceId,
+      seats,
       date: new Date()
     };
 
@@ -549,6 +570,10 @@ router.post('/subscribe', idempotency({ required: true }), async (req, res) => {
       description: tx.description,
       status: tx.status === 'completed' ? 'completed' : 'pending',
       reference: tx.reference,
+      planId,
+      billingCycle,
+      priceId,
+      seats,
       date: tx.date
     });
 
@@ -560,6 +585,10 @@ router.post('/subscribe', idempotency({ required: true }), async (req, res) => {
         transactionReference: tx.reference,
         status: tx.status,
         amount: tx.amount,
+        planId,
+        billingCycle,
+        priceId,
+        seats,
         subscriptionExpiresAt
       }
     });
