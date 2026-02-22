@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { api } from '../../services/api';
+import { PRICING_PLANS } from '../../config/pricing';
 
 const Container = styled.div`
   background: rgba(255, 255, 255, 0.06);
@@ -130,7 +131,6 @@ interface SubscriptionData {
   isSubscribed: boolean;
   subscriptionExpiresAt?: string;
   freeEntriesCount: number;
-  subscriptionPrice: number;
 }
 
 interface SubscriptionCardProps {
@@ -149,8 +149,7 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ onManageSubscriptio
     if (!api.hasToken()) {
       setSubscription({
         isSubscribed: false,
-        freeEntriesCount: 0,
-        subscriptionPrice: 9.99
+        freeEntriesCount: 0
       });
       setLoading(false);
       return;
@@ -161,30 +160,16 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ onManageSubscriptio
       const referralResponse: any = await api.get('/api/referrals/stats');
       const stats = referralResponse?.data || referralResponse || {};
 
-      let subscriptionPrice = 9.99;
-      try {
-        const settingsResponse: any = await api.get('/api/referrals/public-settings');
-        const settings = settingsResponse?.data || settingsResponse || {};
-        const parsedPrice = Number(settings.subscriptionPrice);
-        if (Number.isFinite(parsedPrice) && parsedPrice > 0) {
-          subscriptionPrice = parsedPrice;
-        }
-      } catch {
-        // fallback to default price
-      }
-
       setSubscription({
         isSubscribed: Boolean(stats.isSubscribed),
         subscriptionExpiresAt: stats.subscriptionExpiresAt,
-        freeEntriesCount: Number(stats.freeEntriesCount || 0),
-        subscriptionPrice
+        freeEntriesCount: Number(stats.freeEntriesCount || 0)
       });
     } catch (error: any) {
       if (error?.status === 401) {
         setSubscription({
           isSubscribed: false,
-          freeEntriesCount: 0,
-          subscriptionPrice: 9.99
+          freeEntriesCount: 0
         });
         return;
       }
@@ -195,9 +180,11 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ onManageSubscriptio
   };
 
   const handleSubscribe = () => {
-    // Redirect to checkout/billing page
     window.location.href = '/billing';
   };
+
+  const playerPlan = PRICING_PLANS.find((p) => p.planId === 'player_pro');
+  const teamPlan = PRICING_PLANS.find((p) => p.planId === 'elite_team');
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -259,15 +246,17 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ onManageSubscriptio
         </InfoRow>
         
         <InfoRow>
-          <InfoLabel>Price:</InfoLabel>
-          <InfoValue>${subscription.subscriptionPrice}/month</InfoValue>
+          <InfoLabel>Plans:</InfoLabel>
+          <InfoValue>
+            Player ${playerPlan?.monthly.amount.toFixed(2)}/mo · Team ${teamPlan?.monthly.amount.toFixed(2)}/mo
+          </InfoValue>
         </InfoRow>
       </SubscriptionInfo>
 
       {!subscription.isSubscribed || isExpired ? (
         <>
           <ActionButton $variant="primary" onClick={handleSubscribe}>
-            Subscribe Now - ${subscription.subscriptionPrice}/month
+            Manage Subscription Plans
           </ActionButton>
           
           <BenefitsList>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { api } from '../../services/api';
+import { BillingCycle, PRICING_PLANS, equivalentMonthly, getPlanCycle } from '../../config/pricing';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -65,18 +66,19 @@ const Subtitle = styled.p`
 
 const PlansContainer = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 30px;
   margin-bottom: 30px;
 `;
 
 const PlanCard = styled.div<{ $popular?: boolean }>`
   background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ $popular }) => $popular ? '#3a3a3a' : 'rgba(255,255,255,0.12)'};
+  border: 1px solid ${({ $popular }) => $popular ? 'rgba(255,107,0,0.7)' : 'rgba(255,255,255,0.12)'};
   border-radius: 16px;
   padding: 30px;
   position: relative;
   transition: all 0.3s ease;
+  box-shadow: ${({ $popular }) => $popular ? '0 0 24px rgba(255,107,0,0.2)' : 'none'};
 
   &:hover {
     transform: translateY(-5px);
@@ -89,7 +91,7 @@ const PopularBadge = styled.div`
   top: -12px;
   left: 50%;
   transform: translateX(-50%);
-  background: #3a3a3a;
+  background: #ff6b00;
   color: #000000;
   padding: 6px 20px;
   border-radius: 20px;
@@ -215,6 +217,32 @@ const ConfirmButton = styled.button`
   }
 `;
 
+const ToggleWrap = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+`;
+
+const Toggle = styled.div`
+  display: inline-flex;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  padding: 4px;
+  gap: 4px;
+`;
+
+const ToggleButton = styled.button<{ $active: boolean }>`
+  min-height: 38px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: ${({ $active }) => ($active ? '#000' : '#fff')};
+  background: ${({ $active }) => ($active ? '#ff6b00' : 'transparent')};
+`;
+
 interface SubscriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -226,7 +254,8 @@ const FALLBACK_PAYMENT_ADDRESS =
     : 'TAoLXyWNAZoxYCkYu4iEuk6N6jUhhDyXHU';
 
 const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }) => {
-  const [selectedPlan, setSelectedPlan] = useState<'premium' | 'pro' | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [paymentAddress, setPaymentAddress] = useState(FALLBACK_PAYMENT_ADDRESS);
 
   useEffect(() => {
@@ -264,56 +293,54 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }
         
         <Header>
           <Title>Subscription Plans</Title>
-          <Subtitle>Choose the perfect plan for your gaming journey</Subtitle>
+          <Subtitle>Choose billing cycle and plan</Subtitle>
         </Header>
 
-        <PlansContainer>
-          <PlanCard $popular>
-            <PopularBadge>Most Popular</PopularBadge>
-            <PlanName>Premium</PlanName>
-            <PlanDescription>Most popular choice for competitive players</PlanDescription>
-            <PlanPrice>
-              <Price>$9.99</Price>
-              <PriceLabel>per month</PriceLabel>
-            </PlanPrice>
-            <FeaturesList>
-              <Feature>Priority tournament registration</Feature>
-              <Feature>Advanced statistics</Feature>
-              <Feature>Custom profile themes</Feature>
-              <Feature>Exclusive tournaments</Feature>
-              <Feature>Discord VIP access</Feature>
-              <Feature>Community support</Feature>
-            </FeaturesList>
-            {selectedPlan !== 'premium' && (
-              <ConfirmButton onClick={() => setSelectedPlan('premium')}>
-                Select Premium
-              </ConfirmButton>
-            )}
-          </PlanCard>
+        <ToggleWrap>
+          <Toggle>
+            <ToggleButton $active={billingCycle === 'monthly'} onClick={() => setBillingCycle('monthly')}>
+              Monthly
+            </ToggleButton>
+            <ToggleButton $active={billingCycle === 'yearly'} onClick={() => setBillingCycle('yearly')}>
+              Yearly
+            </ToggleButton>
+          </Toggle>
+        </ToggleWrap>
 
-          <PlanCard>
-            <PlanName>Pro</PlanName>
-            <PlanDescription>For professional teams and organizers</PlanDescription>
-            <PlanPrice>
-              <Price>$39.99</Price>
-              <PriceLabel>per month</PriceLabel>
-            </PlanPrice>
-            <FeaturesList>
-              <Feature>All Premium features</Feature>
-              <Feature>Tournament creation</Feature>
-              <Feature>Team management tools</Feature>
-              <Feature>Advanced analytics</Feature>
-              <Feature>Priority support</Feature>
-              <Feature>Custom branding</Feature>
-              <Feature>API access</Feature>
-              <Feature>Dedicated account manager</Feature>
-            </FeaturesList>
-            {selectedPlan !== 'pro' && (
-              <ConfirmButton onClick={() => setSelectedPlan('pro')}>
-                Select Pro
-              </ConfirmButton>
-            )}
-          </PlanCard>
+        <PlansContainer>
+          {PRICING_PLANS.map((plan) => {
+            const cycle = getPlanCycle(plan, billingCycle);
+            const monthlyEq = billingCycle === 'yearly' ? equivalentMonthly(plan.yearly.amount) : null;
+            const teamEq =
+              billingCycle === 'yearly' && plan.planId === 'elite_team'
+                ? equivalentMonthly(plan.yearly.amount / plan.seats)
+                : null;
+            const badge = billingCycle === 'yearly' ? plan.badgeYearly : plan.badgeMonthly;
+
+            return (
+              <PlanCard key={plan.planId} $popular={Boolean(plan.highlight)}>
+                {badge && <PopularBadge>{badge}</PopularBadge>}
+                <PlanName>{plan.title}</PlanName>
+                <PlanDescription>{plan.planId === 'elite_team' ? 'Up to 5 members' : 'Single player plan'}</PlanDescription>
+                <PlanPrice>
+                  <Price>${cycle.amount.toFixed(2)}</Price>
+                  <PriceLabel>{billingCycle === 'yearly' ? 'billed yearly' : 'per month'}</PriceLabel>
+                </PlanPrice>
+                {monthlyEq !== null && <PriceLabel>Equivalent: ${monthlyEq.toFixed(2)}/mo</PriceLabel>}
+                {teamEq !== null && <PriceLabel>Team benefit: ${teamEq.toFixed(2)}/member per month</PriceLabel>}
+                <FeaturesList>
+                  {plan.features.map((feature) => (
+                    <Feature key={feature}>{feature}</Feature>
+                  ))}
+                </FeaturesList>
+                {selectedPlan !== plan.planId && (
+                  <ConfirmButton onClick={() => setSelectedPlan(plan.planId)}>
+                    {plan.cta}
+                  </ConfirmButton>
+                )}
+              </PlanCard>
+            );
+          })}
         </PlansContainer>
 
         {selectedPlan && (
@@ -333,6 +360,11 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }
             <ConfirmButton>
               I Have Sent The Payment
             </ConfirmButton>
+            <div style={{ marginTop: 12 }}>
+              <ConfirmButton onClick={() => { onClose(); window.location.href = '/billing'; }}>
+                OPEN BILLING PAGE
+              </ConfirmButton>
+            </div>
           </PaymentSection>
         )}
       </ModalContent>
