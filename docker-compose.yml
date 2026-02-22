@@ -18,6 +18,12 @@ services:
       - BOOTSTRAP_ADMIN_TELEGRAM_ID=${BOOTSTRAP_ADMIN_TELEGRAM_ID:-}
       - BOOTSTRAP_ADMIN_EMAIL=${BOOTSTRAP_ADMIN_EMAIL:-}
       - PRIMARY_ADMIN_ONLY=${PRIMARY_ADMIN_ONLY:-false}
+      - AI_SCOUT_PROVIDER=${AI_SCOUT_PROVIDER:-gemini}
+      - SUPPORT_AI_PROVIDER=${SUPPORT_AI_PROVIDER:-gemini}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_SCOUT_MODEL=${OPENAI_SCOUT_MODEL:-gpt-4o-mini}
+      - OPENAI_SUPPORT_MODEL=${OPENAI_SUPPORT_MODEL:-gpt-4o-mini}
     volumes:
       - ./backend/uploads:/app/uploads
     expose:
