@@ -23,6 +23,8 @@ const supportProvider = (process.env.SUPPORT_AI_PROVIDER || process.env.AI_SCOUT
 const geminiKey = (process.env.GEMINI_API_KEY || '').trim();
 const openAiKey = (process.env.OPENAI_API_KEY || '').trim();
 
+const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+
 const buildPrompt = (input: SupportReplyInput): string => {
   const history = input.messages
     .slice(-12)
@@ -32,10 +34,10 @@ const buildPrompt = (input: SupportReplyInput): string => {
   return `
 You are WAY ESPORTS emergency support assistant.
 Rules:
-- Reply in concise Russian if user text is Russian, otherwise concise English.
-- Keep answer practical and directly actionable.
-- If issue is account/payment/security-critical, ask user for only required details and tell admin will review.
-- Do not ask for private keys or passwords.
+- If user text is Russian, answer in Russian. Else answer in English.
+- Be concise and practical.
+- Give clear next actions.
+- Never ask for private keys or passwords.
 - Max 900 characters.
 
 User: ${input.username}
@@ -51,51 +53,69 @@ const heuristicReply = (input: SupportReplyInput): SupportReplyResult => {
   if (last.includes('502') || last.includes('bad gateway')) {
     return {
       provider: 'heuristic',
-      text: 'Понял проблему с 502. Проверь статус контейнеров `api/web/reverse-proxy`, затем логи reverse-proxy и api. Если нужно, передаю диалог админу для ручного ответа.'
+      text: 'Понял проблему с 502. Проверь статус контейнеров api/web/reverse-proxy и логи reverse-proxy + api. Если нужно, передам запрос админу.'
     };
   }
 
   if (last.includes('login') || last.includes('логин') || last.includes('auth')) {
     return {
       provider: 'heuristic',
-      text: 'Проверь, что токен сохранён в браузере и `/api/auth/*` отвечает без 5xx. Если вход всё равно не работает, укажи время ошибки и устройство — передам админу на ручную проверку.'
+      text: 'Проверь токен авторизации в браузере и ответы /api/auth/* (без 5xx). Если не помогает — укажи устройство и точное время ошибки.'
     };
   }
 
   if (last.includes('wallet') || last.includes('withdraw') || last.includes('вывод')) {
     return {
       provider: 'heuristic',
-      text: 'По выводу средств: проверь сеть адреса (TRC20/ERC20/BEP20), минимальную сумму и статус заявки в Wallet. Я отмечу диалог для админ-проверки транзакции.'
+      text: 'Проверь сеть кошелька (TRC20/ERC20/BEP20), минимальную сумму и статус заявки в Wallet. Я пометил запрос для админ-проверки.'
     };
   }
 
   return {
     provider: 'heuristic',
-    text: 'Принял запрос. Опиши проблему в формате: что делал → что ожидал → какая ошибка. Я дам точные шаги и при необходимости передам админу.'
+    text: 'Принял запрос. Опиши в формате: что сделал -> что ожидал -> какая ошибка. Дам точные шаги и при необходимости подключу админа.'
   };
 };
 
-const callGemini = async (input: SupportReplyInput): Promise<SupportReplyResult | null> => {
-  if (!geminiKey) return null;
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`;
+const parseGeminiText = (payload: any): string | null => {
+  const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (typeof text !== 'string') return null;
+  const trimmed = text.trim();
+  return trimmed ? trimmed.slice(0, 900) : null;
+};
+
+const callGeminiModel = async (model: string, input: SupportReplyInput): Promise<string | null> => {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(geminiKey)}`;
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: buildPrompt(input) }] }],
-      generationConfig: { temperature: 0.2, maxOutputTokens: 380 }
+      generationConfig: { temperature: 0.2, maxOutputTokens: 420 }
     })
   });
 
-  if (!response.ok) return null;
-  const payload: any = await response.json();
-  const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (typeof text !== 'string' || !text.trim()) return null;
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    console.error(`[support-ai] gemini failed model=${model} status=${response.status} body=${body.slice(0, 400)}`);
+    return null;
+  }
 
-  return {
-    provider: 'gemini',
-    text: text.trim().slice(0, 900)
-  };
+  const payload: any = await response.json();
+  return parseGeminiText(payload);
+};
+
+const callGemini = async (input: SupportReplyInput): Promise<SupportReplyResult | null> => {
+  if (!geminiKey) return null;
+
+  for (const model of GEMINI_MODELS) {
+    const text = await callGeminiModel(model, input);
+    if (text) {
+      return { provider: 'gemini', text };
+    }
+  }
+
+  return null;
 };
 
 const callOpenAI = async (input: SupportReplyInput): Promise<SupportReplyResult | null> => {
@@ -115,15 +135,16 @@ const callOpenAI = async (input: SupportReplyInput): Promise<SupportReplyResult 
     })
   });
 
-  if (!response.ok) return null;
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    console.error(`[support-ai] openai failed status=${response.status} body=${body.slice(0, 400)}`);
+    return null;
+  }
+
   const payload: any = await response.json();
   const text = payload?.choices?.[0]?.message?.content;
   if (typeof text !== 'string' || !text.trim()) return null;
-
-  return {
-    provider: 'openai',
-    text: text.trim().slice(0, 900)
-  };
+  return { provider: 'openai', text: text.trim().slice(0, 900) };
 };
 
 export const getSupportAiStatus = () => ({
@@ -137,7 +158,7 @@ export const generateSupportReply = async (input: SupportReplyInput): Promise<Su
     if (supportProvider === 'none') {
       return {
         provider: 'none',
-        text: 'ИИ-ответ временно отключён. Ваш запрос передан в админ-панель для ручного ответа.'
+        text: 'ИИ-ответ временно отключен. Запрос доступен админу для ручного ответа.'
       };
     }
 
@@ -150,7 +171,8 @@ export const generateSupportReply = async (input: SupportReplyInput): Promise<Su
     }
 
     return (await callGemini(input)) || (await callOpenAI(input)) || heuristicReply(input);
-  } catch {
+  } catch (error: any) {
+    console.error('[support-ai] unexpected failure', error?.message || error);
     return heuristicReply(input);
   }
 };
