@@ -264,11 +264,19 @@ const RankingsPage: React.FC = () => {
             points: toNumber(player?.weeklyStats?.points, rating)
         };
 
+        const preferredDisplayName = (
+            player?.username ||
+            player?.name ||
+            fullName ||
+            player?.email?.split?.('@')?.[0] ||
+            'Player'
+        );
+
         return {
             id: String(player?.id || player?._id || ''),
             rank,
             previousRank,
-            name: player?.name || fullName || player?.username || 'Player',
+            name: preferredDisplayName,
             avatar: resolveMediaUrl(player?.avatar || player?.profileLogo || ''),
             team: teamName,
             rating,
