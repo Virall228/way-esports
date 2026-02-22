@@ -203,6 +203,27 @@ router.post(
         }))
       });
 
+      if (ai.provider === 'none') {
+        await SupportConversation.updateOne(
+          { _id: conversation._id },
+          {
+            $set: {
+              status: 'waiting_admin',
+              lastMessageAt: new Date(),
+              lastMessagePreview: sanitizePreview(content)
+            }
+          }
+        );
+
+        return res.status(201).json({
+          success: true,
+          data: {
+            userMessage: normalizeMessage(userMessage),
+            aiMessage: null
+          }
+        });
+      }
+
       const aiMessage = await SupportMessage.create({
         conversationId: conversation._id,
         senderType: 'ai',
