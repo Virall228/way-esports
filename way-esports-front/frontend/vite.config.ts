@@ -1,5 +1,5 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
@@ -21,26 +21,11 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    minify: 'esbuild', // Используем esbuild (быстрее и встроен в Vite, не требует дополнительных зависимостей)
-    // Если нужен terser, раскомментируйте и убедитесь что terser установлен в package.json
-    // minify: 'terser',
-    // terserOptions: {
-    //   compress: {
-    //     drop_console: true,
-    //     drop_debugger: true
-    //   }
-    // },
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'telegram': []
-        }
-      }
-    },
+    minify: 'esbuild',
+    // Keep default Rollup chunk strategy; forced vendor split caused runtime TDZ errors.
     chunkSizeWarningLimit: 1000
   },
   define: {
     'process.env': {}
   }
-})
+});
