@@ -37,12 +37,24 @@ const ensureTeamAccess = async (teamId: mongoose.Types.ObjectId, userId: mongoos
   return members.includes(uid) || captainId === uid;
 };
 
+const sanitizeDisplayText = (value: unknown): string => {
+  const text = String(value || '');
+  if (!text) return '';
+
+  const questionMarks = (text.match(/\?/g) || []).length;
+  if (questionMarks >= 8 && (text.includes('->') || text.length >= 40)) {
+    return 'Сообщение повреждено кодировкой. Отправьте новый запрос, и мы ответим корректно.';
+  }
+
+  return text;
+};
+
 const normalizeMessage = (msg: any) => ({
   id: String(msg?._id || ''),
   conversationId: String(msg?.conversationId || ''),
   senderType: msg?.senderType || 'system',
   senderId: msg?.senderId ? String(msg.senderId) : null,
-  content: msg?.content || '',
+  content: sanitizeDisplayText(msg?.content),
   provider: msg?.provider || null,
   createdAt: msg?.createdAt || null
 });
