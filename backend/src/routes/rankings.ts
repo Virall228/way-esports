@@ -58,13 +58,22 @@ router.get('/teams/rankings', async (req, res) => {
 // Get player rankings
 router.get('/players/rankings', async (req, res) => {
   try {
+    const timeFrameRaw = (req.query.timeFrame || req.query.timeframe || 'week') as string;
     const gameRaw = (req.query.game || 'all') as string;
+    const timeFrame = timeFrameRaw.toLowerCase();
     const game = gameRaw.toLowerCase();
     const query: any = {};
     
     // Add game filter if specified
     if (game && game !== 'all') {
       query['gameProfiles.game'] = game;
+    }
+
+    const now = new Date();
+    if (timeFrame === 'month') {
+      query.createdAt = { $gte: new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()) };
+    } else if (timeFrame === 'week') {
+      query.createdAt = { $gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) };
     }
 
     // Get users with stats
@@ -75,12 +84,15 @@ router.get('/players/rankings', async (req, res) => {
 
     // Calculate rankings
     const rankedPlayers = users.map((user: any, index) => ({
+      displayName: [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.username || 'Player',
+      name: [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.username || 'Player',
       _id: user._id,
       username: user.username,
       firstName: user.firstName,
       lastName: user.lastName,
       profileLogo: user.profileLogo,
       rank: index + 1,
+      points: Number(user?.stats?.points || user?.stats?.rankPoints || 0),
       totalPrize: user?.stats?.totalPrizeMoney || 0,
       tournamentWins: user?.stats?.tournamentWins || 0,
       matches: user?.stats?.totalMatches || 0,

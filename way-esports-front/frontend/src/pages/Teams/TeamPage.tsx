@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -9,6 +9,8 @@ import { api } from '../../services/api';
 import { teamsService } from '../../services/teamsService';
 import { resolveMediaUrl, resolveTeamLogoUrl } from '../../utils/media';
 import SupportChat from '../../components/Support/SupportChat';
+import FlameAuraAvatar from '../../components/UI/FlameAuraAvatar';
+import { getTeamPoints, getTierByPoints, getIntensityByPointsAndRank } from '../../utils/flameRank';
 
 const Container = styled.div`
   padding: 2rem 1rem;
@@ -75,6 +77,14 @@ const TeamLogoActions = styled.div`
   padding: 10px;
   border-radius: 10px;
   border: 1px dashed rgba(255, 255, 255, 0.2);
+`;
+
+const ShareRow = styled.div`
+  margin-top: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 `;
 
 const HiddenFileInput = styled.input`
@@ -235,6 +245,7 @@ const TeamPage: React.FC = () => {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [logoError, setLogoError] = useState<string | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [inviteLink, setInviteLink] = useState<string>('');
   const { data: team, isLoading, error, refetch } = useQuery({
     queryKey: ['team', id],
     queryFn: async () => {
@@ -333,6 +344,32 @@ const TeamPage: React.FC = () => {
     logoInputRef.current?.click();
   };
 
+  const loadInviteLink = async () => {
+    if (!id) return;
+    try {
+      const res: any = await api.get(`/api/intelligence/telegram/deep-link/team/${id}`);
+      const payload = res?.data || res;
+      setInviteLink(String(payload?.deepLink || ''));
+    } catch {
+      setInviteLink('');
+    }
+  };
+
+  useEffect(() => {
+    if (!id) return;
+    loadInviteLink().catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  const copyInviteLink = async () => {
+    if (!inviteLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+    } catch {
+      // ignore clipboard error
+    }
+  };
+
   const handleDropTeamLogo = async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
@@ -360,13 +397,16 @@ const TeamPage: React.FC = () => {
   return (
     <Container>
       <TeamHeader>
-        {teamLogo ? (
-          <Logo src={teamLogo} alt={team.name} />
-        ) : (
-          <LogoPlaceholder>
-            {team.tag?.replace('#', '') || team.name?.charAt(0)}
-          </LogoPlaceholder>
-        )}
+        <div>
+          <FlameAuraAvatar
+            imageUrl={teamLogo || undefined}
+            fallbackText={team.tag?.replace('#', '') || team.name?.charAt(0) || '?'}
+            size={120}
+            tier={getTierByPoints(getTeamPoints(wins, losses, winRate, Number(team?.achievements?.length || 0)))}
+            intensity={getIntensityByPointsAndRank(getTeamPoints(wins, losses, winRate, Number(team?.achievements?.length || 0)))}
+            rounded={false}
+          />
+        </div>
         <TeamHeaderMeta>
           <TeamTitle>
             {team.name}
@@ -393,6 +433,21 @@ const TeamPage: React.FC = () => {
               )}
             </TeamLogoActions>
           )}
+          <ShareRow>
+            <Button variant="outline" size="small" onClick={loadInviteLink}>
+              Generate Telegram Invite
+            </Button>
+            {!!inviteLink && (
+              <>
+                <Button variant="primary" size="small" onClick={copyInviteLink}>
+                  Copy Link
+                </Button>
+                <a href={inviteLink} target="_blank" rel="noreferrer" style={{ color: '#ffb680', fontSize: 13 }}>
+                  Open
+                </a>
+              </>
+            )}
+          </ShareRow>
         </TeamHeaderMeta>
       </TeamHeader>
 

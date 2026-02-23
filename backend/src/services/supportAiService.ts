@@ -16,6 +16,7 @@ type SupportReplyResult = {
   text: string;
   provider: 'gemini' | 'openai' | 'heuristic' | 'none';
 };
+import { canCallProvider, getCircuitStatus, markProviderFailure, markProviderSuccess } from './aiCircuitBreaker';
 
 const supportProvider = (process.env.SUPPORT_AI_PROVIDER || process.env.AI_SCOUT_PROVIDER || 'gemini')
   .trim()
@@ -53,27 +54,27 @@ const heuristicReply = (input: SupportReplyInput): SupportReplyResult => {
   if (last.includes('502') || last.includes('bad gateway')) {
     return {
       provider: 'heuristic',
-      text: 'Понял проблему с 502. Проверь статус контейнеров api/web/reverse-proxy и логи reverse-proxy + api. Если нужно, передам запрос админу.'
+      text: '????? ???????? ? 502. ??????? ?????? ??????????? api/web/reverse-proxy ? ???? reverse-proxy + api. ???? ?????, ??????? ?????? ??????.'
     };
   }
 
-  if (last.includes('login') || last.includes('логин') || last.includes('auth')) {
+  if (last.includes('login') || last.includes('?????') || last.includes('auth')) {
     return {
       provider: 'heuristic',
-      text: 'Проверь токен авторизации в браузере и ответы /api/auth/* (без 5xx). Если не помогает — укажи устройство и точное время ошибки.'
+      text: '??????? ????? ??????????? ? ???????? ? ?????? /api/auth/* (??? 5xx). ???? ?? ????????, ????? ?????????? ? ?????? ????? ??????.'
     };
   }
 
-  if (last.includes('wallet') || last.includes('withdraw') || last.includes('вывод')) {
+  if (last.includes('wallet') || last.includes('withdraw') || last.includes('?????')) {
     return {
       provider: 'heuristic',
-      text: 'Проверь сеть кошелька (TRC20/ERC20/BEP20), минимальную сумму и статус заявки в Wallet. Я пометил запрос для админ-проверки.'
+      text: '??????? ???? ???????? (TRC20/ERC20/BEP20), ??????????? ????? ? ?????? ?????? ? Wallet. ? ??????? ?????? ??? ?????-????????.'
     };
   }
 
   return {
     provider: 'heuristic',
-    text: 'Принял запрос. Опиши в формате: что сделал -> что ожидал -> какая ошибка. Дам точные шаги и при необходимости подключу админа.'
+    text: '?????? ??????. ????? ? ???????: ??? ?????? -> ??? ?????? -> ????? ??????. ??? ?????? ???? ? ??? ????????????? ???????? ??????.'
   };
 };
 
@@ -106,19 +107,23 @@ const callGeminiModel = async (model: string, input: SupportReplyInput): Promise
 };
 
 const callGemini = async (input: SupportReplyInput): Promise<SupportReplyResult | null> => {
+  if (!canCallProvider('gemini')) return null;
   if (!geminiKey) return null;
 
   for (const model of GEMINI_MODELS) {
     const text = await callGeminiModel(model, input);
     if (text) {
+      markProviderSuccess('gemini');
       return { provider: 'gemini', text };
     }
   }
 
+  markProviderFailure('gemini');
   return null;
 };
 
 const callOpenAI = async (input: SupportReplyInput): Promise<SupportReplyResult | null> => {
+  if (!canCallProvider('openai')) return null;
   if (!openAiKey) return null;
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -138,19 +143,25 @@ const callOpenAI = async (input: SupportReplyInput): Promise<SupportReplyResult 
   if (!response.ok) {
     const body = await response.text().catch(() => '');
     console.error(`[support-ai] openai failed status=${response.status} body=${body.slice(0, 400)}`);
+    markProviderFailure('openai');
     return null;
   }
 
   const payload: any = await response.json();
   const text = payload?.choices?.[0]?.message?.content;
-  if (typeof text !== 'string' || !text.trim()) return null;
+  if (typeof text !== 'string' || !text.trim()) {
+    markProviderFailure('openai');
+    return null;
+  }
+  markProviderSuccess('openai');
   return { provider: 'openai', text: text.trim().slice(0, 900) };
 };
 
 export const getSupportAiStatus = () => ({
   provider: supportProvider,
   geminiEnabled: Boolean(geminiKey),
-  openAiEnabled: Boolean(openAiKey)
+  openAiEnabled: Boolean(openAiKey),
+  circuit: getCircuitStatus()
 });
 
 export const generateSupportReply = async (input: SupportReplyInput): Promise<SupportReplyResult> => {
@@ -176,4 +187,3 @@ export const generateSupportReply = async (input: SupportReplyInput): Promise<Su
     return heuristicReply(input);
   }
 };
-

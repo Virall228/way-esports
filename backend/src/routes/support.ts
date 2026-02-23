@@ -4,6 +4,8 @@ import { body } from 'express-validator';
 import SupportConversation from '../models/SupportConversation';
 import SupportMessage from '../models/SupportMessage';
 import Team from '../models/Team';
+import SupportSettings from '../models/SupportSettings';
+import AuditLog from '../models/AuditLog';
 import { isAdmin } from '../middleware/auth';
 import { validateRequest } from '../middleware/validate';
 import { generateSupportReply, getSupportAiStatus } from '../services/supportAiService';
@@ -64,8 +66,86 @@ const normalizeConversation = (conv: any) => ({
   createdAt: conv?.createdAt || null
 });
 
-router.get('/ai-status', (_req, res) => {
-  return res.json({ success: true, data: getSupportAiStatus() });
+const getSupportSettings = async () => {
+  const settings = await SupportSettings.findOneAndUpdate(
+    { key: 'global' },
+    { $setOnInsert: { key: 'global', aiEnabled: true } },
+    { new: true, upsert: true }
+  ).lean();
+  return {
+    aiEnabled: Boolean(settings?.aiEnabled),
+    updatedAt: settings?.updatedAt || null,
+    updatedBy: settings?.updatedBy ? String(settings.updatedBy) : null
+  };
+};
+
+router.get('/ai-status', async (_req, res) => {
+  try {
+    const settings = await getSupportSettings();
+    return res.json({
+      success: true,
+      data: {
+        ...getSupportAiStatus(),
+        aiEnabled: settings.aiEnabled,
+        configUpdatedAt: settings.updatedAt
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to load AI status' });
+  }
+});
+
+router.get('/admin/settings', isAdmin, async (_req, res) => {
+  try {
+    const settings = await getSupportSettings();
+    return res.json({ success: true, data: settings });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to load support settings' });
+  }
+});
+
+router.patch('/admin/settings', isAdmin, async (req: any, res: any) => {
+  try {
+    if (typeof req.body?.aiEnabled !== 'boolean') {
+      return res.status(400).json({ success: false, error: 'aiEnabled must be boolean' });
+    }
+    const adminId = getUserId(req);
+    const settings = await SupportSettings.findOneAndUpdate(
+      { key: 'global' },
+      {
+        $set: {
+          aiEnabled: req.body.aiEnabled,
+          updatedBy: adminId || null
+        },
+        $setOnInsert: { key: 'global' }
+      },
+      { upsert: true, new: true }
+    ).lean();
+    await AuditLog.create({
+      actorId: adminId || undefined,
+      actorRole: String(req.user?.role || 'admin'),
+      actorTelegramId: Number(req.user?.telegramId || 0) || undefined,
+      action: 'update',
+      entity: 'support_settings',
+      entityId: 'global',
+      method: req.method,
+      path: req.originalUrl || req.path || '/api/support/admin/settings',
+      statusCode: 200,
+      ip: req.ip,
+      userAgent: String(req.headers?.['user-agent'] || ''),
+      payload: { aiEnabled: Boolean(req.body.aiEnabled) }
+    });
+    return res.json({
+      success: true,
+      data: {
+        aiEnabled: Boolean(settings?.aiEnabled),
+        updatedAt: settings?.updatedAt || null,
+        updatedBy: settings?.updatedBy ? String(settings.updatedBy) : null
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to update support settings' });
+  }
 });
 
 router.get('/thread', async (req: any, res) => {
@@ -193,15 +273,18 @@ router.post(
         .limit(12)
         .lean();
 
-      const ai = await generateSupportReply({
-        username: req.user?.username || 'user',
-        subject,
-        messages: contextMessages.map((row: any) => ({
-          role: row.senderType,
-          content: row.content,
-          createdAt: row.createdAt
-        }))
-      });
+      const settings = await getSupportSettings();
+      const ai = settings.aiEnabled
+        ? await generateSupportReply({
+            username: req.user?.username || 'user',
+            subject,
+            messages: contextMessages.map((row: any) => ({
+              role: row.senderType,
+              content: row.content,
+              createdAt: row.createdAt
+            }))
+          })
+        : { provider: 'none' as const, text: '' };
 
       if (ai.provider === 'none') {
         await SupportConversation.updateOne(
@@ -378,6 +461,82 @@ router.patch('/admin/conversations/:id/status', isAdmin, async (req: any, res: a
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message || 'Failed to update conversation status' });
   }
+});
+
+router.get('/admin/stream', isAdmin, async (req: any, res: any) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders?.();
+
+  let closed = false;
+  let previousSignature = '';
+
+  const writeSnapshot = async () => {
+    if (closed) return;
+    try {
+      const rows: any[] = await SupportConversation.find({})
+        .select('_id status unreadForAdmin updatedAt')
+        .lean();
+
+      const waitingAdmin = rows.filter((row) => String(row?.status || '') === 'waiting_admin').length;
+      const open = rows.filter((row) => String(row?.status || '') === 'open').length;
+      const unresolved = rows.filter((row) => String(row?.status || '') !== 'resolved').length;
+      const unreadForAdmin = rows.reduce((sum, row) => sum + Number(row?.unreadForAdmin || 0), 0);
+      const latestUpdatedAt = rows.reduce((latest, row) => {
+        const value = row?.updatedAt ? new Date(row.updatedAt).getTime() : 0;
+        return Math.max(latest, value);
+      }, 0);
+
+      const payload = {
+        timestamp: new Date().toISOString(),
+        totalConversations: rows.length,
+        waitingAdmin,
+        open,
+        unresolved,
+        unreadForAdmin,
+        latestUpdatedAt: latestUpdatedAt ? new Date(latestUpdatedAt).toISOString() : null
+      };
+
+      const signature = JSON.stringify({
+        totalConversations: payload.totalConversations,
+        waitingAdmin: payload.waitingAdmin,
+        open: payload.open,
+        unresolved: payload.unresolved,
+        unreadForAdmin: payload.unreadForAdmin,
+        latestUpdatedAt: payload.latestUpdatedAt
+      });
+
+      if (signature !== previousSignature) {
+        previousSignature = signature;
+        res.write('event: snapshot\n');
+        res.write(`data: ${JSON.stringify(payload)}\n\n`);
+      }
+    } catch (error: any) {
+      res.write('event: error\n');
+      res.write(`data: ${JSON.stringify({ timestamp: new Date().toISOString(), error: error?.message || 'support_stream_failed' })}\n\n`);
+    }
+  };
+
+  await writeSnapshot();
+
+  const interval = setInterval(() => {
+    writeSnapshot().catch(() => {});
+  }, 8000);
+
+  const heartbeat = setInterval(() => {
+    if (!closed) {
+      res.write(': keep-alive\n\n');
+    }
+  }, 15000);
+
+  req.on('close', () => {
+    closed = true;
+    clearInterval(interval);
+    clearInterval(heartbeat);
+    res.end();
+  });
 });
 
 export default router;

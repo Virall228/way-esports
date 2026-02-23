@@ -7,7 +7,7 @@ export interface IScoutingInsight extends Document<mongoose.Types.ObjectId> {
   impactRating: number;
   tag: 'Hidden Gem' | 'Prospect';
   summary: string;
-  source: 'heuristic' | 'gemini';
+  source: 'heuristic' | 'gemini' | 'openai';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -20,13 +20,13 @@ const scoutingInsightSchema = new Schema<IScoutingInsight>(
     impactRating: { type: Number, required: true, min: 0, max: 100 },
     tag: { type: String, enum: ['Hidden Gem', 'Prospect'], default: 'Prospect' },
     summary: { type: String, required: true, trim: true, maxlength: 1000 },
-    source: { type: String, enum: ['heuristic', 'gemini'], default: 'heuristic' }
+    source: { type: String, enum: ['heuristic', 'gemini', 'openai'], default: 'heuristic' }
   },
   { timestamps: true }
 );
 
 scoutingInsightSchema.index({ weekKey: 1, score: -1 });
 scoutingInsightSchema.index({ user: 1, weekKey: 1 }, { unique: true });
+scoutingInsightSchema.index({ tag: 1, weekKey: 1, score: -1 });
 
 export default mongoose.model<IScoutingInsight>('ScoutingInsight', scoutingInsightSchema);
-

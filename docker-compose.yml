@@ -104,6 +104,27 @@ services:
           - reverse-proxy
     restart: unless-stopped
 
+  bot:
+    build:
+      context: ./way-esports-bot
+      dockerfile: Dockerfile
+    container_name: way-esports-bot
+    env_file:
+      - .env
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - API_BASE_URL=${API_BASE_URL:-https://wayesports.duckdns.org}
+      - WEBAPP_URL=${WEBAPP_URL:-https://wayesports.duckdns.org}
+      - USE_WEBHOOK=${BOT_USE_WEBHOOK:-false}
+      - WEBHOOK_PUBLIC_URL=${BOT_WEBHOOK_PUBLIC_URL:-}
+      - WEBHOOK_PATH=${BOT_WEBHOOK_PATH:-/telegram/webhook}
+      - WEBHOOK_SECRET=${BOT_WEBHOOK_SECRET:-}
+      - POLL_TIMEOUT_SEC=${BOT_POLL_TIMEOUT_SEC:-30}
+      - PORT=8080
+    expose:
+      - "8080"
+    restart: unless-stopped
+
   certbot:
     image: certbot/certbot
     container_name: way-esports-certbot

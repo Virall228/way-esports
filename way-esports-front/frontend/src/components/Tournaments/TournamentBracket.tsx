@@ -206,20 +206,21 @@ interface Match {
 }
 
 interface TournamentBracketProps {
-  tournamentId: number;
+  tournamentId: string | number;
   tournamentName: string;
 }
 
 const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tournamentName }) => {
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
+  const normalizedTournamentId = String(tournamentId || '').trim();
   const { data: matchesRaw = [], isLoading, error } = useQuery({
-    queryKey: ['tournament', tournamentId, 'bracket'],
+    queryKey: ['tournament', normalizedTournamentId, 'bracket'],
     queryFn: async () => {
-      if (!tournamentId) return [];
-      const res: any = await tournamentService.getMatches(String(tournamentId));
+      if (!normalizedTournamentId) return [];
+      const res: any = await tournamentService.getMatches(normalizedTournamentId);
       return res?.data || res || [];
     },
-    enabled: Boolean(tournamentId),
+    enabled: Boolean(normalizedTournamentId),
     staleTime: 15000,
     refetchOnWindowFocus: false
   });

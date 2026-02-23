@@ -16,6 +16,7 @@ type ScoutInput = {
     conflictScore: number;
   };
 };
+import { canCallProvider, markProviderFailure, markProviderSuccess, getCircuitStatus } from './aiCircuitBreaker';
 
 type ScoutOutput = {
   tag?: 'Hidden Gem' | 'Prospect';
@@ -54,56 +55,89 @@ const parseModelJson = (text: string): Omit<ScoutOutput, 'source'> | null => {
 };
 
 const callGemini = async (input: ScoutInput): Promise<ScoutOutput | null> => {
+  if (!canCallProvider('gemini')) return null;
   if (!geminiKey) return null;
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`;
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: basePrompt(input) }] }],
-      generationConfig: {
-        temperature: 0.2,
-        maxOutputTokens: 220
-      }
-    })
-  });
-  if (!response.ok) return null;
-  const payload: any = await response.json();
-  const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (typeof text !== 'string') return null;
-  const parsed = parseModelJson(text);
-  if (!parsed) return null;
-  return { ...parsed, source: 'gemini' };
+  try {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`;
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: basePrompt(input) }] }],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 220
+        }
+      })
+    });
+    if (!response.ok) {
+      markProviderFailure('gemini');
+      return null;
+    }
+    const payload: any = await response.json();
+    const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (typeof text !== 'string') {
+      markProviderFailure('gemini');
+      return null;
+    }
+    const parsed = parseModelJson(text);
+    if (!parsed) {
+      markProviderFailure('gemini');
+      return null;
+    }
+    markProviderSuccess('gemini');
+    return { ...parsed, source: 'gemini' };
+  } catch {
+    markProviderFailure('gemini');
+    return null;
+  }
 };
 
 const callOpenAI = async (input: ScoutInput): Promise<ScoutOutput | null> => {
+  if (!canCallProvider('openai')) return null;
   if (!openAiKey) return null;
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${openAiKey}`
-    },
-    body: JSON.stringify({
-      model: process.env.OPENAI_SCOUT_MODEL || 'gpt-4o-mini',
-      temperature: 0.2,
-      messages: [{ role: 'user', content: basePrompt(input) }],
-      max_tokens: 220
-    })
-  });
-  if (!response.ok) return null;
-  const payload: any = await response.json();
-  const text = payload?.choices?.[0]?.message?.content;
-  if (typeof text !== 'string') return null;
-  const parsed = parseModelJson(text);
-  if (!parsed) return null;
-  return { ...parsed, source: 'openai' };
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${openAiKey}`
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_SCOUT_MODEL || 'gpt-4o-mini',
+        temperature: 0.2,
+        messages: [{ role: 'user', content: basePrompt(input) }],
+        max_tokens: 220
+      })
+    });
+    if (!response.ok) {
+      markProviderFailure('openai');
+      return null;
+    }
+    const payload: any = await response.json();
+    const text = payload?.choices?.[0]?.message?.content;
+    if (typeof text !== 'string') {
+      markProviderFailure('openai');
+      return null;
+    }
+    const parsed = parseModelJson(text);
+    if (!parsed) {
+      markProviderFailure('openai');
+      return null;
+    }
+    markProviderSuccess('openai');
+    return { ...parsed, source: 'openai' };
+  } catch {
+    markProviderFailure('openai');
+    return null;
+  }
 };
 
 export const getScoutProviderStatus = () => ({
   provider,
   geminiEnabled: Boolean(geminiKey),
-  openAiEnabled: Boolean(openAiKey)
+  openAiEnabled: Boolean(openAiKey),
+  circuit: getCircuitStatus()
 });
 
 export const generateAiScoutInsight = async (input: ScoutInput): Promise<ScoutOutput | null> => {
@@ -118,4 +152,3 @@ export const generateAiScoutInsight = async (input: ScoutInput): Promise<ScoutOu
     return null;
   }
 };
-

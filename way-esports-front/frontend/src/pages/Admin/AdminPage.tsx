@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Navigate } from 'react-router-dom';
@@ -328,7 +328,8 @@ type TabType =
   | 'support'
   | 'contacts'
   | 'payments'
-  | 'ops';
+  | 'ops'
+  | 'system';
 
 interface Reward {
   id: string;
@@ -380,6 +381,97 @@ interface SupportMessageRow {
   content: string;
   provider?: string | null;
   createdAt?: string | null;
+}
+
+interface SupportSettings {
+  aiEnabled: boolean;
+  updatedAt?: string | null;
+  updatedBy?: string | null;
+}
+
+interface SupportAiRuntimeStatus {
+  provider: string;
+  geminiEnabled: boolean;
+  openAiEnabled: boolean;
+  aiEnabled: boolean;
+  configUpdatedAt?: string | null;
+  circuit?: Record<string, { open: boolean; failures: number; retryInMs: number }>;
+}
+
+interface IntelligenceReadiness {
+  timestamp?: string;
+  providers?: {
+    scouting?: {
+      provider?: string;
+      geminiEnabled?: boolean;
+      openAiEnabled?: boolean;
+      circuit?: Record<string, { open: boolean; failures: number; retryInMs: number }>;
+    };
+    support?: {
+      provider?: string;
+      geminiEnabled?: boolean;
+      openAiEnabled?: boolean;
+      aiEnabled?: boolean;
+      circuit?: Record<string, { open: boolean; failures: number; retryInMs: number }>;
+    };
+  };
+  integrations?: {
+    telegramBotUsernameConfigured?: boolean;
+    hallOfFameCronTokenConfigured?: boolean;
+  };
+  infrastructure?: {
+    mongoConnected?: boolean;
+    redisConnected?: boolean;
+    mongoState?: number;
+  };
+  realtime?: {
+    rankUpdatesSse?: string;
+    opsSse?: string;
+  };
+  checks?: Array<{ key: string; ok: boolean; message: string }>;
+  readinessScore?: number;
+}
+
+interface ReadinessSmoke {
+  timestamp?: string;
+  durationMs?: number;
+  checks?: Array<{ key: string; ok: boolean; message: string }>;
+  summary?: {
+    mongoOk?: boolean;
+    redisOk?: boolean;
+    usersCount?: number;
+    teamsCount?: number;
+    tournamentsCount?: number;
+  };
+}
+
+interface SupportAuditEvent {
+  id: string;
+  createdAt: string;
+  method: string;
+  statusCode: number;
+  actorRole: string;
+  path: string;
+  payloadAiEnabled: boolean | null;
+}
+
+interface SupportAuditResponse {
+  items: SupportAuditEvent[];
+  pagination: PaginationMeta | null;
+}
+
+interface SystemSmokeAuditEvent {
+  id: string;
+  createdAt: string;
+  actorRole: string;
+  actorTelegramId?: number | null;
+  actorId?: string | null;
+  durationMs: number;
+  mongoOk: boolean;
+  redisOk: boolean;
+  usersCount: number;
+  teamsCount: number;
+  tournamentsCount: number;
 }
 
 interface AdminWalletTransaction {
@@ -459,6 +551,93 @@ interface OpsStreamPayload {
   error?: string;
 }
 
+interface OpsAuditTimelinePoint {
+  ts: string;
+  total: number;
+  success: number;
+  clientError: number;
+  serverError: number;
+}
+
+interface OpsAuditTimeline {
+  hours: number;
+  bucketMinutes: number;
+  since: string;
+  totals: {
+    total: number;
+    success: number;
+    clientError: number;
+    serverError: number;
+  };
+  points: OpsAuditTimelinePoint[];
+}
+
+interface OpsTopErrorRow {
+  method: string;
+  path: string;
+  statusCode: number;
+  count: number;
+  lastSeenAt: string | null;
+}
+
+interface OpsErrorSampleRow {
+  id: string;
+  createdAt: string | null;
+  actorRole: string;
+  statusCode: number;
+  method: string;
+  path: string;
+  entity: string;
+  entityId: string;
+  ip: string;
+  payload: any;
+}
+
+interface SupportStreamPayload {
+  timestamp: string;
+  totalConversations: number;
+  waitingAdmin: number;
+  open: number;
+  unresolved: number;
+  unreadForAdmin: number;
+  latestUpdatedAt?: string | null;
+}
+
+interface MatchRoomLogRow {
+  id: string;
+  source: 'match_room' | 'admin_prepare_single' | 'admin_prepare_bulk';
+  status: 'success' | 'denied' | 'error';
+  reason?: string;
+  roomId?: string | null;
+  requesterRole?: string;
+  requestedBy?: {
+    id: string;
+    username?: string;
+    firstName?: string;
+    lastName?: string;
+    telegramId?: number | null;
+    role?: string;
+  } | null;
+  ip?: string;
+  createdAt?: string | null;
+}
+
+interface MatchRoomLogsStreamPayload {
+  timestamp: string;
+  matchId: string;
+  total: number;
+  logs: MatchRoomLogRow[];
+}
+
+interface MatchOpsSummary {
+  hours: number;
+  since: string;
+  tournamentId: string | null;
+  total: number;
+  byEntity: Array<{ entity: string; count: number }>;
+  byStatusCode: Array<{ statusCode: number; count: number }>;
+}
+
 interface ReferralSettingsRow {
   referralBonusThreshold: number;
   refereeBonus: number;
@@ -493,6 +672,16 @@ interface AnomalyAlertRow {
   impactRating: number;
 }
 
+interface ScoutingExplainRow {
+  userId: string;
+  username: string;
+  role: string;
+  rank: string;
+  impactRating: number;
+  topDrivers: Array<{ key: string; value: number; contribution: number }>;
+  narrative: string;
+}
+
 interface WatchlistRow {
   userId: string;
   username: string;
@@ -500,6 +689,15 @@ interface WatchlistRow {
   impactRating: number;
   reason: string;
   addedAt?: string;
+}
+
+interface HallOfFameAdminRow {
+  id: string;
+  userId: string;
+  username: string;
+  consecutiveDaysRank1: number;
+  firstRank1At?: string;
+  lastRank1At?: string;
 }
 
 interface AdminUserRow {
@@ -551,6 +749,20 @@ interface AdminTournamentOverview {
     maxTeams: number;
     participants: number;
   };
+  summary?: {
+    teamsApproved: number;
+    requestsPending: number;
+    matchesTotal: number;
+    roomsPrepared: number;
+    liveWithoutRoom: number;
+    completedWithoutWinner: number;
+    byStatus: {
+      scheduled: number;
+      live: number;
+      completed: number;
+      cancelled: number;
+    };
+  };
   teams: Array<{
     id: string;
     name: string;
@@ -581,6 +793,18 @@ interface AdminTournamentOverview {
     team2?: { id: string; name: string; tag?: string; logo?: string } | null;
     score: { team1: number; team2: number };
     winnerId?: string | null;
+    eventsSummary?: {
+      totalEvents: number;
+      participants: { players: number; teams: number };
+      byType: {
+        kill: number;
+        death: number;
+        assist: number;
+        utility: number;
+        clutch: number;
+        objective: number;
+      };
+    };
     hasRoomCredentials?: boolean;
     roomCredentials?: {
       roomId: string;
@@ -632,6 +856,11 @@ const AdminPage: React.FC = () => {
   const [usersSearch, setUsersSearch] = useState('');
   const [opsStreamData, setOpsStreamData] = useState<OpsStreamPayload | null>(null);
   const [opsStreamConnected, setOpsStreamConnected] = useState(false);
+  const [tournamentStreamConnected, setTournamentStreamConnected] = useState(false);
+  const [tournamentStreamUpdatedAt, setTournamentStreamUpdatedAt] = useState<string | null>(null);
+  const [tournamentRequestsStreamConnected, setTournamentRequestsStreamConnected] = useState(false);
+  const [globalPendingTournamentRequests, setGlobalPendingTournamentRequests] = useState(0);
+  const [tournamentRequestsStreamUpdatedAt, setTournamentRequestsStreamUpdatedAt] = useState<string | null>(null);
   const [authLogFilters, setAuthLogFilters] = useState({
     event: '',
     method: '',
@@ -644,6 +873,47 @@ const AdminPage: React.FC = () => {
   const [supportStatusFilter, setSupportStatusFilter] = useState<'all' | 'open' | 'waiting_user' | 'waiting_admin' | 'resolved'>('all');
   const [selectedSupportConversationId, setSelectedSupportConversationId] = useState<string | null>(null);
   const [supportReply, setSupportReply] = useState('');
+  const [supportStreamConnected, setSupportStreamConnected] = useState(false);
+  const [supportStreamData, setSupportStreamData] = useState<SupportStreamPayload | null>(null);
+  const [supportStreamUpdatedAt, setSupportStreamUpdatedAt] = useState<string | null>(null);
+  const [supportAuditAiFilter, setSupportAuditAiFilter] = useState<'all' | 'on' | 'off'>('all');
+  const [supportAuditRoleFilter, setSupportAuditRoleFilter] = useState('all');
+  const [supportAuditDateFrom, setSupportAuditDateFrom] = useState('');
+  const [supportAuditDateTo, setSupportAuditDateTo] = useState('');
+  const [supportAuditPage, setSupportAuditPage] = useState(1);
+  const [supportAuditLimit, setSupportAuditLimit] = useState(12);
+  const [matchRoomLogs, setMatchRoomLogs] = useState<Record<string, MatchRoomLogRow[]>>({});
+  const [matchRoomLogsLoadingId, setMatchRoomLogsLoadingId] = useState<string | null>(null);
+  const [selectedMatchRoomLogsId, setSelectedMatchRoomLogsId] = useState<string | null>(null);
+  const [matchRoomLogsStreamConnected, setMatchRoomLogsStreamConnected] = useState(false);
+  const [matchRoomLogsStreamUpdatedAt, setMatchRoomLogsStreamUpdatedAt] = useState<string | null>(null);
+  const [matchStatusFilter, setMatchStatusFilter] = useState<'all' | 'scheduled' | 'live' | 'completed' | 'cancelled'>('all');
+  const [matchRoomFilter, setMatchRoomFilter] = useState<'all' | 'with_room' | 'without_room'>('all');
+  const [matchWinnerFilter, setMatchWinnerFilter] = useState<'all' | 'with_winner' | 'without_winner'>('all');
+  const [matchSearch, setMatchSearch] = useState('');
+  const [matchOpsWindowHours, setMatchOpsWindowHours] = useState<24 | 48 | 168>(48);
+  const [opsTimelineHours, setOpsTimelineHours] = useState<24 | 48 | 168>(24);
+  const [opsTimelineBucketMinutes, setOpsTimelineBucketMinutes] = useState<15 | 60>(60);
+  const [selectedTopError, setSelectedTopError] = useState<OpsTopErrorRow | null>(null);
+  const [readinessSmoke, setReadinessSmoke] = useState<ReadinessSmoke | null>(null);
+  const knownTournamentRequestIdsRef = useRef<Record<string, string[]>>({});
+  const supportUnreadForAdminRef = useRef(0);
+  const [newTournamentRequestCounts, setNewTournamentRequestCounts] = useState<Record<string, number>>({});
+  const [tournamentRequestSoundEnabled, setTournamentRequestSoundEnabled] = useState(true);
+  const [pointsInput, setPointsInput] = useState({ playerRating: 1000, opponentRating: 1000, result: 1 });
+  const [pointsOutput, setPointsOutput] = useState<{ newRating: number; delta: number } | null>(null);
+  const [statsInput, setStatsInput] = useState({
+    kills: 10,
+    deaths: 8,
+    assists: 4,
+    survivalSeconds: 420,
+    utilityUses: 9,
+    objectiveActions: 2,
+    clutchRoundsWon: 1,
+    roundsPlayed: 18
+  });
+  const [statsOutput, setStatsOutput] = useState<any>(null);
+  const [scoutingExplanations, setScoutingExplanations] = useState<Record<string, ScoutingExplainRow>>({});
   const isOpsTab = activeTab === 'ops';
 
   const formatApiError = (e: any, fallback: string) => {
@@ -685,6 +955,46 @@ const AdminPage: React.FC = () => {
     addNotification({ type, title, message });
   };
 
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('admin_tournament_alert_sound');
+      if (saved === '0') {
+        setTournamentRequestSoundEnabled(false);
+      } else if (saved === '1') {
+        setTournamentRequestSoundEnabled(true);
+      }
+    } catch {
+      // ignore storage issues
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('admin_tournament_alert_sound', tournamentRequestSoundEnabled ? '1' : '0');
+    } catch {
+      // ignore storage issues
+    }
+  }, [tournamentRequestSoundEnabled]);
+
+  const playTournamentAlertSound = () => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      oscillator.type = 'triangle';
+      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+      gainNode.gain.setValueAtTime(0.001, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.08, audioContext.currentTime + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2);
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.22);
+    } catch {
+      // ignore audio failures
+    }
+  };
+
   const setField = (key: string, value: any) => {
     setModalData((prev: any) => ({
       ...prev,
@@ -718,6 +1028,7 @@ const AdminPage: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: ['admin', 'scouting-prospects'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'scouting-anomalies'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'scouting-watchlist'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'hall-of-fame'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'ops-metrics'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'ops-queue'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'ops-backups'] }),
@@ -829,6 +1140,381 @@ const AdminPage: React.FC = () => {
       setOpsStreamConnected(false);
     };
   }, [hasAdminAccess, isOpsTab]);
+
+  useEffect(() => {
+    if (!hasAdminAccess || activeTab !== 'tournaments' || !selectedTournamentId) return;
+
+    const currentIds = Array.isArray(tournamentRequests)
+      ? tournamentRequests
+        .map((row: AdminTournamentRequestRow) => String(row.id || row.teamId || ''))
+        .filter(Boolean)
+      : [];
+
+    const prevIds = knownTournamentRequestIdsRef.current[selectedTournamentId];
+    if (!prevIds) {
+      knownTournamentRequestIdsRef.current[selectedTournamentId] = currentIds;
+      return;
+    }
+
+    const prevSet = new Set(prevIds);
+    const added = currentIds.filter((id) => !prevSet.has(id));
+    if (added.length > 0) {
+      setNewTournamentRequestCounts((prev) => ({
+        ...prev,
+        [selectedTournamentId]: (prev[selectedTournamentId] || 0) + added.length
+      }));
+
+      if (tournamentRequestSoundEnabled) {
+        playTournamentAlertSound();
+      }
+
+      notify(
+        'info',
+        'New tournament requests',
+        `${added.length} new request${added.length > 1 ? 's' : ''} in tournament ${selectedTournamentId}`
+      );
+    }
+
+    knownTournamentRequestIdsRef.current[selectedTournamentId] = currentIds;
+  }, [hasAdminAccess, activeTab, selectedTournamentId, tournamentRequests, tournamentRequestSoundEnabled]);
+
+  useEffect(() => {
+    if (!selectedTournamentId) return;
+    setNewTournamentRequestCounts((prev) => ({ ...prev, [selectedTournamentId]: 0 }));
+  }, [selectedTournamentId]);
+
+  useEffect(() => {
+    if (!hasAdminAccess || activeTab !== 'tournaments' || !selectedTournamentId) {
+      setTournamentStreamConnected(false);
+      setTournamentStreamUpdatedAt(null);
+      return;
+    }
+
+    const endpoint = getFullUrl(`/api/tournaments/${selectedTournamentId}/stream`);
+    let source: EventSource | null = null;
+
+    try {
+      source = new EventSource(endpoint);
+      source.addEventListener('open', () => {
+        setTournamentStreamConnected(true);
+      });
+
+      source.addEventListener('error', () => {
+        setTournamentStreamConnected(false);
+      });
+
+      source.addEventListener('tournament_update', async () => {
+        setTournamentStreamConnected(true);
+        setTournamentStreamUpdatedAt(new Date().toISOString());
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
+          queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests', selectedTournamentId] }),
+          queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', selectedTournamentId] }),
+          queryClient.invalidateQueries({ queryKey: ['tournament', selectedTournamentId] }),
+          queryClient.invalidateQueries({ queryKey: ['tournament', selectedTournamentId, 'matches'] }),
+          queryClient.invalidateQueries({ queryKey: ['tournament', String(selectedTournamentId), 'bracket'] })
+        ]);
+      });
+    } catch {
+      setTournamentStreamConnected(false);
+    }
+
+    return () => {
+      source?.close();
+      setTournamentStreamConnected(false);
+    };
+  }, [hasAdminAccess, activeTab, selectedTournamentId, queryClient]);
+
+  useEffect(() => {
+    if (!hasAdminAccess || activeTab !== 'tournaments') {
+      setTournamentRequestsStreamConnected(false);
+      return;
+    }
+
+    const token = getAuthToken();
+    if (!token) {
+      setTournamentRequestsStreamConnected(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    let cancelled = false;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    const processChunk = (chunk: string) => {
+      buffer += chunk;
+
+      while (true) {
+        const boundary = buffer.indexOf('\n\n');
+        if (boundary === -1) break;
+
+        const block = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+
+        const lines = block.split('\n');
+        const dataLine = lines.find((line) => line.startsWith('data: '));
+        if (!dataLine) continue;
+
+        try {
+          const payload = JSON.parse(dataLine.slice(6));
+          const totalPending = Number(payload?.totalPending || 0);
+          setGlobalPendingTournamentRequests(totalPending);
+          setTournamentRequestsStreamConnected(true);
+          setTournamentRequestsStreamUpdatedAt(new Date().toISOString());
+
+          queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] });
+          if (selectedTournamentId) {
+            queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests', selectedTournamentId] });
+            queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', selectedTournamentId] });
+          }
+        } catch {
+          // ignore malformed stream payloads
+        }
+      }
+    };
+
+    const connect = async () => {
+      if (cancelled) return;
+      try {
+        const response = await fetch(getFullUrl('/api/admin/tournaments/requests/stream'), {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          signal: controller.signal
+        });
+
+        if (!response.ok || !response.body) {
+          throw new Error(`Tournament requests stream unavailable (${response.status})`);
+        }
+
+        setTournamentRequestsStreamConnected(true);
+        const reader = response.body.getReader();
+        while (!cancelled) {
+          // eslint-disable-next-line no-await-in-loop
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value) {
+            processChunk(decoder.decode(value, { stream: true }));
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setTournamentRequestsStreamConnected(false);
+          reconnectTimer = setTimeout(() => {
+            connect().catch(() => {});
+          }, 3000);
+        }
+      }
+    };
+
+    connect().catch(() => {
+      setTournamentRequestsStreamConnected(false);
+    });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      setTournamentRequestsStreamConnected(false);
+    };
+  }, [hasAdminAccess, activeTab, selectedTournamentId, queryClient]);
+
+  useEffect(() => {
+    if (!hasAdminAccess || activeTab !== 'support') {
+      setSupportStreamConnected(false);
+      return;
+    }
+
+    const token = getAuthToken();
+    if (!token) {
+      setSupportStreamConnected(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    let cancelled = false;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    const processChunk = (chunk: string) => {
+      buffer += chunk;
+
+      while (true) {
+        const boundary = buffer.indexOf('\n\n');
+        if (boundary === -1) break;
+
+        const block = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+
+        const lines = block.split('\n');
+        const dataLine = lines.find((line) => line.startsWith('data: '));
+        if (!dataLine) continue;
+
+        try {
+          const payload = JSON.parse(dataLine.slice(6)) as SupportStreamPayload;
+          setSupportStreamData(payload);
+          setSupportStreamConnected(true);
+          setSupportStreamUpdatedAt(new Date().toISOString());
+
+          if (Number(payload?.unreadForAdmin || 0) > Number(supportUnreadForAdminRef.current || 0)) {
+            notify('info', 'New support messages', 'Support inbox has new unread messages');
+          }
+          supportUnreadForAdminRef.current = Number(payload?.unreadForAdmin || 0);
+
+          queryClient.invalidateQueries({ queryKey: ['admin', 'support-conversations'] });
+          queryClient.invalidateQueries({ queryKey: ['admin', 'support-ai-runtime'] });
+          if (selectedSupportConversationId) {
+            queryClient.invalidateQueries({ queryKey: ['admin', 'support-messages', selectedSupportConversationId] });
+          }
+        } catch {
+          // ignore malformed payloads
+        }
+      }
+    };
+
+    const connect = async () => {
+      if (cancelled) return;
+      try {
+        const response = await fetch(getFullUrl('/api/support/admin/stream'), {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          signal: controller.signal
+        });
+
+        if (!response.ok || !response.body) {
+          throw new Error(`Support stream unavailable (${response.status})`);
+        }
+
+        setSupportStreamConnected(true);
+        const reader = response.body.getReader();
+        while (!cancelled) {
+          // eslint-disable-next-line no-await-in-loop
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value) {
+            processChunk(decoder.decode(value, { stream: true }));
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setSupportStreamConnected(false);
+          reconnectTimer = setTimeout(() => {
+            connect().catch(() => {});
+          }, 3000);
+        }
+      }
+    };
+
+    connect().catch(() => {
+      setSupportStreamConnected(false);
+    });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      setSupportStreamConnected(false);
+    };
+  }, [hasAdminAccess, activeTab, selectedSupportConversationId, queryClient]);
+
+  useEffect(() => {
+    if (!hasAdminAccess || activeTab !== 'tournaments' || !selectedMatchRoomLogsId) {
+      setMatchRoomLogsStreamConnected(false);
+      return;
+    }
+
+    const token = getAuthToken();
+    if (!token) {
+      setMatchRoomLogsStreamConnected(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    let cancelled = false;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    const processChunk = (chunk: string) => {
+      buffer += chunk;
+
+      while (true) {
+        const boundary = buffer.indexOf('\n\n');
+        if (boundary === -1) break;
+
+        const block = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+
+        const lines = block.split('\n');
+        const eventLine = lines.find((line) => line.startsWith('event: '));
+        const eventName = eventLine ? eventLine.slice(7).trim() : '';
+        const dataLine = lines.find((line) => line.startsWith('data: '));
+        if (!dataLine || eventName !== 'room_logs') continue;
+
+        try {
+          const payload = JSON.parse(dataLine.slice(6)) as MatchRoomLogsStreamPayload;
+          const rows = Array.isArray(payload?.logs) ? payload.logs : [];
+          setMatchRoomLogs((prev) => ({ ...prev, [selectedMatchRoomLogsId]: rows }));
+          setMatchRoomLogsStreamConnected(true);
+          setMatchRoomLogsStreamUpdatedAt(new Date().toISOString());
+        } catch {
+          // ignore malformed payloads
+        }
+      }
+    };
+
+    const connect = async () => {
+      if (cancelled) return;
+      try {
+        const response = await fetch(getFullUrl(`/api/matches/${selectedMatchRoomLogsId}/room/logs/stream`), {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          signal: controller.signal
+        });
+
+        if (!response.ok || !response.body) {
+          throw new Error(`Room logs stream unavailable (${response.status})`);
+        }
+
+        setMatchRoomLogsStreamConnected(true);
+        const reader = response.body.getReader();
+        while (!cancelled) {
+          // eslint-disable-next-line no-await-in-loop
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value) {
+            processChunk(decoder.decode(value, { stream: true }));
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setMatchRoomLogsStreamConnected(false);
+          reconnectTimer = setTimeout(() => {
+            connect().catch(() => {});
+          }, 3000);
+        }
+      }
+    };
+
+    connect().catch(() => {
+      setMatchRoomLogsStreamConnected(false);
+    });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      setMatchRoomLogsStreamConnected(false);
+    };
+  }, [hasAdminAccess, activeTab, selectedMatchRoomLogsId]);
 
   const formatDateForInput = (value: any) => {
     try {
@@ -944,6 +1630,21 @@ const AdminPage: React.FC = () => {
         impactRating: Number(row.impactRating || 0),
         reason: row.reason || '',
         addedAt: row.addedAt
+      }))
+      : [];
+  };
+
+  const fetchHallOfFame = async (): Promise<HallOfFameAdminRow[]> => {
+    const result: any = await api.get('/api/intelligence/hall-of-fame');
+    const rows = result?.data || result || [];
+    return Array.isArray(rows)
+      ? rows.map((row: any) => ({
+        id: String(row._id || row.id || ''),
+        userId: String(row.userId || ''),
+        username: row.username || 'unknown',
+        consecutiveDaysRank1: Number(row.consecutiveDaysRank1 || 0),
+        firstRank1At: row.firstRank1At,
+        lastRank1At: row.lastRank1At
       }))
       : [];
   };
@@ -1091,6 +1792,83 @@ const AdminPage: React.FC = () => {
     }));
   };
 
+  const fetchSupportSettings = async (): Promise<SupportSettings> => {
+    const result: any = await api.get('/api/support/admin/settings');
+    const data = result?.data || result || {};
+    return {
+      aiEnabled: Boolean(data?.aiEnabled),
+      updatedAt: data?.updatedAt || null,
+      updatedBy: data?.updatedBy ? String(data.updatedBy) : null
+    };
+  };
+
+  const fetchSupportAiRuntimeStatus = async (): Promise<SupportAiRuntimeStatus> => {
+    const result: any = await api.get('/api/support/ai-status');
+    const data = result?.data || result || {};
+    return {
+      provider: String(data?.provider || 'auto'),
+      geminiEnabled: Boolean(data?.geminiEnabled),
+      openAiEnabled: Boolean(data?.openAiEnabled),
+      aiEnabled: Boolean(data?.aiEnabled),
+      configUpdatedAt: data?.configUpdatedAt || null,
+      circuit: data?.circuit || {}
+    };
+  };
+
+  const fetchIntelligenceReadiness = async (): Promise<IntelligenceReadiness> => {
+    const result: any = await api.get('/api/intelligence/readiness');
+    return (result?.data || result || {}) as IntelligenceReadiness;
+  };
+
+  const fetchSupportAuditEvents = async (): Promise<SupportAuditResponse> => {
+    const params = new URLSearchParams();
+    params.set('entity', 'support_settings');
+    params.set('page', String(supportAuditPage));
+    params.set('limit', String(supportAuditLimit));
+    if (supportAuditAiFilter === 'on') params.set('aiEnabled', 'true');
+    if (supportAuditAiFilter === 'off') params.set('aiEnabled', 'false');
+    if (supportAuditRoleFilter !== 'all') params.set('actorRole', supportAuditRoleFilter);
+    if (supportAuditDateFrom) params.set('from', `${supportAuditDateFrom}T00:00:00.000Z`);
+    if (supportAuditDateTo) params.set('to', `${supportAuditDateTo}T23:59:59.999Z`);
+
+    const result: any = await api.get(`/api/admin/audit?${params.toString()}`);
+    const items: any[] = Array.isArray(result) ? result : (result?.data || []);
+    const mapped = items.map((row: any) => ({
+      id: String(row?._id || ''),
+      createdAt: String(row?.createdAt || ''),
+      method: String(row?.method || ''),
+      statusCode: Number(row?.statusCode || 0),
+      actorRole: String(row?.actorRole || ''),
+      path: String(row?.path || ''),
+      payloadAiEnabled: typeof row?.payload?.aiEnabled === 'boolean' ? row.payload.aiEnabled : null
+    }));
+    return {
+      items: mapped,
+      pagination: result?.pagination || null
+    };
+  };
+
+  const fetchSystemSmokeAuditEvents = async (): Promise<SystemSmokeAuditEvent[]> => {
+    const params = new URLSearchParams();
+    params.set('entity', 'readiness_smoke');
+    params.set('limit', '20');
+    const result: any = await api.get(`/api/admin/audit?${params.toString()}`);
+    const items: any[] = Array.isArray(result) ? result : (result?.data || []);
+    return items.map((row: any) => ({
+      id: String(row?._id || ''),
+      createdAt: String(row?.createdAt || ''),
+      actorRole: String(row?.actorRole || ''),
+      actorTelegramId: row?.actorTelegramId ? Number(row.actorTelegramId) : null,
+      actorId: row?.actorId ? String(row.actorId) : null,
+      durationMs: Number(row?.payload?.durationMs || 0),
+      mongoOk: Boolean(row?.payload?.summary?.mongoOk),
+      redisOk: Boolean(row?.payload?.summary?.redisOk),
+      usersCount: Number(row?.payload?.summary?.usersCount || 0),
+      teamsCount: Number(row?.payload?.summary?.teamsCount || 0),
+      tournamentsCount: Number(row?.payload?.summary?.tournamentsCount || 0)
+    }));
+  };
+
   const fetchTournaments = async () => {
     const result: any = await api.get('/api/tournaments');
     const items: any[] = (result && (result.data || result.tournaments)) || [];
@@ -1221,8 +1999,39 @@ const AdminPage: React.FC = () => {
       statusCode: Number(row?.statusCode || 0),
       actorRole: row?.actorRole || '',
       path: row?.path || '',
-      method: row?.method || ''
+      method: row?.method || '',
+      payload: row?.payload || null,
+      payloadAiEnabled: typeof row?.payload?.aiEnabled === 'boolean' ? row.payload.aiEnabled : null
     }));
+  };
+
+  const fetchMatchOpsSummary = async (): Promise<MatchOpsSummary | null> => {
+    if (!selectedTournamentId) return null;
+    const params = new URLSearchParams({
+      tournamentId: selectedTournamentId,
+      hours: String(matchOpsWindowHours)
+    });
+    const result: any = await api.get(`/api/matches/ops/summary?${params.toString()}`);
+    const payload = result?.data || result || null;
+    if (!payload) return null;
+    return {
+      hours: Number(payload?.hours || 48),
+      since: String(payload?.since || ''),
+      tournamentId: payload?.tournamentId ? String(payload.tournamentId) : null,
+      total: Number(payload?.total || 0),
+      byEntity: Array.isArray(payload?.byEntity)
+        ? payload.byEntity.map((row: any) => ({
+          entity: String(row?.entity || ''),
+          count: Number(row?.count || 0)
+        }))
+        : [],
+      byStatusCode: Array.isArray(payload?.byStatusCode)
+        ? payload.byStatusCode.map((row: any) => ({
+          statusCode: Number(row?.statusCode || 0),
+          count: Number(row?.count || 0)
+        }))
+        : []
+    };
   };
 
   const fetchAuthLogs = async (): Promise<AdminAuthLog[]> => {
@@ -1269,6 +2078,79 @@ const AdminPage: React.FC = () => {
       createdAt: String(entry?.createdAt || ''),
       updatedAt: String(entry?.updatedAt || ''),
       collections: Number(entry?.collections || 0)
+    }));
+  };
+
+  const fetchOpsAuditTimeline = async (): Promise<OpsAuditTimeline | null> => {
+    const params = new URLSearchParams({
+      hours: String(opsTimelineHours),
+      bucketMinutes: String(opsTimelineBucketMinutes)
+    });
+    const result: any = await api.get(`/api/admin/ops/audit-timeline?${params.toString()}`);
+    const payload = result?.data || result || null;
+    if (!payload) return null;
+    return {
+      hours: Number(payload?.hours || opsTimelineHours),
+      bucketMinutes: Number(payload?.bucketMinutes || opsTimelineBucketMinutes),
+      since: String(payload?.since || ''),
+      totals: {
+        total: Number(payload?.totals?.total || 0),
+        success: Number(payload?.totals?.success || 0),
+        clientError: Number(payload?.totals?.clientError || 0),
+        serverError: Number(payload?.totals?.serverError || 0)
+      },
+      points: Array.isArray(payload?.points)
+        ? payload.points.map((row: any) => ({
+          ts: String(row?.ts || ''),
+          total: Number(row?.total || 0),
+          success: Number(row?.success || 0),
+          clientError: Number(row?.clientError || 0),
+          serverError: Number(row?.serverError || 0)
+        }))
+        : []
+    };
+  };
+
+  const fetchOpsTopErrors = async (): Promise<OpsTopErrorRow[]> => {
+    const params = new URLSearchParams({
+      hours: String(opsTimelineHours),
+      limit: '12'
+    });
+    const result: any = await api.get(`/api/admin/ops/errors-top?${params.toString()}`);
+    const payload = result?.data || result || null;
+    const items = Array.isArray(payload?.items) ? payload.items : [];
+    return items.map((row: any) => ({
+      method: String(row?.method || 'GET'),
+      path: String(row?.path || '/unknown'),
+      statusCode: Number(row?.statusCode || 500),
+      count: Number(row?.count || 0),
+      lastSeenAt: row?.lastSeenAt ? String(row.lastSeenAt) : null
+    }));
+  };
+
+  const fetchOpsErrorSamples = async (): Promise<OpsErrorSampleRow[]> => {
+    if (!selectedTopError) return [];
+    const params = new URLSearchParams({
+      hours: String(opsTimelineHours),
+      limit: '25',
+      method: selectedTopError.method,
+      path: selectedTopError.path,
+      statusCode: String(selectedTopError.statusCode)
+    });
+    const result: any = await api.get(`/api/admin/ops/errors-samples?${params.toString()}`);
+    const payload = result?.data || result || null;
+    const items = Array.isArray(payload?.items) ? payload.items : [];
+    return items.map((row: any) => ({
+      id: String(row?.id || ''),
+      createdAt: row?.createdAt ? String(row.createdAt) : null,
+      actorRole: String(row?.actorRole || ''),
+      statusCode: Number(row?.statusCode || 0),
+      method: String(row?.method || ''),
+      path: String(row?.path || ''),
+      entity: String(row?.entity || ''),
+      entityId: String(row?.entityId || ''),
+      ip: String(row?.ip || ''),
+      payload: row?.payload || null
     }));
   };
 
@@ -1376,6 +2258,55 @@ const AdminPage: React.FC = () => {
     refetchOnWindowFocus: false
   });
 
+  const supportSettingsQuery = useQuery({
+    queryKey: ['admin', 'support-settings'],
+    queryFn: fetchSupportSettings,
+    enabled: hasAdminAccess,
+    staleTime: 10000,
+    refetchOnWindowFocus: false
+  });
+
+  const supportAiRuntimeQuery = useQuery({
+    queryKey: ['admin', 'support-ai-runtime'],
+    queryFn: fetchSupportAiRuntimeStatus,
+    enabled: hasAdminAccess,
+    staleTime: 10000,
+    refetchOnWindowFocus: false
+  });
+
+  const intelligenceReadinessQuery = useQuery({
+    queryKey: ['admin', 'intelligence-readiness'],
+    queryFn: fetchIntelligenceReadiness,
+    enabled: hasAdminAccess,
+    staleTime: 10000,
+    refetchOnWindowFocus: false
+  });
+
+  const supportAuditEventsQuery = useQuery({
+    queryKey: [
+      'admin',
+      'support-audit-events',
+      supportAuditPage,
+      supportAuditLimit,
+      supportAuditAiFilter,
+      supportAuditRoleFilter,
+      supportAuditDateFrom,
+      supportAuditDateTo
+    ],
+    queryFn: fetchSupportAuditEvents,
+    enabled: hasAdminAccess,
+    staleTime: 10000,
+    refetchOnWindowFocus: false
+  });
+
+  const systemSmokeAuditEventsQuery = useQuery({
+    queryKey: ['admin', 'system-smoke-audit-events'],
+    queryFn: fetchSystemSmokeAuditEvents,
+    enabled: hasAdminAccess,
+    staleTime: 10000,
+    refetchOnWindowFocus: false
+  });
+
   const statsQuery = useQuery({
     queryKey: ['admin', 'stats'],
     queryFn: fetchDashboardStats,
@@ -1419,6 +2350,14 @@ const AdminPage: React.FC = () => {
   const watchlistQuery = useQuery({
     queryKey: ['admin', 'scouting-watchlist'],
     queryFn: fetchWatchlist,
+    enabled: hasAdminAccess,
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
+
+  const hallOfFameQuery = useQuery({
+    queryKey: ['admin', 'hall-of-fame'],
+    queryFn: fetchHallOfFame,
     enabled: hasAdminAccess,
     staleTime: 30000,
     refetchOnWindowFocus: false
@@ -1477,6 +2416,49 @@ const AdminPage: React.FC = () => {
     refetchInterval: isOpsTab ? 30000 : false
   });
 
+  const opsAuditTimelineQuery = useQuery({
+    queryKey: ['admin', 'ops-audit-timeline', opsTimelineHours, opsTimelineBucketMinutes],
+    queryFn: fetchOpsAuditTimeline,
+    enabled: hasAdminAccess && isOpsTab,
+    staleTime: 10000,
+    refetchOnWindowFocus: false,
+    refetchInterval: isOpsTab ? 15000 : false
+  });
+
+  const opsTopErrorsQuery = useQuery({
+    queryKey: ['admin', 'ops-top-errors', opsTimelineHours],
+    queryFn: fetchOpsTopErrors,
+    enabled: hasAdminAccess && isOpsTab,
+    staleTime: 10000,
+    refetchOnWindowFocus: false,
+    refetchInterval: isOpsTab ? 15000 : false
+  });
+
+  const opsErrorSamplesQuery = useQuery({
+    queryKey: [
+      'admin',
+      'ops-error-samples',
+      opsTimelineHours,
+      selectedTopError?.method || '',
+      selectedTopError?.path || '',
+      selectedTopError?.statusCode || 0
+    ],
+    queryFn: fetchOpsErrorSamples,
+    enabled: hasAdminAccess && isOpsTab && Boolean(selectedTopError),
+    staleTime: 10000,
+    refetchOnWindowFocus: false,
+    refetchInterval: isOpsTab && Boolean(selectedTopError) ? 15000 : false
+  });
+
+  const matchOpsSummaryQuery = useQuery({
+    queryKey: ['admin', 'match-ops-summary', selectedTournamentId, matchOpsWindowHours],
+    queryFn: fetchMatchOpsSummary,
+    enabled: hasAdminAccess && activeTab === 'tournaments' && Boolean(selectedTournamentId),
+    staleTime: 15000,
+    refetchOnWindowFocus: false,
+    refetchInterval: activeTab === 'tournaments' && Boolean(selectedTournamentId) ? 15000 : false
+  });
+
   const users = usersQuery.data?.items || [];
   const usersPagination = usersQuery.data?.pagination || null;
   const tournaments = tournamentsQuery.data || [];
@@ -1491,18 +2473,29 @@ const AdminPage: React.FC = () => {
   const contacts = contactsQuery.data || [];
   const supportConversations = supportConversationsQuery.data || [];
   const supportMessages = supportMessagesQuery.data || [];
+  const supportSettings = supportSettingsQuery.data || null;
+  const supportAiRuntime = supportAiRuntimeQuery.data || null;
+  const intelligenceReadiness = intelligenceReadinessQuery.data || null;
+  const supportAuditEvents = supportAuditEventsQuery.data?.items || [];
+  const supportAuditPagination = supportAuditEventsQuery.data?.pagination || null;
+  const systemSmokeAuditEvents = systemSmokeAuditEventsQuery.data || [];
   const walletTransactions = walletTransactionsQuery.data || [];
   const auditLogs = auditLogsQuery.data || [];
   const authLogs = authLogsQuery.data || [];
   const opsMetrics = opsMetricsQuery.data || null;
   const opsQueue = opsQueueQuery.data || null;
   const opsBackups = opsBackupsQuery.data || [];
+  const opsAuditTimeline = opsAuditTimelineQuery.data || null;
+  const opsTopErrors = opsTopErrorsQuery.data || [];
+  const opsErrorSamples = opsErrorSamplesQuery.data || [];
   const dashboardStats = statsQuery.data || null;
   const analytics = analyticsQuery.data || null;
   const scoutProvider = scoutProviderQuery.data || null;
   const prospects = prospectsQuery.data || [];
   const anomalies = anomaliesQuery.data || [];
   const watchlist = watchlistQuery.data || [];
+  const hallOfFame = hallOfFameQuery.data || [];
+  const matchOpsSummary = matchOpsSummaryQuery.data || null;
 
   useEffect(() => {
     if (activeTab !== 'tournaments') return;
@@ -1534,6 +2527,22 @@ const AdminPage: React.FC = () => {
     }
   }, [activeTab, supportConversations, selectedSupportConversationId]);
 
+  useEffect(() => {
+    if (!selectedTopError) return;
+    const exists = opsTopErrors.some((row) =>
+      row.method === selectedTopError.method &&
+      row.path === selectedTopError.path &&
+      row.statusCode === selectedTopError.statusCode
+    );
+    if (!exists) {
+      setSelectedTopError(null);
+    }
+  }, [opsTopErrors, selectedTopError]);
+
+  useEffect(() => {
+    setSupportAuditPage(1);
+  }, [supportAuditAiFilter, supportAuditRoleFilter, supportAuditDateFrom, supportAuditDateTo, supportAuditLimit]);
+
   const queryError =
     usersQuery.error ||
     tournamentsQuery.error ||
@@ -1545,6 +2554,11 @@ const AdminPage: React.FC = () => {
     teamsQuery.error ||
     referralsQuery.error ||
     referralSettingsQuery.error ||
+    supportSettingsQuery.error ||
+    supportAiRuntimeQuery.error ||
+    intelligenceReadinessQuery.error ||
+    supportAuditEventsQuery.error ||
+    systemSmokeAuditEventsQuery.error ||
     supportConversationsQuery.error ||
     supportMessagesQuery.error ||
     contactsQuery.error ||
@@ -1554,6 +2568,10 @@ const AdminPage: React.FC = () => {
     opsMetricsQuery.error ||
     opsQueueQuery.error ||
     opsBackupsQuery.error ||
+    opsAuditTimelineQuery.error ||
+    opsTopErrorsQuery.error ||
+    opsErrorSamplesQuery.error ||
+    matchOpsSummaryQuery.error ||
     statsQuery.error ||
     analyticsQuery.error;
 
@@ -1568,6 +2586,11 @@ const AdminPage: React.FC = () => {
     teamsQuery.isFetching ||
     referralsQuery.isFetching ||
     referralSettingsQuery.isFetching ||
+    supportSettingsQuery.isFetching ||
+    supportAiRuntimeQuery.isFetching ||
+    intelligenceReadinessQuery.isFetching ||
+    supportAuditEventsQuery.isFetching ||
+    systemSmokeAuditEventsQuery.isFetching ||
     supportConversationsQuery.isFetching ||
     supportMessagesQuery.isFetching ||
     contactsQuery.isFetching ||
@@ -1577,6 +2600,10 @@ const AdminPage: React.FC = () => {
     opsMetricsQuery.isFetching ||
     opsQueueQuery.isFetching ||
     opsBackupsQuery.isFetching ||
+    opsAuditTimelineQuery.isFetching ||
+    opsTopErrorsQuery.isFetching ||
+    opsErrorSamplesQuery.isFetching ||
+    matchOpsSummaryQuery.isFetching ||
     statsQuery.isFetching ||
     analyticsQuery.isFetching;
 
@@ -1881,7 +2908,11 @@ const AdminPage: React.FC = () => {
       const result: any = await api.post(`/api/matches/${matchId}/room`, { force });
       const payload = result?.data || result || {};
 
-      await invalidateTournamentMatchViews(selectedTournamentId);
+      await Promise.all([
+        invalidateTournamentMatchViews(selectedTournamentId),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'match-ops-summary', selectedTournamentId] })
+      ]);
       notify(
         'success',
         force ? 'Room regenerated' : 'Room prepared',
@@ -1894,7 +2925,24 @@ const AdminPage: React.FC = () => {
     }
   };
 
-  const handlePrepareTournamentRooms = async (force = false) => {
+  const handleLoadMatchRoomLogs = async (matchId: string) => {
+    try {
+      setMatchRoomLogsLoadingId(matchId);
+      setSelectedMatchRoomLogsId(matchId);
+      const result: any = await api.get(`/api/matches/${matchId}/room/logs?limit=20`);
+      const rows = Array.isArray(result?.data) ? result.data : (Array.isArray(result) ? result : []);
+      setMatchRoomLogs((prev) => ({ ...prev, [matchId]: rows }));
+      if (!rows.length) {
+        notify('info', 'Room logs', 'No room events for this match yet');
+      }
+    } catch (e: any) {
+      notify('error', 'Room logs failed', formatApiError(e, 'Failed to load room logs'));
+    } finally {
+      setMatchRoomLogsLoadingId(null);
+    }
+  };
+
+  const handlePrepareTournamentRooms = async (force = false, dryRun = false) => {
     if (!selectedTournamentId) return;
     try {
       setError(null);
@@ -1902,6 +2950,7 @@ const AdminPage: React.FC = () => {
         tournamentId: selectedTournamentId,
         statuses: ['scheduled', 'live'],
         force,
+        dryRun,
         onlyMissing: !force
       });
       const payload = result?.data || result || {};
@@ -1909,10 +2958,16 @@ const AdminPage: React.FC = () => {
       const unchanged = Number(payload.unchanged || 0);
       const failedCount = Array.isArray(payload.failed) ? payload.failed.length : 0;
 
-      await invalidateTournamentMatchViews(selectedTournamentId);
+      if (!dryRun) {
+        await Promise.all([
+          invalidateTournamentMatchViews(selectedTournamentId),
+          queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] }),
+          queryClient.invalidateQueries({ queryKey: ['admin', 'match-ops-summary', selectedTournamentId] })
+        ]);
+      }
       notify(
-        'success',
-        force ? 'Rooms regenerated' : 'Rooms prepared',
+        dryRun ? 'info' : 'success',
+        dryRun ? 'Room dry-run preview' : (force ? 'Rooms regenerated' : 'Rooms prepared'),
         `Created: ${created}, unchanged: ${unchanged}, failed: ${failedCount}`
       );
     } catch (e: any) {
@@ -1920,6 +2975,172 @@ const AdminPage: React.FC = () => {
       setError(message);
       notify('error', 'Room preparation failed', message);
     }
+  };
+
+  const handleUpdateMatchStatus = async (matchId: string, status: 'scheduled' | 'live' | 'completed' | 'cancelled') => {
+    try {
+      setError(null);
+      await api.put(`/api/matches/${matchId}/status`, { status });
+      if (selectedTournamentId) {
+        await Promise.all([
+          invalidateTournamentMatchViews(selectedTournamentId),
+          queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] }),
+          queryClient.invalidateQueries({ queryKey: ['admin', 'match-ops-summary', selectedTournamentId] })
+        ]);
+      }
+      notify('success', 'Match status updated', `Status changed to ${status}`);
+    } catch (e: any) {
+      const message = formatApiError(e, 'Failed to update match status');
+      setError(message);
+      notify('error', 'Status update failed', message);
+    }
+  };
+
+  const handlePrepareFilteredMatchRooms = async (force = false, dryRun = false) => {
+    if (!selectedTournamentId) return;
+    const { filteredMatches } = getFilteredTournamentMatches();
+    const matchIds = filteredMatches.map((m: any) => String(m.id || '')).filter(Boolean);
+    if (!matchIds.length) {
+      notify('info', 'No matches', 'No matches in current filter to prepare rooms');
+      return;
+    }
+
+    if (!dryRun) {
+      const confirmed = window.confirm(
+        `${force ? 'Regenerate' : 'Prepare'} rooms for ${matchIds.length} filtered matches?`
+      );
+      if (!confirmed) return;
+    }
+
+    try {
+      setError(null);
+      const result: any = await api.post('/api/matches/rooms/prepare', {
+        tournamentId: selectedTournamentId,
+        matchIds,
+        force,
+        dryRun,
+        onlyMissing: !force
+      });
+      const payload = result?.data || result || {};
+      const created = Number(payload.created || 0);
+      const unchanged = Number(payload.unchanged || 0);
+      const failedCount = Array.isArray(payload.failed) ? payload.failed.length : 0;
+
+      if (!dryRun) {
+        await Promise.all([
+          invalidateTournamentMatchViews(selectedTournamentId),
+          queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] }),
+          queryClient.invalidateQueries({ queryKey: ['admin', 'match-ops-summary', selectedTournamentId] })
+        ]);
+      }
+      notify(
+        'success',
+        dryRun ? 'Room dry-run preview' : (force ? 'Filtered rooms regenerated' : 'Filtered rooms prepared'),
+        `Created: ${created}, unchanged: ${unchanged}, failed: ${failedCount}`
+      );
+    } catch (e: any) {
+      const message = formatApiError(e, 'Failed to prepare filtered match rooms');
+      setError(message);
+      notify('error', 'Room preparation failed', message);
+    }
+  };
+
+  const getFilteredTournamentMatches = () => {
+    const overview: any = tournamentOverview;
+    const allMatches = Array.isArray(overview?.matches) ? overview.matches : [];
+    const search = matchSearch.trim().toLowerCase();
+    const filteredMatches = allMatches.filter((match: any) => {
+      const statusOk = matchStatusFilter === 'all' || String(match?.status || '').toLowerCase() === matchStatusFilter;
+      if (!statusOk) return false;
+      const hasRoom = Boolean(match?.hasRoomCredentials);
+      const roomOk =
+        matchRoomFilter === 'all' ||
+        (matchRoomFilter === 'with_room' && hasRoom) ||
+        (matchRoomFilter === 'without_room' && !hasRoom);
+      if (!roomOk) return false;
+      const hasWinner = Boolean(match?.winnerId);
+      const winnerOk =
+        matchWinnerFilter === 'all' ||
+        (matchWinnerFilter === 'with_winner' && hasWinner) ||
+        (matchWinnerFilter === 'without_winner' && !hasWinner);
+      if (!winnerOk) return false;
+      if (!search) return true;
+      const t1 = String(match?.team1?.name || '').toLowerCase();
+      const t2 = String(match?.team2?.name || '').toLowerCase();
+      const round = String(match?.round || '').toLowerCase();
+      return t1.includes(search) || t2.includes(search) || round.includes(search);
+    });
+    return { allMatches, filteredMatches };
+  };
+
+  const handleBulkMatchStatus = async (status: 'scheduled' | 'live' | 'completed' | 'cancelled') => {
+    if (!selectedTournamentId) return;
+    const { filteredMatches } = getFilteredTournamentMatches();
+    const ids = filteredMatches.map((m: any) => String(m.id || '')).filter(Boolean);
+    if (!ids.length) {
+      notify('info', 'No matches', 'Nothing to update for current filters');
+      return;
+    }
+
+    const confirmed = window.confirm(`Set status "${status}" for ${ids.length} matches?`);
+    if (!confirmed) return;
+
+    try {
+      setError(null);
+      const result: any = await api.post('/api/matches/status/bulk', {
+        status,
+        tournamentId: selectedTournamentId,
+        matchIds: ids
+      });
+      const payload = result?.data || result || {};
+      const success = Number(payload.updated || 0);
+      const failed = Number(payload.failed || 0);
+      const skipped = Number(payload.skipped || 0);
+
+      await Promise.all([
+        invalidateTournamentMatchViews(selectedTournamentId),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'match-ops-summary', selectedTournamentId] })
+      ]);
+      notify('success', 'Bulk status update complete', `Updated: ${success}, skipped: ${skipped}, failed: ${failed}`);
+    } catch (e: any) {
+      const message = formatApiError(e, 'Failed to update match statuses');
+      setError(message);
+      notify('error', 'Bulk update failed', message);
+    }
+  };
+
+  const handlePreviewFilteredMatches = () => {
+    const { filteredMatches, allMatches } = getFilteredTournamentMatches();
+    const summary = `Matched: ${filteredMatches.length}/${allMatches.length}`;
+    if (!selectedTournamentId) return;
+    if (!filteredMatches.length) {
+      notify('info', 'Preview', summary);
+      return;
+    }
+    const rawStatus = window.prompt('Preview target status: scheduled/live/completed/cancelled', 'completed');
+    if (!rawStatus) return;
+    const status = rawStatus.trim().toLowerCase();
+    if (!['scheduled', 'live', 'completed', 'cancelled'].includes(status)) {
+      notify('warning', 'Preview', 'Invalid status');
+      return;
+    }
+    const ids = filteredMatches.map((m: any) => String(m.id || '')).filter(Boolean);
+    api.post('/api/matches/status/bulk', {
+      status,
+      tournamentId: selectedTournamentId,
+      matchIds: ids,
+      dryRun: true
+    }).then((result: any) => {
+      const payload = result?.data || result || {};
+      notify(
+        'info',
+        'Dry-run preview',
+        `${summary}. To "${status}": update ${Number(payload.updated || 0)}, skip ${Number(payload.skipped || 0)}, fail ${Number(payload.failed || 0)}`
+      );
+    }).catch((e: any) => {
+      notify('error', 'Preview failed', formatApiError(e, 'Dry-run failed'));
+    });
   };
 
   const handleWalletAdjust = async (targetUserId: string, username: string) => {
@@ -2292,6 +3513,9 @@ const AdminPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'ops-metrics'] }),
       queryClient.invalidateQueries({ queryKey: ['admin', 'ops-queue'] }),
       queryClient.invalidateQueries({ queryKey: ['admin', 'ops-backups'] }),
+      queryClient.invalidateQueries({ queryKey: ['admin', 'ops-audit-timeline'] }),
+      queryClient.invalidateQueries({ queryKey: ['admin', 'ops-top-errors'] }),
+      queryClient.invalidateQueries({ queryKey: ['admin', 'ops-error-samples'] }),
       queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] }),
       queryClient.invalidateQueries({ queryKey: ['admin', 'auth-logs'] })
     ]);
@@ -2344,6 +3568,34 @@ const AdminPage: React.FC = () => {
       setError(message);
       notify('error', 'Export failed', message);
     }
+  };
+
+  const handleExportTopErrorsCsv = () => {
+    if (!opsTopErrors.length) {
+      notify('info', 'Export skipped', 'No error endpoints for selected window');
+      return;
+    }
+
+    const csvCell = (value: any) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const header = ['count', 'statusCode', 'method', 'path', 'lastSeenAt'];
+    const rows = opsTopErrors.map((row) => [
+      row.count,
+      row.statusCode,
+      row.method,
+      row.path,
+      row.lastSeenAt ? new Date(row.lastSeenAt).toISOString() : ''
+    ]);
+    const csv = [header, ...rows].map((line) => line.map(csvCell).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ops_top_errors_${opsTimelineHours}h_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    notify('success', 'Export complete', `Downloaded ${opsTopErrors.length} rows`);
   };
 
   const handleExportAuthCsv = async () => {
@@ -2689,6 +3941,7 @@ const AdminPage: React.FC = () => {
             </tbody>
           </Table>
         </TableWrap>
+
       </div>
     );
   }
@@ -2764,14 +4017,146 @@ const AdminPage: React.FC = () => {
   function renderTournaments() {
     const selectedTournament = tournaments.find((item: any) => item.id === selectedTournamentId) || null;
     const overview = tournamentOverview;
+    const { allMatches, filteredMatches } = getFilteredTournamentMatches();
+    const trackedEntities = new Set([
+      'match_status_update',
+      'match_status_bulk_update',
+      'match_room_prepare_single',
+      'match_room_bulk_prepare'
+    ]);
+    const recentMatchOps = (auditLogs || [])
+      .filter((log: any) => trackedEntities.has(String(log?.entity || '')))
+      .filter((log: any) => {
+        if (!selectedTournamentId) return true;
+        const payloadTournamentId = String(log?.payload?.tournamentId || '');
+        const entityId = String(log?.entityId || '');
+        return payloadTournamentId === selectedTournamentId || entityId === selectedTournamentId;
+      })
+      .slice(0, 8);
+    const statusCodeSummary = Array.isArray(matchOpsSummary?.byStatusCode) ? matchOpsSummary.byStatusCode : [];
+    const successfulOps = statusCodeSummary
+      .filter((item) => item.statusCode >= 200 && item.statusCode < 300)
+      .reduce((sum, item) => sum + Number(item.count || 0), 0);
+    const failedOps = statusCodeSummary
+      .filter((item) => item.statusCode >= 400)
+      .reduce((sum, item) => sum + Number(item.count || 0), 0);
+    const successRate = matchOpsSummary?.total
+      ? Math.round((successfulOps / Math.max(matchOpsSummary.total, 1)) * 100)
+      : 0;
+    const exportRecentMatchOpsCsv = () => {
+      if (!recentMatchOps.length) {
+        notify('info', 'Export skipped', 'No recent match operations to export');
+        return;
+      }
+      const csvCell = (value: any) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+      const header = ['time', 'entity', 'statusCode', 'method', 'path', 'targetStatus', 'updated', 'skipped', 'failed', 'createdRooms'];
+      const rows = recentMatchOps.map((log: any) => [
+        log.createdAt ? new Date(log.createdAt).toISOString() : '',
+        log.entity || '',
+        log.statusCode || '',
+        log.method || '',
+        log.path || '',
+        log?.payload?.targetStatus || '',
+        typeof log?.payload?.updated === 'number' ? log.payload.updated : '',
+        typeof log?.payload?.skipped === 'number' ? log.payload.skipped : '',
+        typeof log?.payload?.failed === 'number' ? log.payload.failed : '',
+        typeof log?.payload?.created === 'number' ? log.payload.created : ''
+      ]);
+      const csv = [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `match_ops_${selectedTournamentId || 'global'}_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      notify('success', 'Export complete', `Downloaded ${recentMatchOps.length} operations`);
+    };
     const preparedRoomsCount = Array.isArray(overview?.matches)
       ? overview.matches.filter((match: any) => Boolean(match?.hasRoomCredentials)).length
       : 0;
+
+    const exportFilteredMatchesCsv = () => {
+      if (!selectedTournamentId) {
+        notify('warning', 'Export skipped', 'Select tournament first');
+        return;
+      }
+      if (!filteredMatches.length) {
+        notify('info', 'Export skipped', 'No matches for current filters');
+        return;
+      }
+
+      const csvCell = (value: any) => {
+        const text = String(value ?? '');
+        return `"${text.replace(/"/g, '""')}"`;
+      };
+
+      const header = [
+        'matchId',
+        'tournamentId',
+        'round',
+        'team1',
+        'team2',
+        'score',
+        'status',
+        'winner',
+        'roomId',
+        'roomPassword',
+        'roomVisibleAt',
+        'roomExpiresAt'
+      ];
+
+      const rows = filteredMatches.map((match: any) => {
+        const winner =
+          match.winnerId === match.team1?.id
+            ? (match.team1?.name || 'Team 1')
+            : match.winnerId === match.team2?.id
+              ? (match.team2?.name || 'Team 2')
+              : '';
+
+        return [
+          match.id || '',
+          selectedTournamentId,
+          match.round || '',
+          match.team1?.name || '',
+          match.team2?.name || '',
+          `${Number(match.score?.team1 || 0)}:${Number(match.score?.team2 || 0)}`,
+          match.status || '',
+          winner,
+          match.roomCredentials?.roomId || '',
+          match.roomCredentials?.password || '',
+          match.roomCredentials?.visibleAt ? formatDateTime(match.roomCredentials.visibleAt) : '',
+          match.roomCredentials?.expiresAt ? formatDateTime(match.roomCredentials.expiresAt) : ''
+        ];
+      });
+
+      const csv = [header, ...rows]
+        .map((row) => row.map(csvCell).join(','))
+        .join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tournament_matches_${selectedTournamentId}_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      notify('success', 'Export complete', `Downloaded ${filteredMatches.length} matches`);
+    };
 
     return (
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
           <h3>Tournament Management</h3>
+          <div style={{ fontSize: '12px', color: tournamentRequestsStreamConnected ? '#81c784' : '#ffab91' }}>
+            Requests Stream: {tournamentRequestsStreamConnected ? 'LIVE' : 'OFFLINE'} • Global pending: {globalPendingTournamentRequests}
+            {tournamentRequestsStreamUpdatedAt ? ` • Last: ${formatDateTime(tournamentRequestsStreamUpdatedAt)}` : ''}
+          </div>
           <ActionsCell>
             <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] })}>
               Refresh
@@ -2806,14 +4191,24 @@ const AdminPage: React.FC = () => {
                       <span>End: {formatDateTime(tournament.endDate)}</span>
                     </div>
                   </Td>
-                  <Td>{tournament.participants}/{tournament.maxTeams || '—'}</Td>
-                  <Td>{tournament.pendingRequestsCount || 0}</Td>
+                  <Td>{tournament.participants}/{tournament.maxTeams || '-'}</Td>
+                  <Td>
+                    {tournament.pendingRequestsCount || 0}
+                    {(newTournamentRequestCounts[tournament.id] || 0) > 0 ? (
+                      <span style={{ marginLeft: 8, color: '#ff6b00', fontSize: 12, fontWeight: 700 }}>
+                        +{newTournamentRequestCounts[tournament.id]} new
+                      </span>
+                    ) : null}
+                  </Td>
                   <Td>${tournament.prizePool}</Td>
                   <Td>
                     <ActionsCell>
                       <ActionButton
                         $variant="success"
-                        onClick={() => setSelectedTournamentId(tournament.id)}
+                        onClick={() => {
+                          setSelectedTournamentId(tournament.id);
+                          setNewTournamentRequestCounts((prev) => ({ ...prev, [tournament.id]: 0 }));
+                        }}
                       >
                         Manage
                       </ActionButton>
@@ -2850,23 +4245,175 @@ const AdminPage: React.FC = () => {
                 <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', selectedTournamentId] })}>
                   Refresh Overview
                 </ActionButton>
+                <ActionButton
+                  onClick={() => setTournamentRequestSoundEnabled((prev) => !prev)}
+                  $variant={tournamentRequestSoundEnabled ? 'success' : undefined}
+                >
+                  Alert Sound: {tournamentRequestSoundEnabled ? 'ON' : 'OFF'}
+                </ActionButton>
+                <ActionButton
+                  onClick={() => {
+                    if (!selectedTournamentId) return;
+                    setNewTournamentRequestCounts((prev) => ({ ...prev, [selectedTournamentId]: 0 }));
+                  }}
+                >
+                  Mark New as Seen
+                </ActionButton>
                 <ActionButton onClick={() => handlePrepareTournamentRooms(false)}>
                   Prepare Missing Rooms
                 </ActionButton>
                 <ActionButton onClick={() => handlePrepareTournamentRooms(true)}>
                   Regenerate Rooms
                 </ActionButton>
+                <ActionButton onClick={() => handlePrepareTournamentRooms(false, true)}>
+                  Preview Missing Rooms
+                </ActionButton>
+                <ActionButton onClick={() => handlePrepareTournamentRooms(true, true)}>
+                  Preview Regenerate Rooms
+                </ActionButton>
               </ActionsCell>
             </div>
+
+            <div style={{ marginBottom: '12px', color: tournamentStreamConnected ? '#81c784' : '#ffab91', fontSize: '12px' }}>
+              Realtime Sync: {tournamentStreamConnected ? 'LIVE' : 'OFFLINE'}
+              {tournamentStreamUpdatedAt ? ` • last update ${formatDateTime(tournamentStreamUpdatedAt)}` : ''}
+            </div>
+            {selectedMatchRoomLogsId ? (
+              <div style={{ marginBottom: '12px', color: matchRoomLogsStreamConnected ? '#81c784' : '#ffab91', fontSize: '12px' }}>
+                Room Logs Stream: {matchRoomLogsStreamConnected ? 'LIVE' : 'OFFLINE'}
+                {matchRoomLogsStreamUpdatedAt ? ` • last update ${formatDateTime(matchRoomLogsStreamUpdatedAt)}` : ''}
+              </div>
+            ) : null}
 
             <div style={{ marginBottom: '16px', color: '#cccccc', fontSize: '14px' }}>
               Approved teams: <strong>{overview?.teams?.length || 0}</strong>
               {' | '}
               Pending requests: <strong>{tournamentRequests.length}</strong>
+              {(newTournamentRequestCounts[selectedTournamentId] || 0) > 0 ? (
+                <>
+                  {' • '}
+                  New: <strong style={{ color: '#ff6b00' }}>{newTournamentRequestCounts[selectedTournamentId]}</strong>
+                </>
+              ) : null}
               {' • '}
               Matches: <strong>{overview?.matches?.length || 0}</strong>
               {' • '}
               Rooms prepared: <strong>{preparedRoomsCount}</strong>
+              {' • '}
+              Live w/o room: <strong style={{ color: Number(overview?.summary?.liveWithoutRoom || 0) > 0 ? '#ff8a65' : '#81c784' }}>{Number(overview?.summary?.liveWithoutRoom || 0)}</strong>
+              {' • '}
+              Completed w/o winner: <strong style={{ color: Number(overview?.summary?.completedWithoutWinner || 0) > 0 ? '#ff8a65' : '#81c784' }}>{Number(overview?.summary?.completedWithoutWinner || 0)}</strong>
+            </div>
+            {overview?.summary?.byStatus ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)', color: '#e0e0e0' }}>
+                  scheduled: {Number(overview.summary.byStatus.scheduled || 0)}
+                </span>
+                <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)', color: '#e0e0e0' }}>
+                  live: {Number(overview.summary.byStatus.live || 0)}
+                </span>
+                <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)', color: '#e0e0e0' }}>
+                  completed: {Number(overview.summary.byStatus.completed || 0)}
+                </span>
+                <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)', color: '#e0e0e0' }}>
+                  cancelled: {Number(overview.summary.byStatus.cancelled || 0)}
+                </span>
+              </div>
+            ) : null}
+            <div style={{ marginBottom: 14, padding: 10, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <div style={{ fontWeight: 700 }}>Recent Match Operations</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <select
+                    value={String(matchOpsWindowHours)}
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      if (value === 24 || value === 48 || value === 168) {
+                        setMatchOpsWindowHours(value);
+                      }
+                    }}
+                    style={{
+                      background: 'rgba(0,0,0,0.35)',
+                      color: '#fff',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      borderRadius: 6,
+                      padding: '6px 8px',
+                      fontSize: 12
+                    }}
+                  >
+                    <option value="24">24h</option>
+                    <option value="48">48h</option>
+                    <option value="168">7d</option>
+                  </select>
+                  <ActionButton onClick={exportRecentMatchOpsCsv}>Export Ops CSV</ActionButton>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 10, color: '#cfcfcf', fontSize: 12 }}>
+                <span>Window: {matchOpsSummary?.hours || 48}h</span>
+                <span>Total Ops: {Number(matchOpsSummary?.total || 0)}</span>
+                <span>Success: {successfulOps}</span>
+                <span>Failed: {failedOps}</span>
+                <span>Success Rate: {successRate}%</span>
+              </div>
+              {statusCodeSummary.length ? (
+                <div style={{ display: 'grid', gap: 6, marginBottom: 10 }}>
+                  {statusCodeSummary.map((row) => {
+                    const total = Math.max(Number(matchOpsSummary?.total || 0), 1);
+                    const width = Math.min(100, Math.round((Number(row.count || 0) / total) * 100));
+                    const isSuccess = row.statusCode >= 200 && row.statusCode < 300;
+                    const isError = row.statusCode >= 400;
+                    return (
+                      <div key={`status-${row.statusCode}`} style={{ display: 'grid', gridTemplateColumns: '72px 1fr 48px', gap: 8, alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, color: '#bdbdbd' }}>{row.statusCode}</span>
+                        <div style={{ height: 8, borderRadius: 6, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                          <div
+                            style={{
+                              height: '100%',
+                              width: `${width}%`,
+                              background: isSuccess ? '#66bb6a' : isError ? '#ef5350' : '#ffb74d'
+                            }}
+                          />
+                        </div>
+                        <span style={{ fontSize: 11, color: '#bdbdbd', textAlign: 'right' }}>{row.count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+              {matchOpsSummary?.byEntity?.length ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+                  {matchOpsSummary.byEntity.map((row) => (
+                    <span
+                      key={row.entity}
+                      style={{
+                        fontSize: 11,
+                        color: '#e8e8e8',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: 999,
+                        padding: '3px 8px'
+                      }}
+                    >
+                      {row.entity}: {row.count}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              {!recentMatchOps.length ? (
+                <div style={{ color: '#999', fontSize: 12 }}>No recent match operations in audit log</div>
+              ) : (
+                <div style={{ display: 'grid', gap: 4 }}>
+                  {recentMatchOps.map((log: any) => (
+                    <div key={log.id} style={{ fontSize: 12, color: '#cfcfcf' }}>
+                      {log.createdAt ? new Date(log.createdAt).toLocaleString() : '-'} | {log.entity} | {log.statusCode} | {log.method} {log.path}
+                      {log?.payload?.targetStatus ? ` | status: ${String(log.payload.targetStatus)}` : ''}
+                      {typeof log?.payload?.updated === 'number' ? ` | updated: ${log.payload.updated}` : ''}
+                      {typeof log?.payload?.skipped === 'number' ? ` | skipped: ${log.payload.skipped}` : ''}
+                      {typeof log?.payload?.failed === 'number' ? ` | failed: ${log.payload.failed}` : ''}
+                      {typeof log?.payload?.created === 'number' ? ` | rooms created: ${log.payload.created}` : ''}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <h5 style={{ marginTop: 0 }}>Pending Tournament Requests</h5>
@@ -2892,7 +4439,7 @@ const AdminPage: React.FC = () => {
                         <Td>{request.membersCount}</Td>
                         <Td>{request.stats?.wins || 0}W / {request.stats?.losses || 0}L ({Number(request.stats?.winRate || 0).toFixed(1)}%)</Td>
                         <Td>{request.requestedBy?.username || request.requestedBy?.firstName || 'Unknown'}</Td>
-                        <Td>{request.requestedAt ? new Date(request.requestedAt).toLocaleString() : '—'}</Td>
+                        <Td>{request.requestedAt ? new Date(request.requestedAt).toLocaleString() : '-'}</Td>
                         <Td>
                           <ActionsCell>
                             <ActionButton
@@ -2949,8 +4496,47 @@ const AdminPage: React.FC = () => {
             )}
 
             <h5>Matches and Results</h5>
-            {!overview?.matches?.length ? (
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+              <Select value={matchStatusFilter} onChange={(e) => setMatchStatusFilter(e.target.value as any)}>
+                <option value="all">All statuses</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="live">Live</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </Select>
+              <Select value={matchRoomFilter} onChange={(e) => setMatchRoomFilter(e.target.value as any)}>
+                <option value="all">All rooms</option>
+                <option value="with_room">With room</option>
+                <option value="without_room">Without room</option>
+              </Select>
+              <Select value={matchWinnerFilter} onChange={(e) => setMatchWinnerFilter(e.target.value as any)}>
+                <option value="all">All winners</option>
+                <option value="with_winner">With winner</option>
+                <option value="without_winner">Without winner</option>
+              </Select>
+              <Input
+                value={matchSearch}
+                onChange={(e) => setMatchSearch(e.target.value)}
+                placeholder="Search by team or round"
+                style={{ minWidth: 240 }}
+              />
+              <ActionButton onClick={handlePreviewFilteredMatches}>Preview</ActionButton>
+              <ActionButton onClick={exportFilteredMatchesCsv}>Export CSV</ActionButton>
+              <ActionButton onClick={() => handlePrepareFilteredMatchRooms(false, true)}>Preview Rooms (Filtered)</ActionButton>
+              <ActionButton onClick={() => handlePrepareFilteredMatchRooms(false)}>Prepare Rooms (Filtered)</ActionButton>
+              <ActionButton onClick={() => handlePrepareFilteredMatchRooms(true)}>Regenerate Rooms (Filtered)</ActionButton>
+              <ActionButton onClick={() => handleBulkMatchStatus('live')}>Bulk Live</ActionButton>
+              <ActionButton onClick={() => handleBulkMatchStatus('completed')}>Bulk Complete</ActionButton>
+              <ActionButton onClick={() => handleBulkMatchStatus('scheduled')}>Bulk Schedule</ActionButton>
+              <ActionButton $variant="danger" onClick={() => handleBulkMatchStatus('cancelled')}>Bulk Cancel</ActionButton>
+              <span style={{ color: '#aaa', fontSize: 12 }}>
+                Showing {filteredMatches.length} of {allMatches.length}
+              </span>
+            </div>
+            {!allMatches.length ? (
               <div style={{ color: '#999' }}>No matches generated yet</div>
+            ) : !filteredMatches.length ? (
+              <div style={{ color: '#999' }}>No matches match the selected filters</div>
             ) : (
               <TableWrap>
                 <Table>
@@ -2961,6 +4547,7 @@ const AdminPage: React.FC = () => {
                       <Th>Team 2</Th>
                       <Th>Score</Th>
                       <Th>Status</Th>
+                      <Th>Events</Th>
                       <Th>Room</Th>
                       <Th>Access Window</Th>
                       <Th>Winner</Th>
@@ -2968,13 +4555,22 @@ const AdminPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {overview.matches.map((match: any) => (
+                    {filteredMatches.map((match: any) => (
                       <tr key={match.id}>
                         <Td>{match.round || 'Round'}</Td>
                         <Td>{match.team1?.name || 'TBD'}</Td>
                         <Td>{match.team2?.name || 'TBD'}</Td>
                         <Td>{Number(match.score?.team1 || 0)} : {Number(match.score?.team2 || 0)}</Td>
                         <Td>{match.status || 'scheduled'}</Td>
+                        <Td>
+                          <div style={{ display: 'grid', gap: '4px' }}>
+                            <span>Total: {Number(match.eventsSummary?.totalEvents || 0)}</span>
+                            <span>Players: {Number(match.eventsSummary?.participants?.players || 0)}</span>
+                            <span style={{ color: '#aaa', fontSize: 11 }}>
+                              K:{Number(match.eventsSummary?.byType?.kill || 0)} D:{Number(match.eventsSummary?.byType?.death || 0)} A:{Number(match.eventsSummary?.byType?.assist || 0)}
+                            </span>
+                          </div>
+                        </Td>
                         <Td>
                           {match.hasRoomCredentials && match.roomCredentials ? (
                             <div style={{ display: 'grid', gap: '4px' }}>
@@ -3013,7 +4609,7 @@ const AdminPage: React.FC = () => {
                             ? (match.team1?.name || 'Team 1')
                             : match.winnerId === match.team2?.id
                               ? (match.team2?.name || 'Team 2')
-                              : '—'}
+                              : '-'}
                         </Td>
                         <Td>
                           <ActionsCell>
@@ -3034,7 +4630,46 @@ const AdminPage: React.FC = () => {
                             >
                               Edit Score
                             </ActionButton>
+                            {String(match.status || '').toLowerCase() !== 'live' ? (
+                              <ActionButton onClick={() => handleUpdateMatchStatus(match.id, 'live')}>
+                                Mark Live
+                              </ActionButton>
+                            ) : null}
+                            {String(match.status || '').toLowerCase() !== 'completed' ? (
+                              <ActionButton onClick={() => handleUpdateMatchStatus(match.id, 'completed')}>
+                                Mark Completed
+                              </ActionButton>
+                            ) : null}
+                            {String(match.status || '').toLowerCase() !== 'scheduled' ? (
+                              <ActionButton onClick={() => handleUpdateMatchStatus(match.id, 'scheduled')}>
+                                Set Scheduled
+                              </ActionButton>
+                            ) : null}
+                            {String(match.status || '').toLowerCase() !== 'cancelled' ? (
+                              <ActionButton $variant="danger" onClick={() => handleUpdateMatchStatus(match.id, 'cancelled')}>
+                                Cancel
+                              </ActionButton>
+                            ) : null}
+                            <ActionButton onClick={() => handleLoadMatchRoomLogs(match.id)}>
+                              {matchRoomLogsLoadingId === match.id ? 'Loading Logs...' : 'Room Logs'}
+                            </ActionButton>
                           </ActionsCell>
+                          {Array.isArray(matchRoomLogs[match.id]) && matchRoomLogs[match.id].length > 0 && (
+                            <div style={{ marginTop: 8, fontSize: 11, color: '#bdbdbd', maxWidth: 520 }}>
+                              {matchRoomLogs[match.id].slice(0, 5).map((row) => {
+                                const actor =
+                                  row.requestedBy?.username ||
+                                  row.requestedBy?.firstName ||
+                                  row.requesterRole ||
+                                  'unknown';
+                                return (
+                                  <div key={row.id}>
+                                    {row.createdAt ? new Date(row.createdAt).toLocaleString() : '-'} | {row.source} | {row.status} | {actor}{row.reason ? ` | ${row.reason}` : ''}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </Td>
                       </tr>
                     ))}
@@ -3184,6 +4819,20 @@ const AdminPage: React.FC = () => {
 
   function renderSupport() {
     const selectedConversation = supportConversations.find((row: SupportConversationRow) => row.id === selectedSupportConversationId) || null;
+    const aiEnabled = Boolean(supportSettings?.aiEnabled);
+    const runtimeProvider = supportAiRuntime?.provider || 'auto';
+    const runtimeCircuit = supportAiRuntime?.circuit || {};
+    const runtimeOpenProviders = Object.entries(runtimeCircuit)
+      .filter(([, value]) => Boolean(value?.open))
+      .map(([provider, value]) => `${provider} (${Number(value?.retryInMs || 0)}ms)`);
+    const supportAuditRoles = Array.from(
+      new Set(
+        (auditLogs || [])
+          .map((row) => String(row.actorRole || '').trim())
+          .filter((value) => value.length > 0)
+      )
+    );
+    const supportSettingsAuditLogs = supportAuditEvents.slice(0, 12);
 
     const sendReply = async () => {
       const message = supportReply.trim();
@@ -3213,11 +4862,99 @@ const AdminPage: React.FC = () => {
       }
     };
 
+    const toggleAiSupport = async () => {
+      try {
+        await api.patch('/api/support/admin/settings', { aiEnabled: !aiEnabled });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['admin', 'support-settings'] }),
+          queryClient.invalidateQueries({ queryKey: ['admin', 'support-ai-runtime'] }),
+          queryClient.invalidateQueries({ queryKey: ['admin', 'support-audit-events'] }),
+          queryClient.invalidateQueries({ queryKey: ['admin', 'support-conversations'] })
+        ]);
+        notify('success', 'Support', `AI replies ${!aiEnabled ? 'enabled' : 'disabled'}`);
+      } catch (e: any) {
+        notify('error', 'Support settings failed', formatApiError(e, 'Failed to update support settings'));
+      }
+    };
+
+    const exportSupportAuditCsv = async () => {
+      try {
+        const token = getAuthToken();
+        if (!token) throw new Error('Admin token missing');
+
+        const params = new URLSearchParams();
+        params.set('entity', 'support_settings');
+        params.set('limit', '5000');
+        if (supportAuditAiFilter === 'on') params.set('aiEnabled', 'true');
+        if (supportAuditAiFilter === 'off') params.set('aiEnabled', 'false');
+        if (supportAuditRoleFilter !== 'all') params.set('actorRole', supportAuditRoleFilter);
+        if (supportAuditDateFrom) params.set('from', `${supportAuditDateFrom}T00:00:00.000Z`);
+        if (supportAuditDateTo) params.set('to', `${supportAuditDateTo}T23:59:59.999Z`);
+
+        const response = await fetch(getFullUrl(`/api/admin/audit/export.csv?${params.toString()}`), {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!response.ok) {
+          const text = await response.text().catch(() => '');
+          throw new Error(text || `Export failed (${response.status})`);
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `support_ai_audit_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        notify('success', 'Export complete', 'Support audit CSV downloaded');
+      } catch (e: any) {
+        notify('error', 'Export failed', e?.message || 'Failed to export support audit CSV');
+      }
+    };
+
+    const applySupportAuditRangePreset = (preset: 'today' | '7d' | '30d' | 'all') => {
+      if (preset === 'all') {
+        setSupportAuditDateFrom('');
+        setSupportAuditDateTo('');
+        return;
+      }
+
+      const now = new Date();
+      const to = now.toISOString().slice(0, 10);
+      let fromDate = new Date(now);
+
+      if (preset === 'today') {
+        fromDate = new Date(now);
+      } else if (preset === '7d') {
+        fromDate.setDate(fromDate.getDate() - 6);
+      } else {
+        fromDate.setDate(fromDate.getDate() - 29);
+      }
+
+      const from = fromDate.toISOString().slice(0, 10);
+      setSupportAuditDateFrom(from);
+      setSupportAuditDateTo(to);
+    };
+
     return (
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
           <h3>Emergency Support Inbox</h3>
+          <div style={{ fontSize: 12, color: supportStreamConnected ? '#81c784' : '#ffab91' }}>
+            Stream: {supportStreamConnected ? 'LIVE' : 'OFFLINE'}
+            {supportStreamData ? ` • Unread: ${supportStreamData.unreadForAdmin} • Waiting admin: ${supportStreamData.waitingAdmin}` : ''}
+            {supportStreamUpdatedAt ? ` • Last: ${formatDateTime(supportStreamUpdatedAt)}` : ''}
+          </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <span style={{ fontSize: 12, color: aiEnabled ? '#81c784' : '#ffab91' }}>
+              AI replies: {aiEnabled ? 'ON' : 'OFF'}
+            </span>
+            <ActionButton $variant={aiEnabled ? 'danger' : 'success'} onClick={toggleAiSupport}>
+              {aiEnabled ? 'Disable AI Replies' : 'Enable AI Replies'}
+            </ActionButton>
             <Select value={supportStatusFilter} onChange={(e) => setSupportStatusFilter(e.target.value as any)}>
               <option value="all">All</option>
               <option value="open">Open</option>
@@ -3225,10 +4962,140 @@ const AdminPage: React.FC = () => {
               <option value="waiting_user">Waiting User</option>
               <option value="resolved">Resolved</option>
             </Select>
-            <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'support-conversations'] })}>
+            <ActionButton onClick={() => Promise.all([
+              queryClient.invalidateQueries({ queryKey: ['admin', 'support-conversations'] }),
+              queryClient.invalidateQueries({ queryKey: ['admin', 'support-ai-runtime'] }),
+              queryClient.invalidateQueries({ queryKey: ['admin', 'support-settings'] })
+            ])}>
               Refresh
             </ActionButton>
           </div>
+        </div>
+
+        <div style={{
+          border: '1px solid rgba(255,255,255,0.12)',
+          borderRadius: 10,
+          padding: '10px 12px',
+          marginBottom: 12,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))',
+          gap: 8
+        }}>
+          <div style={{ color: '#bbb', fontSize: 12 }}>Provider</div>
+          <div style={{ color: '#fff' }}>{runtimeProvider.toUpperCase()}</div>
+          <div style={{ color: '#bbb', fontSize: 12 }}>Gemini / OpenAI</div>
+          <div style={{ color: '#fff' }}>
+            {supportAiRuntime?.geminiEnabled ? 'ON' : 'OFF'} / {supportAiRuntime?.openAiEnabled ? 'ON' : 'OFF'}
+          </div>
+          <div style={{ color: '#bbb', fontSize: 12 }}>Circuit</div>
+          <div style={{ color: runtimeOpenProviders.length ? '#ffab91' : '#81c784' }}>
+            {runtimeOpenProviders.length ? `OPEN: ${runtimeOpenProviders.join(', ')}` : 'CLOSED'}
+          </div>
+        </div>
+
+        <div style={{
+          border: '1px solid rgba(255,255,255,0.12)',
+          borderRadius: 10,
+          padding: '10px 12px',
+          marginBottom: 12
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <strong>Support AI Events (Audit)</strong>
+            <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'support-audit-events'] })}>
+              Refresh Audit
+            </ActionButton>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 8, marginBottom: 8 }}>
+            <Select value={supportAuditAiFilter} onChange={(e) => setSupportAuditAiFilter(e.target.value as any)}>
+              <option value="all">AI Enabled: All</option>
+              <option value="on">AI Enabled: ON</option>
+              <option value="off">AI Enabled: OFF</option>
+            </Select>
+            <Select value={supportAuditRoleFilter} onChange={(e) => setSupportAuditRoleFilter(e.target.value)}>
+              <option value="all">Role: All</option>
+              {supportAuditRoles.map((role) => (
+                <option key={role} value={role}>{role}</option>
+              ))}
+            </Select>
+            <Input
+              type="date"
+              value={supportAuditDateFrom}
+              onChange={(e) => setSupportAuditDateFrom(e.target.value)}
+              placeholder="Date from"
+            />
+            <Input
+              type="date"
+              value={supportAuditDateTo}
+              onChange={(e) => setSupportAuditDateTo(e.target.value)}
+              placeholder="Date to"
+            />
+            <Select value={String(supportAuditLimit)} onChange={(e) => setSupportAuditLimit(Number(e.target.value) || 12)}>
+              <option value="12">Rows: 12</option>
+              <option value="25">Rows: 25</option>
+              <option value="50">Rows: 50</option>
+            </Select>
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+            <ActionButton onClick={() => applySupportAuditRangePreset('today')}>Today</ActionButton>
+            <ActionButton onClick={() => applySupportAuditRangePreset('7d')}>7d</ActionButton>
+            <ActionButton onClick={() => applySupportAuditRangePreset('30d')}>30d</ActionButton>
+            <ActionButton onClick={() => applySupportAuditRangePreset('all')}>All time</ActionButton>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ color: '#bbb', fontSize: 12 }}>
+              Page {supportAuditPagination?.page || supportAuditPage} / {supportAuditPagination?.totalPages || 1}
+              {supportAuditPagination ? ` • total ${supportAuditPagination.total}` : ''}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <ActionButton
+                onClick={() => setSupportAuditPage((prev) => Math.max(1, prev - 1))}
+                disabled={(supportAuditPagination?.page || supportAuditPage) <= 1}
+              >
+                Prev
+              </ActionButton>
+              <ActionButton
+                onClick={() => setSupportAuditPage((prev) => {
+                  const totalPages = supportAuditPagination?.totalPages || 1;
+                  return Math.min(totalPages, prev + 1);
+                })}
+                disabled={(supportAuditPagination?.page || supportAuditPage) >= (supportAuditPagination?.totalPages || 1)}
+              >
+                Next
+              </ActionButton>
+              <ActionButton onClick={exportSupportAuditCsv}>Export Filtered CSV</ActionButton>
+            </div>
+          </div>
+          {!supportSettingsAuditLogs.length && <div style={{ color: '#999' }}>No support settings events yet</div>}
+          {supportSettingsAuditLogs.length > 0 && (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', color: '#fff', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ color: '#ffb280', textAlign: 'left' }}>
+                    <th style={{ padding: '6px 8px' }}>Time</th>
+                    <th style={{ padding: '6px 8px' }}>Method</th>
+                    <th style={{ padding: '6px 8px' }}>Status</th>
+                    <th style={{ padding: '6px 8px' }}>AI Enabled</th>
+                    <th style={{ padding: '6px 8px' }}>Role</th>
+                    <th style={{ padding: '6px 8px' }}>Path</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {supportSettingsAuditLogs.map((row: any) => (
+                    <tr key={row.id} style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                      <td style={{ padding: '6px 8px' }}>{row.createdAt ? new Date(row.createdAt).toLocaleString() : '-'}</td>
+                      <td style={{ padding: '6px 8px' }}>{row.method || '-'}</td>
+                      <td style={{ padding: '6px 8px' }}>{row.statusCode || '-'}</td>
+                      <td style={{ padding: '6px 8px', color: row.payloadAiEnabled === true ? '#81c784' : row.payloadAiEnabled === false ? '#ffab91' : '#bbb' }}>
+                        {row.payloadAiEnabled === null ? '-' : row.payloadAiEnabled ? 'ON' : 'OFF'}
+                      </td>
+                      <td style={{ padding: '6px 8px' }}>{row.actorRole || '-'}</td>
+                      <td style={{ padding: '6px 8px', color: '#bbb' }}>{row.path || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) 2fr', gap: '14px' }}>
@@ -3368,6 +5235,13 @@ const AdminPage: React.FC = () => {
       return { color: '#b0bec5', border: '1px solid rgba(176,190,197,0.35)', padding: '4px 8px', borderRadius: 999 };
     };
     const providerLabel = scoutProvider?.provider || 'unknown';
+    const readinessProviders = intelligenceReadiness?.providers || {};
+    const readinessIntegrations = intelligenceReadiness?.integrations || {};
+    const readinessChecks = Array.isArray(intelligenceReadiness?.checks) ? intelligenceReadiness.checks : [];
+    const readinessScore = Number(intelligenceReadiness?.readinessScore ?? 0);
+    const readinessSupportEnabled = Boolean(readinessProviders?.support?.aiEnabled);
+    const readinessTelegram = Boolean(readinessIntegrations?.telegramBotUsernameConfigured);
+    const readinessCron = Boolean(readinessIntegrations?.hallOfFameCronTokenConfigured);
     const addToWatchlist = async (row: AnomalyAlertRow) => {
       try {
         await api.post('/api/scouting/watchlist', {
@@ -3378,6 +5252,15 @@ const AdminPage: React.FC = () => {
         notify('success', 'Watchlist updated', `@${row.username} added to watchlist`);
       } catch (e: any) {
         notify('error', 'Watchlist update failed', formatApiError(e, 'Failed to update watchlist'));
+      }
+    };
+    const explainScouting = async (row: AnomalyAlertRow) => {
+      try {
+        const res: any = await api.get(`/api/scouting/explain/${row.userId}`);
+        const payload = res?.data || res;
+        setScoutingExplanations((prev) => ({ ...prev, [row.userId]: payload }));
+      } catch (e: any) {
+        notify('error', 'Explainability failed', formatApiError(e, 'Failed to fetch AI explanation'));
       }
     };
     const refreshScouting = async () => {
@@ -3395,11 +5278,94 @@ const AdminPage: React.FC = () => {
       }
     };
 
+    const calculatePointsPreview = async () => {
+      try {
+        const res: any = await api.post('/api/intelligence/points/calculate', {
+          playerRating: Number(pointsInput.playerRating || 1000),
+          opponentRating: Number(pointsInput.opponentRating || 1000),
+          result: Number(pointsInput.result || 0)
+        });
+        const row = res?.data || res;
+        setPointsOutput({
+          newRating: Number(row?.newRating || 0),
+          delta: Number(row?.delta || 0)
+        });
+      } catch (e: any) {
+        setPointsOutput(null);
+        notify('error', 'Points calculation failed', formatApiError(e, 'Failed to calculate points'));
+      }
+    };
+
+    const normalizeStatsPreview = async () => {
+      try {
+        const res: any = await api.post('/api/intelligence/analytics/normalize', {
+          kills: Number(statsInput.kills || 0),
+          deaths: Number(statsInput.deaths || 0),
+          assists: Number(statsInput.assists || 0),
+          survivalSeconds: Number(statsInput.survivalSeconds || 0),
+          utilityUses: Number(statsInput.utilityUses || 0),
+          objectiveActions: Number(statsInput.objectiveActions || 0),
+          clutchRoundsWon: Number(statsInput.clutchRoundsWon || 0),
+          roundsPlayed: Number(statsInput.roundsPlayed || 1)
+        });
+        setStatsOutput(res?.data || res || null);
+      } catch (e: any) {
+        setStatsOutput(null);
+        notify('error', 'Analytics normalize failed', formatApiError(e, 'Failed to normalize stats'));
+      }
+    };
+
+    const updateHallOfFame = async () => {
+      try {
+        await api.post('/api/intelligence/hall-of-fame/update', {});
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'hall-of-fame'] });
+        notify('success', 'Hall of Fame', 'Hall of Fame updated');
+      } catch (e: any) {
+        notify('error', 'Hall of Fame update failed', formatApiError(e, 'Failed to update hall of fame'));
+      }
+    };
+
+    const copyEnvFixes = async () => {
+      try {
+        const lines: string[] = [];
+        if (!readinessTelegram) lines.push('TELEGRAM_BOT_USERNAME=your_bot_username_without_at');
+        if (!readinessCron) lines.push('HALL_OF_FAME_CRON_TOKEN=generate_long_random_token');
+        if (!readinessProviders?.support?.geminiEnabled && !readinessProviders?.support?.openAiEnabled) {
+          lines.push('GEMINI_API_KEY=your_key_or_set_OPENAI_API_KEY');
+        }
+        if (!readinessProviders?.scouting?.geminiEnabled && !readinessProviders?.scouting?.openAiEnabled) {
+          lines.push('AI_SCOUT_PROVIDER=gemini');
+        }
+        if (!lines.length) {
+          lines.push('# No missing critical env vars detected by readiness');
+        }
+        const text = lines.join('\n');
+        await navigator.clipboard.writeText(text);
+        notify('success', 'Copied', 'Env fixes copied to clipboard');
+      } catch (e: any) {
+        notify('error', 'Copy failed', e?.message || 'Failed to copy env fixes');
+      }
+    };
+
+    const runReadinessCheck = async () => {
+      try {
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'intelligence-readiness'] });
+        notify('success', 'Readiness', 'Readiness check refreshed');
+      } catch (e: any) {
+        notify('error', 'Readiness check failed', e?.message || 'Failed to refresh readiness');
+      }
+    };
+
     return (
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <h3>Analytics Dashboard</h3>
-          <ActionButton onClick={refreshScouting}>Refresh AI Insights</ActionButton>
+          <ActionsCell>
+            <ActionButton onClick={refreshScouting}>Refresh AI Insights</ActionButton>
+            <ActionButton onClick={updateHallOfFame}>Update Hall of Fame</ActionButton>
+            <ActionButton onClick={copyEnvFixes}>Copy Env Fixes</ActionButton>
+            <ActionButton onClick={runReadinessCheck}>Run Readiness Check</ActionButton>
+          </ActionsCell>
         </div>
         <StatsGrid>
           <StatCard>
@@ -3413,10 +5379,109 @@ const AdminPage: React.FC = () => {
           <StatCard>
             <StatValue>{providerLabel}</StatValue>
             <StatLabel>
-              AI: Gemini {scoutProvider?.geminiEnabled ? 'on' : 'off'} · OpenAI {scoutProvider?.openAiEnabled ? 'on' : 'off'}
+              AI: Gemini {scoutProvider?.geminiEnabled ? 'on' : 'off'} • OpenAI {scoutProvider?.openAiEnabled ? 'on' : 'off'}
             </StatLabel>
           </StatCard>
+          <StatCard>
+            <StatValue style={{ color: readinessSupportEnabled ? '#81c784' : '#ffab91' }}>
+              {readinessSupportEnabled ? 'ON' : 'OFF'}
+            </StatValue>
+            <StatLabel>Support AI Runtime</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue style={{ color: readinessTelegram ? '#81c784' : '#ffab91' }}>
+              {readinessTelegram ? 'OK' : 'MISS'}
+            </StatValue>
+            <StatLabel>Telegram Bot Username</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue style={{ color: readinessCron ? '#81c784' : '#ffab91' }}>
+              {readinessCron ? 'OK' : 'MISS'}
+            </StatValue>
+            <StatLabel>Hall of Fame Cron Token</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue style={{ color: readinessScore >= 80 ? '#81c784' : readinessScore >= 50 ? '#ffb74d' : '#ff6b6b' }}>
+              {readinessScore}%
+            </StatValue>
+            <StatLabel>Readiness Score</StatLabel>
+          </StatCard>
         </StatsGrid>
+
+        <h4 style={{ marginTop: '20px' }}>System Readiness</h4>
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Component</Th>
+                <Th>Status</Th>
+                <Th>Details</Th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <Td>Scouting Provider</Td>
+                <Td style={{ color: readinessProviders?.scouting?.provider ? '#81c784' : '#ffab91' }}>
+                  {readinessProviders?.scouting?.provider ? 'ready' : 'missing'}
+                </Td>
+                <Td>
+                  {String(readinessProviders?.scouting?.provider || 'unknown')} • Gemini {readinessProviders?.scouting?.geminiEnabled ? 'on' : 'off'} • OpenAI {readinessProviders?.scouting?.openAiEnabled ? 'on' : 'off'}
+                </Td>
+              </tr>
+              <tr>
+                <Td>Support Provider</Td>
+                <Td style={{ color: readinessProviders?.support?.provider ? '#81c784' : '#ffab91' }}>
+                  {readinessProviders?.support?.provider ? 'ready' : 'missing'}
+                </Td>
+                <Td>
+                  {String(readinessProviders?.support?.provider || 'unknown')} • Gemini {readinessProviders?.support?.geminiEnabled ? 'on' : 'off'} • OpenAI {readinessProviders?.support?.openAiEnabled ? 'on' : 'off'} • Runtime {readinessProviders?.support?.aiEnabled ? 'on' : 'off'}
+                </Td>
+              </tr>
+              <tr>
+                <Td>Telegram Linking</Td>
+                <Td style={{ color: readinessTelegram ? '#81c784' : '#ffab91' }}>{readinessTelegram ? 'ready' : 'missing'}</Td>
+                <Td>{readinessTelegram ? 'TELEGRAM_BOT_USERNAME configured' : 'Set TELEGRAM_BOT_USERNAME in .env'}</Td>
+              </tr>
+              <tr>
+                <Td>Hall of Fame Cron</Td>
+                <Td style={{ color: readinessCron ? '#81c784' : '#ffab91' }}>{readinessCron ? 'ready' : 'missing'}</Td>
+                <Td>{readinessCron ? 'HALL_OF_FAME_CRON_TOKEN configured' : 'Set HALL_OF_FAME_CRON_TOKEN in .env'}</Td>
+              </tr>
+              <tr>
+                <Td>Realtime Rank Stream</Td>
+                <Td style={{ color: intelligenceReadiness?.realtime?.rankUpdatesSse ? '#81c784' : '#ffab91' }}>
+                  {intelligenceReadiness?.realtime?.rankUpdatesSse ? 'ready' : 'missing'}
+                </Td>
+                <Td>{intelligenceReadiness?.realtime?.rankUpdatesSse || '-'}</Td>
+              </tr>
+            </tbody>
+          </Table>
+        </TableWrap>
+
+        <h4 style={{ marginTop: '20px' }}>Readiness Checks</h4>
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Check</Th>
+                <Th>Status</Th>
+                <Th>Message</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {readinessChecks.map((check) => (
+                <tr key={check.key}>
+                  <Td>{check.key}</Td>
+                  <Td style={{ color: check.ok ? '#81c784' : '#ffab91' }}>{check.ok ? 'ok' : 'fail'}</Td>
+                  <Td>{check.ok ? 'Ready' : check.message}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
+        {!readinessChecks.length && (
+          <div style={{ color: '#cccccc', padding: '16px 0' }}>No readiness check data yet.</div>
+        )}
 
         <TableWrap>
           <Table>
@@ -3494,16 +5559,35 @@ const AdminPage: React.FC = () => {
             </thead>
             <tbody>
               {anomalies.map((row: AnomalyAlertRow, idx: number) => (
-                <tr key={`${row.userId}-${row.type}-${idx}`}>
-                  <Td>@{row.username}</Td>
-                  <Td>{row.type}</Td>
-                  <Td><span style={severityStyle(row.severity)}>{row.severity}</span></Td>
-                  <Td>{row.impactRating.toFixed(1)}</Td>
-                  <Td>{row.message}</Td>
-                  <Td>
-                    <ActionButton onClick={() => addToWatchlist(row)}>Promote</ActionButton>
-                  </Td>
-                </tr>
+                <React.Fragment key={`${row.userId}-${row.type}-${idx}`}>
+                  <tr>
+                    <Td>@{row.username}</Td>
+                    <Td>{row.type}</Td>
+                    <Td><span style={severityStyle(row.severity)}>{row.severity}</span></Td>
+                    <Td>{row.impactRating.toFixed(1)}</Td>
+                    <Td>{row.message}</Td>
+                    <Td>
+                      <ActionsCell>
+                        <ActionButton onClick={() => addToWatchlist(row)}>Promote</ActionButton>
+                        <ActionButton onClick={() => explainScouting(row)}>Explain</ActionButton>
+                      </ActionsCell>
+                    </Td>
+                  </tr>
+                  {scoutingExplanations[row.userId] && (
+                    <tr>
+                      <Td colSpan={6}>
+                        <div style={{ fontSize: 13, color: '#d0d0d0', lineHeight: 1.5 }}>
+                          <strong>AI Explain:</strong> {scoutingExplanations[row.userId].narrative}
+                          <div style={{ marginTop: 6, opacity: 0.9 }}>
+                            Drivers: {scoutingExplanations[row.userId].topDrivers
+                              .map((d) => `${d.key}(${d.contribution >= 0 ? '+' : ''}${d.contribution.toFixed(1)})`)
+                              .join(', ')}
+                          </div>
+                        </div>
+                      </Td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </Table>
@@ -3539,6 +5623,88 @@ const AdminPage: React.FC = () => {
         </TableWrap>
         {!watchlist.length && (
           <div style={{ color: '#cccccc', padding: '16px 0' }}>Watchlist is empty.</div>
+        )}
+
+        <h4 style={{ marginTop: '20px' }}>Hall of Fame (Longest Reign)</h4>
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>#</Th>
+                <Th>Player</Th>
+                <Th>Days at #1</Th>
+                <Th>First Rank #1</Th>
+                <Th>Last Rank #1</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {hallOfFame.map((row: HallOfFameAdminRow, idx: number) => (
+                <tr key={row.id || `${row.userId}-${idx}`}>
+                  <Td>{idx + 1}</Td>
+                  <Td>@{row.username}</Td>
+                  <Td>{row.consecutiveDaysRank1}</Td>
+                  <Td>{row.firstRank1At ? formatDate(row.firstRank1At) : '-'}</Td>
+                  <Td>{row.lastRank1At ? formatDate(row.lastRank1At) : '-'}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
+        {!hallOfFame.length && (
+          <div style={{ color: '#cccccc', padding: '16px 0' }}>Hall of Fame is empty.</div>
+        )}
+
+        <h4 style={{ marginTop: '20px' }}>Manual Points Calculator</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+          <Input
+            type="number"
+            value={pointsInput.playerRating}
+            onChange={(e) => setPointsInput((prev) => ({ ...prev, playerRating: Number(e.target.value) }))}
+            placeholder="Player rating"
+          />
+          <Input
+            type="number"
+            value={pointsInput.opponentRating}
+            onChange={(e) => setPointsInput((prev) => ({ ...prev, opponentRating: Number(e.target.value) }))}
+            placeholder="Opponent rating"
+          />
+          <Select
+            value={String(pointsInput.result)}
+            onChange={(e) => setPointsInput((prev) => ({ ...prev, result: Number(e.target.value) }))}
+          >
+            <option value="1">Win</option>
+            <option value="0.5">Draw</option>
+            <option value="0">Loss</option>
+          </Select>
+          <ActionButton onClick={calculatePointsPreview}>Calculate</ActionButton>
+        </div>
+        {pointsOutput && (
+          <div style={{ color: '#ccc', marginTop: 10 }}>
+            New points: <strong>{pointsOutput.newRating}</strong> | Delta: <strong>{pointsOutput.delta >= 0 ? '+' : ''}{pointsOutput.delta}</strong>
+          </div>
+        )}
+
+        <h4 style={{ marginTop: '20px' }}>Manual Stats Normalization</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
+          <Input type="number" value={statsInput.kills} onChange={(e) => setStatsInput((p) => ({ ...p, kills: Number(e.target.value) }))} placeholder="Kills" />
+          <Input type="number" value={statsInput.deaths} onChange={(e) => setStatsInput((p) => ({ ...p, deaths: Number(e.target.value) }))} placeholder="Deaths" />
+          <Input type="number" value={statsInput.assists} onChange={(e) => setStatsInput((p) => ({ ...p, assists: Number(e.target.value) }))} placeholder="Assists" />
+          <Input type="number" value={statsInput.survivalSeconds} onChange={(e) => setStatsInput((p) => ({ ...p, survivalSeconds: Number(e.target.value) }))} placeholder="Survival sec" />
+          <Input type="number" value={statsInput.utilityUses} onChange={(e) => setStatsInput((p) => ({ ...p, utilityUses: Number(e.target.value) }))} placeholder="Utility uses" />
+          <Input type="number" value={statsInput.objectiveActions} onChange={(e) => setStatsInput((p) => ({ ...p, objectiveActions: Number(e.target.value) }))} placeholder="Objective actions" />
+          <Input type="number" value={statsInput.clutchRoundsWon} onChange={(e) => setStatsInput((p) => ({ ...p, clutchRoundsWon: Number(e.target.value) }))} placeholder="Clutch rounds won" />
+          <Input type="number" value={statsInput.roundsPlayed} onChange={(e) => setStatsInput((p) => ({ ...p, roundsPlayed: Number(e.target.value) }))} placeholder="Rounds played" />
+          <ActionButton onClick={normalizeStatsPreview}>Normalize</ActionButton>
+        </div>
+        {statsOutput && (
+          <div style={{ color: '#ccc', marginTop: 10, lineHeight: 1.6 }}>
+            Impact: <strong>{Number(statsOutput.impactRating || 0).toFixed(1)}</strong> | Aiming:{' '}
+            <strong>{Number(statsOutput.skills?.aiming || 0).toFixed(1)}</strong> | Positioning:{' '}
+            <strong>{Number(statsOutput.skills?.positioning || 0).toFixed(1)}</strong> | Utility:{' '}
+            <strong>{Number(statsOutput.skills?.utility || 0).toFixed(1)}</strong> | Clutch:{' '}
+            <strong>{Number(statsOutput.skills?.clutchFactor || 0).toFixed(1)}</strong> | Teamplay:{' '}
+            <strong>{Number(statsOutput.skills?.teamplay || 0).toFixed(1)}</strong>
+          </div>
         )}
       </div>
     );
@@ -3584,6 +5750,154 @@ const AdminPage: React.FC = () => {
         <div style={{ color: '#cccccc', marginBottom: '12px' }}>
           Stream: {opsStreamConnected ? 'live' : 'polling fallback'} • Last update: {streamTimestamp}
         </div>
+
+        <h4 style={{ marginTop: '16px' }}>Audit Timeline</h4>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
+          <Select
+            value={String(opsTimelineHours)}
+            onChange={(e) => {
+              const value = Number(e.target.value);
+              if (value === 24 || value === 48 || value === 168) {
+                setOpsTimelineHours(value);
+              }
+            }}
+            style={{ minWidth: '100px' }}
+          >
+            <option value="24">24h</option>
+            <option value="48">48h</option>
+            <option value="168">7d</option>
+          </Select>
+          <Select
+            value={String(opsTimelineBucketMinutes)}
+            onChange={(e) => {
+              const value = Number(e.target.value);
+              if (value === 15 || value === 60) {
+                setOpsTimelineBucketMinutes(value);
+              }
+            }}
+            style={{ minWidth: '120px' }}
+          >
+            <option value="60">1h buckets</option>
+            <option value="15">15m buckets</option>
+          </Select>
+        </div>
+        <div style={{ color: '#cccccc', marginBottom: '10px', fontSize: '13px' }}>
+          Total: {Number(opsAuditTimeline?.totals?.total || 0)} | Success: {Number(opsAuditTimeline?.totals?.success || 0)} | 4xx: {Number(opsAuditTimeline?.totals?.clientError || 0)} | 5xx: {Number(opsAuditTimeline?.totals?.serverError || 0)}
+        </div>
+        <div style={{ display: 'grid', gap: 6, marginBottom: '16px' }}>
+          {(opsAuditTimeline?.points || []).slice(-20).map((point) => {
+            const max = Math.max(...(opsAuditTimeline?.points || []).map((p) => Number(p.total || 0)), 1);
+            const totalWidth = Math.round((Number(point.total || 0) / max) * 100);
+            const errorCount = Number(point.clientError || 0) + Number(point.serverError || 0);
+            const errorWidth = Math.round((errorCount / max) * 100);
+            return (
+              <div key={point.ts} style={{ display: 'grid', gridTemplateColumns: '140px 1fr 60px', gap: 8, alignItems: 'center' }}>
+                <span style={{ color: '#bdbdbd', fontSize: 11 }}>{formatDate(point.ts)}</span>
+                <div style={{ height: 8, borderRadius: 6, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', position: 'relative' }}>
+                  <div style={{ height: '100%', width: `${totalWidth}%`, background: 'rgba(102, 187, 106, 0.7)' }} />
+                  <div style={{ height: '100%', width: `${errorWidth}%`, background: 'rgba(239, 83, 80, 0.9)', position: 'absolute', right: 0, top: 0 }} />
+                </div>
+                <span style={{ color: '#bdbdbd', fontSize: 11, textAlign: 'right' }}>{point.total}</span>
+              </div>
+            );
+          })}
+          {!opsAuditTimeline?.points?.length ? (
+            <div style={{ color: '#cccccc', padding: '8px 0' }}>No timeline data yet.</div>
+          ) : null}
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginTop: '16px' }}>
+          <h4 style={{ margin: 0 }}>Top Error Endpoints</h4>
+          <ActionButton onClick={handleExportTopErrorsCsv}>Export Top Errors CSV</ActionButton>
+        </div>
+        {opsTopErrors[0] ? (
+          <div style={{ color: '#ffb4a8', margin: '8px 0 10px', fontSize: 13 }}>
+            Hot endpoint: <strong>{opsTopErrors[0].method} {opsTopErrors[0].path}</strong> ({opsTopErrors[0].statusCode}) • {opsTopErrors[0].count} errors
+          </div>
+        ) : null}
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Count</Th>
+                <Th>Status</Th>
+                <Th>Method</Th>
+                <Th>Path</Th>
+                <Th>Last Seen</Th>
+                <Th>Action</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {opsTopErrors.map((row, index) => (
+                <tr
+                  key={`${row.method}-${row.path}-${row.statusCode}-${index}`}
+                  style={{
+                    background: selectedTopError &&
+                      selectedTopError.method === row.method &&
+                      selectedTopError.path === row.path &&
+                      selectedTopError.statusCode === row.statusCode
+                      ? 'rgba(255,107,0,0.08)'
+                      : 'transparent'
+                  }}
+                >
+                  <Td>{row.count}</Td>
+                  <Td>{row.statusCode}</Td>
+                  <Td>{row.method}</Td>
+                  <Td>{row.path}</Td>
+                  <Td>{row.lastSeenAt ? formatDate(row.lastSeenAt) : '-'}</Td>
+                  <Td>
+                    <ActionButton onClick={() => setSelectedTopError(row)}>
+                      Inspect
+                    </ActionButton>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
+        {!opsTopErrors.length && (
+          <div style={{ color: '#cccccc', padding: '8px 0 12px' }}>No 4xx/5xx endpoints for selected window.</div>
+        )}
+
+        {selectedTopError ? (
+          <div style={{ marginTop: '14px', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <div style={{ color: '#ffb4a8', fontSize: 13 }}>
+                Error samples: <strong>{selectedTopError.method} {selectedTopError.path}</strong> ({selectedTopError.statusCode})
+              </div>
+              <ActionButton onClick={() => setSelectedTopError(null)}>Clear</ActionButton>
+            </div>
+            <TableWrap>
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>Time</Th>
+                    <Th>Role</Th>
+                    <Th>Entity</Th>
+                    <Th>IP</Th>
+                    <Th>Details</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {opsErrorSamples.map((row) => (
+                    <tr key={row.id}>
+                      <Td>{row.createdAt ? formatDate(row.createdAt) : '-'}</Td>
+                      <Td>{row.actorRole || '-'}</Td>
+                      <Td>{row.entity}{row.entityId ? `:${row.entityId}` : ''}</Td>
+                      <Td>{row.ip || '-'}</Td>
+                      <Td style={{ fontSize: 11, color: '#cfcfcf' }}>
+                        {row.payload ? JSON.stringify(row.payload).slice(0, 180) : '-'}
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </TableWrap>
+            {!opsErrorSamples.length ? (
+              <div style={{ color: '#cccccc', padding: '8px 0 0' }}>No sample rows found.</div>
+            ) : null}
+          </div>
+        ) : null}
 
         <h4 style={{ marginTop: '16px' }}>Queue</h4>
         <div style={{ color: '#cccccc', marginBottom: '12px' }}>
@@ -3743,6 +6057,227 @@ const AdminPage: React.FC = () => {
         </TableWrap>
         {!authLogs.length && (
           <div style={{ color: '#cccccc', padding: '12px 0' }}>No auth logs yet.</div>
+        )}
+      </div>
+    );
+  }
+
+  function renderSystem() {
+    const readinessProviders = intelligenceReadiness?.providers || {};
+    const readinessIntegrations = intelligenceReadiness?.integrations || {};
+    const readinessInfra = intelligenceReadiness?.infrastructure || {};
+    const readinessRealtime = intelligenceReadiness?.realtime || {};
+    const readinessChecks = Array.isArray(intelligenceReadiness?.checks) ? intelligenceReadiness.checks : [];
+    const readinessScore = Number(intelligenceReadiness?.readinessScore ?? 0);
+    const smokeChecks = Array.isArray(readinessSmoke?.checks) ? readinessSmoke.checks : [];
+    const systemSmokeRows = Array.isArray(systemSmokeAuditEvents) ? systemSmokeAuditEvents : [];
+
+    const runSmokeTest = async () => {
+      try {
+        const result: any = await api.post('/api/intelligence/readiness/smoke', {});
+        setReadinessSmoke((result?.data || result || null) as ReadinessSmoke);
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'system-smoke-audit-events'] });
+        notify('success', 'Smoke test', 'System smoke test completed');
+      } catch (e: any) {
+        notify('error', 'Smoke test failed', formatApiError(e, 'Failed to run smoke test'));
+      }
+    };
+
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+          <h3>System Readiness</h3>
+          <ActionsCell>
+            <ActionButton onClick={async () => {
+              await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['admin', 'intelligence-readiness'] }),
+                queryClient.invalidateQueries({ queryKey: ['admin', 'system-smoke-audit-events'] })
+              ]);
+            }}>
+              Refresh Readiness
+            </ActionButton>
+            <ActionButton onClick={runSmokeTest}>Run Smoke Test</ActionButton>
+          </ActionsCell>
+        </div>
+
+        <StatsGrid>
+          <StatCard>
+            <StatValue style={{ color: readinessScore >= 80 ? '#81c784' : readinessScore >= 50 ? '#ffb74d' : '#ff6b6b' }}>
+              {readinessScore}%
+            </StatValue>
+            <StatLabel>Readiness Score</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue style={{ color: readinessIntegrations?.telegramBotUsernameConfigured ? '#81c784' : '#ffab91' }}>
+              {readinessIntegrations?.telegramBotUsernameConfigured ? 'OK' : 'MISS'}
+            </StatValue>
+            <StatLabel>Telegram Bot Username</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue style={{ color: readinessIntegrations?.hallOfFameCronTokenConfigured ? '#81c784' : '#ffab91' }}>
+              {readinessIntegrations?.hallOfFameCronTokenConfigured ? 'OK' : 'MISS'}
+            </StatValue>
+            <StatLabel>Hall Of Fame Cron Token</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue style={{ color: readinessProviders?.support?.aiEnabled ? '#81c784' : '#ffab91' }}>
+              {readinessProviders?.support?.aiEnabled ? 'ON' : 'OFF'}
+            </StatValue>
+            <StatLabel>Support AI Runtime</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue style={{ color: readinessInfra?.mongoConnected ? '#81c784' : '#ffab91' }}>
+              {readinessInfra?.mongoConnected ? 'OK' : 'MISS'}
+            </StatValue>
+            <StatLabel>Mongo Connection</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue style={{ color: readinessInfra?.redisConnected ? '#81c784' : '#ffab91' }}>
+              {readinessInfra?.redisConnected ? 'OK' : 'MISS'}
+            </StatValue>
+            <StatLabel>Redis Connection</StatLabel>
+          </StatCard>
+        </StatsGrid>
+
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Component</Th>
+                <Th>Status</Th>
+                <Th>Details</Th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <Td>Scouting Provider</Td>
+                <Td style={{ color: readinessProviders?.scouting?.provider ? '#81c784' : '#ffab91' }}>
+                  {readinessProviders?.scouting?.provider ? 'ready' : 'missing'}
+                </Td>
+                <Td>
+                  {String(readinessProviders?.scouting?.provider || 'unknown')} • Gemini {readinessProviders?.scouting?.geminiEnabled ? 'on' : 'off'} • OpenAI {readinessProviders?.scouting?.openAiEnabled ? 'on' : 'off'}
+                </Td>
+              </tr>
+              <tr>
+                <Td>Support Provider</Td>
+                <Td style={{ color: readinessProviders?.support?.provider ? '#81c784' : '#ffab91' }}>
+                  {readinessProviders?.support?.provider ? 'ready' : 'missing'}
+                </Td>
+                <Td>
+                  {String(readinessProviders?.support?.provider || 'unknown')} • Gemini {readinessProviders?.support?.geminiEnabled ? 'on' : 'off'} • OpenAI {readinessProviders?.support?.openAiEnabled ? 'on' : 'off'}
+                </Td>
+              </tr>
+              <tr>
+                <Td>Rank SSE</Td>
+                <Td style={{ color: readinessRealtime?.rankUpdatesSse ? '#81c784' : '#ffab91' }}>
+                  {readinessRealtime?.rankUpdatesSse ? 'ready' : 'missing'}
+                </Td>
+                <Td>{readinessRealtime?.rankUpdatesSse || '-'}</Td>
+              </tr>
+              <tr>
+                <Td>Ops SSE</Td>
+                <Td style={{ color: readinessRealtime?.opsSse ? '#81c784' : '#ffab91' }}>
+                  {readinessRealtime?.opsSse ? 'ready' : 'missing'}
+                </Td>
+                <Td>{readinessRealtime?.opsSse || '-'}</Td>
+              </tr>
+            </tbody>
+          </Table>
+        </TableWrap>
+
+        <h4 style={{ marginTop: '24px' }}>Checks</h4>
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Key</Th>
+                <Th>Status</Th>
+                <Th>Message</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {readinessChecks.map((check) => (
+                <tr key={check.key}>
+                  <Td>{check.key}</Td>
+                  <Td style={{ color: check.ok ? '#81c784' : '#ffab91' }}>{check.ok ? 'ok' : 'fail'}</Td>
+                  <Td>{check.ok ? 'Ready' : check.message}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+
+        </TableWrap>
+
+        <h4 style={{ marginTop: '24px' }}>Last Smoke Run</h4>
+        {!readinessSmoke && (
+          <div style={{ color: '#cccccc', padding: '12px 0' }}>Run smoke test to validate DB/cache and collections.</div>
+        )}
+        {readinessSmoke && (
+          <>
+            <div style={{ color: '#cccccc', marginBottom: 10 }}>
+              Executed: {readinessSmoke.timestamp ? formatDate(readinessSmoke.timestamp) : '-'} ? Duration: {readinessSmoke.durationMs ?? 0}ms
+            </div>
+            <TableWrap>
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>Check</Th>
+                    <Th>Status</Th>
+                    <Th>Message</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {smokeChecks.map((check) => (
+                    <tr key={check.key}>
+                      <Td>{check.key}</Td>
+                      <Td style={{ color: check.ok ? '#81c784' : '#ffab91' }}>{check.ok ? 'ok' : 'fail'}</Td>
+                      <Td>{check.message}</Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </TableWrap>
+          </>
+        )}
+
+        <h4 style={{ marginTop: '24px' }}>Smoke History</h4>
+        {!systemSmokeRows.length && (
+          <div style={{ color: '#cccccc', padding: '12px 0' }}>No smoke history yet.</div>
+        )}
+        {systemSmokeRows.length > 0 && (
+          <TableWrap>
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Time</Th>
+                  <Th>Actor</Th>
+                  <Th>Duration</Th>
+                  <Th>Mongo</Th>
+                  <Th>Redis</Th>
+                  <Th>Users</Th>
+                  <Th>Teams</Th>
+                  <Th>Tournaments</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {systemSmokeRows.map((row) => (
+                  <tr key={row.id}>
+                    <Td>{formatDate(row.createdAt)}</Td>
+                    <Td>
+                      {row.actorRole}
+                      {row.actorTelegramId ? ` (${row.actorTelegramId})` : ''}
+                    </Td>
+                    <Td>{row.durationMs}ms</Td>
+                    <Td style={{ color: row.mongoOk ? '#81c784' : '#ffab91' }}>{row.mongoOk ? 'ok' : 'fail'}</Td>
+                    <Td style={{ color: row.redisOk ? '#81c784' : '#ffab91' }}>{row.redisOk ? 'ok' : 'fail'}</Td>
+                    <Td>{row.usersCount}</Td>
+                    <Td>{row.teamsCount}</Td>
+                    <Td>{row.tournamentsCount}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </TableWrap>
         )}
       </div>
     );
@@ -4278,6 +6813,8 @@ const AdminPage: React.FC = () => {
         return renderPayments();
       case 'ops':
         return renderOps();
+      case 'system':
+        return renderSystem();
       default:
         return renderDashboard();
     }
@@ -4325,6 +6862,20 @@ const AdminPage: React.FC = () => {
         </Tab>
         <Tab $active={activeTab === 'tournaments'} onClick={() => setActiveTab('tournaments')}>
           Tournaments
+          {globalPendingTournamentRequests > 0 ? (
+            <span style={{
+              marginLeft: 8,
+              background: 'rgba(255, 107, 0, 0.2)',
+              border: '1px solid rgba(255, 107, 0, 0.55)',
+              color: '#ffb280',
+              borderRadius: 999,
+              padding: '1px 7px',
+              fontSize: 11,
+              fontWeight: 700
+            }}>
+              {globalPendingTournamentRequests}
+            </span>
+          ) : null}
         </Tab>
         <Tab $active={activeTab === 'news'} onClick={() => setActiveTab('news')}>
           News
@@ -4346,6 +6897,20 @@ const AdminPage: React.FC = () => {
         </Tab>
         <Tab $active={activeTab === 'support'} onClick={() => setActiveTab('support')}>
           Support
+          {Number(supportStreamData?.unreadForAdmin || 0) > 0 ? (
+            <span style={{
+              marginLeft: 8,
+              background: 'rgba(255, 107, 0, 0.2)',
+              border: '1px solid rgba(255, 107, 0, 0.55)',
+              color: '#ffb280',
+              borderRadius: 999,
+              padding: '1px 7px',
+              fontSize: 11,
+              fontWeight: 700
+            }}>
+              {Number(supportStreamData?.unreadForAdmin || 0)}
+            </span>
+          ) : null}
         </Tab>
         <Tab $active={activeTab === 'contacts'} onClick={() => setActiveTab('contacts')}>
           Contacts
@@ -4355,6 +6920,9 @@ const AdminPage: React.FC = () => {
         </Tab>
         <Tab $active={activeTab === 'ops'} onClick={() => setActiveTab('ops')}>
           Ops
+        </Tab>
+        <Tab $active={activeTab === 'system'} onClick={() => setActiveTab('system')}>
+          System
         </Tab>
       </TabContainer>
 
@@ -4368,3 +6936,8 @@ const AdminPage: React.FC = () => {
 };
 
 export default AdminPage; 
+
+
+
+
+

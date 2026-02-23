@@ -6,12 +6,20 @@ import Referral from '../models/Referral';
 import MatchEvent from '../models/MatchEvent';
 import { getAnalyticsForUser } from '../services/analyticsEngine';
 import { authenticateJWT } from '../middleware/auth';
+import { createInMemoryLimiter } from '../middleware/rateLimiter';
+import { cacheService } from '../services/cacheService';
 
 const logInfo = (event: string, data: any) => {
   console.log(`Analytics: ${event}`, data);
 };
 
 const router = express.Router();
+const analyticsReadLimiter = createInMemoryLimiter({
+  keyPrefix: 'analytics_read',
+  max: Number(process.env.RATE_LIMIT_ANALYTICS_READ_MAX || 120),
+  windowMs: Number(process.env.RATE_LIMIT_ANALYTICS_READ_WINDOW_MS || 60_000),
+  identity: 'ip'
+});
 
 const buildEventDedupeKey = (params: {
   matchId: string;
@@ -75,6 +83,10 @@ router.post('/track', async (req, res) => {
 
     // Update funnel metrics
     await updateFunnelMetrics(event, userId, data);
+    await cacheService.invalidatePattern('analytics:funnel:*');
+    await cacheService.invalidatePattern('analytics:referrals:*');
+    await cacheService.invalidatePattern('analytics:subscriptions:*');
+    await cacheService.invalidatePattern('analytics:tournaments:*');
 
     logInfo('analytics_event_tracked', { event, userId, data });
 
@@ -88,11 +100,20 @@ router.post('/track', async (req, res) => {
 /**
  * Get funnel conversion metrics
  */
-router.get('/funnel', async (req, res) => {
+router.get('/funnel', analyticsReadLimiter, async (req, res) => {
   try {
     const { timeframe = '7d', cohort } = req.query;
-
-    const metrics = await getFunnelMetrics(timeframe as string, cohort as string);
+    const tf = String(timeframe || '7d');
+    const cohortValue = cohort ? String(cohort) : '';
+    const cacheKey = `analytics:funnel:${tf}:${cohortValue || 'all'}`;
+    const metrics = await cacheService.getOrSet(
+      cacheKey,
+      () => getFunnelMetrics(tf, cohortValue || undefined),
+      { key: cacheKey, ttl: 45 }
+    );
+    if (!metrics) {
+      return res.status(500).json({ error: 'Failed to get metrics' });
+    }
     res.json(metrics);
   } catch (error) {
     console.error('Failed to get funnel metrics:', error);
@@ -103,11 +124,18 @@ router.get('/funnel', async (req, res) => {
 /**
  * Get referral performance metrics
  */
-router.get('/referrals', async (req, res) => {
+router.get('/referrals', analyticsReadLimiter, async (req, res) => {
   try {
     const { timeframe = '30d' } = req.query;
-
-    const metrics = await getReferralMetrics(timeframe as string);
+    const tf = String(timeframe || '30d');
+    const cacheKey = `analytics:referrals:${tf}`;
+    const metrics = await cacheService.getOrSet(cacheKey, () => getReferralMetrics(tf), {
+      key: cacheKey,
+      ttl: 60
+    });
+    if (!metrics) {
+      return res.status(500).json({ error: 'Failed to get metrics' });
+    }
     res.json(metrics);
   } catch (error) {
     console.error('Failed to get referral metrics:', error);
@@ -118,11 +146,18 @@ router.get('/referrals', async (req, res) => {
 /**
  * Get subscription conversion metrics
  */
-router.get('/subscriptions', async (req, res) => {
+router.get('/subscriptions', analyticsReadLimiter, async (req, res) => {
   try {
     const { timeframe = '30d' } = req.query;
-
-    const metrics = await getSubscriptionMetrics(timeframe as string);
+    const tf = String(timeframe || '30d');
+    const cacheKey = `analytics:subscriptions:${tf}`;
+    const metrics = await cacheService.getOrSet(cacheKey, () => getSubscriptionMetrics(tf), {
+      key: cacheKey,
+      ttl: 60
+    });
+    if (!metrics) {
+      return res.status(500).json({ error: 'Failed to get metrics' });
+    }
     res.json(metrics);
   } catch (error) {
     console.error('Failed to get subscription metrics:', error);
@@ -133,11 +168,18 @@ router.get('/subscriptions', async (req, res) => {
 /**
  * Get tournament engagement metrics
  */
-router.get('/tournaments', async (req, res) => {
+router.get('/tournaments', analyticsReadLimiter, async (req, res) => {
   try {
     const { timeframe = '30d' } = req.query;
-
-    const metrics = await getTournamentMetrics(timeframe as string);
+    const tf = String(timeframe || '30d');
+    const cacheKey = `analytics:tournaments:${tf}`;
+    const metrics = await cacheService.getOrSet(cacheKey, () => getTournamentMetrics(tf), {
+      key: cacheKey,
+      ttl: 45
+    });
+    if (!metrics) {
+      return res.status(500).json({ error: 'Failed to get metrics' });
+    }
     res.json(metrics);
   } catch (error) {
     console.error('Failed to get tournament metrics:', error);
@@ -198,6 +240,7 @@ router.post('/events', authenticateJWT, async (req, res) => {
       },
       { upsert: true, new: true }
     );
+    await cacheService.invalidate(`analytics:user:${userId}`);
 
     return res.status(201).json({ success: true, data: event });
   } catch (error: any) {
@@ -264,6 +307,7 @@ router.post('/events/bulk', authenticateJWT, async (req, res) => {
     }));
     const bulk = await MatchEvent.bulkWrite(ops, { ordered: false });
     const inserted = Number((bulk as any)?.upsertedCount || 0);
+    await cacheService.invalidate(`analytics:user:${userId}`);
     return res.status(201).json({
       success: true,
       inserted
@@ -528,10 +572,14 @@ async function getTournamentMetrics(timeframe: string) {
  * GET /api/analytics/:userId
  * Digital Athlete analytics payload
  */
-router.get('/:userId', async (req, res) => {
+router.get('/:userId', analyticsReadLimiter, async (req, res) => {
   try {
     const { userId } = req.params;
-    const analytics = await getAnalyticsForUser(userId);
+    const cacheKey = `analytics:user:${userId}`;
+    const analytics = await cacheService.getOrSet(cacheKey, () => getAnalyticsForUser(userId), {
+      key: cacheKey,
+      ttl: 60
+    });
     if (!analytics) {
       return res.status(404).json({ error: 'User analytics not found' });
     }

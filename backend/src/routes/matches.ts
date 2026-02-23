@@ -5,6 +5,8 @@ import Team from '../models/Team';
 import User from '../models/User';
 import Wallet from '../models/Wallet';
 import MatchEvent from '../models/MatchEvent';
+import MatchRoomAccessLog from '../models/MatchRoomAccessLog';
+import AuditLog from '../models/AuditLog';
 import { authenticateJWT, isAdmin } from '../middleware/auth';
 import { evaluateUserAchievements } from '../services/achievements/engine';
 import { hasRoomCredentials, prepareMatchRoom } from '../services/matchRoomService';
@@ -75,6 +77,61 @@ const buildEventDedupeKey = (params: {
   const baseTime = params.timestamp ? new Date(params.timestamp).getTime() : Date.now();
   const bucket = Number.isFinite(baseTime) ? Math.floor(baseTime / 5000) : Math.floor(Date.now() / 5000);
   return `${params.matchId}:${params.playerId}:${params.eventType}:${x}:${y}:${bucket}`;
+};
+
+const logRoomEvent = async (req: any, payload: {
+  matchId: any;
+  tournamentId?: any;
+  source: 'match_room' | 'admin_prepare_single' | 'admin_prepare_bulk';
+  status: 'success' | 'denied' | 'error';
+  reason?: string;
+  roomId?: string | null;
+}) => {
+  try {
+    const userId = resolveUserId(req);
+    await MatchRoomAccessLog.create({
+      matchId: payload.matchId,
+      tournamentId: payload.tournamentId || undefined,
+      requestedBy: userId || undefined,
+      requesterRole: String(req.user?.role || 'user'),
+      source: payload.source,
+      status: payload.status,
+      reason: payload.reason || undefined,
+      roomId: payload.roomId || undefined,
+      ip: req.ip,
+      userAgent: String(req.headers?.['user-agent'] || '')
+    });
+  } catch (error) {
+    // Logging failure must not break business flow.
+    console.error('Failed to write match room log:', error);
+  }
+};
+
+const writeAdminAudit = async (req: any, payload: {
+  entity: string;
+  entityId?: string;
+  statusCode: number;
+  details?: any;
+}) => {
+  try {
+    await AuditLog.create({
+      actorId: req.user?._id || undefined,
+      actorRole: String(req.user?.role || 'admin'),
+      actorTelegramId: Number(req.user?.telegramId || 0) || undefined,
+      action: 'custom',
+      entity: payload.entity,
+      entityId: payload.entityId,
+      method: req.method,
+      path: req.originalUrl || req.path || '/api/matches',
+      statusCode: payload.statusCode,
+      requestId: req.headers?.['x-request-id'] ? String(req.headers['x-request-id']) : undefined,
+      ip: req.ip,
+      userAgent: String(req.headers?.['user-agent'] || ''),
+      payload: payload.details || {}
+    });
+  } catch (error) {
+    console.error('Failed to write admin audit log:', error);
+  }
 };
 
 async function distributeMatchWinnerPayout(matchId: string, winnerTeamId?: string | null) {
@@ -311,6 +368,69 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Admin: operations summary for match control actions (from audit logs)
+router.get('/ops/summary', authenticateJWT, isAdmin, async (req: any, res: any) => {
+  try {
+    const tournamentId = typeof req.query?.tournamentId === 'string' ? req.query.tournamentId.trim() : '';
+    const hours = Math.min(Math.max(Number(req.query?.hours || 24), 1), 24 * 30);
+    const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+    const trackedEntities = [
+      'match_status_update',
+      'match_status_bulk_update',
+      'match_room_prepare_single',
+      'match_room_bulk_prepare'
+    ];
+
+    const baseMatch: any = {
+      entity: { $in: trackedEntities },
+      createdAt: { $gte: since }
+    };
+
+    if (tournamentId) {
+      baseMatch.$or = [
+        { entityId: tournamentId },
+        { 'payload.tournamentId': tournamentId }
+      ];
+    }
+
+    const [byEntity, byStatusCode, totals] = await Promise.all([
+      AuditLog.aggregate([
+        { $match: baseMatch },
+        { $group: { _id: '$entity', count: { $sum: 1 } } },
+        { $sort: { count: -1 } }
+      ]),
+      AuditLog.aggregate([
+        { $match: baseMatch },
+        { $group: { _id: '$statusCode', count: { $sum: 1 } } },
+        { $sort: { _id: 1 } }
+      ]),
+      AuditLog.countDocuments(baseMatch)
+    ]);
+
+    return res.json({
+      success: true,
+      data: {
+        hours,
+        since: since.toISOString(),
+        tournamentId: tournamentId || null,
+        total: totals,
+        byEntity: byEntity.map((row: any) => ({
+          entity: String(row?._id || ''),
+          count: Number(row?.count || 0)
+        })),
+        byStatusCode: byStatusCode.map((row: any) => ({
+          statusCode: Number(row?._id || 0),
+          count: Number(row?.count || 0)
+        }))
+      }
+    });
+  } catch (error: any) {
+    console.error('Error loading match ops summary:', error);
+    return res.status(500).json({ success: false, error: error?.message || 'Failed to load match ops summary' });
+  }
+});
+
 // Admin: bulk prepare room credentials for matches
 router.post('/rooms/prepare', authenticateJWT, isAdmin, async (req: any, res: any) => {
   try {
@@ -321,9 +441,27 @@ router.post('/rooms/prepare', authenticateJWT, isAdmin, async (req: any, res: an
     const statuses = Array.isArray(req.body?.statuses)
       ? req.body.statuses.map((status: any) => String(status || '').trim()).filter(Boolean)
       : [];
+    const allowedStatuses = new Set(['scheduled', 'live', 'completed', 'cancelled']);
+    const invalidStatuses = statuses.filter((status: string) => !allowedStatuses.has(status));
+    if (invalidStatuses.length > 0) {
+      void writeAdminAudit(req, {
+        entity: 'match_room_bulk_prepare',
+        entityId: tournamentId || undefined,
+        statusCode: 400,
+        details: {
+          tournamentId: tournamentId || null,
+          invalidStatuses
+        }
+      });
+      return res.status(400).json({
+        success: false,
+        error: `Invalid statuses: ${invalidStatuses.join(', ')}`
+      });
+    }
 
     const force = Boolean(req.body?.force);
     const onlyMissing = req.body?.onlyMissing !== false;
+    const dryRun = Boolean(req.body?.dryRun);
     const visibilityWindowMinutes = Number(req.body?.visibilityWindowMinutes || 5);
     const ttlHours = Number(req.body?.ttlHours || 6);
 
@@ -349,6 +487,26 @@ router.post('/rooms/prepare', authenticateJWT, isAdmin, async (req: any, res: an
 
     const matches: any[] = await Match.find(query).sort({ startTime: 1 });
 
+    if (tournamentId && matchIds.length) {
+      const outOfTournament = matches.some((match: any) => String(match?.tournament || '') !== tournamentId);
+      if (outOfTournament) {
+        void writeAdminAudit(req, {
+          entity: 'match_room_bulk_prepare',
+          entityId: tournamentId,
+          statusCode: 400,
+          details: {
+            tournamentId,
+            requestedMatches: matchIds.length,
+            reason: 'match_tournament_mismatch'
+          }
+        });
+        return res.status(400).json({
+          success: false,
+          error: 'Some matches do not belong to selected tournament'
+        });
+      }
+    }
+
     let created = 0;
     let unchanged = 0;
     const failed: Array<{ matchId: string; error: string }> = [];
@@ -366,6 +524,25 @@ router.post('/rooms/prepare', authenticateJWT, isAdmin, async (req: any, res: an
 
     for (const match of matches) {
       try {
+        if (dryRun) {
+          const hasExisting = hasRoomCredentials(match);
+          const willCreate = force || !hasExisting;
+          if (willCreate) {
+            created += 1;
+          } else {
+            unchanged += 1;
+          }
+          rooms.push({
+            matchId: match._id.toString(),
+            roomId: match.roomCredentials?.roomId || null,
+            password: match.roomCredentials?.password || null,
+            created: willCreate,
+            updated: willCreate,
+            ...buildRoomMeta(match)
+          });
+          continue;
+        }
+
         // eslint-disable-next-line no-await-in-loop
         const result = await prepareMatchRoom(match, {
           force,
@@ -387,18 +564,51 @@ router.post('/rooms/prepare', authenticateJWT, isAdmin, async (req: any, res: an
           updated: result.updated,
           ...buildRoomMeta(match)
         });
+        void logRoomEvent(req, {
+          matchId: match._id,
+          tournamentId: match.tournament,
+          source: 'admin_prepare_bulk',
+          status: 'success',
+          roomId: match.roomCredentials?.roomId || null
+        });
       } catch (error: any) {
         failed.push({
           matchId: match?._id?.toString?.() || '',
           error: error?.message || 'Failed to prepare room'
         });
+        void logRoomEvent(req, {
+          matchId: match?._id,
+          tournamentId: match?.tournament,
+          source: 'admin_prepare_bulk',
+          status: 'error',
+          reason: error?.message || 'Failed to prepare room'
+        });
       }
     }
+
+    void writeAdminAudit(req, {
+      entity: 'match_room_bulk_prepare',
+      entityId: tournamentId || undefined,
+      statusCode: 200,
+      details: {
+        tournamentId: tournamentId || null,
+        requestedMatches: matchIds.length,
+        selectedMatches: matches.length,
+        statuses,
+        force,
+        onlyMissing,
+        dryRun,
+        created,
+        unchanged,
+        failed: failed.length
+      }
+    });
 
     return res.json({
       success: true,
       data: {
         total: matches.length,
+        dryRun,
         created,
         unchanged,
         failed,
@@ -407,6 +617,12 @@ router.post('/rooms/prepare', authenticateJWT, isAdmin, async (req: any, res: an
     });
   } catch (error) {
     console.error('Error bulk preparing match rooms:', error);
+    void writeAdminAudit(req, {
+      entity: 'match_room_bulk_prepare',
+      entityId: typeof req.body?.tournamentId === 'string' ? req.body.tournamentId : undefined,
+      statusCode: 500,
+      details: { error: (error as any)?.message || 'Failed to prepare match rooms' }
+    });
     return res.status(500).json({
       success: false,
       error: 'Failed to prepare match rooms'
@@ -440,6 +656,25 @@ router.post('/:id/room', authenticateJWT, isAdmin, async (req: any, res: any) =>
       ttlHours
     });
 
+    void logRoomEvent(req, {
+      matchId: match._id,
+      tournamentId: match.tournament,
+      source: 'admin_prepare_single',
+      status: 'success',
+      roomId: match.roomCredentials?.roomId || null
+    });
+    void writeAdminAudit(req, {
+      entity: 'match_room_prepare_single',
+      entityId: String(match._id),
+      statusCode: 200,
+      details: {
+        force,
+        roomId: match.roomCredentials?.roomId || null,
+        visibleAt: toIso(match.roomCredentials?.visibleAt),
+        expiresAt: toIso(match.roomCredentials?.expiresAt)
+      }
+    });
+
     return res.json({
       success: true,
       data: {
@@ -452,6 +687,21 @@ router.post('/:id/room', authenticateJWT, isAdmin, async (req: any, res: any) =>
       }
     });
   } catch (error: any) {
+    const matchId = req.params?.id;
+    if (matchId) {
+      void logRoomEvent(req, {
+        matchId,
+        source: 'admin_prepare_single',
+        status: 'error',
+        reason: error?.message || 'Failed to prepare room'
+      });
+      void writeAdminAudit(req, {
+        entity: 'match_room_prepare_single',
+        entityId: String(matchId),
+        statusCode: 400,
+        details: { error: error?.message || 'Failed to prepare room' }
+      });
+    }
     console.error('Error preparing match room:', error);
     return res.status(400).json({
       success: false,
@@ -465,15 +715,35 @@ router.get('/:id/room', authenticateJWT, async (req: any, res: any) => {
   try {
     const match: any = await Match.findById(req.params.id).lean();
     if (!match) {
+      void logRoomEvent(req, {
+        matchId: req.params.id,
+        source: 'match_room',
+        status: 'error',
+        reason: 'Match not found'
+      });
       return res.status(404).json({ success: false, error: 'Match not found' });
     }
 
     if (!match.roomCredentials?.roomId || !match.roomCredentials?.password) {
+      void logRoomEvent(req, {
+        matchId: match._id,
+        tournamentId: match.tournament,
+        source: 'match_room',
+        status: 'error',
+        reason: 'Room credentials are not generated yet'
+      });
       return res.status(404).json({ success: false, error: 'Room credentials are not generated yet' });
     }
 
     const requesterId = resolveUserId(req);
     if (!requesterId) {
+      void logRoomEvent(req, {
+        matchId: match._id,
+        tournamentId: match.tournament,
+        source: 'match_room',
+        status: 'denied',
+        reason: 'Authentication required'
+      });
       return res.status(401).json({ success: false, error: 'Authentication required' });
     }
 
@@ -481,6 +751,13 @@ router.get('/:id/room', authenticateJWT, async (req: any, res: any) => {
     if (!adminAccess) {
       const isParticipant = await isUserMatchParticipant(match, requesterId);
       if (!isParticipant) {
+        void logRoomEvent(req, {
+          matchId: match._id,
+          tournamentId: match.tournament,
+          source: 'match_room',
+          status: 'denied',
+          reason: 'Access denied for this match room'
+        });
         return res.status(403).json({ success: false, error: 'Access denied for this match room' });
       }
     }
@@ -490,6 +767,14 @@ router.get('/:id/room', authenticateJWT, async (req: any, res: any) => {
     const now = new Date();
 
     if (!adminAccess && visibleAt && now < visibleAt) {
+      void logRoomEvent(req, {
+        matchId: match._id,
+        tournamentId: match.tournament,
+        source: 'match_room',
+        status: 'denied',
+        reason: 'Room credentials not yet visible',
+        roomId: match.roomCredentials.roomId
+      });
       return res.status(403).json({
         success: false,
         error: 'Room credentials will be available 5 minutes before match start',
@@ -498,8 +783,24 @@ router.get('/:id/room', authenticateJWT, async (req: any, res: any) => {
     }
 
     if (!adminAccess && expiresAt && now > expiresAt) {
+      void logRoomEvent(req, {
+        matchId: match._id,
+        tournamentId: match.tournament,
+        source: 'match_room',
+        status: 'denied',
+        reason: 'Room credentials expired',
+        roomId: match.roomCredentials.roomId
+      });
       return res.status(410).json({ success: false, error: 'Room credentials expired' });
     }
+
+    void logRoomEvent(req, {
+      matchId: match._id,
+      tournamentId: match.tournament,
+      source: 'match_room',
+      status: 'success',
+      roomId: match.roomCredentials.roomId
+    });
 
     return res.json({
       success: true,
@@ -512,9 +813,152 @@ router.get('/:id/room', authenticateJWT, async (req: any, res: any) => {
       }
     });
   } catch (error) {
+    void logRoomEvent(req, {
+      matchId: req.params?.id,
+      source: 'match_room',
+      status: 'error',
+      reason: 'Failed to fetch room credentials'
+    });
     console.error('Error fetching room credentials:', error);
     return res.status(500).json({ success: false, error: 'Failed to fetch room credentials' });
   }
+});
+
+// Admin: inspect room access/generation logs for a match
+router.get('/:id/room/logs', authenticateJWT, isAdmin, async (req: any, res: any) => {
+  try {
+    const matchId = String(req.params?.id || '').trim();
+    if (!matchId) {
+      return res.status(400).json({ success: false, error: 'matchId is required' });
+    }
+    const limit = Math.min(Math.max(Number(req.query?.limit || 50), 1), 200);
+    const logs = await MatchRoomAccessLog.find({ matchId })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .populate('requestedBy', 'username firstName lastName telegramId role')
+      .lean();
+
+    return res.json({
+      success: true,
+      data: logs.map((row: any) => ({
+        id: String(row?._id || ''),
+        matchId: String(row?.matchId || ''),
+        tournamentId: row?.tournamentId ? String(row.tournamentId) : null,
+        source: row?.source || 'match_room',
+        status: row?.status || 'success',
+        reason: row?.reason || '',
+        roomId: row?.roomId || null,
+        requesterRole: row?.requesterRole || 'user',
+        requestedBy: row?.requestedBy
+          ? {
+              id: String(row.requestedBy._id || ''),
+              username: row.requestedBy.username || '',
+              firstName: row.requestedBy.firstName || '',
+              lastName: row.requestedBy.lastName || '',
+              telegramId: row.requestedBy.telegramId || null,
+              role: row.requestedBy.role || 'user'
+            }
+          : null,
+        ip: row?.ip || '',
+        userAgent: row?.userAgent || '',
+        createdAt: row?.createdAt || null
+      }))
+    });
+  } catch (error: any) {
+    console.error('Error fetching room logs:', error);
+    return res.status(500).json({ success: false, error: error?.message || 'Failed to fetch room logs' });
+  }
+});
+
+// Admin: live stream room access/generation logs for a match (SSE)
+router.get('/:id/room/logs/stream', authenticateJWT, isAdmin, async (req: any, res: any) => {
+  const matchId = String(req.params?.id || '').trim();
+  if (!matchId) {
+    return res.status(400).json({ success: false, error: 'matchId is required' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders?.();
+
+  let closed = false;
+  let lastSignature = '';
+
+  const buildPayload = async () => {
+    const logs: any[] = await MatchRoomAccessLog.find({ matchId })
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .populate('requestedBy', 'username firstName lastName telegramId role')
+      .lean();
+
+    const normalized = logs.map((row: any) => ({
+      id: String(row?._id || ''),
+      matchId: String(row?.matchId || ''),
+      tournamentId: row?.tournamentId ? String(row.tournamentId) : null,
+      source: row?.source || 'match_room',
+      status: row?.status || 'success',
+      reason: row?.reason || '',
+      roomId: row?.roomId || null,
+      requesterRole: row?.requesterRole || 'user',
+      requestedBy: row?.requestedBy
+        ? {
+            id: String(row.requestedBy._id || ''),
+            username: row.requestedBy.username || '',
+            firstName: row.requestedBy.firstName || '',
+            lastName: row.requestedBy.lastName || '',
+            telegramId: row.requestedBy.telegramId || null,
+            role: row.requestedBy.role || 'user'
+          }
+        : null,
+      ip: row?.ip || '',
+      userAgent: row?.userAgent || '',
+      createdAt: row?.createdAt || null
+    }));
+
+    const signature = JSON.stringify(
+      normalized.map((item) => [item.id, item.status, item.source, item.createdAt, item.reason, item.roomId])
+    );
+
+    return {
+      timestamp: new Date().toISOString(),
+      matchId,
+      total: normalized.length,
+      logs: normalized,
+      signature
+    };
+  };
+
+  const writeSnapshot = async () => {
+    if (closed) return;
+    try {
+      const payload = await buildPayload();
+      if (payload.signature !== lastSignature) {
+        lastSignature = payload.signature;
+        res.write(`event: room_logs\n`);
+        res.write(`data: ${JSON.stringify(payload)}\n\n`);
+      } else {
+        res.write(`event: heartbeat\n`);
+        res.write(`data: {"timestamp":"${new Date().toISOString()}"}\n\n`);
+      }
+    } catch (error: any) {
+      res.write(`event: error\n`);
+      res.write(`data: ${JSON.stringify({ message: error?.message || 'Failed to stream room logs' })}\n\n`);
+    }
+  };
+
+  const timer = setInterval(() => {
+    void writeSnapshot();
+  }, 5000);
+
+  void writeSnapshot();
+
+  req.on('close', () => {
+    closed = true;
+    clearInterval(timer);
+    res.end();
+  });
 });
 
 // Get match by ID
@@ -795,9 +1239,30 @@ router.put('/:id/score', authenticateJWT, isAdmin, async (req, res) => {
 router.put('/:id/status', authenticateJWT, isAdmin, async (req, res) => {
   try {
     const { status } = req.body;
+    const allowedStatuses = new Set(['scheduled', 'live', 'completed', 'cancelled']);
+    const normalizedStatus = String(status || '').trim().toLowerCase();
+    if (!allowedStatuses.has(normalizedStatus)) {
+      void writeAdminAudit(req, {
+        entity: 'match_status_update',
+        entityId: String(req.params.id),
+        statusCode: 400,
+        details: { attemptedStatus: normalizedStatus, reason: 'invalid_status' }
+      });
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid status. Allowed: scheduled, live, completed, cancelled'
+      });
+    }
+
     const match = await Match.findById(req.params.id);
 
     if (!match) {
+      void writeAdminAudit(req, {
+        entity: 'match_status_update',
+        entityId: String(req.params.id),
+        statusCode: 404,
+        details: { attemptedStatus: normalizedStatus, reason: 'match_not_found' }
+      });
       return res.status(404).json({
         success: false,
         error: 'Match not found'
@@ -805,9 +1270,12 @@ router.put('/:id/status', authenticateJWT, isAdmin, async (req, res) => {
     }
 
     const wasCompleted = match.status === 'completed';
-    match.status = status;
-    if (status === 'completed' && !match.endTime) {
+    const previousStatus = String(match.status || '');
+    match.status = normalizedStatus as any;
+    if (normalizedStatus === 'completed' && !match.endTime) {
       match.endTime = new Date();
+    } else if (normalizedStatus !== 'completed') {
+      match.endTime = undefined;
     }
 
     await match.save();
@@ -832,15 +1300,171 @@ router.put('/:id/status', authenticateJWT, isAdmin, async (req, res) => {
       winner: match.winner?.toString() || match.winner
     };
 
+    void writeAdminAudit(req, {
+      entity: 'match_status_update',
+      entityId: String(match._id),
+      statusCode: 200,
+      details: { previousStatus, nextStatus: normalizedStatus }
+    });
+
     res.json({
       success: true,
       data: transformed
     });
   } catch (error) {
     console.error('Error updating match status:', error);
+    void writeAdminAudit(req, {
+      entity: 'match_status_update',
+      entityId: String(req.params.id),
+      statusCode: 500,
+      details: { error: (error as any)?.message || 'Failed to update match status' }
+    });
     res.status(500).json({
       success: false,
       error: 'Failed to update match status'
+    });
+  }
+});
+
+// Bulk update match statuses (admin)
+router.post('/status/bulk', authenticateJWT, isAdmin, async (req, res) => {
+  try {
+    const allowedStatuses = new Set(['scheduled', 'live', 'completed', 'cancelled']);
+    const normalizedStatus = String(req.body?.status || '').trim().toLowerCase();
+    const tournamentId = typeof req.body?.tournamentId === 'string' ? req.body.tournamentId.trim() : '';
+    const dryRun = Boolean(req.body?.dryRun);
+    const matchIds = Array.isArray(req.body?.matchIds)
+      ? req.body.matchIds.map((id: any) => String(id || '').trim()).filter(Boolean)
+      : [];
+
+    if (!allowedStatuses.has(normalizedStatus)) {
+      void writeAdminAudit(req, {
+        entity: 'match_status_bulk_update',
+        statusCode: 400,
+        details: { attemptedStatus: normalizedStatus, reason: 'invalid_status' }
+      });
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid status. Allowed: scheduled, live, completed, cancelled'
+      });
+    }
+
+    if (!matchIds.length) {
+      void writeAdminAudit(req, {
+        entity: 'match_status_bulk_update',
+        statusCode: 400,
+        details: { attemptedStatus: normalizedStatus, reason: 'missing_match_ids' }
+      });
+      return res.status(400).json({
+        success: false,
+        error: 'matchIds array is required'
+      });
+    }
+
+    const matches: any[] = await Match.find({ _id: { $in: matchIds } });
+    const existingById = new Map(matches.map((m: any) => [String(m._id), m]));
+
+    if (tournamentId) {
+      const outOfTournament = matches.some((match: any) => String(match?.tournament || '') !== tournamentId);
+      if (outOfTournament) {
+        void writeAdminAudit(req, {
+          entity: 'match_status_bulk_update',
+          statusCode: 400,
+          details: {
+            attemptedStatus: normalizedStatus,
+            tournamentId,
+            reason: 'match_tournament_mismatch'
+          }
+        });
+        return res.status(400).json({
+          success: false,
+          error: 'Some matches do not belong to selected tournament'
+        });
+      }
+    }
+
+    let updated = 0;
+    let skipped = 0;
+    let failed = 0;
+    const details: Array<{ matchId: string; status: 'updated' | 'skipped' | 'failed'; reason?: string }> = [];
+
+    for (const id of matchIds) {
+      const match: any = existingById.get(id);
+      if (!match) {
+        failed += 1;
+        details.push({ matchId: id, status: 'failed', reason: 'Match not found' });
+        continue;
+      }
+
+      try {
+        const previousStatus = String(match.status || '');
+        if (previousStatus === normalizedStatus) {
+          skipped += 1;
+          details.push({ matchId: id, status: 'skipped', reason: 'Already in target status' });
+          continue;
+        }
+
+        const wasCompleted = previousStatus === 'completed';
+        if (!dryRun) {
+          match.status = normalizedStatus;
+          if (normalizedStatus === 'completed' && !match.endTime) {
+            match.endTime = new Date();
+          } else if (normalizedStatus !== 'completed') {
+            match.endTime = undefined;
+          }
+
+          await match.save();
+
+          const nowCompleted = normalizedStatus === 'completed';
+          if (!wasCompleted && nowCompleted) {
+            await handleMatchCompleted((match as any)._id.toString(), match.winner?.toString());
+          }
+        }
+
+        updated += 1;
+        details.push({ matchId: id, status: 'updated' });
+      } catch (error: any) {
+        failed += 1;
+        details.push({ matchId: id, status: 'failed', reason: error?.message || 'Update failed' });
+      }
+    }
+
+    void writeAdminAudit(req, {
+      entity: 'match_status_bulk_update',
+      statusCode: 200,
+      details: {
+        targetStatus: normalizedStatus,
+        tournamentId: tournamentId || null,
+        dryRun,
+        requested: matchIds.length,
+        updated,
+        skipped,
+        failed
+      }
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        status: normalizedStatus,
+        dryRun,
+        requested: matchIds.length,
+        updated,
+        skipped,
+        failed,
+        details
+      }
+    });
+  } catch (error: any) {
+    console.error('Error bulk updating match statuses:', error);
+    void writeAdminAudit(req, {
+      entity: 'match_status_bulk_update',
+      statusCode: 500,
+      details: { error: error?.message || 'Failed to bulk update match statuses' }
+    });
+    return res.status(500).json({
+      success: false,
+      error: error?.message || 'Failed to bulk update match statuses'
     });
   }
 });

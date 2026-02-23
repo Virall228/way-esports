@@ -42,6 +42,7 @@ import billingRouter from './routes/billing';
 import usersRouter from './routes/users';
 import tasksRouter from './routes/tasks';
 import tournamentRoomsRouter from './routes/tournamentRooms';
+import intelligenceRouter from './routes/intelligence';
 import User from './models/User';
 
 import { seedDefaultAchievements } from './services/achievements/seedAchievements';
@@ -170,6 +171,7 @@ app.use('/api/billing', authenticateJWT, billingRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/tasks', tasksRouter);
 app.use('/api/tournament-rooms', tournamentRoomsRouter);
+app.use('/api/intelligence', intelligenceRouter);
 
 // Serve static files from uploads directory
 app.use('/api/uploads', express.static(path.join(process.cwd(), 'uploads')));

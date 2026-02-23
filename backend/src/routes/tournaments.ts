@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import Tournament, { ITournament } from '../models/Tournament';
 import Match from '../models/Match';
+import MatchEvent from '../models/MatchEvent';
 import Team from '../models/Team';
 import User from '../models/User';
 import TournamentRegistration from '../models/TournamentRegistration';
@@ -523,6 +524,102 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Tournament realtime stream (SSE): pushes update when tournament or match snapshot changes
+router.get('/:id/stream', async (req, res) => {
+  const tournamentId = String(req.params.id || '').trim();
+  if (!tournamentId || !mongoose.Types.ObjectId.isValid(tournamentId)) {
+    return res.status(400).json({ success: false, error: 'Invalid tournament id' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders?.();
+
+  let closed = false;
+  let lastSignature = '';
+
+  const buildSignature = async () => {
+    const tournament: any = await Tournament.findById(tournamentId)
+      .select('_id updatedAt status startDate endDate registeredTeams matches')
+      .lean();
+
+    if (!tournament) return null;
+
+    const matches: any[] = await Match.find({ tournament: tournamentId })
+      .select('_id updatedAt status score winner round')
+      .lean();
+
+    const statusCounts = matches.reduce((acc: Record<string, number>, row: any) => {
+      const status = String(row?.status || 'unknown');
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {});
+
+    const latestMatchUpdatedAt = matches.reduce((latest, row: any) => {
+      const candidate = row?.updatedAt ? new Date(row.updatedAt).getTime() : 0;
+      return Math.max(latest, candidate);
+    }, 0);
+
+    const signaturePayload = {
+      tournamentUpdatedAt: tournament.updatedAt ? new Date(tournament.updatedAt).getTime() : 0,
+      latestMatchUpdatedAt,
+      status: String(tournament.status || ''),
+      registeredTeamsCount: Array.isArray(tournament.registeredTeams) ? tournament.registeredTeams.length : 0,
+      matchesCount: Array.isArray(tournament.matches) ? tournament.matches.length : matches.length,
+      statusCounts
+    };
+
+    return {
+      signature: JSON.stringify(signaturePayload),
+      payload: {
+        timestamp: new Date().toISOString(),
+        tournamentId,
+        ...signaturePayload
+      }
+    };
+  };
+
+  const emitIfChanged = async () => {
+    try {
+      if (closed) return;
+      const built = await buildSignature();
+      if (!built) {
+        res.write(`event: tournament_not_found\n`);
+        res.write(`data: ${JSON.stringify({ tournamentId })}\n\n`);
+        return;
+      }
+
+      if (built.signature !== lastSignature) {
+        lastSignature = built.signature;
+        res.write(`event: tournament_update\n`);
+        res.write(`data: ${JSON.stringify(built.payload)}\n\n`);
+      }
+    } catch (error: any) {
+      res.write(`event: tournament_error\n`);
+      res.write(`data: ${JSON.stringify({ error: error?.message || 'stream_error' })}\n\n`);
+    }
+  };
+
+  const heartbeat = setInterval(() => {
+    if (closed) return;
+    res.write(': keep-alive\n\n');
+  }, 15000);
+
+  const poller = setInterval(() => {
+    emitIfChanged().catch(() => {});
+  }, 5000);
+
+  emitIfChanged().catch(() => {});
+
+  req.on('close', () => {
+    closed = true;
+    clearInterval(heartbeat);
+    clearInterval(poller);
+    res.end();
+  });
+});
+
 // Get tournament by ID
 router.get('/:id', async (req, res) => {
   try {
@@ -998,6 +1095,62 @@ router.get('/:id/admin-overview', authenticateJWT, isAdmin, async (req, res) => 
       .sort({ startTime: 1 })
       .lean();
 
+    const matchIds = matches
+      .map((match: any) => match?._id)
+      .filter(Boolean)
+      .map((id: any) => new mongoose.Types.ObjectId(id));
+
+    const [eventsByTypeRows, participantsRows] = matchIds.length
+      ? await Promise.all([
+        MatchEvent.aggregate([
+          { $match: { matchId: { $in: matchIds } } },
+          {
+            $group: {
+              _id: {
+                matchId: '$matchId',
+                eventType: '$eventType'
+              },
+              count: { $sum: 1 }
+            }
+          }
+        ]),
+        MatchEvent.aggregate([
+          { $match: { matchId: { $in: matchIds } } },
+          {
+            $group: {
+              _id: '$matchId',
+              players: { $addToSet: '$playerId' },
+              teams: { $addToSet: '$teamId' },
+              totalEvents: { $sum: 1 }
+            }
+          }
+        ])
+      ])
+      : [[], []];
+
+    const eventsByMatch = new Map<string, Record<string, number>>();
+    for (const row of eventsByTypeRows as any[]) {
+      const matchId = row?._id?.matchId ? String(row._id.matchId) : '';
+      const eventType = row?._id?.eventType ? String(row._id.eventType) : '';
+      if (!matchId || !eventType) continue;
+      const next = eventsByMatch.get(matchId) || {};
+      next[eventType] = Number(row?.count || 0);
+      eventsByMatch.set(matchId, next);
+    }
+
+    const participantsByMatch = new Map<string, { players: number; teams: number; totalEvents: number }>();
+    for (const row of participantsRows as any[]) {
+      const matchId = row?._id ? String(row._id) : '';
+      if (!matchId) continue;
+      const players = Array.isArray(row?.players) ? row.players.filter(Boolean).length : 0;
+      const teams = Array.isArray(row?.teams) ? row.teams.filter(Boolean).length : 0;
+      participantsByMatch.set(matchId, {
+        players,
+        teams,
+        totalEvents: Number(row?.totalEvents || 0)
+      });
+    }
+
     const teams = (tournament.registeredTeams || []).map((team: any) => ({
       id: team?._id?.toString?.() || '',
       name: team?.name || '',
@@ -1053,6 +1206,29 @@ router.get('/:id/admin-overview', authenticateJWT, isAdmin, async (req, res) => 
       });
     });
 
+    const matchStatusSummary = matches.reduce(
+      (acc, match: any) => {
+        const key = String(match?.status || 'scheduled').toLowerCase();
+        if (key === 'live' || key === 'completed' || key === 'cancelled' || key === 'scheduled') {
+          acc[key] += 1;
+        } else {
+          acc.scheduled += 1;
+        }
+        return acc;
+      },
+      { scheduled: 0, live: 0, completed: 0, cancelled: 0 }
+    );
+
+    const roomsPrepared = matches.filter((match: any) => Boolean(match?.roomCredentials?.roomId && match?.roomCredentials?.password)).length;
+    const liveWithoutRoom = matches.filter(
+      (match: any) => String(match?.status || '').toLowerCase() === 'live' && !(match?.roomCredentials?.roomId && match?.roomCredentials?.password)
+    ).length;
+    const completedWithoutWinner = matches.filter(
+      (match: any) => String(match?.status || '').toLowerCase() === 'completed' && !match?.winner
+    ).length;
+
+    const pendingRequests = requests.filter((item: any) => String(item?.status || '').toLowerCase() === 'pending').length;
+
     return res.json({
       success: true,
       data: {
@@ -1063,6 +1239,15 @@ router.get('/:id/admin-overview', authenticateJWT, isAdmin, async (req, res) => 
           status: tournament.status || 'upcoming',
           maxTeams: Number(tournament.maxTeams || 0),
           participants: teams.length
+        },
+        summary: {
+          teamsApproved: teams.length,
+          requestsPending: pendingRequests,
+          matchesTotal: matches.length,
+          roomsPrepared,
+          liveWithoutRoom,
+          completedWithoutWinner,
+          byStatus: matchStatusSummary
         },
         teams,
         requests,
@@ -1097,7 +1282,27 @@ router.get('/:id/admin-overview', authenticateJWT, isAdmin, async (req, res) => 
               visibleAt: match.roomCredentials.visibleAt?.toISOString?.() || null,
               expiresAt: match.roomCredentials.expiresAt?.toISOString?.() || null
             }
-            : null
+            : null,
+          eventsSummary: (() => {
+            const key = match._id?.toString?.() || '';
+            const byType = eventsByMatch.get(key) || {};
+            const participants = participantsByMatch.get(key) || { players: 0, teams: 0, totalEvents: 0 };
+            return {
+              totalEvents: Number(participants.totalEvents || 0),
+              participants: {
+                players: Number(participants.players || 0),
+                teams: Number(participants.teams || 0)
+              },
+              byType: {
+                kill: Number(byType.kill || 0),
+                death: Number(byType.death || 0),
+                assist: Number(byType.assist || 0),
+                utility: Number(byType.utility || 0),
+                clutch: Number(byType.clutch || 0),
+                objective: Number(byType.objective || 0)
+              }
+            };
+          })()
         })),
         bracket
       }

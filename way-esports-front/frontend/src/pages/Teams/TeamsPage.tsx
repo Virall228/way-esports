@@ -11,6 +11,8 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 import { resolveTeamLogoUrl } from '../../utils/media';
+import FlameAuraAvatar from '../../components/UI/FlameAuraAvatar';
+import { getTeamPoints, getTierByPoints, getIntensityByPointsAndRank } from '../../utils/flameRank';
 
 const Container = styled.div`
   padding: 1rem;
@@ -815,9 +817,14 @@ const TeamsPage: React.FC = () => {
                 .map(team => (
                   <TeamCard key={team.id}>
                     <TeamHeader>
-                      <TeamAvatar $imageUrl={team.logo}>
-                        {!team.logo ? team.tag.replace('#', '').slice(0, 2) : null}
-                      </TeamAvatar>
+                      <FlameAuraAvatar
+                        imageUrl={team.logo || undefined}
+                        fallbackText={team.tag.replace('#', '').slice(0, 2) || team.name || '?'}
+                        size={60}
+                        tier={getTierByPoints(getTeamPoints(team.wins, 0, team.winRate, team.tournaments))}
+                        intensity={getIntensityByPointsAndRank(getTeamPoints(team.wins, 0, team.winRate, team.tournaments))}
+                        rounded
+                      />
                       <TeamInfo>
                         <TeamName>{team.name}</TeamName>
                         <TeamTag>{team.tag}</TeamTag>

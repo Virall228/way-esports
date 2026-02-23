@@ -73,5 +73,6 @@ const userStatsSchema = new Schema<IUserStats>(
 userStatsSchema.index({ impactRating: -1 });
 userStatsSchema.index({ hiddenGem: 1, impactRating: -1 });
 userStatsSchema.index({ primaryRole: 1 });
+userStatsSchema.index({ watchlist: 1, watchlistAddedAt: -1 });
 
 export default mongoose.model<IUserStats>('UserStats', userStatsSchema);

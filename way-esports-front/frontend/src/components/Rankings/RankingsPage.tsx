@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { api } from '../../services/api';
+import FlameAuraAvatar from '../UI/FlameAuraAvatar';
+import { getTierByRank, getIntensityByPointsAndRank, getTeamPoints } from '../../utils/flameRank';
 import {
     TeamRanking,
     PlayerRanking,
@@ -9,6 +11,7 @@ import {
     calculateRankChange
 } from '../../utils/rankings';
 import { resolveMediaUrl, resolveTeamLogoUrl } from '../../utils/media';
+import { getFullUrl } from '../../config/api';
 
 const Container = styled.div`
     width: 100%;
@@ -34,6 +37,17 @@ const UpdateInfo = styled.div`
     color: #999;
     font-size: 14px;
     margin-top: 8px;
+`;
+
+const LiveBadge = styled.span<{ $online: boolean }>`
+    display: inline-flex;
+    align-items: center;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    border: 1px solid ${({ $online }) => ($online ? 'rgba(76,175,80,0.5)' : 'rgba(255,171,145,0.45)')};
+    color: ${({ $online }) => ($online ? '#81c784' : '#ffab91')};
 `;
 
 const TabContainer = styled.div`
@@ -191,11 +205,30 @@ const RankingsPage: React.FC = () => {
     const [teamRankings, setTeamRankings] = useState<TeamRanking[]>([]);
     const [playerRankings, setPlayerRankings] = useState<PlayerRanking[]>([]);
     const [currentPeriod] = useState(getCurrentRankingPeriod());
+    const [liveConnected, setLiveConnected] = useState(false);
+    const [lastLiveUpdateAt, setLastLiveUpdateAt] = useState<string | null>(null);
 
     useEffect(() => {
         fetchRankings();
         const interval = setInterval(fetchRankings, 5 * 60 * 1000); // Refresh every 5 minutes
         return () => clearInterval(interval);
+    }, [activeTab, timeFrame, game]);
+
+    useEffect(() => {
+        const endpoint = getFullUrl('/api/intelligence/stream/rank-updates');
+        const source = new EventSource(endpoint);
+
+        source.onopen = () => setLiveConnected(true);
+        source.onerror = () => setLiveConnected(false);
+        source.addEventListener('rank_update', () => {
+            setLastLiveUpdateAt(new Date().toISOString());
+            void fetchRankings();
+        });
+
+        return () => {
+            source.close();
+            setLiveConnected(false);
+        };
     }, [activeTab, timeFrame, game]);
 
     const toNumber = (value: any, fallback = 0) => {
@@ -251,7 +284,7 @@ const RankingsPage: React.FC = () => {
         const previousRank = toNumber(player?.previousRank, rank);
         const matches = toNumber(player?.matches ?? player?.totalMatches, 0);
         const winRate = toNumber(player?.winRate, 0);
-        const rating = toNumber(player?.rating, Math.round(winRate));
+        const rating = toNumber(player?.points, toNumber(player?.rating, Math.round(winRate)));
         const teams = Array.isArray(player?.teams) ? player.teams : [];
         const teamName = player?.team || teams[0]?.name || teams[0]?.tag || '-';
         const fullName = [player?.firstName, player?.lastName].filter(Boolean).join(' ').trim();
@@ -265,9 +298,10 @@ const RankingsPage: React.FC = () => {
         };
 
         const preferredDisplayName = (
-            player?.username ||
+            player?.displayName ||
             player?.name ||
             fullName ||
+            player?.username ||
             player?.email?.split?.('@')?.[0] ||
             'Player'
         );
@@ -316,6 +350,10 @@ const RankingsPage: React.FC = () => {
                 <Title>Rankings</Title>
                 <UpdateInfo>
                     Week {currentPeriod.weekNumber} {'\u2022'} Updated {new Date().toLocaleDateString()}
+                    <LiveBadge $online={liveConnected}>
+                        {liveConnected ? 'LIVE' : 'OFFLINE'}
+                    </LiveBadge>
+                    {lastLiveUpdateAt ? ` • last push ${new Date(lastLiveUpdateAt).toLocaleTimeString()}` : ''}
                 </UpdateInfo>
             </Header>
 
@@ -358,7 +396,16 @@ const RankingsPage: React.FC = () => {
                                 {formatRankChange(team.rankingStats.rankChange)}
                             </RankChange>
                         </RankInfo>
-                        <Avatar imageUrl={team.logo} />
+                        <div style={{ margin: '0 20px' }}>
+                            <FlameAuraAvatar
+                                imageUrl={team.logo || undefined}
+                                fallbackText={team.name || team.tag || '?'}
+                                size={50}
+                                tier={getTierByRank(team.rank)}
+                                intensity={getIntensityByPointsAndRank(getTeamPoints(team.wins, 0, team.winRate, team.tournamentWins), team.rank)}
+                                rounded
+                            />
+                        </div>
                         <Info>
                             <Name>
                                 {team.name}
@@ -390,12 +437,21 @@ const RankingsPage: React.FC = () => {
                                 {formatRankChange(player.rankingStats.rankChange)}
                             </RankChange>
                         </RankInfo>
-                        <Avatar imageUrl={player.avatar} />
+                        <div style={{ margin: '0 20px' }}>
+                            <FlameAuraAvatar
+                                imageUrl={player.avatar || undefined}
+                                fallbackText={player.name || '?'}
+                                size={50}
+                                tier={getTierByRank(player.rank)}
+                                intensity={getIntensityByPointsAndRank(player.rating, player.rank)}
+                                rounded
+                            />
+                        </div>
                         <Info>
                             <Name>{player.name}</Name>
                             <Stats>
                                 <Stat>Team: <span>{player.team}</span></Stat>
-                                <Stat>Rating: <span>{player.rating}</span></Stat>
+                                <Stat>Points: <span>{player.rating}</span></Stat>
                                 <Stat>Matches: <span>{player.matches}</span></Stat>
                                 <Stat>Win Rate: <span>{player.winRate}%</span></Stat>
                             </Stats>

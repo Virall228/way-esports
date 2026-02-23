@@ -1,13 +1,15 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { tournamentService } from '../../services/tournamentService';
 import { api } from '../../services/api';
+import { getFullUrl } from '../../config/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
+import TournamentBracket from '../../components/Tournaments/TournamentBracket';
 import { resolveMediaUrl, resolveTeamLogoUrl } from '../../utils/media';
 
 type MatchItem = {
@@ -202,11 +204,14 @@ const Banner = styled.div<{ $src?: string }>`
 
 const TournamentDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<'schedule' | 'live' | 'results' | 'bracket'>('schedule');
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { addNotification } = useNotifications();
   const [roomByMatch, setRoomByMatch] = useState<Record<string, RoomData>>({});
   const [loadingRoomId, setLoadingRoomId] = useState<string | null>(null);
+  const [streamConnected, setStreamConnected] = useState(false);
+  const [streamUpdatedAt, setStreamUpdatedAt] = useState<string | null>(null);
   const { data: tournament, isLoading: isTournamentLoading, error: tournamentError } = useQuery({
     queryKey: ['tournament', id],
     queryFn: async () => {
@@ -252,17 +257,6 @@ const TournamentDetailsPage: React.FC = () => {
     if (tab === 'results') return list.filter((m) => m.status === 'completed');
     return list;
   }, [matches, tab]);
-
-  const rounds = useMemo(() => {
-    const groups: Record<string, MatchItem[]> = {};
-    const list = Array.isArray(matches) ? matches : [];
-    for (const m of list) {
-      const key = (m.round || 'Round').toString();
-      groups[key] = groups[key] || [];
-      groups[key].push(m);
-    }
-    return Object.entries(groups);
-  }, [matches]);
 
   const registeredTeams = useMemo(() => {
     const list = Array.isArray(tournament?.registeredTeams) ? tournament.registeredTeams : [];
@@ -316,6 +310,54 @@ const TournamentDetailsPage: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (!id || !user?.id) return;
+    api.post('/api/analytics/track', {
+      event: 'tournament_page_view',
+      userId: user.id,
+      data: { tournamentId: id },
+      source: 'tournament_details'
+    }).catch(() => {});
+  }, [id, user?.id]);
+
+  useEffect(() => {
+    if (!id || !user?.id) return;
+    api.post('/api/analytics/track', {
+      event: 'page_view',
+      userId: user.id,
+      data: { page: 'tournament_details', tournamentId: id, tab },
+      source: 'tournament_details'
+    }).catch(() => {});
+  }, [id, tab, user?.id]);
+
+  useEffect(() => {
+    if (!id) return;
+    const streamUrl = getFullUrl(`/api/tournaments/${id}/stream`);
+    let source: EventSource | null = null;
+
+    try {
+      source = new EventSource(streamUrl);
+      source.addEventListener('open', () => setStreamConnected(true));
+      source.addEventListener('error', () => setStreamConnected(false));
+      const refresh = () => {
+        setStreamUpdatedAt(new Date().toISOString());
+        queryClient.invalidateQueries({ queryKey: ['tournament', id] });
+        queryClient.invalidateQueries({ queryKey: ['tournament', id, 'matches'] });
+        queryClient.invalidateQueries({ queryKey: ['tournament', String(id), 'bracket'] });
+      };
+
+      source.addEventListener('tournament_update', refresh);
+      source.addEventListener('tournament_not_found', refresh);
+    } catch {
+      // Silent fallback: manual refresh still works
+    }
+
+    return () => {
+      source?.close();
+      setStreamConnected(false);
+    };
+  }, [id, queryClient]);
+
   return (
     <Container>
       <Banner $src={tournamentBanner || '/images/main.png'}>
@@ -327,6 +369,14 @@ const TournamentDetailsPage: React.FC = () => {
             <span style={{ color: '#fff' }}>
               {'\u2022'} {tournament?.startDate ? new Date(tournament.startDate).toLocaleDateString() : '\u2014'}
             </span>
+            <span style={{ color: streamConnected ? '#81c784' : '#ffab91' }}>
+              {'\u2022'} Realtime: {streamConnected ? 'LIVE' : 'OFFLINE'}
+            </span>
+            {streamUpdatedAt ? (
+              <span style={{ color: '#d1d1d1' }}>
+                {'\u2022'} Updated: {new Date(streamUpdatedAt).toLocaleTimeString()}
+              </span>
+            ) : null}
           </Subtitle>
         </div>
       </Banner>
@@ -422,52 +472,10 @@ const TournamentDetailsPage: React.FC = () => {
       )}
 
       {!loading && !error && tab === 'bracket' && (
-        <List>
-          {rounds.map(([roundName, ms]) => (
-            <SurfaceCard key={roundName}>
-              <Row>
-                <TeamName>{roundName}</TeamName>
-                <Meta>{ms.length} matches</Meta>
-              </Row>
-              <List>
-                {ms.map((m) => {
-                  const t1 = getTeamDisplay(m.team1);
-                  const t2 = getTeamDisplay(m.team2);
-                  const score = m.score ? `${m.score.team1 ?? 0}:${m.score.team2 ?? 0}` : '\u2014';
-                  return (
-                    <SurfaceCard key={m.id}>
-                      <Row>
-                        <Meta>{m.startTime ? new Date(m.startTime).toLocaleString() : '\u2014'}</Meta>
-                        <Meta>{m.status}</Meta>
-                      </Row>
-                      <TeamsRow>
-                        <TeamCell>
-                          <TeamLogo $imageUrl={t1.logo}>{!t1.logo ? t1.name.slice(0, 1).toUpperCase() : null}</TeamLogo>
-                          <TeamName>{t1.name}</TeamName>
-                        </TeamCell>
-                        <Vs>{score}</Vs>
-                        <TeamCell $align="right">
-                          <TeamLogo $imageUrl={t2.logo}>{!t2.logo ? t2.name.slice(0, 1).toUpperCase() : null}</TeamLogo>
-                          <TeamName>{t2.name}</TeamName>
-                        </TeamCell>
-                      </TeamsRow>
-                    </SurfaceCard>
-                  );
-                })}
-              </List>
-            </SurfaceCard>
-          ))}
-
-          {!matches.length && (
-            <div style={{ color: '#cccccc', padding: '20px 0' }}>No matches</div>
-          )}
-        </List>
-      )}
-
-      {!loading && !error && tab === 'bracket' && (
-        <div style={{ color: '#cccccc', padding: '20px 0' }}>
-          Bracket view will be implemented next (visual bracket tree powered by matches data).
-        </div>
+        <TournamentBracket
+          tournamentId={String(id || '')}
+          tournamentName={title}
+        />
       )}
     </Container>
   );

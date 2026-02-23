@@ -3,6 +3,7 @@ import Match from '../models/Match';
 import PrizeDistributionService from './prizeDistribution';
 import { prepareMatchRoom } from './matchRoomService';
 import { refreshWeeklyTopProspects, scoutingUtils } from './scoutingEngine';
+import { updateHallOfFameSnapshot } from './hallOfFameService';
 
 const FIVE_MIN = 5 * 60 * 1000;
 const MATCH_INTERVAL_MIN = 30;
@@ -17,6 +18,7 @@ interface ScheduledJob {
 
 const scheduledJobs = new Map<string, ScheduledJob>();
 let lastScoutingWeekKey = '';
+let lastHallOfFameDayKey = '';
 
 const normalizeMatchGame = (game: string | undefined): 'Critical Ops' | 'CS2' | 'PUBG Mobile' => {
   if (game && SUPPORTED_MATCH_GAMES.has(game)) {
@@ -169,6 +171,14 @@ async function runWeeklyScoutingRefresh() {
   lastScoutingWeekKey = weekKey;
 }
 
+async function runDailyHallOfFameRefresh() {
+  const now = new Date();
+  const dayKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
+  if (dayKey === lastHallOfFameDayKey) return;
+  await updateHallOfFameSnapshot();
+  lastHallOfFameDayKey = dayKey;
+}
+
 export function startSchedulers() {
   // Run immediately on boot, then on interval
   const run = async () => {
@@ -179,7 +189,8 @@ export function startSchedulers() {
         closeStaleMatches(),
         ensureUpcomingRoomCredentials(),
         executeScheduledJobs(),
-        runWeeklyScoutingRefresh()
+        runWeeklyScoutingRefresh(),
+        runDailyHallOfFameRefresh()
       ]);
     } catch (err) {
       console.error('[scheduler] error', err);

@@ -5,6 +5,9 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../services/api';
 import { getFullUrl } from '../../config/api';
 import Card from '../../components/UI/Card';
+import FlameAuraAvatar from '../../components/UI/FlameAuraAvatar';
+import { getTierByPoints, getIntensityByPointsAndRank, getPlayerPoints } from '../../utils/flameRank';
+import Button from '../../components/UI/Button';
 
 const Container = styled.div`
   padding: 2rem 1rem;
@@ -28,12 +31,12 @@ const ProfileHeader = styled(Card)`
   }
 `;
 
-const Avatar = styled.img`
+const AvatarWrap = styled.div`
   width: 150px;
   height: 150px;
-  border-radius: 50%;
-  border: 4px solid #ff6b00;
-  object-fit: cover;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 const Info = styled.div`
@@ -106,20 +109,66 @@ const PublicProfilePage: React.FC = () => {
         refetchOnWindowFocus: false
     });
 
+    const { data: statusCard } = useQuery({
+        queryKey: ['public-profile-card', id],
+        queryFn: async () => {
+            if (!id) return null;
+            const res: any = await api.get(`/api/intelligence/telegram/player-card/${id}`);
+            return res?.data || res || null;
+        },
+        enabled: Boolean(id),
+        staleTime: 30000,
+        refetchOnWindowFocus: false
+    });
+
     if (isLoading) return <Container>Loading profile...</Container>;
     if (error || !profile) {
         const message = (error as Error | undefined)?.message || 'Not found';
         return <Container>Error: {message}</Container>;
     }
 
+    const wins = Number(profile?.stats?.wins || 0);
+    const losses = Number(profile?.stats?.losses || 0);
+    const points = getPlayerPoints(wins, losses);
+    const profileTier = getTierByPoints(points);
+    const profileIntensity = getIntensityByPointsAndRank(points);
+
+    const copyPlayerCardLink = async () => {
+        if (!id) return;
+        const cardUrl = getFullUrl(`/api/intelligence/telegram/player-card/${id}.svg`);
+        try {
+            await navigator.clipboard.writeText(cardUrl);
+        } catch {
+            // ignore clipboard errors
+        }
+    };
+
     return (
         <Container>
             <ProfileHeader>
-                <Avatar src={toAvatarUrl(profile.profileLogo || profile.photoUrl)} alt={profile.username} />
+                <AvatarWrap>
+                    <FlameAuraAvatar
+                        imageUrl={toAvatarUrl(profile.profileLogo || profile.photoUrl)}
+                        fallbackText={profile.username || 'U'}
+                        size={150}
+                        tier={profileTier}
+                        intensity={profileIntensity}
+                    />
+                </AvatarWrap>
                 <Info>
                     <Username>{profile.username}</Username>
                     <RealName>{profile.firstName} {profile.lastName}</RealName>
                     <Bio>{profile.bio || "This user hasn't set a bio yet."}</Bio>
+                    <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <Button size="small" variant="outline" onClick={copyPlayerCardLink}>
+                            Copy Player Card
+                        </Button>
+                        {statusCard?.shareLink ? (
+                            <a href={statusCard.shareLink} target="_blank" rel="noreferrer" style={{ color: '#ff6b00', fontSize: '0.9rem', textDecoration: 'none' }}>
+                                Open Telegram Share
+                            </a>
+                        ) : null}
+                    </div>
                 </Info>
             </ProfileHeader>
 

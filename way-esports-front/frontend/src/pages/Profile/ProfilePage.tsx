@@ -15,6 +15,17 @@ import { Link } from 'react-router-dom';
 import { useProfileQuery } from '../../hooks/useProfileQuery';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
+import FlameAuraAvatar from '../../components/UI/FlameAuraAvatar';
+import { getTierByPoints, getIntensityByPointsAndRank, getPlayerPoints } from '../../utils/flameRank';
+
+type TelegramStatusCardData = {
+  userId: string;
+  shareLink?: string | null;
+  sharePayload?: string;
+  points?: number;
+  winRate?: number;
+  rankColor?: string;
+};
 
 const Bio = styled.p`
   line-height: 1.6;
@@ -46,42 +57,30 @@ const ProfileHeader = styled(Card).attrs({ variant: 'elevated' })`
 const Avatar = styled.div<{ $hasImage?: boolean; $imageUrl?: string | null }>`
   width: 120px;
   height: 120px;
-  border-radius: 50%;
-  background: ${({ theme, $hasImage, $imageUrl }) => ($hasImage || $imageUrl) ? 'transparent' : theme.colors.surface};
-  border: 3px solid ${({ theme }) => theme.colors.border.medium};
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 3rem;
-  color: #cccccc;
-  font-weight: bold;
   position: relative;
   cursor: pointer;
   transition: all 0.3s ease;
-  overflow: hidden;
+  overflow: visible;
 
   &:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(0,0,0,0.35); }
 
   &:hover::after {
-    content: '\\1F4F7';
+    content: 'Change';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    top: 42px;
+    left: 12px;
+    right: 12px;
     background: rgba(0, 0, 0, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2rem;
+    font-size: 0.75rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
   }
-`;
-
-const AvatarImage = styled.img`
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 50%;
 `;
 
 const ProfileInfo = styled.div`
@@ -105,6 +104,19 @@ const UserOrg = styled.div`
   color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 1.1rem;
   margin-bottom: 15px;
+`;
+
+const GhostBadge = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 107, 0, 0.16);
+  border: 1px solid rgba(255, 107, 0, 0.5);
+  color: #ffd7b8;
+  font-size: 0.8rem;
+  margin-bottom: 10px;
 `;
 
 const UserStats = styled.div`
@@ -198,6 +210,8 @@ const ProfilePage: React.FC = () => {
   const [newBio, setNewBio] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingUsername, setIsSavingUsername] = useState(false);
+  const [aiGhostBadge, setAiGhostBadge] = useState<string>('');
+  const [statusCardData, setStatusCardData] = useState<TelegramStatusCardData | null>(null);
 
   useEffect(() => {
     if (profile?.bio) {
@@ -207,6 +221,44 @@ const ProfilePage: React.FC = () => {
       setNewUsername(profile.username);
     }
   }, [profile]);
+
+  useEffect(() => {
+    const loadGhostBadge = async () => {
+      try {
+        const targetId = profile?.id || user?.id;
+        if (!targetId) return;
+        const analyticsRes: any = await api.get(`/api/analytics/${targetId}`);
+        const analyticsPayload = analyticsRes?.data || analyticsRes;
+        const skills = analyticsPayload?.skills;
+        if (!skills) return;
+        const styleRes: any = await api.post('/api/intelligence/analytics/style-match', skills);
+        const matches = styleRes?.data || styleRes || [];
+        const top = Array.isArray(matches) ? matches[0] : null;
+        if (!top?.pro || typeof top?.similarity !== 'number') return;
+        setAiGhostBadge(`${top.similarity.toFixed(0)}% ${top.pro} Movement`);
+      } catch {
+        setAiGhostBadge('');
+      }
+    };
+    void loadGhostBadge();
+  }, [profile?.id, user?.id]);
+
+  useEffect(() => {
+    const loadStatusCard = async () => {
+      try {
+        const targetId = String(profile?.id || user?.id || '').trim();
+        if (!targetId) return;
+        const res: any = await api.get(`/api/intelligence/telegram/player-card/${targetId}`);
+        const payload = (res?.data || res || null) as TelegramStatusCardData | null;
+        if (payload) {
+          setStatusCardData(payload);
+        }
+      } catch {
+        setStatusCardData(null);
+      }
+    };
+    void loadStatusCard();
+  }, [profile?.id, user?.id]);
 
   const hasEmoji = (value: string) => /\p{Extended_Pictographic}/u.test(value);
 
@@ -291,6 +343,32 @@ const ProfilePage: React.FC = () => {
     return normalized;
   };
 
+  const wins = Number(profile?.stats?.wins || 0);
+  const losses = Number(profile?.stats?.losses || 0);
+  const points = getPlayerPoints(wins, losses);
+  const profileTier = getTierByPoints(points);
+  const profileIntensity = getIntensityByPointsAndRank(points);
+
+  const copyStatusCard = async () => {
+    const targetId = String(profile?.id || user?.id || '').trim();
+    if (!targetId) return;
+    const cardUrl = getFullUrl(`/api/intelligence/telegram/player-card/${targetId}.svg`);
+    try {
+      await navigator.clipboard.writeText(cardUrl);
+      addNotification({
+        type: 'success',
+        title: 'Status card copied',
+        message: 'Player status card URL copied to clipboard'
+      });
+    } catch {
+      addNotification({
+        type: 'warning',
+        title: 'Copy failed',
+        message: cardUrl
+      });
+    }
+  };
+
   return (
     <Container>
       <ProfileHeader>
@@ -299,11 +377,13 @@ const ProfilePage: React.FC = () => {
           $imageUrl={profile?.profileLogo || profile?.photoUrl}
           onClick={() => setIsPhotoUploadOpen(true)}
         >
-          {(profile?.profileLogo || profile?.photoUrl) ? (
-            <AvatarImage src={getFullAvatarUrl(profile?.profileLogo || profile?.photoUrl) || ''} alt="Profile" />
-          ) : (
-            profile?.username?.charAt(0).toUpperCase() || '\u{1F464}'
-          )}
+          <FlameAuraAvatar
+            imageUrl={getFullAvatarUrl(profile?.profileLogo || profile?.photoUrl) || undefined}
+            fallbackText={profile?.username || 'U'}
+            size={120}
+            tier={profileTier}
+            intensity={profileIntensity}
+          />
         </Avatar>
         <ProfileInfo>
           <ProfileTop>
@@ -332,9 +412,41 @@ const ProfilePage: React.FC = () => {
                 )}
               </div>
               <UserOrg>{t('memberLabel')}</UserOrg>
+              {aiGhostBadge && <GhostBadge>AI Ghost: {aiGhostBadge}</GhostBadge>}
               <Link to={`/profile/${profile?.id || user?.id}`} style={{ color: '#ff6b00', fontSize: '0.9rem', textDecoration: 'none' }}>
                 {'\u{1F517}'} {t('viewPublicProfile')}
               </Link>
+              <div style={{ marginTop: 10, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <Button
+                  size="small"
+                  variant="outline"
+                  onClick={copyStatusCard}
+                >
+                  Copy Player Card
+                </Button>
+                {statusCardData?.shareLink ? (
+                  <a
+                    href={statusCardData.shareLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      color: '#ff6b00',
+                      fontSize: '0.85rem',
+                      textDecoration: 'none',
+                      border: '1px solid rgba(255,107,0,0.5)',
+                      borderRadius: 10,
+                      padding: '6px 10px'
+                    }}
+                  >
+                    Open Telegram Share
+                  </a>
+                ) : null}
+                {statusCardData?.points ? (
+                  <span style={{ color: statusCardData.rankColor || '#ffd7b8', fontSize: '0.82rem' }}>
+                    Points {Number(statusCardData.points).toFixed(0)} • WinRate {Number(statusCardData.winRate || 0).toFixed(1)}%
+                  </span>
+                ) : null}
+              </div>
             </div>
           </ProfileTop>
           <UserStats>

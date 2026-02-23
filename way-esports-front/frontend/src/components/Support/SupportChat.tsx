@@ -19,6 +19,14 @@ type SupportConversation = {
   unreadForAdmin: number;
 };
 
+type SupportAiStatus = {
+  provider?: string;
+  aiEnabled?: boolean;
+  geminiEnabled?: boolean;
+  openAiEnabled?: boolean;
+  circuit?: Record<string, { open: boolean; failures: number; retryInMs: number }>;
+};
+
 const Wrapper = styled.div`
   display: grid;
   gap: 12px;
@@ -152,6 +160,8 @@ const SupportChat: React.FC<SupportChatProps> = ({
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiStatus, setAiStatus] = useState<SupportAiStatus | null>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
 
   const loadThread = async () => {
     if (!api.hasToken()) return;
@@ -161,18 +171,31 @@ const SupportChat: React.FC<SupportChatProps> = ({
       const data = res?.data || {};
       setConversation(data.conversation || null);
       setMessages(Array.isArray(data.messages) ? data.messages : []);
+      setLastUpdatedAt(Date.now());
     } catch (e: any) {
       setError(e?.message || 'Failed to load support chat');
     }
   };
 
+  const loadAiStatus = async () => {
+    if (!api.hasToken()) return;
+    try {
+      const res: any = await api.get('/api/support/ai-status');
+      setAiStatus((res?.data || null) as SupportAiStatus);
+    } catch {
+      setAiStatus(null);
+    }
+  };
+
   useEffect(() => {
     void loadThread();
+    void loadAiStatus();
     const timer = setInterval(() => {
       void loadThread();
+      void loadAiStatus();
     }, 15000);
     return () => clearInterval(timer);
-  }, []);
+  }, [teamId, source, subject]);
 
   const onSend = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -190,6 +213,7 @@ const SupportChat: React.FC<SupportChatProps> = ({
         ...(teamId ? { teamId } : {})
       });
       await loadThread();
+      await loadAiStatus();
     } catch (e: any) {
       setError(e?.message || 'Failed to send message');
     } finally {
@@ -207,13 +231,30 @@ const SupportChat: React.FC<SupportChatProps> = ({
     [messages]
   );
 
+  const statusHint = useMemo(() => {
+    if (!aiStatus) return 'AI first response + manual admin reply when needed';
+    if (!aiStatus.aiEnabled) return 'Admin-only mode: AI auto-replies are disabled';
+    const provider = String(aiStatus.provider || 'auto').toUpperCase();
+    const circuit = aiStatus.circuit || {};
+    const openProviders = Object.entries(circuit)
+      .filter(([, value]) => value?.open)
+      .map(([key]) => key.toUpperCase());
+    if (openProviders.length > 0) {
+      return `AI: ${provider} (fallback, circuit open: ${openProviders.join(', ')})`;
+    }
+    return `AI: ${provider} (Gemini: ${aiStatus.geminiEnabled ? 'ON' : 'OFF'}, OpenAI: ${aiStatus.openAiEnabled ? 'ON' : 'OFF'})`;
+  }, [aiStatus]);
+
   return (
     <Wrapper>
       <StatusRow>
         <StatusBadge $status={conversation?.status || 'open'}>
           {(conversation?.status || 'open').toUpperCase()}
         </StatusBadge>
-        <Hint>AI first response + manual admin reply when needed</Hint>
+        <Hint>
+          {statusHint}
+          {lastUpdatedAt ? ` | Updated: ${new Date(lastUpdatedAt).toLocaleTimeString()}` : ''}
+        </Hint>
       </StatusRow>
 
       <Messages>

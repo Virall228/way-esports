@@ -4,6 +4,7 @@ import { getDashboardStats, getAnalytics, updateEntity, deleteEntity } from '../
 import { authenticateJWT, isAdmin } from '../middleware/auth';
 import User from '../models/User';
 import Team from '../models/Team';
+import Tournament from '../models/Tournament';
 import ContactMessage from '../models/ContactMessage';
 import Wallet from '../models/Wallet';
 import AuditLog from '../models/AuditLog';
@@ -177,6 +178,207 @@ router.get('/ops/backups', async (_req, res) => {
   }
 });
 
+router.get('/ops/audit-timeline', async (req, res) => {
+  try {
+    const hoursRaw = Number(req.query?.hours || 24);
+    const bucketRaw = Number(req.query?.bucketMinutes || 60);
+    const hours = Math.min(Math.max(Number.isFinite(hoursRaw) ? hoursRaw : 24, 1), 24 * 14);
+    const allowedBuckets = new Set([5, 15, 30, 60, 120, 240]);
+    const bucketMinutes = allowedBuckets.has(bucketRaw) ? bucketRaw : 60;
+    const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+    const bucketMs = bucketMinutes * 60 * 1000;
+
+    const rows = await AuditLog.aggregate([
+      { $match: { createdAt: { $gte: since } } },
+      {
+        $project: {
+          statusCode: { $ifNull: ['$statusCode', 0] },
+          bucketTs: {
+            $toDate: {
+              $multiply: [
+                bucketMs,
+                {
+                  $floor: {
+                    $divide: [{ $toLong: '$createdAt' }, bucketMs]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        $group: {
+          _id: '$bucketTs',
+          total: { $sum: 1 },
+          success: {
+            $sum: {
+              $cond: [
+                { $and: [{ $gte: ['$statusCode', 200] }, { $lt: ['$statusCode', 300] }] },
+                1,
+                0
+              ]
+            }
+          },
+          clientError: {
+            $sum: {
+              $cond: [
+                { $and: [{ $gte: ['$statusCode', 400] }, { $lt: ['$statusCode', 500] }] },
+                1,
+                0
+              ]
+            }
+          },
+          serverError: {
+            $sum: {
+              $cond: [
+                { $gte: ['$statusCode', 500] },
+                1,
+                0
+              ]
+            }
+          }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    const points = rows.map((row: any) => ({
+      ts: row?._id instanceof Date ? row._id.toISOString() : new Date(row?._id).toISOString(),
+      total: Number(row?.total || 0),
+      success: Number(row?.success || 0),
+      clientError: Number(row?.clientError || 0),
+      serverError: Number(row?.serverError || 0)
+    }));
+
+    const totals = points.reduce(
+      (acc, point) => {
+        acc.total += point.total;
+        acc.success += point.success;
+        acc.clientError += point.clientError;
+        acc.serverError += point.serverError;
+        return acc;
+      },
+      { total: 0, success: 0, clientError: 0, serverError: 0 }
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        hours,
+        bucketMinutes,
+        since: since.toISOString(),
+        totals,
+        points
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to fetch audit timeline' });
+  }
+});
+
+router.get('/ops/errors-top', async (req, res) => {
+  try {
+    const hoursRaw = Number(req.query?.hours || 24);
+    const limitRaw = Number(req.query?.limit || 10);
+    const hours = Math.min(Math.max(Number.isFinite(hoursRaw) ? hoursRaw : 24, 1), 24 * 14);
+    const limit = Math.min(Math.max(Number.isFinite(limitRaw) ? limitRaw : 10, 1), 100);
+    const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+    const rows = await AuditLog.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: since },
+          statusCode: { $gte: 400 }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            method: { $ifNull: ['$method', 'GET'] },
+            path: { $ifNull: ['$path', '/unknown'] },
+            statusCode: { $ifNull: ['$statusCode', 500] }
+          },
+          count: { $sum: 1 },
+          lastSeenAt: { $max: '$createdAt' }
+        }
+      },
+      { $sort: { count: -1, lastSeenAt: -1 } },
+      { $limit: limit }
+    ]);
+
+    return res.json({
+      success: true,
+      data: {
+        hours,
+        since: since.toISOString(),
+        limit,
+        items: rows.map((row: any) => ({
+          method: String(row?._id?.method || 'GET'),
+          path: String(row?._id?.path || '/unknown'),
+          statusCode: Number(row?._id?.statusCode || 500),
+          count: Number(row?.count || 0),
+          lastSeenAt: row?.lastSeenAt instanceof Date ? row.lastSeenAt.toISOString() : null
+        }))
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to fetch top errors' });
+  }
+});
+
+router.get('/ops/errors-samples', async (req, res) => {
+  try {
+    const hoursRaw = Number(req.query?.hours || 24);
+    const limitRaw = Number(req.query?.limit || 20);
+    const method = typeof req.query?.method === 'string' ? req.query.method.trim().toUpperCase() : '';
+    const path = typeof req.query?.path === 'string' ? req.query.path.trim() : '';
+    const statusCodeRaw = Number(req.query?.statusCode || 0);
+
+    if (!method || !path || !Number.isFinite(statusCodeRaw) || statusCodeRaw < 100) {
+      return res.status(400).json({ success: false, error: 'method, path, statusCode are required' });
+    }
+
+    const hours = Math.min(Math.max(Number.isFinite(hoursRaw) ? hoursRaw : 24, 1), 24 * 14);
+    const limit = Math.min(Math.max(Number.isFinite(limitRaw) ? limitRaw : 20, 1), 100);
+    const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+    const rows = await AuditLog.find({
+      createdAt: { $gte: since },
+      method,
+      path,
+      statusCode: statusCodeRaw
+    })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .select('createdAt actorRole actorId statusCode method path entity entityId ip payload')
+      .lean();
+
+    return res.json({
+      success: true,
+      data: {
+        hours,
+        limit,
+        total: rows.length,
+        items: rows.map((row: any) => ({
+          id: String(row?._id || ''),
+          createdAt: row?.createdAt instanceof Date ? row.createdAt.toISOString() : row?.createdAt || null,
+          actorRole: String(row?.actorRole || ''),
+          statusCode: Number(row?.statusCode || 0),
+          method: String(row?.method || ''),
+          path: String(row?.path || ''),
+          entity: String(row?.entity || ''),
+          entityId: row?.entityId ? String(row.entityId) : '',
+          ip: String(row?.ip || ''),
+          payload: row?.payload || null
+        }))
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to fetch error samples' });
+  }
+});
+
 router.get('/ops/stream', async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
@@ -230,6 +432,84 @@ router.get('/ops/stream', async (req, res) => {
   });
 });
 
+router.get('/tournaments/requests/stream', async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders?.();
+
+  let closed = false;
+  let previousSignature = '';
+
+  const writeSnapshot = async () => {
+    if (closed) return;
+    try {
+      const rows = await Tournament.find({})
+        .select('_id name registrationRequests updatedAt')
+        .lean();
+
+      const pendingByTournament = rows
+        .map((row: any) => {
+          const pendingCount = Array.isArray(row?.registrationRequests)
+            ? row.registrationRequests.filter((request: any) => request?.status === 'pending').length
+            : 0;
+          return {
+            tournamentId: String(row?._id || ''),
+            name: String(row?.name || ''),
+            pendingCount,
+            updatedAt: row?.updatedAt ? new Date(row.updatedAt).toISOString() : null
+          };
+        })
+        .filter((item) => item.pendingCount > 0)
+        .sort((a, b) => b.pendingCount - a.pendingCount);
+
+      const totalPending = pendingByTournament.reduce((sum, item) => sum + item.pendingCount, 0);
+      const payload = {
+        timestamp: new Date().toISOString(),
+        totalPending,
+        pendingByTournament
+      };
+
+      const signature = JSON.stringify({
+        totalPending,
+        pendingByTournament: pendingByTournament.map((item) => ({
+          tournamentId: item.tournamentId,
+          pendingCount: item.pendingCount,
+          updatedAt: item.updatedAt
+        }))
+      });
+
+      if (signature !== previousSignature) {
+        previousSignature = signature;
+        res.write('event: snapshot\n');
+        res.write(`data: ${JSON.stringify(payload)}\n\n`);
+      }
+    } catch (error: any) {
+      res.write('event: error\n');
+      res.write(`data: ${JSON.stringify({ timestamp: new Date().toISOString(), error: error?.message || 'stream_failed' })}\n\n`);
+    }
+  };
+
+  await writeSnapshot();
+  const interval = setInterval(() => {
+    writeSnapshot().catch(() => {});
+  }, 10000);
+
+  const heartbeat = setInterval(() => {
+    if (!closed) {
+      res.write(': keep-alive\n\n');
+    }
+  }, 15000);
+
+  req.on('close', () => {
+    closed = true;
+    clearInterval(interval);
+    clearInterval(heartbeat);
+    res.end();
+  });
+});
+
 router.post('/ops/backups/run', idempotency({ required: true }), async (_req, res) => {
   try {
     const startedAt = Date.now();
@@ -256,12 +536,36 @@ router.get('/audit', async (req, res) => {
     const action = typeof req.query.action === 'string' ? req.query.action.trim() : '';
     const entity = typeof req.query.entity === 'string' ? req.query.entity.trim() : '';
     const actorId = typeof req.query.actorId === 'string' ? req.query.actorId.trim() : '';
+    const actorRole = typeof req.query.actorRole === 'string' ? req.query.actorRole.trim() : '';
+    const pathContains = typeof req.query.pathContains === 'string' ? req.query.pathContains.trim() : '';
+    const aiEnabled = typeof req.query.aiEnabled === 'string' ? req.query.aiEnabled.trim().toLowerCase() : '';
+    const from = typeof req.query.from === 'string' ? req.query.from.trim() : '';
+    const to = typeof req.query.to === 'string' ? req.query.to.trim() : '';
 
     const query: Record<string, unknown> = {};
     if (action) query.action = action;
     if (entity) query.entity = entity;
+    if (actorRole) query.actorRole = actorRole;
     if (actorId && mongoose.Types.ObjectId.isValid(actorId)) {
       query.actorId = new mongoose.Types.ObjectId(actorId);
+    }
+    if (pathContains) query.path = new RegExp(pathContains.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    if (aiEnabled === 'true' || aiEnabled === 'false') {
+      query['payload.aiEnabled'] = aiEnabled === 'true';
+    }
+    if (from || to) {
+      const createdAt: Record<string, Date> = {};
+      if (from) {
+        const fromDate = new Date(from);
+        if (!Number.isNaN(fromDate.getTime())) createdAt.$gte = fromDate;
+      }
+      if (to) {
+        const toDate = new Date(to);
+        if (!Number.isNaN(toDate.getTime())) createdAt.$lte = toDate;
+      }
+      if (Object.keys(createdAt).length > 0) {
+        query.createdAt = createdAt;
+      }
     }
 
     const [total, rows] = await Promise.all([
@@ -288,14 +592,38 @@ router.get('/audit/export.csv', async (req, res) => {
     const action = typeof req.query.action === 'string' ? req.query.action.trim() : '';
     const entity = typeof req.query.entity === 'string' ? req.query.entity.trim() : '';
     const actorId = typeof req.query.actorId === 'string' ? req.query.actorId.trim() : '';
+    const actorRole = typeof req.query.actorRole === 'string' ? req.query.actorRole.trim() : '';
+    const pathContains = typeof req.query.pathContains === 'string' ? req.query.pathContains.trim() : '';
+    const aiEnabled = typeof req.query.aiEnabled === 'string' ? req.query.aiEnabled.trim().toLowerCase() : '';
+    const from = typeof req.query.from === 'string' ? req.query.from.trim() : '';
+    const to = typeof req.query.to === 'string' ? req.query.to.trim() : '';
     const rawLimit = toNumber(req.query.limit, 5000);
     const limit = Math.min(Math.max(Math.trunc(rawLimit), 1), 10000);
 
     const query: Record<string, unknown> = {};
     if (action) query.action = action;
     if (entity) query.entity = entity;
+    if (actorRole) query.actorRole = actorRole;
     if (actorId && mongoose.Types.ObjectId.isValid(actorId)) {
       query.actorId = new mongoose.Types.ObjectId(actorId);
+    }
+    if (pathContains) query.path = new RegExp(pathContains.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    if (aiEnabled === 'true' || aiEnabled === 'false') {
+      query['payload.aiEnabled'] = aiEnabled === 'true';
+    }
+    if (from || to) {
+      const createdAt: Record<string, Date> = {};
+      if (from) {
+        const fromDate = new Date(from);
+        if (!Number.isNaN(fromDate.getTime())) createdAt.$gte = fromDate;
+      }
+      if (to) {
+        const toDate = new Date(to);
+        if (!Number.isNaN(toDate.getTime())) createdAt.$lte = toDate;
+      }
+      if (Object.keys(createdAt).length > 0) {
+        query.createdAt = createdAt;
+      }
     }
 
     const rows = await AuditLog.find(query)
