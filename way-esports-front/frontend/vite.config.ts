@@ -20,9 +20,10 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: false,
-    minify: 'esbuild',
-    // Keep default Rollup chunk strategy; forced vendor split caused runtime TDZ errors.
+    // Temporary stability mode: keep output readable and preserve execution order
+    // while tracking down Telegram WebView runtime TDZ in production bundle.
+    sourcemap: true,
+    minify: false,
     chunkSizeWarningLimit: 1000
   },
   define: {
