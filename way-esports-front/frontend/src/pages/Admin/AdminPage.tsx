@@ -1142,43 +1142,6 @@ const AdminPage: React.FC = () => {
   }, [hasAdminAccess, isOpsTab]);
 
   useEffect(() => {
-    if (!hasAdminAccess || activeTab !== 'tournaments' || !selectedTournamentId) return;
-
-    const currentIds = Array.isArray(tournamentRequests)
-      ? tournamentRequests
-        .map((row: AdminTournamentRequestRow) => String(row.id || row.teamId || ''))
-        .filter(Boolean)
-      : [];
-
-    const prevIds = knownTournamentRequestIdsRef.current[selectedTournamentId];
-    if (!prevIds) {
-      knownTournamentRequestIdsRef.current[selectedTournamentId] = currentIds;
-      return;
-    }
-
-    const prevSet = new Set(prevIds);
-    const added = currentIds.filter((id) => !prevSet.has(id));
-    if (added.length > 0) {
-      setNewTournamentRequestCounts((prev) => ({
-        ...prev,
-        [selectedTournamentId]: (prev[selectedTournamentId] || 0) + added.length
-      }));
-
-      if (tournamentRequestSoundEnabled) {
-        playTournamentAlertSound();
-      }
-
-      notify(
-        'info',
-        'New tournament requests',
-        `${added.length} new request${added.length > 1 ? 's' : ''} in tournament ${selectedTournamentId}`
-      );
-    }
-
-    knownTournamentRequestIdsRef.current[selectedTournamentId] = currentIds;
-  }, [hasAdminAccess, activeTab, selectedTournamentId, tournamentRequests, tournamentRequestSoundEnabled]);
-
-  useEffect(() => {
     if (!selectedTournamentId) return;
     setNewTournamentRequestCounts((prev) => ({ ...prev, [selectedTournamentId]: 0 }));
   }, [selectedTournamentId]);
@@ -2496,6 +2459,43 @@ const AdminPage: React.FC = () => {
   const watchlist = watchlistQuery.data || [];
   const hallOfFame = hallOfFameQuery.data || [];
   const matchOpsSummary = matchOpsSummaryQuery.data || null;
+
+  useEffect(() => {
+    if (!hasAdminAccess || activeTab !== 'tournaments' || !selectedTournamentId) return;
+
+    const currentIds = Array.isArray(tournamentRequests)
+      ? tournamentRequests
+        .map((row: AdminTournamentRequestRow) => String(row.id || row.teamId || ''))
+        .filter(Boolean)
+      : [];
+
+    const prevIds = knownTournamentRequestIdsRef.current[selectedTournamentId];
+    if (!prevIds) {
+      knownTournamentRequestIdsRef.current[selectedTournamentId] = currentIds;
+      return;
+    }
+
+    const prevSet = new Set(prevIds);
+    const added = currentIds.filter((id) => !prevSet.has(id));
+    if (added.length > 0) {
+      setNewTournamentRequestCounts((prev) => ({
+        ...prev,
+        [selectedTournamentId]: (prev[selectedTournamentId] || 0) + added.length
+      }));
+
+      if (tournamentRequestSoundEnabled) {
+        playTournamentAlertSound();
+      }
+
+      notify(
+        'info',
+        'New tournament requests',
+        `${added.length} new request${added.length > 1 ? 's' : ''} in tournament ${selectedTournamentId}`
+      );
+    }
+
+    knownTournamentRequestIdsRef.current[selectedTournamentId] = currentIds;
+  }, [hasAdminAccess, activeTab, selectedTournamentId, tournamentRequests, tournamentRequestSoundEnabled, notify]);
 
   useEffect(() => {
     if (activeTab !== 'tournaments') return;
