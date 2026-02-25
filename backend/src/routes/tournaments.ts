@@ -524,6 +524,68 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Admin: export tournaments as CSV with same filters as list
+router.get('/admin/export.csv', authenticateJWT, isAdmin, async (req: any, res: any) => {
+  try {
+    const game = typeof req.query?.game === 'string' ? req.query.game.trim() : '';
+    const status = typeof req.query?.status === 'string' ? req.query.status.trim() : '';
+    const search = typeof req.query?.search === 'string' ? req.query.search.trim() : '';
+
+    const query: any = {};
+    if (game && game !== 'all') query.game = game;
+    if (status && status !== 'all') query.status = status;
+    if (search) query.name = { $regex: search, $options: 'i' };
+
+    const rows: any[] = await Tournament.find(query)
+      .select('name game status startDate endDate prizePool maxTeams maxParticipants participants currentParticipants registeredPlayers registrationRequests')
+      .sort({ startDate: 1 })
+      .lean();
+
+    const csvCell = (value: any) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const header = [
+      'id',
+      'name',
+      'game',
+      'status',
+      'startDate',
+      'endDate',
+      'prizePool',
+      'participants',
+      'maxTeams',
+      'pendingRequests'
+    ];
+
+    const data = rows.map((t: any) => {
+      const participants = Number(t?.participants ?? t?.currentParticipants ?? (Array.isArray(t?.registeredPlayers) ? t.registeredPlayers.length : 0) ?? 0);
+      const maxTeams = Number(t?.maxTeams ?? t?.maxParticipants ?? 0);
+      const pendingRequests = Array.isArray(t?.registrationRequests)
+        ? t.registrationRequests.filter((entry: any) => String(entry?.status || '').toLowerCase() === 'pending').length
+        : 0;
+      return [
+        String(t?._id || ''),
+        String(t?.name || ''),
+        String(t?.game || ''),
+        String(t?.status || ''),
+        t?.startDate ? new Date(t.startDate).toISOString() : '',
+        t?.endDate ? new Date(t.endDate).toISOString() : '',
+        Number(t?.prizePool || 0),
+        participants,
+        maxTeams,
+        pendingRequests
+      ];
+    });
+
+    const csv = [header, ...data].map((row) => row.map(csvCell).join(',')).join('\n');
+    const fileName = `tournaments_${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename=\"${fileName}\"`);
+    return res.status(200).send(csv);
+  } catch (error) {
+    console.error('Error exporting tournaments csv:', error);
+    return res.status(500).json({ success: false, error: 'Failed to export tournaments' });
+  }
+});
+
 // Tournament realtime stream (SSE): pushes update when tournament or match snapshot changes
 router.get('/:id/stream', async (req, res) => {
   const tournamentId = String(req.params.id || '').trim();
@@ -1024,6 +1086,100 @@ router.get('/admin/requests/recent', authenticateJWT, isAdmin, async (req: any, 
   }
 });
 
+// Admin: export recent processed requests across tournaments as CSV
+router.get('/admin/requests/recent/export.csv', authenticateJWT, isAdmin, async (req: any, res: any) => {
+  try {
+    const status = typeof req.query?.status === 'string' ? req.query.status.trim().toLowerCase() : 'all';
+    const search = typeof req.query?.search === 'string' ? req.query.search.trim().toLowerCase() : '';
+    const allowedStatuses = new Set(['all', 'approved', 'rejected']);
+    if (!allowedStatuses.has(status)) {
+      return res.status(400).json({ success: false, error: 'Invalid status filter' });
+    }
+
+    const tournaments: any[] = await Tournament.find(
+      { registrationRequests: { $elemMatch: { status: { $in: ['approved', 'rejected'] } } } }
+    )
+      .select('name game status registrationRequests')
+      .populate('registrationRequests.team', 'name tag')
+      .populate('registrationRequests.requestedBy', 'username firstName lastName')
+      .populate('registrationRequests.reviewedBy', 'username firstName lastName')
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    const rows = tournaments
+      .flatMap((t: any) => {
+        const requests = Array.isArray(t.registrationRequests) ? t.registrationRequests : [];
+        return requests
+          .filter((entry: any) => {
+            const rowStatus = String(entry?.status || '').toLowerCase();
+            if (rowStatus !== 'approved' && rowStatus !== 'rejected') return false;
+            if (status !== 'all' && rowStatus !== status) return false;
+            if (!search) return true;
+
+            const teamName = String(entry?.team?.name || '').toLowerCase();
+            const teamTag = String(entry?.team?.tag || '').toLowerCase();
+            const requestedBy = String(entry?.requestedBy?.username || entry?.requestedBy?.firstName || '').toLowerCase();
+            const reviewedBy = String(entry?.reviewedBy?.username || entry?.reviewedBy?.firstName || '').toLowerCase();
+            const note = String(entry?.note || '').toLowerCase();
+            const tournamentName = String(t?.name || '').toLowerCase();
+
+            return (
+              teamName.includes(search) ||
+              teamTag.includes(search) ||
+              requestedBy.includes(search) ||
+              reviewedBy.includes(search) ||
+              note.includes(search) ||
+              tournamentName.includes(search)
+            );
+          })
+          .map((entry: any) => ({
+            reviewedAt: entry?.reviewedAt ? new Date(entry.reviewedAt).toISOString() : '',
+            requestedAt: entry?.requestedAt ? new Date(entry.requestedAt).toISOString() : '',
+            tournamentName: String(t?.name || ''),
+            game: String(t?.game || ''),
+            tournamentStatus: String(t?.status || ''),
+            teamName: String(entry?.team?.name || ''),
+            teamTag: String(entry?.team?.tag || ''),
+            status: String(entry?.status || ''),
+            note: String(entry?.note || ''),
+            requestedBy: String(entry?.requestedBy?.username || entry?.requestedBy?.firstName || ''),
+            reviewedBy: String(entry?.reviewedBy?.username || entry?.reviewedBy?.firstName || '')
+          }));
+      })
+      .sort((a: any, b: any) => {
+        const left = a?.reviewedAt ? new Date(a.reviewedAt).getTime() : 0;
+        const right = b?.reviewedAt ? new Date(b.reviewedAt).getTime() : 0;
+        return right - left;
+      });
+
+    const csvCell = (value: any) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const header = [
+      'reviewedAt',
+      'requestedAt',
+      'tournamentName',
+      'game',
+      'tournamentStatus',
+      'teamName',
+      'teamTag',
+      'status',
+      'note',
+      'requestedBy',
+      'reviewedBy'
+    ];
+    const csv = [header, ...rows.map((row: any) => header.map((key: string) => (row as any)[key]))]
+      .map((row) => row.map(csvCell).join(','))
+      .join('\n');
+
+    const fileName = `tournament_decisions_${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename=\"${fileName}\"`);
+    return res.status(200).send(csv);
+  } catch (error) {
+    console.error('Error exporting recent tournament requests:', error);
+    return res.status(500).json({ success: false, error: 'Failed to export recent tournament requests' });
+  }
+});
+
 // Admin: list team registration requests for tournament
 router.get('/:id/requests', authenticateJWT, isAdmin, async (req: any, res: any) => {
   try {
@@ -1104,6 +1260,205 @@ router.get('/:id/requests', authenticateJWT, isAdmin, async (req: any, res: any)
   } catch (error) {
     console.error('Error fetching tournament requests:', error);
     return res.status(500).json({ success: false, error: 'Failed to fetch tournament requests' });
+  }
+});
+
+// Admin: export pending tournament requests as CSV (with optional search)
+router.get('/:id/requests/export.csv', authenticateJWT, isAdmin, async (req: any, res: any) => {
+  try {
+    const tournamentId = String(req.params.id || '');
+    const search = typeof req.query?.search === 'string' ? req.query.search.trim().toLowerCase() : '';
+
+    const tournament: any = await Tournament.findById(tournamentId)
+      .populate('registrationRequests.team', 'name tag members captain stats')
+      .populate('registrationRequests.requestedBy', 'username firstName lastName')
+      .lean();
+
+    if (!tournament) {
+      return res.status(404).json({ success: false, error: 'Tournament not found' });
+    }
+
+    const requests = Array.isArray(tournament.registrationRequests) ? tournament.registrationRequests : [];
+    const filtered = requests.filter((entry: any) => {
+      if (String(entry?.status || '').toLowerCase() !== 'pending') return false;
+      if (!search) return true;
+      const teamName = String(entry?.team?.name || '').toLowerCase();
+      const teamTag = String(entry?.team?.tag || '').toLowerCase();
+      const requester = String(entry?.requestedBy?.username || entry?.requestedBy?.firstName || '').toLowerCase();
+      return teamName.includes(search) || teamTag.includes(search) || requester.includes(search);
+    });
+
+    const csvCell = (value: any) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const header = ['requestId', 'teamId', 'teamName', 'teamTag', 'membersCount', 'wins', 'losses', 'winRate', 'requestedBy', 'requestedAt'];
+    const rows = filtered.map((entry: any) => [
+      String(entry?._id || ''),
+      String(entry?.team?._id || ''),
+      String(entry?.team?.name || ''),
+      String(entry?.team?.tag || ''),
+      Array.isArray(entry?.team?.members) ? entry.team.members.length : 0,
+      Number(entry?.team?.stats?.wins || 0),
+      Number(entry?.team?.stats?.losses || 0),
+      Number(entry?.team?.stats?.winRate || 0),
+      String(entry?.requestedBy?.username || entry?.requestedBy?.firstName || ''),
+      entry?.requestedAt ? new Date(entry.requestedAt).toISOString() : ''
+    ]);
+
+    const csv = [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\n');
+    const fileName = `tournament_requests_${tournamentId}_${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename=\"${fileName}\"`);
+    return res.status(200).send(csv);
+  } catch (error) {
+    console.error('Error exporting tournament requests:', error);
+    return res.status(500).json({ success: false, error: 'Failed to export tournament requests' });
+  }
+});
+
+// Admin: list approved tournament participants with pagination/search
+router.get('/:id/participants', authenticateJWT, isAdmin, async (req: any, res: any) => {
+  try {
+    const tournamentId = String(req.params.id || '');
+    const { page, limit } = parsePagination(req.query, { defaultLimit: 12, maxLimit: 100 });
+    const search = typeof req.query?.search === 'string' ? req.query.search.trim().toLowerCase() : '';
+
+    const tournament: any = await Tournament.findById(tournamentId)
+      .select('registeredTeams');
+    if (!tournament) {
+      return res.status(404).json({ success: false, error: 'Tournament not found' });
+    }
+
+    const registeredTeamIds = Array.isArray(tournament.registeredTeams)
+      ? tournament.registeredTeams.map((id: any) => String(id)).filter(Boolean)
+      : [];
+
+    if (!registeredTeamIds.length) {
+      return res.json({
+        success: true,
+        data: [],
+        pagination: buildPaginationMeta(page, limit, 0),
+        summary: { filteredTotal: 0 }
+      });
+    }
+
+    const teams: any[] = await Team.find({
+      _id: { $in: registeredTeamIds.map((id: string) => new mongoose.Types.ObjectId(id)) }
+    })
+      .select('name tag logo members players captain stats')
+      .lean();
+
+    const rows = teams
+      .map((team: any) => {
+        const membersSet = new Set<string>();
+        const captainId = team?.captain ? String(team.captain) : '';
+        if (captainId) membersSet.add(captainId);
+        (Array.isArray(team?.members) ? team.members : []).forEach((value: any) => membersSet.add(String(value)));
+        (Array.isArray(team?.players) ? team.players : []).forEach((value: any) => membersSet.add(String(value)));
+
+        return {
+          id: String(team?._id || ''),
+          name: String(team?.name || ''),
+          tag: String(team?.tag || ''),
+          logo: String(team?.logo || ''),
+          membersCount: membersSet.size,
+          stats: {
+            wins: Number(team?.stats?.wins || 0),
+            losses: Number(team?.stats?.losses || 0),
+            points: Number(team?.stats?.points || 0),
+            rank: Number(team?.stats?.rank || 0),
+            winRate: Number(team?.stats?.winRate || 0),
+            totalMatches: Number(team?.stats?.totalMatches || 0)
+          }
+        };
+      })
+      .filter((row: any) => {
+        if (!search) return true;
+        return row.name.toLowerCase().includes(search) || row.tag.toLowerCase().includes(search);
+      })
+      .sort((a: any, b: any) => Number(b?.stats?.points || 0) - Number(a?.stats?.points || 0));
+
+    const total = rows.length;
+    const start = (page - 1) * limit;
+    const data = rows.slice(start, start + limit);
+
+    return res.json({
+      success: true,
+      data,
+      pagination: buildPaginationMeta(page, limit, total),
+      summary: { filteredTotal: total }
+    });
+  } catch (error) {
+    console.error('Error fetching tournament participants:', error);
+    return res.status(500).json({ success: false, error: 'Failed to fetch tournament participants' });
+  }
+});
+
+// Admin: export tournament participants as CSV
+router.get('/:id/participants/export.csv', authenticateJWT, isAdmin, async (req: any, res: any) => {
+  try {
+    const tournamentId = String(req.params.id || '');
+    const search = typeof req.query?.search === 'string' ? req.query.search.trim().toLowerCase() : '';
+
+    const tournament: any = await Tournament.findById(tournamentId).select('registeredTeams');
+    if (!tournament) {
+      return res.status(404).json({ success: false, error: 'Tournament not found' });
+    }
+
+    const registeredTeamIds = Array.isArray(tournament.registeredTeams)
+      ? tournament.registeredTeams.map((id: any) => String(id)).filter(Boolean)
+      : [];
+
+    if (!registeredTeamIds.length) {
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename=\"tournament_participants_${tournamentId}.csv\"`);
+      return res.status(200).send('teamId,teamName,tag,membersCount,wins,losses,points,rank,winRate,totalMatches');
+    }
+
+    const teams: any[] = await Team.find({
+      _id: { $in: registeredTeamIds.map((id: string) => new mongoose.Types.ObjectId(id)) }
+    })
+      .select('name tag members players captain stats')
+      .lean();
+
+    const rows = teams
+      .map((team: any) => {
+        const membersSet = new Set<string>();
+        const captainId = team?.captain ? String(team.captain) : '';
+        if (captainId) membersSet.add(captainId);
+        (Array.isArray(team?.members) ? team.members : []).forEach((value: any) => membersSet.add(String(value)));
+        (Array.isArray(team?.players) ? team.players : []).forEach((value: any) => membersSet.add(String(value)));
+
+        return {
+          teamId: String(team?._id || ''),
+          teamName: String(team?.name || ''),
+          tag: String(team?.tag || ''),
+          membersCount: membersSet.size,
+          wins: Number(team?.stats?.wins || 0),
+          losses: Number(team?.stats?.losses || 0),
+          points: Number(team?.stats?.points || 0),
+          rank: Number(team?.stats?.rank || 0),
+          winRate: Number(team?.stats?.winRate || 0),
+          totalMatches: Number(team?.stats?.totalMatches || 0)
+        };
+      })
+      .filter((row: any) => {
+        if (!search) return true;
+        return row.teamName.toLowerCase().includes(search) || row.tag.toLowerCase().includes(search);
+      })
+      .sort((a: any, b: any) => Number(b?.points || 0) - Number(a?.points || 0));
+
+    const csvCell = (value: any) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const header = ['teamId', 'teamName', 'tag', 'membersCount', 'wins', 'losses', 'points', 'rank', 'winRate', 'totalMatches'];
+    const csv = [header, ...rows.map((row: any) => header.map((key: string) => (row as any)[key]))]
+      .map((row) => row.map(csvCell).join(','))
+      .join('\n');
+
+    const fileName = `tournament_participants_${tournamentId}_${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename=\"${fileName}\"`);
+    return res.status(200).send(csv);
+  } catch (error) {
+    console.error('Error exporting tournament participants:', error);
+    return res.status(500).json({ success: false, error: 'Failed to export participants' });
   }
 });
 
@@ -1665,6 +2020,92 @@ router.delete('/:id/participants/:teamId/remove', authenticateJWT, isAdmin, idem
   }
 });
 
+// Admin: bulk remove teams from tournament participants
+router.post('/:id/participants/bulk-remove', authenticateJWT, isAdmin, idempotency({ required: true }), async (req: any, res: any) => {
+  try {
+    const tournamentId = String(req.params.id || '');
+    const rawTeamIds = Array.isArray(req.body?.teamIds) ? req.body.teamIds : [];
+    const teamIds: string[] = Array.from(
+      new Set<string>(
+        rawTeamIds
+          .map((value: any): string => String(value || '').trim())
+          .filter((value: string) => Boolean(value))
+      )
+    );
+
+    if (!teamIds.length) {
+      return res.status(400).json({ success: false, error: 'teamIds array is required' });
+    }
+
+    const tournament: any = await Tournament.findById(tournamentId);
+    if (!tournament) return res.status(404).json({ success: false, error: 'Tournament not found' });
+
+    const registeredTeamSet = new Set((tournament.registeredTeams || []).map((value: any) => String(value)));
+    const removableTeamIds = teamIds.filter((teamId) => registeredTeamSet.has(teamId));
+    if (!removableTeamIds.length) {
+      return res.json({
+        success: true,
+        message: 'No registered participants matched',
+        data: { requested: teamIds.length, removed: 0, skipped: teamIds.length }
+      });
+    }
+
+    const teams: any[] = await Team.find({ _id: { $in: removableTeamIds.map((id) => new mongoose.Types.ObjectId(id)) } })
+      .select('captain members players');
+    const teamById = new Map(teams.map((team) => [String(team._id), team]));
+
+    const participantIdsToCheck = new Set<string>();
+    for (const teamId of removableTeamIds) {
+      const team = teamById.get(teamId);
+      if (!team) continue;
+      const rows = buildTeamParticipantRows(team);
+      rows.forEach((row) => participantIdsToCheck.add(String(row.userId)));
+    }
+
+    const participantIdSet = new Set(Array.from(participantIdsToCheck));
+    tournament.registeredTeams = (tournament.registeredTeams || [])
+      .filter((value: any) => !removableTeamIds.includes(String(value)));
+    tournament.registeredPlayers = (tournament.registeredPlayers || [])
+      .filter((value: any) => !participantIdSet.has(String(value)));
+
+    await tournament.save();
+
+    await TournamentRegistration.updateMany(
+      { tournamentId, teamId: { $in: removableTeamIds }, status: { $in: ['active', 'pending'] } },
+      { $set: { status: 'rejected' } }
+    );
+
+    for (const userId of participantIdsToCheck) {
+      const stillActive = await TournamentRegistration.exists({
+        tournamentId,
+        userId,
+        status: 'active'
+      });
+      if (!stillActive) {
+        await User.updateOne(
+          { _id: new mongoose.Types.ObjectId(userId) },
+          { $pull: { participatingTournaments: tournament._id } }
+        );
+      }
+    }
+
+    await cacheService.invalidateTournamentCaches();
+
+    return res.json({
+      success: true,
+      message: 'Participants removed',
+      data: {
+        requested: teamIds.length,
+        removed: removableTeamIds.length,
+        skipped: Math.max(0, teamIds.length - removableTeamIds.length)
+      }
+    });
+  } catch (error) {
+    console.error('Error bulk removing tournament participants:', error);
+    return res.status(500).json({ success: false, error: 'Failed to bulk remove participants' });
+  }
+});
+
 // Admin: update participant team stats (wins/losses/points) inside tournament roster
 router.patch('/:id/participants/:teamId/stats', authenticateJWT, isAdmin, idempotency({ required: true }), async (req: any, res: any) => {
   try {
@@ -2067,6 +2508,334 @@ router.get('/:id/admin-overview', authenticateJWT, isAdmin, async (req, res) => 
   } catch (error) {
     console.error('Error fetching admin tournament overview:', error);
     return res.status(500).json({ success: false, error: 'Failed to fetch admin tournament overview' });
+  }
+});
+
+// Admin: paged tournament matches with filters/search
+router.get('/:id/matches/admin', authenticateJWT, isAdmin, async (req: any, res: any) => {
+  try {
+    const tournamentId = String(req.params.id || '');
+    const { page, limit } = parsePagination(req.query, { defaultLimit: 12, maxLimit: 100 });
+    const status = typeof req.query?.status === 'string' ? req.query.status.trim().toLowerCase() : 'all';
+    const room = typeof req.query?.room === 'string' ? req.query.room.trim().toLowerCase() : 'all';
+    const winner = typeof req.query?.winner === 'string' ? req.query.winner.trim().toLowerCase() : 'all';
+    const search = typeof req.query?.search === 'string' ? req.query.search.trim().toLowerCase() : '';
+
+    const tournament = await Tournament.findById(tournamentId).select('_id');
+    if (!tournament) {
+      return res.status(404).json({ success: false, error: 'Tournament not found' });
+    }
+
+    const dbQuery: any = { tournament: new mongoose.Types.ObjectId(tournamentId) };
+    if (status && status !== 'all') {
+      dbQuery.status = status;
+    }
+
+    const rawMatches: any[] = await Match.find(dbQuery)
+      .populate('team1', 'name tag logo')
+      .populate('team2', 'name tag logo')
+      .populate('winner', 'name tag logo')
+      .sort({ startTime: 1 })
+      .lean();
+
+    const filteredMatches = rawMatches.filter((match: any) => {
+      const hasRoom = Boolean(match?.roomCredentials?.roomId && match?.roomCredentials?.password);
+      if (room === 'with_room' && !hasRoom) return false;
+      if (room === 'without_room' && hasRoom) return false;
+
+      const hasWinner = Boolean(match?.winner);
+      if (winner === 'with_winner' && !hasWinner) return false;
+      if (winner === 'without_winner' && hasWinner) return false;
+
+      if (!search) return true;
+      const t1 = String(match?.team1?.name || '').toLowerCase();
+      const t2 = String(match?.team2?.name || '').toLowerCase();
+      const round = String(match?.round || '').toLowerCase();
+      return t1.includes(search) || t2.includes(search) || round.includes(search);
+    });
+
+    const total = filteredMatches.length;
+    const totalAll = rawMatches.length;
+    const roomsPreparedAll = rawMatches.filter((match: any) => Boolean(match?.roomCredentials?.roomId && match?.roomCredentials?.password)).length;
+    const roomsPreparedFiltered = filteredMatches.filter((match: any) => Boolean(match?.roomCredentials?.roomId && match?.roomCredentials?.password)).length;
+    const byStatus = rawMatches.reduce((acc: Record<string, number>, match: any) => {
+      const key = String(match?.status || 'scheduled').toLowerCase();
+      acc[key] = Number(acc[key] || 0) + 1;
+      return acc;
+    }, { scheduled: 0, live: 0, completed: 0, cancelled: 0 });
+    const liveWithoutRoom = rawMatches.filter((match: any) =>
+      String(match?.status || '').toLowerCase() === 'live' &&
+      !(match?.roomCredentials?.roomId && match?.roomCredentials?.password)
+    ).length;
+    const completedWithoutWinner = rawMatches.filter((match: any) =>
+      String(match?.status || '').toLowerCase() === 'completed' && !match?.winner
+    ).length;
+    const skip = (page - 1) * limit;
+    const pageRows = filteredMatches.slice(skip, skip + limit);
+
+    const matchIds = pageRows
+      .map((match: any) => match?._id)
+      .filter(Boolean)
+      .map((id: any) => new mongoose.Types.ObjectId(id));
+
+    const [eventsByTypeRows, participantsRows] = matchIds.length
+      ? await Promise.all([
+        MatchEvent.aggregate([
+          { $match: { matchId: { $in: matchIds } } },
+          {
+            $group: {
+              _id: {
+                matchId: '$matchId',
+                eventType: '$eventType'
+              },
+              count: { $sum: 1 }
+            }
+          }
+        ]),
+        MatchEvent.aggregate([
+          { $match: { matchId: { $in: matchIds } } },
+          {
+            $group: {
+              _id: '$matchId',
+              players: { $addToSet: '$playerId' },
+              teams: { $addToSet: '$teamId' },
+              totalEvents: { $sum: 1 }
+            }
+          }
+        ])
+      ])
+      : [[], []];
+
+    const eventsByMatch = new Map<string, Record<string, number>>();
+    for (const row of eventsByTypeRows as any[]) {
+      const matchId = row?._id?.matchId ? String(row._id.matchId) : '';
+      const eventType = row?._id?.eventType ? String(row._id.eventType) : '';
+      if (!matchId || !eventType) continue;
+      const next = eventsByMatch.get(matchId) || {};
+      next[eventType] = Number(row?.count || 0);
+      eventsByMatch.set(matchId, next);
+    }
+
+    const participantsByMatch = new Map<string, { players: number; teams: number; totalEvents: number }>();
+    for (const row of participantsRows as any[]) {
+      const matchId = row?._id ? String(row._id) : '';
+      if (!matchId) continue;
+      participantsByMatch.set(matchId, {
+        players: Array.isArray(row?.players) ? row.players.length : 0,
+        teams: Array.isArray(row?.teams) ? row.teams.length : 0,
+        totalEvents: Number(row?.totalEvents || 0)
+      });
+    }
+
+    const data = pageRows.map((match: any) => {
+      const key = String(match?._id || '');
+      const byType = eventsByMatch.get(key) || {};
+      const participantsMeta = participantsByMatch.get(key) || { players: 0, teams: 0, totalEvents: 0 };
+      return {
+        id: key,
+        round: String(match?.round || ''),
+        status: String(match?.status || 'scheduled'),
+        startTime: match?.startTime || null,
+        team1: match?.team1
+          ? {
+            id: String(match.team1._id || ''),
+            name: String(match.team1.name || ''),
+            tag: String(match.team1.tag || ''),
+            logo: String(match.team1.logo || '')
+          }
+          : null,
+        team2: match?.team2
+          ? {
+            id: String(match.team2._id || ''),
+            name: String(match.team2.name || ''),
+            tag: String(match.team2.tag || ''),
+            logo: String(match.team2.logo || '')
+          }
+          : null,
+        winnerId: match?.winner ? String(match.winner._id || '') : null,
+        score: {
+          team1: Number(match?.score?.team1 || 0),
+          team2: Number(match?.score?.team2 || 0)
+        },
+        hasRoomCredentials: Boolean(match?.roomCredentials?.roomId && match?.roomCredentials?.password),
+        roomCredentials: match?.roomCredentials?.roomId && match?.roomCredentials?.password
+          ? {
+            roomId: String(match.roomCredentials.roomId || ''),
+            password: String(match.roomCredentials.password || ''),
+            visibleAt: match.roomCredentials.visibleAt || null,
+            expiresAt: match.roomCredentials.expiresAt || null
+          }
+          : null,
+        eventsSummary: {
+          totalEvents: Number(participantsMeta.totalEvents || 0),
+          participants: {
+            players: Number(participantsMeta.players || 0),
+            teams: Number(participantsMeta.teams || 0)
+          },
+          byType
+        }
+      };
+    });
+
+    return res.json({
+      success: true,
+      data,
+      pagination: buildPaginationMeta(page, limit, total),
+      summary: {
+        filteredTotal: total,
+        totalAll,
+        roomsPreparedFiltered,
+        roomsPreparedAll,
+        byStatus,
+        liveWithoutRoom,
+        completedWithoutWinner
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching paged tournament matches:', error);
+    return res.status(500).json({ success: false, error: 'Failed to fetch tournament matches' });
+  }
+});
+
+// Admin: resolve all filtered tournament match IDs for bulk operations
+router.get('/:id/matches/admin/ids', authenticateJWT, isAdmin, async (req: any, res: any) => {
+  try {
+    const tournamentId = String(req.params.id || '');
+    const status = typeof req.query?.status === 'string' ? req.query.status.trim().toLowerCase() : 'all';
+    const room = typeof req.query?.room === 'string' ? req.query.room.trim().toLowerCase() : 'all';
+    const winner = typeof req.query?.winner === 'string' ? req.query.winner.trim().toLowerCase() : 'all';
+    const search = typeof req.query?.search === 'string' ? req.query.search.trim().toLowerCase() : '';
+
+    const tournament = await Tournament.findById(tournamentId).select('_id');
+    if (!tournament) {
+      return res.status(404).json({ success: false, error: 'Tournament not found' });
+    }
+
+    const dbQuery: any = { tournament: new mongoose.Types.ObjectId(tournamentId) };
+    if (status && status !== 'all') {
+      dbQuery.status = status;
+    }
+
+    const rawMatches: any[] = await Match.find(dbQuery)
+      .populate('team1', 'name')
+      .populate('team2', 'name')
+      .select('_id round status winner roomCredentials team1 team2')
+      .lean();
+
+    const filtered = rawMatches.filter((match: any) => {
+      const hasRoom = Boolean(match?.roomCredentials?.roomId && match?.roomCredentials?.password);
+      if (room === 'with_room' && !hasRoom) return false;
+      if (room === 'without_room' && hasRoom) return false;
+
+      const hasWinner = Boolean(match?.winner);
+      if (winner === 'with_winner' && !hasWinner) return false;
+      if (winner === 'without_winner' && hasWinner) return false;
+
+      if (!search) return true;
+      const t1 = String(match?.team1?.name || '').toLowerCase();
+      const t2 = String(match?.team2?.name || '').toLowerCase();
+      const round = String(match?.round || '').toLowerCase();
+      return t1.includes(search) || t2.includes(search) || round.includes(search);
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        matchIds: filtered.map((m: any) => String(m?._id || '')).filter(Boolean),
+        filteredTotal: filtered.length,
+        totalAll: rawMatches.length
+      }
+    });
+  } catch (error) {
+    console.error('Error resolving tournament match ids:', error);
+    return res.status(500).json({ success: false, error: 'Failed to resolve match ids' });
+  }
+});
+
+// Admin: export filtered tournament matches as CSV
+router.get('/:id/matches/admin/export.csv', authenticateJWT, isAdmin, async (req: any, res: any) => {
+  try {
+    const tournamentId = String(req.params.id || '');
+    const status = typeof req.query?.status === 'string' ? req.query.status.trim().toLowerCase() : 'all';
+    const room = typeof req.query?.room === 'string' ? req.query.room.trim().toLowerCase() : 'all';
+    const winner = typeof req.query?.winner === 'string' ? req.query.winner.trim().toLowerCase() : 'all';
+    const search = typeof req.query?.search === 'string' ? req.query.search.trim().toLowerCase() : '';
+
+    const tournament = await Tournament.findById(tournamentId).select('_id');
+    if (!tournament) {
+      return res.status(404).json({ success: false, error: 'Tournament not found' });
+    }
+
+    const dbQuery: any = { tournament: new mongoose.Types.ObjectId(tournamentId) };
+    if (status && status !== 'all') dbQuery.status = status;
+
+    const rawMatches: any[] = await Match.find(dbQuery)
+      .populate('team1', 'name')
+      .populate('team2', 'name')
+      .populate('winner', 'name')
+      .sort({ startTime: 1 })
+      .select('_id round status winner score roomCredentials team1 team2')
+      .lean();
+
+    const filtered = rawMatches.filter((match: any) => {
+      const hasRoom = Boolean(match?.roomCredentials?.roomId && match?.roomCredentials?.password);
+      if (room === 'with_room' && !hasRoom) return false;
+      if (room === 'without_room' && hasRoom) return false;
+
+      const hasWinner = Boolean(match?.winner);
+      if (winner === 'with_winner' && !hasWinner) return false;
+      if (winner === 'without_winner' && hasWinner) return false;
+
+      if (!search) return true;
+      const t1 = String(match?.team1?.name || '').toLowerCase();
+      const t2 = String(match?.team2?.name || '').toLowerCase();
+      const round = String(match?.round || '').toLowerCase();
+      return t1.includes(search) || t2.includes(search) || round.includes(search);
+    });
+
+    const csvCell = (value: any) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const header = [
+      'matchId',
+      'tournamentId',
+      'round',
+      'team1',
+      'team2',
+      'score',
+      'status',
+      'winner',
+      'roomId',
+      'roomPassword',
+      'roomVisibleAt',
+      'roomExpiresAt'
+    ];
+
+    const rows = filtered.map((match: any) => {
+      const winnerName = String(match?.winner?.name || '');
+      return [
+        String(match?._id || ''),
+        tournamentId,
+        String(match?.round || ''),
+        String(match?.team1?.name || ''),
+        String(match?.team2?.name || ''),
+        `${Number(match?.score?.team1 || 0)}:${Number(match?.score?.team2 || 0)}`,
+        String(match?.status || ''),
+        winnerName,
+        String(match?.roomCredentials?.roomId || ''),
+        String(match?.roomCredentials?.password || ''),
+        match?.roomCredentials?.visibleAt ? new Date(match.roomCredentials.visibleAt).toISOString() : '',
+        match?.roomCredentials?.expiresAt ? new Date(match.roomCredentials.expiresAt).toISOString() : ''
+      ];
+    });
+
+    const csv = [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\n');
+    const fileName = `tournament_matches_${tournamentId}_${new Date().toISOString().slice(0, 10)}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename=\"${fileName}\"`);
+    return res.status(200).send(csv);
+  } catch (error) {
+    console.error('Error exporting tournament matches csv:', error);
+    return res.status(500).json({ success: false, error: 'Failed to export tournament matches' });
   }
 });
 

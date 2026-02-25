@@ -66,6 +66,8 @@ const toNumber = (value: unknown, fallback = 0): number => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const buildAuthLogQuery = (queryParams: Record<string, unknown>) => {
   const event = typeof queryParams.event === 'string' ? queryParams.event.trim() : '';
   const method = typeof queryParams.method === 'string' ? queryParams.method.trim() : '';
@@ -83,7 +85,7 @@ const buildAuthLogQuery = (queryParams: Record<string, unknown>) => {
   }
 
   if (search) {
-    const regex = new RegExp(search, 'i');
+    const regex = new RegExp(escapeRegExp(search), 'i');
     query.$or = [
       { identifier: regex },
       { reason: regex },
@@ -772,6 +774,8 @@ router.get('/users', async (req, res) => {
       maxLimit: 200
     });
     const roleFilter = typeof req.query.role === 'string' ? req.query.role.trim() : '';
+    const subscribedFilter = typeof req.query.subscribed === 'string' ? req.query.subscribed.trim() : '';
+    const bannedFilter = typeof req.query.banned === 'string' ? req.query.banned.trim() : '';
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
     const query: any = {};
 
@@ -780,23 +784,41 @@ router.get('/users', async (req, res) => {
     }
 
     if (search) {
-      const regex = new RegExp(search, 'i');
-      query.$or = [
+      const regex = new RegExp(escapeRegExp(search), 'i');
+      const searchOr: any[] = [
         { username: regex },
         { firstName: regex },
         { lastName: regex },
         { email: regex }
       ];
+      if (/^\d{3,20}$/.test(search)) {
+        searchOr.push({ telegramId: Number(search) });
+      }
+      query.$or = searchOr;
     }
 
-    const [total, users] = await Promise.all([
+    if (subscribedFilter === 'yes') {
+      query.isSubscribed = true;
+    } else if (subscribedFilter === 'no') {
+      query.isSubscribed = false;
+    }
+
+    if (bannedFilter === 'yes') {
+      query.isBanned = true;
+    } else if (bannedFilter === 'no') {
+      query.isBanned = false;
+    }
+
+    const [total, users, filteredSubscribed, filteredBanned] = await Promise.all([
       User.countDocuments(query),
       User.find(query)
         .select('-password -passwordHash')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .lean()
+        .lean(),
+      User.countDocuments({ ...query, isSubscribed: true }),
+      User.countDocuments({ ...query, isBanned: true })
     ]);
     const userIds = users.map((item: any) => item?._id).filter(Boolean);
 
@@ -825,10 +847,109 @@ router.get('/users', async (req, res) => {
     res.json({
       success: true,
       data: normalizedUsers,
-      pagination: buildPaginationMeta(page, limit, total)
+      pagination: buildPaginationMeta(page, limit, total),
+      summary: {
+        filteredTotal: total,
+        filteredSubscribed,
+        filteredBanned
+      }
     });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Export filtered users (CSV)
+router.get('/users/export.csv', async (req, res) => {
+  try {
+    const roleFilter = typeof req.query.role === 'string' ? req.query.role.trim() : '';
+    const subscribedFilter = typeof req.query.subscribed === 'string' ? req.query.subscribed.trim() : '';
+    const bannedFilter = typeof req.query.banned === 'string' ? req.query.banned.trim() : '';
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    const query: any = {};
+
+    if (roleFilter) query.role = roleFilter;
+    if (subscribedFilter === 'yes') query.isSubscribed = true;
+    else if (subscribedFilter === 'no') query.isSubscribed = false;
+    if (bannedFilter === 'yes') query.isBanned = true;
+    else if (bannedFilter === 'no') query.isBanned = false;
+
+    if (search) {
+      const regex = new RegExp(escapeRegExp(search), 'i');
+      const searchOr: any[] = [
+        { username: regex },
+        { firstName: regex },
+        { lastName: regex },
+        { email: regex }
+      ];
+      if (/^\d{3,20}$/.test(search)) {
+        searchOr.push({ telegramId: Number(search) });
+      }
+      query.$or = searchOr;
+    }
+
+    const users: any[] = await User.find(query)
+      .select('-password -passwordHash')
+      .sort({ createdAt: -1 })
+      .limit(5000)
+      .lean();
+
+    const userIds = users.map((item: any) => item?._id).filter(Boolean);
+    const wallets: any[] = await Wallet.find({ user: { $in: userIds } })
+      .select('user balance')
+      .lean();
+    const balanceByUser = new Map<string, number>(
+      wallets.map((wallet: any) => [wallet.user.toString(), Number(wallet.balance || 0)])
+    );
+
+    const header = [
+      'id',
+      'username',
+      'firstName',
+      'lastName',
+      'email',
+      'telegramId',
+      'role',
+      'isSubscribed',
+      'subscriptionExpiresAt',
+      'freeEntriesCount',
+      'bonusEntries',
+      'walletBalance',
+      'isBanned',
+      'createdAt'
+    ];
+
+    const lines = [
+      header.join(','),
+      ...users.map((u: any) => {
+        const id = u?._id?.toString?.() || '';
+        const walletBalance = balanceByUser.get(id) ?? Number(u?.wallet?.balance || 0);
+        return [
+          csvEscape(id),
+          csvEscape(u?.username || ''),
+          csvEscape(u?.firstName || ''),
+          csvEscape(u?.lastName || ''),
+          csvEscape(u?.email || ''),
+          csvEscape(u?.telegramId || ''),
+          csvEscape(u?.role || 'user'),
+          csvEscape(Boolean(u?.isSubscribed)),
+          csvEscape(u?.subscriptionExpiresAt || ''),
+          csvEscape(Number(u?.freeEntriesCount || 0)),
+          csvEscape(Number(u?.bonusEntries || 0)),
+          csvEscape(walletBalance),
+          csvEscape(Boolean(u?.isBanned)),
+          csvEscape(u?.createdAt || '')
+        ].join(',');
+      })
+    ];
+
+    const csv = `${lines.join('\n')}\n`;
+    const fileName = `users_${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    return res.status(200).send(csv);
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to export users CSV' });
   }
 });
 
@@ -1090,7 +1211,23 @@ router.get('/wallet/transactions', async (req, res) => {
       if (statusFilter && row.status !== statusFilter) return false;
       if (typeFilter && row.type !== typeFilter) return false;
       if (searchFilter) {
-        const payload = `${row.username} ${row.email} ${row.telegramId}`.toLowerCase();
+        const payload = [
+          row.username,
+          row.email,
+          row.telegramId,
+          row.walletAddress,
+          row.network,
+          row.txHash,
+          row.description,
+          row.reference,
+          row.source,
+          row.type,
+          row.status,
+          Number(row.amount || 0).toFixed(2)
+        ]
+          .filter((value) => value !== undefined && value !== null)
+          .join(' ')
+          .toLowerCase();
         if (!payload.includes(searchFilter)) return false;
       }
       return true;
@@ -1360,7 +1497,7 @@ router.get('/teams', async (req, res) => {
     const query: any = {};
 
     if (search) {
-      const regex = new RegExp(search, 'i');
+      const regex = new RegExp(escapeRegExp(search), 'i');
       query.$or = [{ name: regex }, { tag: regex }, { game: regex }];
     }
 
@@ -1377,7 +1514,10 @@ router.get('/teams', async (req, res) => {
     res.json({
       success: true,
       data: teams,
-      pagination: buildPaginationMeta(page, limit, total)
+      pagination: buildPaginationMeta(page, limit, total),
+      summary: {
+        filteredTotal: total
+      }
     });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -1391,8 +1531,19 @@ router.get('/contacts', async (req, res) => {
       defaultLimit: 50,
       maxLimit: 200
     });
-    const total = await ContactMessage.countDocuments({});
-    const messages = await ContactMessage.find()
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    const query: any = {};
+    if (search) {
+      const regex = new RegExp(escapeRegExp(search), 'i');
+      query.$or = [
+        { name: regex },
+        { email: regex },
+        { message: regex }
+      ];
+    }
+
+    const total = await ContactMessage.countDocuments(query);
+    const messages = await ContactMessage.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -1400,7 +1551,10 @@ router.get('/contacts', async (req, res) => {
     res.json({
       success: true,
       data: messages,
-      pagination: buildPaginationMeta(page, limit, total)
+      pagination: buildPaginationMeta(page, limit, total),
+      summary: {
+        filteredTotal: total
+      }
     });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });

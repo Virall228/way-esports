@@ -22,7 +22,12 @@ type SupportReplyResult = {
 const supportProvider = (process.env.SUPPORT_AI_PROVIDER || process.env.AI_SCOUT_PROVIDER || 'gemini')
   .trim()
   .toLowerCase();
-const geminiKey = (process.env.GEMINI_API_KEY || '').trim();
+const geminiKey = (
+  process.env.GEMINI_API_KEY ||
+  process.env.GEMINI_KEY ||
+  process.env.GOOGLE_API_KEY ||
+  ''
+).trim();
 const openAiKey = (process.env.OPENAI_API_KEY || '').trim();
 
 const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash'];
@@ -50,32 +55,53 @@ ${history}
 };
 
 const heuristicReply = (input: SupportReplyInput): SupportReplyResult => {
-  const last = (input.messages[input.messages.length - 1]?.content || '').toLowerCase();
+  const lastRaw = String(input.messages[input.messages.length - 1]?.content || '');
+  const last = lastRaw.toLowerCase();
+  const hasCyrillic = /[\u0400-\u04FF]/.test(lastRaw);
+
+  const msg = (en: string, ru: string) => (hasCyrillic ? ru : en);
 
   if (last.includes('502') || last.includes('bad gateway')) {
     return {
       provider: 'heuristic',
-      text: 'Detected 502 Bad Gateway. Check container status for api/web/reverse-proxy and inspect reverse-proxy + api logs. If needed, send the last 100 log lines.'
+      text: msg(
+        'Detected 502 Bad Gateway. Check api/web/reverse-proxy container status, then inspect reverse-proxy and api logs. Send the last 100 lines if needed.',
+        'Обнаружен 502 Bad Gateway. Проверь статус контейнеров api/web/reverse-proxy, затем логи reverse-proxy и api. При необходимости отправь последние 100 строк.'
+      )
     };
   }
 
-  if (last.includes('login') || last.includes('auth') || last.includes('вход')) {
+  if (last.includes('login') || last.includes('auth') || last.includes('вход') || last.includes('логин')) {
     return {
       provider: 'heuristic',
-      text: 'Looks like an authentication issue. Check /api/auth/* requests in DevTools and response status (especially 4xx/5xx). Send exact status code and response body.'
+      text: msg(
+        'Looks like an authentication issue. Check /api/auth/* calls in DevTools and response status (especially 4xx/5xx). Send exact status code and response body.',
+        'Похоже на проблему авторизации. Проверь запросы /api/auth/* в DevTools и их статус (особенно 4xx/5xx). Отправь точный код и тело ответа.'
+      )
     };
   }
 
-  if (last.includes('wallet') || last.includes('withdraw') || last.includes('вывод')) {
+  if (
+    last.includes('wallet') ||
+    last.includes('withdraw') ||
+    last.includes('кошел') ||
+    last.includes('вывод')
+  ) {
     return {
       provider: 'heuristic',
-      text: 'Check wallet network (TRC20/ERC20/BEP20), address format, and minimum withdrawal limit. In admin panel, verify transaction status and rejection reason.'
+      text: msg(
+        'Check network (TRC20/ERC20/BEP20), wallet address format, and minimum withdrawal limit. In admin panel, verify transaction status and rejection reason.',
+        'Проверь сеть (TRC20/ERC20/BEP20), формат адреса и минимальный лимит вывода. В админке проверь статус транзакции и причину отклонения.'
+      )
     };
   }
 
   return {
     provider: 'heuristic',
-    text: 'Request received. Describe issue as: what you did -> what you expected -> actual error. I will return exact steps and escalate to admin when needed.'
+    text: msg(
+      'Request received. Describe issue as: what you did -> what you expected -> actual error. I will provide exact steps and escalate to admin when needed.',
+      'Запрос принят. Опиши проблему в формате: что сделал -> что ожидал -> какая ошибка. Я дам точные шаги и передам администратору при необходимости.'
+    )
   };
 };
 

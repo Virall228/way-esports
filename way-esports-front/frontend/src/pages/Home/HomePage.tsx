@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import Card from '../../components/UI/Card';
@@ -49,10 +49,12 @@ const HeroSection = styled(Card).attrs({ variant: 'elevated' })`
     padding: 28px 16px;
     margin-bottom: 28px;
     border-radius: 14px;
+    background: ${({ theme }) => theme.colors.bg.secondary};
+    box-shadow: none;
 
     &::before {
-      opacity: 0.06;
-      background-position: top center;
+      opacity: 0;
+      background: none;
     }
   }
 `;
@@ -109,11 +111,21 @@ const CTAButton = styled(Button).attrs({ variant: 'brand', size: 'large' })`
   border-radius: 8px;
   font-size: 1.1rem;
   letter-spacing: 1px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
 
   @media (max-width: 768px) {
     width: 100%;
     font-size: 0.95rem;
     padding: 12px 14px;
+    transition: none;
+
+    &:hover {
+      transform: none;
+    }
   }
 `;
 
@@ -164,6 +176,16 @@ const FeatureCard = styled(Card).attrs({ variant: 'outlined' })`
       transform: none;
       box-shadow: none;
       border-color: rgba(255, 255, 255, 0.1);
+    }
+  }
+`;
+
+const PageRoot = styled.div`
+  @media (prefers-reduced-motion: reduce), (max-width: 768px) {
+    * {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
     }
   }
 `;
@@ -288,7 +310,10 @@ const StatLabel = styled.div`
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const [isBooting, setIsBooting] = useState(true);
+  const isMobile = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(max-width: 768px)').matches;
+  }, []);
   const [stats, setStats] = useState({
     totalUsers: 0,
     activeTournaments: 0,
@@ -316,33 +341,15 @@ const HomePage: React.FC = () => {
         }
       } catch (e) {
         console.error('Failed to fetch stats:', e);
-      } finally {
-        setIsBooting(false);
       }
     };
     run();
   }, []);
 
-  if (isBooting) {
-    return (
-      <Container>
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          minHeight: '60vh'
-        }}>
-          {/* silent loader without text */}
-          <div style={{
-            width: 48, height: 48, border: '3px solid #444', borderTopColor: '#a3a3a3',
-            borderRadius: '50%'
-          }} />
-        </div>
-      </Container>
-    );
-  }
-
   return (
-    <Container>
-      <HeroSection>
+    <PageRoot>
+      <Container>
+      <HeroSection style={isMobile ? { minHeight: 'auto' } : undefined}>
         <Logo aria-label="WAY logo" />
         <HeroTitle>WAY ESPORTS</HeroTitle>
         <HeroSubtitle>
@@ -426,7 +433,8 @@ const HomePage: React.FC = () => {
           </StatCard>
         </StatsGrid>
       </StatsSection>
-    </Container>
+      </Container>
+    </PageRoot>
   );
 };
 

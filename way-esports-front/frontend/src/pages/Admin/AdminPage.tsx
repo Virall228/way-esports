@@ -525,6 +525,24 @@ interface PagedResult<T> {
   pagination: PaginationMeta | null;
 }
 
+interface UsersSummary {
+  filteredTotal: number;
+  filteredSubscribed: number;
+  filteredBanned: number;
+}
+
+interface TeamsSummary {
+  filteredTotal: number;
+}
+
+interface ContactsSummary {
+  filteredTotal: number;
+}
+
+interface NewsSummary {
+  filteredTotal: number;
+}
+
 interface OpsMetrics {
   status: string;
   uptimeSeconds: number;
@@ -889,6 +907,24 @@ const AdminPage: React.FC = () => {
   const [usersPage, setUsersPage] = useState(1);
   const [usersSearchInput, setUsersSearchInput] = useState('');
   const [usersSearch, setUsersSearch] = useState('');
+  const [usersRoleFilter, setUsersRoleFilter] = useState<'all' | 'user' | 'admin' | 'developer'>('all');
+  const [usersSubscribedFilter, setUsersSubscribedFilter] = useState<'all' | 'yes' | 'no'>('all');
+  const [usersBannedFilter, setUsersBannedFilter] = useState<'all' | 'yes' | 'no'>('all');
+  const [teamsPage, setTeamsPage] = useState(1);
+  const [teamsSearchInput, setTeamsSearchInput] = useState('');
+  const [teamsSearch, setTeamsSearch] = useState('');
+  const [contactsPage, setContactsPage] = useState(1);
+  const [contactsSearchInput, setContactsSearchInput] = useState('');
+  const [contactsSearch, setContactsSearch] = useState('');
+  const [newsPage, setNewsPage] = useState(1);
+  const [newsSearchInput, setNewsSearchInput] = useState('');
+  const [newsSearch, setNewsSearch] = useState('');
+  const [newsStatusFilter, setNewsStatusFilter] = useState<'all' | 'draft' | 'published' | 'archived'>('all');
+  const [tournamentsPage, setTournamentsPage] = useState(1);
+  const [tournamentsSearchInput, setTournamentsSearchInput] = useState('');
+  const [tournamentsSearch, setTournamentsSearch] = useState('');
+  const [tournamentsStatusFilter, setTournamentsStatusFilter] = useState<'all' | 'upcoming' | 'live' | 'completed' | 'cancelled' | 'open'>('all');
+  const [tournamentsGameFilter, setTournamentsGameFilter] = useState<'all' | 'CS2' | 'Critical Ops' | 'PUBG Mobile' | 'Valorant'>('all');
   const [opsStreamData, setOpsStreamData] = useState<OpsStreamPayload | null>(null);
   const [opsStreamConnected, setOpsStreamConnected] = useState(false);
   const [tournamentStreamConnected, setTournamentStreamConnected] = useState(false);
@@ -904,13 +940,17 @@ const AdminPage: React.FC = () => {
   });
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'pending_withdrawals'>('all');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<'all' | 'pending' | 'completed' | 'failed' | 'refund_pending' | 'refunded' | 'refund_denied'>('all');
+  const [paymentSearchInput, setPaymentSearchInput] = useState('');
   const [paymentSearch, setPaymentSearch] = useState('');
   const [paymentsPage, setPaymentsPage] = useState(1);
+  const [tournamentRequestSearchInput, setTournamentRequestSearchInput] = useState('');
   const [tournamentRequestSearch, setTournamentRequestSearch] = useState('');
   const [tournamentRequestsPage, setTournamentRequestsPage] = useState(1);
   const [matchesPage, setMatchesPage] = useState(1);
+  const [recentDecisionsSearchInput, setRecentDecisionsSearchInput] = useState('');
   const [recentDecisionsSearch, setRecentDecisionsSearch] = useState('');
   const [recentDecisionsPage, setRecentDecisionsPage] = useState(1);
+  const [pendingQueuePage, setPendingQueuePage] = useState(1);
   const [recentRequestsStatusFilter, setRecentRequestsStatusFilter] = useState<'all' | 'approved' | 'rejected'>('all');
   const [prospectsFilter, setProspectsFilter] = useState<'all' | 'hidden_gem'>('all');
   const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
@@ -935,6 +975,9 @@ const AdminPage: React.FC = () => {
   const [matchRoomFilter, setMatchRoomFilter] = useState<'all' | 'with_room' | 'without_room'>('all');
   const [matchWinnerFilter, setMatchWinnerFilter] = useState<'all' | 'with_winner' | 'without_winner'>('all');
   const [matchSearch, setMatchSearch] = useState('');
+  const [participantSearchInput, setParticipantSearchInput] = useState('');
+  const [participantSearch, setParticipantSearch] = useState('');
+  const [participantPage, setParticipantPage] = useState(1);
   const [matchOpsWindowHours, setMatchOpsWindowHours] = useState<24 | 48 | 168>(48);
   const [opsTimelineHours, setOpsTimelineHours] = useState<24 | 48 | 168>(24);
   const [opsTimelineBucketMinutes, setOpsTimelineBucketMinutes] = useState<15 | 60>(60);
@@ -1056,6 +1099,7 @@ const AdminPage: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-participants'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'news'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'achievements'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'rewards'] }),
@@ -1098,6 +1142,49 @@ const AdminPage: React.FC = () => {
 
     return () => clearTimeout(timer);
   }, [usersSearchInput]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setTeamsPage(1);
+      setTeamsSearch(teamsSearchInput.trim());
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [teamsSearchInput]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setContactsPage(1);
+      setContactsSearch(contactsSearchInput.trim());
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [contactsSearchInput]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setNewsPage(1);
+      setNewsSearch(newsSearchInput.trim());
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [newsSearchInput]);
+
+  useEffect(() => {
+    setNewsPage(1);
+  }, [newsStatusFilter]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setTournamentsPage(1);
+      setTournamentsSearch(tournamentsSearchInput.trim());
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [tournamentsSearchInput]);
+
+  useEffect(() => {
+    setTournamentsPage(1);
+  }, [tournamentsStatusFilter, tournamentsGameFilter]);
 
   useEffect(() => {
     if (!hasAdminAccess || !isOpsTab) {
@@ -1656,15 +1743,25 @@ const AdminPage: React.FC = () => {
       : [];
   };
 
-  const fetchUsers = async (): Promise<{ items: AdminUserRow[]; pagination: PaginationMeta | null }> => {
+  const fetchUsers = async (): Promise<{ items: AdminUserRow[]; pagination: PaginationMeta | null; summary: UsersSummary | null }> => {
     const params = new URLSearchParams();
     params.set('page', String(usersPage));
     params.set('limit', '25');
     if (usersSearch) params.set('search', usersSearch);
+    if (usersRoleFilter !== 'all') params.set('role', usersRoleFilter);
+    if (usersSubscribedFilter !== 'all') params.set('subscribed', usersSubscribedFilter);
+    if (usersBannedFilter !== 'all') params.set('banned', usersBannedFilter);
 
     const result: any = await api.get(`/api/admin/users?${params.toString()}`);
     const items: any[] = (result && (result.data || result.users || result)) || [];
     const pagination: PaginationMeta | null = result?.pagination || null;
+    const summary: UsersSummary | null = result?.summary
+      ? {
+        filteredTotal: Number(result.summary.filteredTotal || 0),
+        filteredSubscribed: Number(result.summary.filteredSubscribed || 0),
+        filteredBanned: Number(result.summary.filteredBanned || 0)
+      }
+      : null;
 
     return {
       items: items.map((u: any) => ({
@@ -1683,16 +1780,26 @@ const AdminPage: React.FC = () => {
         balance: Number(u.wallet?.balance || 0),
         createdAt: formatDate(u.createdAt)
       })),
-      pagination
+      pagination,
+      summary
     };
   };
 
-  const fetchTeams = async () => {
+  const fetchTeams = async (): Promise<{ items: any[]; pagination: PaginationMeta | null; summary: TeamsSummary | null }> => {
     try {
-      const result: any = await api.get('/api/teams');
+      const params = new URLSearchParams();
+      params.set('page', String(teamsPage));
+      params.set('limit', '25');
+      if (teamsSearch) params.set('search', teamsSearch);
+      const result: any = await api.get(`/api/admin/teams?${params.toString()}`);
       const items = result?.data || [];
-      return items.map((t: any) => ({
-        id: t.id,
+      const pagination: PaginationMeta | null = result?.pagination || null;
+      const summary: TeamsSummary | null = result?.summary
+        ? { filteredTotal: Number(result.summary.filteredTotal || 0) }
+        : null;
+      return {
+        items: items.map((t: any) => ({
+        id: String(t.id || t._id || ''),
         name: t.name,
         tag: t.tag,
         logo: resolveMediaUrl(t.logo || ''),
@@ -1700,7 +1807,10 @@ const AdminPage: React.FC = () => {
         captain: t.captain,
         members: t.members,
         stats: t.stats
-      }));
+      })),
+        pagination,
+        summary
+      };
     } catch (e) {
       console.error('Failed to fetch teams:', e);
       throw e;
@@ -1737,18 +1847,30 @@ const AdminPage: React.FC = () => {
     };
   };
 
-  const fetchContacts = async (): Promise<ContactMessage[]> => {
+  const fetchContacts = async (): Promise<{ items: ContactMessage[]; pagination: PaginationMeta | null; summary: ContactsSummary | null }> => {
     try {
-      const result: any = await api.get('/api/admin/contacts');
+      const params = new URLSearchParams();
+      params.set('page', String(contactsPage));
+      params.set('limit', '25');
+      if (contactsSearch) params.set('search', contactsSearch);
+      const result: any = await api.get(`/api/admin/contacts?${params.toString()}`);
       const items: any[] = Array.isArray(result) ? result : (result?.data || []);
-      return items.map((m: any) => ({
+      const pagination: PaginationMeta | null = result?.pagination || null;
+      const summary: ContactsSummary | null = result?.summary
+        ? { filteredTotal: Number(result.summary.filteredTotal || 0) }
+        : null;
+      return {
+        items: items.map((m: any) => ({
         id: (m._id || m.id || '').toString(),
         name: m.name || '',
         email: m.email || '',
         message: m.message || '',
         userId: m.userId?._id?.toString() || m.userId?.toString() || '',
         createdAt: formatDate(m.createdAt)
-      }));
+      })),
+        pagination,
+        summary
+      };
     } catch (e) {
       console.error('Failed to fetch contact messages:', e);
       throw e;
@@ -1876,10 +1998,24 @@ const AdminPage: React.FC = () => {
     }));
   };
 
-  const fetchTournaments = async () => {
-    const result: any = await api.get('/api/tournaments');
+  const fetchTournaments = async (): Promise<PagedResult<any>> => {
+    const params = new URLSearchParams({
+      page: String(tournamentsPage),
+      limit: '20'
+    });
+    if (tournamentsStatusFilter !== 'all') {
+      params.set('status', tournamentsStatusFilter);
+    }
+    if (tournamentsGameFilter !== 'all') {
+      params.set('game', tournamentsGameFilter);
+    }
+    if (tournamentsSearch.trim()) {
+      params.set('search', tournamentsSearch.trim());
+    }
+    const result: any = await api.get(`/api/tournaments?${params.toString()}`);
     const items: any[] = (result && (result.data || result.tournaments)) || [];
-    return items.map((t: any) => ({
+    return {
+      data: items.map((t: any) => ({
       id: (t.id || t._id || '').toString(),
       name: t.name || t.title || '',
       game: t.game || '',
@@ -1891,7 +2027,9 @@ const AdminPage: React.FC = () => {
       prizePool: Number(t.prizePool ?? 0),
       startDate: t.startDate || null,
       endDate: t.endDate || null
-    }));
+      })),
+      pagination: result?.pagination || null
+    };
   };
 
   const fetchTournamentRequests = async (): Promise<PagedResult<AdminTournamentRequestRow>> => {
@@ -1936,10 +2074,51 @@ const AdminPage: React.FC = () => {
     return (result?.data || result || null) as AdminTournamentOverview | null;
   };
 
-  const fetchPendingTournamentQueue = async (): Promise<any[]> => {
-    const result: any = await api.get('/api/tournaments/admin/requests/pending-overview?limit=50');
+  const fetchTournamentMatches = async (): Promise<PagedResult<any> & {
+    summary: {
+      filteredTotal: number;
+      totalAll?: number;
+      roomsPreparedFiltered?: number;
+      roomsPreparedAll?: number;
+      byStatus?: {
+        scheduled?: number;
+        live?: number;
+        completed?: number;
+        cancelled?: number;
+      };
+      liveWithoutRoom?: number;
+      completedWithoutWinner?: number;
+    } | null
+  }> => {
+    if (!selectedTournamentId) {
+      return { data: [], pagination: null, summary: { filteredTotal: 0, roomsPrepared: 0 } };
+    }
+    const params = new URLSearchParams({
+      page: String(matchesPage),
+      limit: '12',
+      status: matchStatusFilter,
+      room: matchRoomFilter,
+      winner: matchWinnerFilter
+    });
+    if (matchSearch.trim()) {
+      params.set('search', matchSearch.trim());
+    }
+    const result: any = await api.get(`/api/tournaments/${selectedTournamentId}/matches/admin?${params.toString()}`);
+    return {
+      data: Array.isArray(result?.data) ? result.data : [],
+      pagination: result?.pagination || null,
+      summary: result?.summary || null
+    };
+  };
+
+  const fetchPendingTournamentQueue = async (): Promise<PagedResult<any>> => {
+    const params = new URLSearchParams({
+      limit: '12',
+      page: String(pendingQueuePage)
+    });
+    const result: any = await api.get(`/api/tournaments/admin/requests/pending-overview?${params.toString()}`);
     const items: any[] = (result && result.data) || [];
-    return items.map((row: any) => ({
+    const rows = items.map((row: any) => ({
       id: String(row.tournamentId || ''),
       name: String(row.tournamentName || ''),
       game: String(row.game || ''),
@@ -1948,6 +2127,10 @@ const AdminPage: React.FC = () => {
       pendingRequestsCount: Number(row.pendingRequestsCount || 0),
       firstPendingAt: row.firstPendingAt || null
     }));
+    return {
+      data: rows,
+      pagination: result?.pagination || null
+    };
   };
 
   const fetchRecentTournamentRequests = async (): Promise<PagedResult<AdminTournamentRequestHistoryRow>> => {
@@ -1983,17 +2166,48 @@ const AdminPage: React.FC = () => {
     };
   };
 
-  const fetchNews = async () => {
-    const result: any = await api.get('/api/news/admin?status=all');
+  const fetchTournamentParticipants = async (): Promise<PagedResult<any> & { summary: { filteredTotal: number } | null }> => {
+    if (!selectedTournamentId) {
+      return { data: [], pagination: null, summary: { filteredTotal: 0 } };
+    }
+    const params = new URLSearchParams({
+      page: String(participantPage),
+      limit: '12'
+    });
+    if (participantSearch.trim()) {
+      params.set('search', participantSearch.trim());
+    }
+    const result: any = await api.get(`/api/tournaments/${selectedTournamentId}/participants?${params.toString()}`);
+    return {
+      data: Array.isArray(result?.data) ? result.data : [],
+      pagination: result?.pagination || null,
+      summary: result?.summary || null
+    };
+  };
+
+  const fetchNews = async (): Promise<{ items: any[]; pagination: PaginationMeta | null; summary: NewsSummary | null }> => {
+    const params = new URLSearchParams({
+      page: String(newsPage),
+      limit: '20',
+      status: newsStatusFilter
+    });
+    if (newsSearch.trim()) {
+      params.set('search', newsSearch.trim());
+    }
+    const result: any = await api.get(`/api/news/admin?${params.toString()}`);
     const items: any[] = (result && result.data) || [];
-    return items.map((n: any) => ({
+    return {
+      items: items.map((n: any) => ({
       id: (n._id || n.id || '').toString(),
       title: n.title || '',
       content: n.content || '',
       author: n.author?.username || n.author || '',
       status: n.status || 'draft',
       createdAt: formatDate(n.createdAt)
-    }));
+      })),
+      pagination: result?.pagination || null,
+      summary: result?.summary || null
+    };
   };
 
   const fetchAchievements = async () => {
@@ -2243,7 +2457,7 @@ const AdminPage: React.FC = () => {
   };
 
   const usersQuery = useQuery({
-    queryKey: ['admin', 'users', usersPage, usersSearch],
+    queryKey: ['admin', 'users', usersPage, usersSearch, usersRoleFilter, usersSubscribedFilter, usersBannedFilter],
     queryFn: fetchUsers,
     enabled: hasAdminAccess,
     staleTime: 30000,
@@ -2251,7 +2465,7 @@ const AdminPage: React.FC = () => {
   });
 
   const tournamentsQuery = useQuery({
-    queryKey: ['admin', 'tournaments'],
+    queryKey: ['admin', 'tournaments', tournamentsPage, tournamentsSearch, tournamentsStatusFilter, tournamentsGameFilter],
     queryFn: fetchTournaments,
     enabled: hasAdminAccess,
     staleTime: 30000,
@@ -2274,8 +2488,25 @@ const AdminPage: React.FC = () => {
     refetchOnWindowFocus: false
   });
 
+  const tournamentMatchesQuery = useQuery({
+    queryKey: [
+      'admin',
+      'tournament-matches',
+      selectedTournamentId,
+      matchesPage,
+      matchStatusFilter,
+      matchRoomFilter,
+      matchWinnerFilter,
+      matchSearch
+    ],
+    queryFn: fetchTournamentMatches,
+    enabled: hasAdminAccess && activeTab === 'tournaments' && Boolean(selectedTournamentId),
+    staleTime: 5000,
+    refetchOnWindowFocus: false
+  });
+
   const pendingTournamentQueueQuery = useQuery({
-    queryKey: ['admin', 'pending-tournament-queue'],
+    queryKey: ['admin', 'pending-tournament-queue', pendingQueuePage],
     queryFn: fetchPendingTournamentQueue,
     enabled: hasAdminAccess && activeTab === 'tournaments',
     staleTime: 5000,
@@ -2290,8 +2521,16 @@ const AdminPage: React.FC = () => {
     refetchOnWindowFocus: false
   });
 
+  const tournamentParticipantsQuery = useQuery({
+    queryKey: ['admin', 'tournament-participants', selectedTournamentId, participantPage, participantSearch],
+    queryFn: fetchTournamentParticipants,
+    enabled: hasAdminAccess && activeTab === 'tournaments' && Boolean(selectedTournamentId),
+    staleTime: 5000,
+    refetchOnWindowFocus: false
+  });
+
   const newsQuery = useQuery({
-    queryKey: ['admin', 'news'],
+    queryKey: ['admin', 'news', newsPage, newsSearch, newsStatusFilter],
     queryFn: fetchNews,
     enabled: hasAdminAccess,
     staleTime: 30000,
@@ -2315,7 +2554,7 @@ const AdminPage: React.FC = () => {
   });
 
   const teamsQuery = useQuery({
-    queryKey: ['admin', 'teams'],
+    queryKey: ['admin', 'teams', teamsPage, teamsSearch],
     queryFn: fetchTeams,
     enabled: hasAdminAccess,
     staleTime: 30000,
@@ -2339,7 +2578,7 @@ const AdminPage: React.FC = () => {
   });
 
   const contactsQuery = useQuery({
-    queryKey: ['admin', 'contacts'],
+    queryKey: ['admin', 'contacts', contactsPage, contactsSearch],
     queryFn: fetchContacts,
     enabled: hasAdminAccess,
     staleTime: 30000,
@@ -2565,27 +2804,35 @@ const AdminPage: React.FC = () => {
 
   const users = usersQuery.data?.items || [];
   const usersPagination = usersQuery.data?.pagination || null;
-  const tournaments = tournamentsQuery.data || [];
-  const tournamentsWithPending = Array.isArray(tournaments)
-    ? [...tournaments]
-      .filter((row: any) => Number(row?.pendingRequestsCount || 0) > 0)
-      .sort((a: any, b: any) => Number(b?.pendingRequestsCount || 0) - Number(a?.pendingRequestsCount || 0))
-    : [];
-  const pendingTournamentQueue = (pendingTournamentQueueQuery.data && pendingTournamentQueueQuery.data.length > 0)
-    ? pendingTournamentQueueQuery.data
-    : tournamentsWithPending;
+  const usersSummary = usersQuery.data?.summary || null;
+  const tournaments = tournamentsQuery.data?.data || [];
+  const tournamentsPagination = tournamentsQuery.data?.pagination || null;
+  const pendingTournamentQueue = pendingTournamentQueueQuery.data?.data || [];
+  const pendingTournamentQueuePagination = pendingTournamentQueueQuery.data?.pagination || null;
   const recentTournamentRequests = recentTournamentRequestsQuery.data?.data || [];
   const recentTournamentRequestsPagination = recentTournamentRequestsQuery.data?.pagination || null;
   const tournamentRequests = tournamentRequestsQuery.data?.data || [];
   const tournamentRequestsPagination = tournamentRequestsQuery.data?.pagination || null;
+  const tournamentParticipants = tournamentParticipantsQuery.data?.data || [];
+  const tournamentParticipantsPagination = tournamentParticipantsQuery.data?.pagination || null;
+  const tournamentParticipantsSummary = tournamentParticipantsQuery.data?.summary || null;
+  const tournamentMatches = tournamentMatchesQuery.data?.data || [];
+  const tournamentMatchesPagination = tournamentMatchesQuery.data?.pagination || null;
+  const tournamentMatchesSummary = tournamentMatchesQuery.data?.summary || null;
   const tournamentOverview = tournamentOverviewQuery.data || null;
-  const news = newsQuery.data || [];
+  const news = newsQuery.data?.items || [];
+  const newsPagination = newsQuery.data?.pagination || null;
+  const newsSummary = newsQuery.data?.summary || null;
   const achievements = achievementsQuery.data || [];
   const rewards = rewardsQuery.data || [];
-  const teams = teamsQuery.data || [];
+  const teams = teamsQuery.data?.items || [];
+  const teamsPagination = teamsQuery.data?.pagination || null;
+  const teamsSummary = teamsQuery.data?.summary || null;
   const referrals = referralsQuery.data || [];
   const referralSettings = referralSettingsQuery.data || null;
-  const contacts = contactsQuery.data || [];
+  const contacts = contactsQuery.data?.items || [];
+  const contactsPagination = contactsQuery.data?.pagination || null;
+  const contactsSummary = contactsQuery.data?.summary || null;
   const supportConversations = supportConversationsQuery.data || [];
   const supportMessages = supportMessagesQuery.data || [];
   const supportSettings = supportSettingsQuery.data || null;
@@ -2670,7 +2917,40 @@ const AdminPage: React.FC = () => {
     setTournamentRequestsPage(1);
     setMatchesPage(1);
     setRecentDecisionsPage(1);
+    setParticipantPage(1);
   }, [selectedTournamentId]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setTournamentRequestsPage(1);
+      setTournamentRequestSearch(tournamentRequestSearchInput.trim());
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [tournamentRequestSearchInput]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setRecentDecisionsPage(1);
+      setRecentDecisionsSearch(recentDecisionsSearchInput.trim());
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [recentDecisionsSearchInput]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setPaymentsPage(1);
+      setPaymentSearch(paymentSearchInput.trim());
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [paymentSearchInput]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setParticipantSearch(participantSearchInput.trim().toLowerCase());
+      setParticipantPage(1);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [participantSearchInput]);
 
   useEffect(() => {
     if (activeTab !== 'support') return;
@@ -2707,6 +2987,8 @@ const AdminPage: React.FC = () => {
     tournamentsQuery.error ||
     tournamentRequestsQuery.error ||
     tournamentOverviewQuery.error ||
+    tournamentMatchesQuery.error ||
+    tournamentParticipantsQuery.error ||
     newsQuery.error ||
     achievementsQuery.error ||
     rewardsQuery.error ||
@@ -2739,6 +3021,8 @@ const AdminPage: React.FC = () => {
     tournamentsQuery.isFetching ||
     tournamentRequestsQuery.isFetching ||
     tournamentOverviewQuery.isFetching ||
+    tournamentMatchesQuery.isFetching ||
+    tournamentParticipantsQuery.isFetching ||
     newsQuery.isFetching ||
     achievementsQuery.isFetching ||
     rewardsQuery.isFetching ||
@@ -3056,6 +3340,7 @@ const AdminPage: React.FC = () => {
   const invalidateTournamentMatchViews = async (tournamentId: string) => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', tournamentId] }),
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-matches', tournamentId] }),
       queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
       queryClient.invalidateQueries({ queryKey: ['matches'] }),
       queryClient.invalidateQueries({ queryKey: ['tournament', tournamentId, 'matches', 'schedule'] }),
@@ -3160,10 +3445,28 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const fetchFilteredTournamentMatchIds = async (): Promise<{ matchIds: string[]; filteredTotal: number; totalAll: number }> => {
+    if (!selectedTournamentId) return { matchIds: [], filteredTotal: 0, totalAll: 0 };
+    const params = new URLSearchParams({
+      status: matchStatusFilter,
+      room: matchRoomFilter,
+      winner: matchWinnerFilter
+    });
+    if (matchSearch.trim()) {
+      params.set('search', matchSearch.trim());
+    }
+    const result: any = await api.get(`/api/tournaments/${selectedTournamentId}/matches/admin/ids?${params.toString()}`);
+    const payload = result?.data || result || {};
+    return {
+      matchIds: Array.isArray(payload?.matchIds) ? payload.matchIds.map((id: any) => String(id)).filter(Boolean) : [],
+      filteredTotal: Number(payload?.filteredTotal || 0),
+      totalAll: Number(payload?.totalAll || 0)
+    };
+  };
+
   const handlePrepareFilteredMatchRooms = async (force = false, dryRun = false) => {
     if (!selectedTournamentId) return;
-    const { filteredMatches } = getFilteredTournamentMatches();
-    const matchIds = filteredMatches.map((m: any) => String(m.id || '')).filter(Boolean);
+    const { matchIds } = await fetchFilteredTournamentMatchIds();
     if (!matchIds.length) {
       notify('info', 'No matches', 'No matches in current filter to prepare rooms');
       return;
@@ -3209,38 +3512,9 @@ const AdminPage: React.FC = () => {
     }
   };
 
-  const getFilteredTournamentMatches = () => {
-    const overview: any = tournamentOverview;
-    const allMatches = Array.isArray(overview?.matches) ? overview.matches : [];
-    const search = matchSearch.trim().toLowerCase();
-    const filteredMatches = allMatches.filter((match: any) => {
-      const statusOk = matchStatusFilter === 'all' || String(match?.status || '').toLowerCase() === matchStatusFilter;
-      if (!statusOk) return false;
-      const hasRoom = Boolean(match?.hasRoomCredentials);
-      const roomOk =
-        matchRoomFilter === 'all' ||
-        (matchRoomFilter === 'with_room' && hasRoom) ||
-        (matchRoomFilter === 'without_room' && !hasRoom);
-      if (!roomOk) return false;
-      const hasWinner = Boolean(match?.winnerId);
-      const winnerOk =
-        matchWinnerFilter === 'all' ||
-        (matchWinnerFilter === 'with_winner' && hasWinner) ||
-        (matchWinnerFilter === 'without_winner' && !hasWinner);
-      if (!winnerOk) return false;
-      if (!search) return true;
-      const t1 = String(match?.team1?.name || '').toLowerCase();
-      const t2 = String(match?.team2?.name || '').toLowerCase();
-      const round = String(match?.round || '').toLowerCase();
-      return t1.includes(search) || t2.includes(search) || round.includes(search);
-    });
-    return { allMatches, filteredMatches };
-  };
-
   const handleBulkMatchStatus = async (status: 'scheduled' | 'live' | 'completed' | 'cancelled') => {
     if (!selectedTournamentId) return;
-    const { filteredMatches } = getFilteredTournamentMatches();
-    const ids = filteredMatches.map((m: any) => String(m.id || '')).filter(Boolean);
+    const { matchIds: ids } = await fetchFilteredTournamentMatchIds();
     if (!ids.length) {
       notify('info', 'No matches', 'Nothing to update for current filters');
       return;
@@ -3274,11 +3548,11 @@ const AdminPage: React.FC = () => {
     }
   };
 
-  const handlePreviewFilteredMatches = () => {
-    const { filteredMatches, allMatches } = getFilteredTournamentMatches();
-    const summary = `Matched: ${filteredMatches.length}/${allMatches.length}`;
+  const handlePreviewFilteredMatches = async () => {
     if (!selectedTournamentId) return;
-    if (!filteredMatches.length) {
+    const { matchIds, filteredTotal, totalAll } = await fetchFilteredTournamentMatchIds();
+    const summary = `Matched: ${filteredTotal}/${totalAll}`;
+    if (!matchIds.length) {
       notify('info', 'Preview', summary);
       return;
     }
@@ -3289,11 +3563,10 @@ const AdminPage: React.FC = () => {
       notify('warning', 'Preview', 'Invalid status');
       return;
     }
-    const ids = filteredMatches.map((m: any) => String(m.id || '')).filter(Boolean);
     api.post('/api/matches/status/bulk', {
       status,
       tournamentId: selectedTournamentId,
-      matchIds: ids,
+      matchIds,
       dryRun: true
     }).then((result: any) => {
       const payload = result?.data || result || {};
@@ -3309,8 +3582,7 @@ const AdminPage: React.FC = () => {
 
   const handleBulkInferWinners = async () => {
     if (!selectedTournamentId) return;
-    const { filteredMatches } = getFilteredTournamentMatches();
-    const matchIds = filteredMatches.map((m: any) => String(m.id || '')).filter(Boolean);
+    const { matchIds } = await fetchFilteredTournamentMatchIds();
     if (!matchIds.length) {
       notify('info', 'No matches', 'No matches in current filter');
       return;
@@ -3489,6 +3761,44 @@ const AdminPage: React.FC = () => {
     );
   };
 
+  const exportTournamentRequestsCsv = async (tournamentId: string, searchText?: string) => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        notify('warning', 'Export failed', 'Admin token missing');
+        return;
+      }
+
+      const params = new URLSearchParams();
+      if ((searchText || '').trim()) params.set('search', String(searchText).trim());
+
+      const response = await fetch(
+        getFullUrl(`/api/tournaments/${tournamentId}/requests/export.csv?${params.toString()}`),
+        {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Export failed (${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tournament_requests_${tournamentId}_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      notify('success', 'Export complete', 'Pending requests CSV downloaded');
+    } catch (e: any) {
+      notify('error', 'Export failed', formatApiError(e, 'Failed to export tournament requests'));
+    }
+  };
+
   const handleBulkTournamentRequestsForTournament = async (tournamentId: string, action: 'approve' | 'reject') => {
     const noteInput = window.prompt(
       action === 'approve' ? 'Bulk approval note (optional)' : 'Bulk reject reason (optional)',
@@ -3505,6 +3815,7 @@ const AdminPage: React.FC = () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests', tournamentId] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-participants', tournamentId] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', tournamentId] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'pending-tournament-queue'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'recent-tournament-requests'] }),
@@ -3526,6 +3837,40 @@ const AdminPage: React.FC = () => {
       setError(message);
       notify('error', action === 'approve' ? 'Approve failed' : 'Reject failed', message);
     }
+  };
+
+  const handleRefreshTournamentAdminPanels = async () => {
+    if (!selectedTournamentId) return;
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'pending-tournament-queue'] }),
+      queryClient.invalidateQueries({ queryKey: ['admin', 'recent-tournament-requests'] }),
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests', selectedTournamentId] }),
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', selectedTournamentId] }),
+      queryClient.invalidateQueries({ queryKey: ['admin', 'match-ops-summary', selectedTournamentId] }),
+      queryClient.invalidateQueries({ queryKey: ['matches'] }),
+      queryClient.invalidateQueries({ queryKey: ['tournaments'] })
+    ]);
+    notify('success', 'Tournament panels refreshed', 'Queue, decisions, requests and overview updated');
+  };
+
+  const handleResetTournamentFilters = () => {
+    setPendingQueuePage(1);
+    setRecentRequestsStatusFilter('all');
+    setRecentDecisionsSearchInput('');
+    setRecentDecisionsSearch('');
+    setRecentDecisionsPage(1);
+    setTournamentRequestSearchInput('');
+    setTournamentRequestSearch('');
+    setTournamentRequestsPage(1);
+    setMatchStatusFilter('all');
+    setMatchRoomFilter('all');
+    setMatchWinnerFilter('all');
+    setMatchSearch('');
+    setMatchesPage(1);
+    setPaymentSearchInput('');
+    setPaymentSearch('');
+    setPaymentsPage(1);
+    notify('info', 'Filters reset', 'Tournament queue, requests, decisions and matches filters are default now');
   };
 
   const handleReopenTournamentRequest = async (row: AdminTournamentRequestHistoryRow) => {
@@ -3561,6 +3906,7 @@ const AdminPage: React.FC = () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests', tournamentId] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-participants', tournamentId] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', tournamentId] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'recent-tournament-requests'] }),
         queryClient.invalidateQueries({ queryKey: ['tournaments'] }),
@@ -3581,6 +3927,7 @@ const AdminPage: React.FC = () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests', tournamentId] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-participants', tournamentId] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', tournamentId] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'recent-tournament-requests'] }),
         queryClient.invalidateQueries({ queryKey: ['tournaments'] }),
@@ -3591,6 +3938,42 @@ const AdminPage: React.FC = () => {
       const message = formatApiError(e, 'Failed to remove participant');
       setError(message);
       notify('error', 'Remove participant failed', message);
+    }
+  };
+
+  const handleBulkRemoveTournamentParticipants = async (tournamentId: string, teamIds: string[]) => {
+    const uniqueTeamIds = Array.from(new Set((teamIds || []).map((id) => String(id || '').trim()).filter(Boolean)));
+    if (!uniqueTeamIds.length) {
+      notify('info', 'No teams selected', 'No visible teams to remove');
+      return;
+    }
+
+    const confirmed = window.confirm(`Remove ${uniqueTeamIds.length} visible team(s) from participants?`);
+    if (!confirmed) return;
+
+    try {
+      setError(null);
+      const result: any = await api.post(`/api/tournaments/${tournamentId}/participants/bulk-remove`, {
+        teamIds: uniqueTeamIds
+      });
+      const payload = result?.data || result || {};
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests', tournamentId] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', tournamentId] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'recent-tournament-requests'] }),
+        queryClient.invalidateQueries({ queryKey: ['tournaments'] }),
+        queryClient.invalidateQueries({ queryKey: ['matches'] })
+      ]);
+      notify(
+        'success',
+        'Participants removed',
+        `Removed: ${Number(payload?.removed || 0)}, skipped: ${Number(payload?.skipped || 0)}`
+      );
+    } catch (e: any) {
+      const message = formatApiError(e, 'Failed to bulk remove participants');
+      setError(message);
+      notify('error', 'Bulk remove failed', message);
     }
   };
 
@@ -4214,6 +4597,49 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const handleExportUsersCsv = async () => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        notify('error', 'Export failed', 'Login required');
+        return;
+      }
+
+      const params = new URLSearchParams();
+      if (usersSearch) params.set('search', usersSearch);
+      if (usersRoleFilter !== 'all') params.set('role', usersRoleFilter);
+      if (usersSubscribedFilter !== 'all') params.set('subscribed', usersSubscribedFilter);
+      if (usersBannedFilter !== 'all') params.set('banned', usersBannedFilter);
+
+      const response = await fetch(getFullUrl(`/api/admin/users/export.csv?${params.toString()}`), {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Export failed (${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `users_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      notify('success', 'Export complete', 'Users CSV downloaded');
+    } catch (e: any) {
+      const message = e?.message || 'Failed to export users CSV';
+      setError(message);
+      notify('error', 'Export failed', message);
+    }
+  };
+
   function renderDashboard() {
     const stats = dashboardStats || {
       totalUsers: users.length,
@@ -4323,16 +4749,82 @@ const AdminPage: React.FC = () => {
               <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })}>
                 Refresh
               </ActionButton>
+              <ActionButton onClick={handleExportUsersCsv}>
+                Export CSV
+              </ActionButton>
+              <ActionButton
+                onClick={() => {
+                  setUsersPage(1);
+                  setUsersSearchInput('');
+                  setUsersSearch('');
+                  setUsersRoleFilter('all');
+                  setUsersSubscribedFilter('all');
+                  setUsersBannedFilter('all');
+                }}
+              >
+                Reset Filters
+              </ActionButton>
             </ActionsCell>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 420px)', gap: '8px' }}>
             <Input
-              placeholder="Search users by username/email/name"
+              placeholder="Search users by username/email/name/telegram"
               value={usersSearchInput}
               onChange={(e) => setUsersSearchInput(e.target.value)}
             />
           </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 220px))', gap: '8px' }}>
+            <Select
+              value={usersRoleFilter}
+              onChange={(e) => {
+                setUsersPage(1);
+                setUsersRoleFilter(e.target.value as typeof usersRoleFilter);
+              }}
+            >
+              <option value="all">All roles</option>
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+              <option value="developer">Developer</option>
+            </Select>
+            <Select
+              value={usersSubscribedFilter}
+              onChange={(e) => {
+                setUsersPage(1);
+                setUsersSubscribedFilter(e.target.value as typeof usersSubscribedFilter);
+              }}
+            >
+              <option value="all">All subs</option>
+              <option value="yes">Subscribed</option>
+              <option value="no">Not subscribed</option>
+            </Select>
+            <Select
+              value={usersBannedFilter}
+              onChange={(e) => {
+                setUsersPage(1);
+                setUsersBannedFilter(e.target.value as typeof usersBannedFilter);
+              }}
+            >
+              <option value="all">All status</option>
+              <option value="no">Active</option>
+              <option value="yes">Banned</option>
+            </Select>
+          </div>
         </div>
+
+        <StatsGrid style={{ marginBottom: '16px' }}>
+          <StatCard>
+            <StatValue>{Number(usersSummary?.filteredTotal || usersPagination?.total || users.length)}</StatValue>
+            <StatLabel>Filtered Users</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>{Number(usersSummary?.filteredSubscribed || users.filter((u) => u.isSubscribed).length)}</StatValue>
+            <StatLabel>Subscribed</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>{Number(usersSummary?.filteredBanned || users.filter((u) => u.isBanned).length)}</StatValue>
+            <StatLabel>Banned</StatLabel>
+          </StatCard>
+        </StatsGrid>
 
         <TableWrap>
           <Table>
@@ -4525,10 +5017,9 @@ const AdminPage: React.FC = () => {
           <label style={{ display: 'grid', gap: '6px', color: '#cccccc', fontSize: '13px' }}>
             Search
             <input
-              value={paymentSearch}
+              value={paymentSearchInput}
               onChange={(e) => {
-                setPaymentSearch(e.target.value);
-                setPaymentsPage(1);
+                setPaymentSearchInput(e.target.value);
               }}
               placeholder="username, email, wallet, tx hash..."
               style={{ minHeight: '40px', borderRadius: '10px', background: '#151515', color: '#ffffff', border: '1px solid rgba(255,255,255,0.15)', padding: '0 10px' }}
@@ -4714,9 +5205,56 @@ const AdminPage: React.FC = () => {
   function renderTournaments() {
     const selectedTournament = tournaments.find((item: any) => item.id === selectedTournamentId) || null;
     const overview = tournamentOverview;
-    const { allMatches, filteredMatches } = getFilteredTournamentMatches();
+    const allMatchesTotal = Number(
+      tournamentMatchesSummary?.totalAll ||
+      (Array.isArray((overview as any)?.matches) ? (overview as any).matches.length : 0)
+    );
     const filteredTournamentRequests = tournamentRequests;
     const sortedTournamentRequests = tournamentRequests;
+    const pendingRequestsTotal = Number(tournamentRequestsPagination?.total || sortedTournamentRequests.length || 0);
+    const tournamentsTotalPages = Number(tournamentsPagination?.totalPages || 1);
+    const tournamentsCurrentPage = Number(tournamentsPagination?.page || tournamentsPage || 1);
+    const exportTournamentsCsv = async () => {
+      try {
+        const token = getAuthToken();
+        if (!token) {
+          notify('warning', 'Export failed', 'Admin token missing');
+          return;
+        }
+
+        const params = new URLSearchParams();
+        if (tournamentsStatusFilter !== 'all') params.set('status', tournamentsStatusFilter);
+        if (tournamentsGameFilter !== 'all') params.set('game', tournamentsGameFilter);
+        if (tournamentsSearch.trim()) params.set('search', tournamentsSearch.trim());
+
+        const response = await fetch(
+          getFullUrl(`/api/tournaments/admin/export.csv?${params.toString()}`),
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Export failed (${response.status})`);
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `tournaments_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        notify('success', 'Export complete', 'Tournaments CSV downloaded');
+      } catch (e: any) {
+        notify('error', 'Export failed', formatApiError(e, 'Failed to export tournaments'));
+      }
+    };
     const tournamentRequestsTotalPages = Number(tournamentRequestsPagination?.totalPages || 1);
     const tournamentRequestsCurrentPage = Number(tournamentRequestsPagination?.page || tournamentRequestsPage || 1);
     const tournamentRequestsStart = tournamentRequestsPagination
@@ -4724,11 +5262,12 @@ const AdminPage: React.FC = () => {
       : 0;
     const paginatedTournamentRequests = tournamentRequests;
 
-    const matchesPageSize = 12;
-    const matchesTotalPages = Math.max(1, Math.ceil(filteredMatches.length / matchesPageSize));
-    const matchesCurrentPage = Math.min(matchesPage, matchesTotalPages);
-    const matchesStart = (matchesCurrentPage - 1) * matchesPageSize;
-    const paginatedFilteredMatches = filteredMatches.slice(matchesStart, matchesStart + matchesPageSize);
+    const matchesTotalPages = Number(tournamentMatchesPagination?.totalPages || 1);
+    const matchesCurrentPage = Number(tournamentMatchesPagination?.page || matchesPage || 1);
+    const matchesPageLimit = Number(tournamentMatchesPagination?.limit || 12);
+    const matchesStart = (Math.max(1, matchesCurrentPage) - 1) * matchesPageLimit;
+    const paginatedFilteredMatches = tournamentMatches;
+    const matchesFilteredTotal = Number(tournamentMatchesSummary?.filteredTotal || tournamentMatchesPagination?.total || paginatedFilteredMatches.length);
     const filteredRecentDecisions = recentTournamentRequests;
     const recentDecisionsTotalPages = Number(recentTournamentRequestsPagination?.totalPages || 1);
     const recentDecisionsCurrentPage = Number(recentTournamentRequestsPagination?.page || recentDecisionsPage || 1);
@@ -4793,100 +5332,104 @@ const AdminPage: React.FC = () => {
       URL.revokeObjectURL(url);
       notify('success', 'Export complete', `Downloaded ${recentMatchOps.length} operations`);
     };
-    const preparedRoomsCount = Array.isArray(overview?.matches)
-      ? overview.matches.filter((match: any) => Boolean(match?.hasRoomCredentials)).length
-      : 0;
+    const preparedRoomsCount = Number(
+      tournamentMatchesSummary?.roomsPreparedAll ||
+      (Array.isArray(overview?.matches)
+        ? overview.matches.filter((match: any) => Boolean(match?.hasRoomCredentials)).length
+        : 0)
+    );
+    const approvedTeams = tournamentParticipants;
+    const participantsTotalPages = Number(tournamentParticipantsPagination?.totalPages || 1);
+    const participantsCurrentPage = Number(tournamentParticipantsPagination?.page || participantPage || 1);
 
-    const exportRecentTournamentDecisionsCsv = () => {
-      if (!filteredRecentDecisions.length) {
-        notify('info', 'Export skipped', 'No recent decisions to export');
-        return;
+    const exportRecentTournamentDecisionsCsv = async () => {
+      try {
+        const token = getAuthToken();
+        if (!token) {
+          notify('warning', 'Export failed', 'Admin token missing');
+          return;
+        }
+
+        const params = new URLSearchParams({
+          status: recentRequestsStatusFilter
+        });
+        if (recentDecisionsSearch.trim()) {
+          params.set('search', recentDecisionsSearch.trim());
+        }
+
+        const response = await fetch(
+          getFullUrl(`/api/tournaments/admin/requests/recent/export.csv?${params.toString()}`),
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Export failed (${response.status})`);
+        }
+
+        const blob = await response.blob();
+        if (!blob.size) {
+          notify('info', 'Export skipped', 'No recent decisions to export');
+          return;
+        }
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `tournament_decisions_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        notify('success', 'Export complete', 'Recent decisions CSV downloaded');
+      } catch (e: any) {
+        notify('error', 'Export failed', formatApiError(e, 'Failed to export recent decisions'));
       }
-      const csvCell = (value: any) => `"${String(value ?? '').replace(/"/g, '""')}"`;
-      const header = ['reviewedAt', 'tournament', 'game', 'team', 'teamTag', 'status', 'note', 'requestedBy', 'reviewedBy'];
-      const rows = filteredRecentDecisions.map((row: AdminTournamentRequestHistoryRow) => [
-        row.reviewedAt || '',
-        row.tournamentName || '',
-        row.game || '',
-        row.teamName || '',
-        row.teamTag || '',
-        row.status || '',
-        row.note || '',
-        row.requestedBy?.username || row.requestedBy?.firstName || '',
-        row.reviewedBy?.username || row.reviewedBy?.firstName || ''
-      ]);
-      const csv = [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `tournament_decisions_${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      notify('success', 'Export complete', `Downloaded ${filteredRecentDecisions.length} decision rows`);
     };
 
-    const exportFilteredMatchesCsv = () => {
+    const exportFilteredMatchesCsv = async () => {
       if (!selectedTournamentId) {
         notify('warning', 'Export skipped', 'Select tournament first');
         return;
       }
-      if (!filteredMatches.length) {
+      try {
+      const token = getAuthToken();
+      if (!token) {
+        notify('warning', 'Export failed', 'Admin token missing');
+        return;
+      }
+
+      const params = new URLSearchParams({
+        status: matchStatusFilter,
+        room: matchRoomFilter,
+        winner: matchWinnerFilter
+      });
+      if (matchSearch.trim()) params.set('search', matchSearch.trim());
+
+      const response = await fetch(
+        getFullUrl(`/api/tournaments/${selectedTournamentId}/matches/admin/export.csv?${params.toString()}`),
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Export failed (${response.status})`);
+      }
+
+      const blob = await response.blob();
+      if (!blob.size) {
         notify('info', 'Export skipped', 'No matches for current filters');
         return;
       }
 
-      const csvCell = (value: any) => {
-        const text = String(value ?? '');
-        return `"${text.replace(/"/g, '""')}"`;
-      };
-
-      const header = [
-        'matchId',
-        'tournamentId',
-        'round',
-        'team1',
-        'team2',
-        'score',
-        'status',
-        'winner',
-        'roomId',
-        'roomPassword',
-        'roomVisibleAt',
-        'roomExpiresAt'
-      ];
-
-      const rows = filteredMatches.map((match: any) => {
-        const winner =
-          match.winnerId === match.team1?.id
-            ? (match.team1?.name || 'Team 1')
-            : match.winnerId === match.team2?.id
-              ? (match.team2?.name || 'Team 2')
-              : '';
-
-        return [
-          match.id || '',
-          selectedTournamentId,
-          match.round || '',
-          match.team1?.name || '',
-          match.team2?.name || '',
-          `${Number(match.score?.team1 || 0)}:${Number(match.score?.team2 || 0)}`,
-          match.status || '',
-          winner,
-          match.roomCredentials?.roomId || '',
-          match.roomCredentials?.password || '',
-          match.roomCredentials?.visibleAt ? formatDateTime(match.roomCredentials.visibleAt) : '',
-          match.roomCredentials?.expiresAt ? formatDateTime(match.roomCredentials.expiresAt) : ''
-        ];
-      });
-
-      const csv = [header, ...rows]
-        .map((row) => row.map(csvCell).join(','))
-        .join('\n');
-
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -4896,7 +5439,54 @@ const AdminPage: React.FC = () => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      notify('success', 'Export complete', `Downloaded ${filteredMatches.length} matches`);
+      notify('success', 'Export complete', 'Filtered matches CSV downloaded');
+      } catch (e: any) {
+        notify('error', 'Export failed', formatApiError(e, 'Failed to export filtered matches'));
+      }
+    };
+
+    const exportParticipantsCsv = async () => {
+      if (!selectedTournamentId) {
+        notify('warning', 'Export skipped', 'Select tournament first');
+        return;
+      }
+      try {
+        const token = getAuthToken();
+        if (!token) {
+          notify('warning', 'Export failed', 'Admin token missing');
+          return;
+        }
+
+        const params = new URLSearchParams();
+        if (participantSearch.trim()) params.set('search', participantSearch.trim());
+
+        const response = await fetch(
+          getFullUrl(`/api/tournaments/${selectedTournamentId}/participants/export.csv?${params.toString()}`),
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Export failed (${response.status})`);
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `tournament_participants_${selectedTournamentId}_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        notify('success', 'Export complete', 'Participants CSV downloaded');
+      } catch (e: any) {
+        notify('error', 'Export failed', formatApiError(e, 'Failed to export participants'));
+      }
     };
 
     return (
@@ -4911,8 +5501,33 @@ const AdminPage: React.FC = () => {
             <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] })}>
               Refresh
             </ActionButton>
+            <ActionButton onClick={exportTournamentsCsv}>
+              Export CSV
+            </ActionButton>
             <ActionButton onClick={() => handleCreate('tournament')}>Create Tournament</ActionButton>
           </ActionsCell>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 360px) minmax(160px, 220px) minmax(160px, 220px)', gap: '8px', marginBottom: '12px' }}>
+          <Input
+            value={tournamentsSearchInput}
+            onChange={(e) => setTournamentsSearchInput(e.target.value)}
+            placeholder="Search tournaments by name"
+          />
+          <Select value={tournamentsStatusFilter} onChange={(e) => setTournamentsStatusFilter(e.target.value as any)}>
+            <option value="all">All statuses</option>
+            <option value="open">Open</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="live">Live</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </Select>
+          <Select value={tournamentsGameFilter} onChange={(e) => setTournamentsGameFilter(e.target.value as any)}>
+            <option value="all">All games</option>
+            <option value="CS2">CS2</option>
+            <option value="Critical Ops">Critical Ops</option>
+            <option value="PUBG Mobile">PUBG Mobile</option>
+            <option value="Valorant">Valorant</option>
+          </Select>
         </div>
 
         <TableWrap>
@@ -4976,6 +5591,25 @@ const AdminPage: React.FC = () => {
             </tbody>
           </Table>
         </TableWrap>
+        <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ color: '#cccccc', fontSize: '13px' }}>
+            Page {tournamentsCurrentPage} of {tournamentsTotalPages} {tournamentsPagination ? `• total ${tournamentsPagination.total}` : ''}
+          </div>
+          <ActionsCell>
+            <ActionButton
+              onClick={() => setTournamentsPage((prev) => Math.max(1, prev - 1))}
+              disabled={tournamentsCurrentPage <= 1}
+            >
+              Prev
+            </ActionButton>
+            <ActionButton
+              onClick={() => setTournamentsPage((prev) => Math.min(tournamentsTotalPages, prev + 1))}
+              disabled={tournamentsCurrentPage >= tournamentsTotalPages}
+            >
+              Next
+            </ActionButton>
+          </ActionsCell>
+        </div>
 
         {selectedTournamentId && (
           <Card variant="outlined" style={{ marginTop: '20px', padding: '16px' }}>
@@ -4989,6 +5623,12 @@ const AdminPage: React.FC = () => {
                 </div>
               )}
               <ActionsCell>
+                <ActionButton onClick={handleRefreshTournamentAdminPanels}>
+                  Refresh All
+                </ActionButton>
+                <ActionButton onClick={handleResetTournamentFilters}>
+                  Reset Filters
+                </ActionButton>
                 <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests', selectedTournamentId] })}>
                   Refresh Requests
                 </ActionButton>
@@ -5046,27 +5686,27 @@ const AdminPage: React.FC = () => {
                 </>
               ) : null}
               {' • '}
-              Matches: <strong>{overview?.matches?.length || 0}</strong>
+              Matches: <strong>{allMatchesTotal}</strong>
               {' • '}
               Rooms prepared: <strong>{preparedRoomsCount}</strong>
               {' • '}
-              Live w/o room: <strong style={{ color: Number(overview?.summary?.liveWithoutRoom || 0) > 0 ? '#ff8a65' : '#81c784' }}>{Number(overview?.summary?.liveWithoutRoom || 0)}</strong>
+              Live w/o room: <strong style={{ color: Number((tournamentMatchesSummary?.liveWithoutRoom ?? overview?.summary?.liveWithoutRoom) || 0) > 0 ? '#ff8a65' : '#81c784' }}>{Number((tournamentMatchesSummary?.liveWithoutRoom ?? overview?.summary?.liveWithoutRoom) || 0)}</strong>
               {' • '}
-              Completed w/o winner: <strong style={{ color: Number(overview?.summary?.completedWithoutWinner || 0) > 0 ? '#ff8a65' : '#81c784' }}>{Number(overview?.summary?.completedWithoutWinner || 0)}</strong>
+              Completed w/o winner: <strong style={{ color: Number((tournamentMatchesSummary?.completedWithoutWinner ?? overview?.summary?.completedWithoutWinner) || 0) > 0 ? '#ff8a65' : '#81c784' }}>{Number((tournamentMatchesSummary?.completedWithoutWinner ?? overview?.summary?.completedWithoutWinner) || 0)}</strong>
             </div>
-            {overview?.summary?.byStatus ? (
+            {(tournamentMatchesSummary?.byStatus || overview?.summary?.byStatus) ? (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
                 <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)', color: '#e0e0e0' }}>
-                  scheduled: {Number(overview.summary.byStatus.scheduled || 0)}
+                  scheduled: {Number((tournamentMatchesSummary?.byStatus?.scheduled ?? overview?.summary?.byStatus?.scheduled) || 0)}
                 </span>
                 <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)', color: '#e0e0e0' }}>
-                  live: {Number(overview.summary.byStatus.live || 0)}
+                  live: {Number((tournamentMatchesSummary?.byStatus?.live ?? overview?.summary?.byStatus?.live) || 0)}
                 </span>
                 <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)', color: '#e0e0e0' }}>
-                  completed: {Number(overview.summary.byStatus.completed || 0)}
+                  completed: {Number((tournamentMatchesSummary?.byStatus?.completed ?? overview?.summary?.byStatus?.completed) || 0)}
                 </span>
                 <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)', color: '#e0e0e0' }}>
-                  cancelled: {Number(overview.summary.byStatus.cancelled || 0)}
+                  cancelled: {Number((tournamentMatchesSummary?.byStatus?.cancelled ?? overview?.summary?.byStatus?.cancelled) || 0)}
                 </span>
               </div>
             ) : null}
@@ -5182,7 +5822,7 @@ const AdminPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {pendingTournamentQueue.slice(0, 12).map((row: any) => (
+                    {pendingTournamentQueue.map((row: any) => (
                       <tr key={`pending-tournament-${row.id}`}>
                         <Td>{row.name}</Td>
                         <Td>{row.game || '-'}</Td>
@@ -5213,6 +5853,27 @@ const AdminPage: React.FC = () => {
                     ))}
                   </tbody>
                 </Table>
+                <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <div style={{ color: '#cccccc', fontSize: '13px' }}>
+                    Page {Number(pendingTournamentQueuePagination?.page || pendingQueuePage)} of {Number(pendingTournamentQueuePagination?.totalPages || 1)}
+                    {' • '}
+                    Total {Number(pendingTournamentQueuePagination?.total || pendingTournamentQueue.length)}
+                  </div>
+                  <ActionsCell>
+                    <ActionButton
+                      onClick={() => setPendingQueuePage((prev) => Math.max(1, prev - 1))}
+                      disabled={Number(pendingTournamentQueuePagination?.page || pendingQueuePage) <= 1}
+                    >
+                      Prev
+                    </ActionButton>
+                    <ActionButton
+                      onClick={() => setPendingQueuePage((prev) => Math.min(Number(pendingTournamentQueuePagination?.totalPages || 1), prev + 1))}
+                      disabled={Number(pendingTournamentQueuePagination?.page || pendingQueuePage) >= Number(pendingTournamentQueuePagination?.totalPages || 1)}
+                    >
+                      Next
+                    </ActionButton>
+                  </ActionsCell>
+                </div>
               </TableWrap>
             )}
 
@@ -5240,10 +5901,9 @@ const AdminPage: React.FC = () => {
             </div>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
               <Input
-                value={recentDecisionsSearch}
+                value={recentDecisionsSearchInput}
                 onChange={(e) => {
-                  setRecentDecisionsSearch(e.target.value);
-                  setRecentDecisionsPage(1);
+                  setRecentDecisionsSearchInput(e.target.value);
                 }}
                 placeholder="Search by tournament / team / reviewer / note"
                 style={{ minWidth: 300 }}
@@ -5319,11 +5979,14 @@ const AdminPage: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <h5 style={{ marginTop: 0, marginBottom: 0 }}>Pending Tournament Requests</h5>
               <ActionsCell>
-                <ActionButton onClick={() => handleBulkTournamentRequests('approve')} disabled={!sortedTournamentRequests.length}>
+                <ActionButton onClick={() => handleBulkTournamentRequests('approve')} disabled={!pendingRequestsTotal}>
                   Approve All
                 </ActionButton>
-                <ActionButton $variant="danger" onClick={() => handleBulkTournamentRequests('reject')} disabled={!sortedTournamentRequests.length}>
+                <ActionButton $variant="danger" onClick={() => handleBulkTournamentRequests('reject')} disabled={!pendingRequestsTotal}>
                   Reject All
+                </ActionButton>
+                <ActionButton onClick={() => exportTournamentRequestsCsv(selectedTournamentId, tournamentRequestSearch)}>
+                  Export Pending CSV
                 </ActionButton>
                 <ActionButton
                   onClick={() => handleBulkTournamentRequests('approve', paginatedTournamentRequests.map((row) => row.teamId).filter(Boolean))}
@@ -5342,10 +6005,9 @@ const AdminPage: React.FC = () => {
             </div>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
               <Input
-                value={tournamentRequestSearch}
+                value={tournamentRequestSearchInput}
                 onChange={(e) => {
-                  setTournamentRequestSearch(e.target.value);
-                  setTournamentRequestsPage(1);
+                  setTournamentRequestSearchInput(e.target.value);
                 }}
                 placeholder="Search by team / tag / requester"
                 style={{ minWidth: 260 }}
@@ -5425,12 +6087,36 @@ const AdminPage: React.FC = () => {
             )}
 
             <h5>Approved Teams and Stats</h5>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
               <ActionButton onClick={() => handleRecalculateParticipantStats(selectedTournamentId)}>
                 Recalculate Stats From Matches
               </ActionButton>
+              <ActionButton onClick={exportParticipantsCsv}>
+                Export Participants CSV
+              </ActionButton>
+              <ActionButton
+                $variant="danger"
+                onClick={() => handleBulkRemoveTournamentParticipants(
+                  selectedTournamentId,
+                  approvedTeams.map((team: any) => String(team.id || '')).filter(Boolean)
+                )}
+                disabled={!approvedTeams.length}
+              >
+                Remove Visible
+              </ActionButton>
+              <Input
+                value={participantSearchInput}
+                onChange={(e) => setParticipantSearchInput(e.target.value)}
+                placeholder="Filter approved teams by name/tag"
+                style={{ minWidth: 260 }}
+              />
+              <span style={{ color: '#aaa', fontSize: 12, alignSelf: 'center' }}>
+                Showing {approvedTeams.length ? ((participantsCurrentPage - 1) * Number(tournamentParticipantsPagination?.limit || 12)) + 1 : 0}
+                -{Math.min(((participantsCurrentPage - 1) * Number(tournamentParticipantsPagination?.limit || 12)) + approvedTeams.length, Number(tournamentParticipantsPagination?.total || approvedTeams.length))}
+                {' '}of {Number(tournamentParticipantsSummary?.filteredTotal || tournamentParticipantsPagination?.total || approvedTeams.length)}
+              </span>
             </div>
-            {!overview?.teams?.length ? (
+            {!approvedTeams.length ? (
               <div style={{ color: '#999', marginBottom: '18px' }}>No approved teams yet</div>
             ) : (
               <TableWrap>
@@ -5447,7 +6133,7 @@ const AdminPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {overview.teams.map((team: any) => (
+                    {approvedTeams.map((team: any) => (
                       <tr key={team.id}>
                         <Td>{team.name} {team.tag ? `(${team.tag})` : ''}</Td>
                         <Td>{team.membersCount}</Td>
@@ -5474,6 +6160,25 @@ const AdminPage: React.FC = () => {
                     ))}
                   </tbody>
                 </Table>
+                <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <div style={{ color: '#cccccc', fontSize: '13px' }}>
+                    Page {participantsCurrentPage} of {participantsTotalPages}
+                  </div>
+                  <ActionsCell>
+                    <ActionButton
+                      onClick={() => setParticipantPage((prev) => Math.max(1, prev - 1))}
+                      disabled={participantsCurrentPage <= 1}
+                    >
+                      Prev
+                    </ActionButton>
+                    <ActionButton
+                      onClick={() => setParticipantPage((prev) => Math.min(participantsTotalPages, prev + 1))}
+                      disabled={participantsCurrentPage >= participantsTotalPages}
+                    >
+                      Next
+                    </ActionButton>
+                  </ActionsCell>
+                </div>
               </TableWrap>
             )}
 
@@ -5513,12 +6218,12 @@ const AdminPage: React.FC = () => {
               <ActionButton onClick={() => handleBulkMatchStatus('scheduled')}>Bulk Schedule</ActionButton>
               <ActionButton $variant="danger" onClick={() => handleBulkMatchStatus('cancelled')}>Bulk Cancel</ActionButton>
               <span style={{ color: '#aaa', fontSize: 12 }}>
-                Showing {filteredMatches.length ? matchesStart + 1 : 0}-{Math.min(matchesStart + paginatedFilteredMatches.length, filteredMatches.length)} of {filteredMatches.length} filtered ({allMatches.length} total)
+                Showing {matchesFilteredTotal ? matchesStart + 1 : 0}-{Math.min(matchesStart + paginatedFilteredMatches.length, matchesFilteredTotal)} of {matchesFilteredTotal} filtered ({allMatchesTotal} total)
               </span>
             </div>
-            {!allMatches.length ? (
+            {!allMatchesTotal ? (
               <div style={{ color: '#999' }}>No matches generated yet</div>
-            ) : !filteredMatches.length ? (
+            ) : !matchesFilteredTotal ? (
               <div style={{ color: '#999' }}>No matches match the selected filters</div>
             ) : (
               <TableWrap>
@@ -5702,12 +6407,38 @@ const AdminPage: React.FC = () => {
   }
 
   function renderNews() {
+    const totalPages = newsPagination?.totalPages || 1;
+    const currentPage = newsPagination?.page || newsPage;
     return (
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
           <h3>News Management</h3>
-          <ActionButton onClick={() => handleCreate('news')}>Create Article</ActionButton>
+          <ActionsCell>
+            <ActionButton onClick={() => handleCreate('news')}>Create Article</ActionButton>
+            <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'news'] })}>
+              Refresh
+            </ActionButton>
+          </ActionsCell>
         </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 420px) minmax(180px, 240px)', gap: '8px', marginBottom: '12px' }}>
+          <Input
+            placeholder="Search by title/content/category/game"
+            value={newsSearchInput}
+            onChange={(e) => setNewsSearchInput(e.target.value)}
+          />
+          <Select value={newsStatusFilter} onChange={(e) => setNewsStatusFilter(e.target.value as any)}>
+            <option value="all">All statuses</option>
+            <option value="draft">Draft</option>
+            <option value="published">Published</option>
+            <option value="archived">Archived</option>
+          </Select>
+        </div>
+        <StatsGrid style={{ marginBottom: '16px' }}>
+          <StatCard>
+            <StatValue>{Number(newsSummary?.filteredTotal || newsPagination?.total || news.length)}</StatValue>
+            <StatLabel>Filtered Articles</StatLabel>
+          </StatCard>
+        </StatsGrid>
 
         <TableWrap>
           <Table>
@@ -5738,17 +6469,56 @@ const AdminPage: React.FC = () => {
             </tbody>
           </Table>
         </TableWrap>
+        <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ color: '#cccccc', fontSize: '13px' }}>
+            Page {currentPage} of {totalPages} {newsPagination ? `• total ${newsPagination.total}` : ''}
+          </div>
+          <ActionsCell>
+            <ActionButton
+              onClick={() => setNewsPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage <= 1}
+            >
+              Prev
+            </ActionButton>
+            <ActionButton
+              onClick={() => setNewsPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage >= totalPages}
+            >
+              Next
+            </ActionButton>
+          </ActionsCell>
+        </div>
       </div>
     );
   }
 
   function renderTeams() {
+    const totalPages = teamsPagination?.totalPages || 1;
+    const currentPage = teamsPagination?.page || teamsPage;
     return (
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
           <h3>Team Management</h3>
-          <ActionButton onClick={() => handleCreate('team')}>Create Team</ActionButton>
+          <ActionsCell>
+            <ActionButton onClick={() => handleCreate('team')}>Create Team</ActionButton>
+            <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'teams'] })}>
+              Refresh
+            </ActionButton>
+          </ActionsCell>
         </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 420px)', gap: '8px', marginBottom: '12px' }}>
+          <Input
+            placeholder="Search teams by name/tag/game"
+            value={teamsSearchInput}
+            onChange={(e) => setTeamsSearchInput(e.target.value)}
+          />
+        </div>
+        <StatsGrid style={{ marginBottom: '16px' }}>
+          <StatCard>
+            <StatValue>{Number(teamsSummary?.filteredTotal || teamsPagination?.total || teams.length)}</StatValue>
+            <StatLabel>Filtered Teams</StatLabel>
+          </StatCard>
+        </StatsGrid>
 
         <TableWrap>
           <Table>
@@ -5789,19 +6559,64 @@ const AdminPage: React.FC = () => {
             </tbody>
           </Table>
         </TableWrap>
+        <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ color: '#cccccc', fontSize: '13px' }}>
+            Page {currentPage} of {totalPages} {teamsPagination ? `• total ${teamsPagination.total}` : ''}
+          </div>
+          <ActionsCell>
+            <ActionButton
+              onClick={() => setTeamsPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage <= 1}
+            >
+              Prev
+            </ActionButton>
+            <ActionButton
+              onClick={() => setTeamsPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage >= totalPages}
+            >
+              Next
+            </ActionButton>
+          </ActionsCell>
+        </div>
       </div>
     );
   }
 
   function renderContacts() {
+    const totalPages = contactsPagination?.totalPages || 1;
+    const currentPage = contactsPagination?.page || contactsPage;
     return (
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
           <h3>Contact Messages</h3>
-          <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'contacts'] })}>
-            Refresh
-          </ActionButton>
+          <ActionsCell>
+            <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'contacts'] })}>
+              Refresh
+            </ActionButton>
+            <ActionButton
+              onClick={() => {
+                setContactsPage(1);
+                setContactsSearchInput('');
+                setContactsSearch('');
+              }}
+            >
+              Reset Filters
+            </ActionButton>
+          </ActionsCell>
         </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 420px)', gap: '8px', marginBottom: '12px' }}>
+          <Input
+            placeholder="Search contacts by name/email/message"
+            value={contactsSearchInput}
+            onChange={(e) => setContactsSearchInput(e.target.value)}
+          />
+        </div>
+        <StatsGrid style={{ marginBottom: '16px' }}>
+          <StatCard>
+            <StatValue>{Number(contactsSummary?.filteredTotal || contactsPagination?.total || contacts.length)}</StatValue>
+            <StatLabel>Filtered Messages</StatLabel>
+          </StatCard>
+        </StatsGrid>
 
         <TableWrap>
           <Table>
@@ -5827,6 +6642,25 @@ const AdminPage: React.FC = () => {
             </tbody>
           </Table>
         </TableWrap>
+        <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ color: '#cccccc', fontSize: '13px' }}>
+            Page {currentPage} of {totalPages} {contactsPagination ? `• total ${contactsPagination.total}` : ''}
+          </div>
+          <ActionsCell>
+            <ActionButton
+              onClick={() => setContactsPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage <= 1}
+            >
+              Prev
+            </ActionButton>
+            <ActionButton
+              onClick={() => setContactsPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage >= totalPages}
+            >
+              Next
+            </ActionButton>
+          </ActionsCell>
+        </div>
 
         {!contacts.length && (
           <div style={{ color: '#cccccc', padding: '16px 0' }}>No contact messages yet.</div>

@@ -1,6 +1,7 @@
 import express from 'express';
 import News, { INews } from '../models/News';
 import { authenticateJWT, isAdmin } from '../middleware/auth';
+import { parsePagination, buildPaginationMeta } from '../utils/pagination';
 
 const router = express.Router();
 
@@ -23,17 +24,39 @@ router.get('/', async (req, res) => {
 router.get('/admin', authenticateJWT, isAdmin, async (req, res) => {
   try {
     const { status } = req.query as { status?: string };
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>, {
+      defaultLimit: 20,
+      maxLimit: 200
+    });
     const query: any = {};
     if (status && status !== 'all') {
       query.status = status;
     }
+    if (search) {
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escaped, 'i');
+      query.$or = [{ title: regex }, { summary: regex }, { content: regex }, { category: regex }, { game: regex }];
+    }
 
-    const items = await News.find(query)
-      .populate('author', 'username firstName lastName')
-      .sort({ publishDate: -1, createdAt: -1 })
-      .lean();
+    const [total, items] = await Promise.all([
+      News.countDocuments(query),
+      News.find(query)
+        .populate('author', 'username firstName lastName')
+        .sort({ publishDate: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+    ]);
 
-    res.json({ success: true, data: items });
+    res.json({
+      success: true,
+      data: items,
+      pagination: buildPaginationMeta(page, limit, total),
+      summary: {
+        filteredTotal: total
+      }
+    });
   } catch (error) {
     console.error('Error fetching admin news:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch news' });
