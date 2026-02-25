@@ -140,7 +140,7 @@ const Hint = styled.div`
 const formatSender = (sender: SenderType) => {
   if (sender === 'user') return 'You';
   if (sender === 'admin') return 'Admin';
-  if (sender === 'ai') return 'WAY AI Support';
+  if (sender === 'ai') return 'WAY Support Bot';
   return 'System';
 };
 
@@ -232,7 +232,7 @@ const SupportChat: React.FC<SupportChatProps> = ({
   );
 
   const statusHint = useMemo(() => {
-    if (!aiStatus) return 'AI first response + manual admin reply when needed';
+    if (!aiStatus) return 'Support mode: status unavailable, admin replies manually';
     if (!aiStatus.aiEnabled) return 'Admin-only mode: AI auto-replies are disabled';
     const provider = String(aiStatus.provider || 'auto').toUpperCase();
     const circuit = aiStatus.circuit || {};
@@ -259,14 +259,14 @@ const SupportChat: React.FC<SupportChatProps> = ({
 
       <Messages>
         {!sortedMessages.length && (
-          <Hint>No messages yet. Describe the problem and AI support will answer.</Hint>
+          <Hint>No messages yet. Describe the problem and support will respond.</Hint>
         )}
         {sortedMessages.map((msg) => (
           <Bubble key={msg.id} $sender={msg.senderType}>
             <BubbleMeta>
               {formatSender(msg.senderType)}
-              {msg.provider ? ` â€¢ ${msg.provider}` : ''}
-              {msg.createdAt ? ` â€¢ ${new Date(msg.createdAt).toLocaleString()}` : ''}
+              {msg.provider ? ` • ${msg.provider}` : ''}
+              {msg.createdAt ? ` • ${new Date(msg.createdAt).toLocaleString()}` : ''}
             </BubbleMeta>
             <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
           </Bubble>
@@ -292,3 +292,4 @@ const SupportChat: React.FC<SupportChatProps> = ({
 };
 
 export default SupportChat;
+

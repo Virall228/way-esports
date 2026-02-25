@@ -55,27 +55,27 @@ const heuristicReply = (input: SupportReplyInput): SupportReplyResult => {
   if (last.includes('502') || last.includes('bad gateway')) {
     return {
       provider: 'heuristic',
-      text: 'Похоже на 502 Bad Gateway. Проверь статусы контейнеров api/web/reverse-proxy и логи reverse-proxy + api. Если нужно, пришли последние 100 строк логов.'
+      text: 'Detected 502 Bad Gateway. Check container status for api/web/reverse-proxy and inspect reverse-proxy + api logs. If needed, send the last 100 log lines.'
     };
   }
 
   if (last.includes('login') || last.includes('auth') || last.includes('вход')) {
     return {
       provider: 'heuristic',
-      text: 'Похоже на проблему авторизации. Проверь запросы /api/auth/* в DevTools и статус-коды (особенно 4xx/5xx). Если есть ошибка, отправь код и текст ответа.'
+      text: 'Looks like an authentication issue. Check /api/auth/* requests in DevTools and response status (especially 4xx/5xx). Send exact status code and response body.'
     };
   }
 
   if (last.includes('wallet') || last.includes('withdraw') || last.includes('вывод')) {
     return {
       provider: 'heuristic',
-      text: 'Проверь сеть кошелька (TRC20/ERC20/BEP20), формат адреса и минимальный лимит вывода в Wallet. В админке проверь статус транзакции и причину отказа.'
+      text: 'Check wallet network (TRC20/ERC20/BEP20), address format, and minimum withdrawal limit. In admin panel, verify transaction status and rejection reason.'
     };
   }
 
   return {
     provider: 'heuristic',
-    text: 'Принял запрос. Опиши проблему по шагам: что сделал -> что ожидал -> какая ошибка. Я дам точные действия и при необходимости передам администратору.'
+    text: 'Request received. Describe issue as: what you did -> what you expected -> actual error. I will return exact steps and escalate to admin when needed.'
   };
 };
 
@@ -170,7 +170,7 @@ export const generateSupportReply = async (input: SupportReplyInput): Promise<Su
     if (supportProvider === 'none') {
       return {
         provider: 'none',
-        text: 'ИИ-ответ временно отключен. Запрос передан администратору для ручного ответа.'
+        text: 'AI reply is temporarily disabled. Your request has been routed to admin for manual response.'
       };
     }
 

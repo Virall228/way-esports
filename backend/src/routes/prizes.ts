@@ -119,6 +119,8 @@ router.get('/leaderboard', async (req, res) => {
       {
         $project: {
           username: 1,
+          firstName: 1,
+          lastName: 1,
           totalPrizes: 1,
           prizeCount: 1,
           'stats.tournamentsWon': 1,
@@ -134,7 +136,16 @@ router.get('/leaderboard', async (req, res) => {
       }
     ]);
 
-    res.json(topEarners);
+    const normalized = topEarners.map((row: any) => {
+      const displayName = [row.firstName, row.lastName].filter(Boolean).join(' ').trim() || row.username || 'Player';
+      return {
+        ...row,
+        displayName,
+        name: displayName
+      };
+    });
+
+    res.json(normalized);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

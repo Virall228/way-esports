@@ -12,6 +12,10 @@ const Container = styled.div`
   max-width: 100%;
   margin: 0;
   color: #ffffff;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
 `;
 
 const HeroSection = styled(Card).attrs({ variant: 'elevated' })`
@@ -40,6 +44,17 @@ const HeroSection = styled(Card).attrs({ variant: 'elevated' })`
     position: relative;
     z-index: 1;
   }
+
+  @media (max-width: 768px) {
+    padding: 28px 16px;
+    margin-bottom: 28px;
+    border-radius: 14px;
+
+    &::before {
+      opacity: 0.06;
+      background-position: top center;
+    }
+  }
 `;
 
 const Logo = styled.div`
@@ -54,6 +69,12 @@ const Logo = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.border.medium};
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
   overflow: hidden;
+
+  @media (max-width: 768px) {
+    width: 88px;
+    height: 88px;
+    margin: 0 auto 16px;
+  }
 `;
 
 const HeroTitle = styled.h1`
@@ -63,6 +84,12 @@ const HeroTitle = styled.h1`
   margin-bottom: 20px;
   letter-spacing: 4px;
   text-shadow: 0 0 30px rgba(0, 0, 0, 0.35);
+
+  @media (max-width: 768px) {
+    font-size: 2rem;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
 `;
 
 const HeroSubtitle = styled.p`
@@ -70,6 +97,11 @@ const HeroSubtitle = styled.p`
   color: #cccccc;
   margin-bottom: 40px;
   line-height: 1.6;
+
+  @media (max-width: 768px) {
+    font-size: 0.95rem;
+    margin-bottom: 18px;
+  }
 `;
 
 const CTAButton = styled(Button).attrs({ variant: 'brand', size: 'large' })`
@@ -77,6 +109,12 @@ const CTAButton = styled(Button).attrs({ variant: 'brand', size: 'large' })`
   border-radius: 8px;
   font-size: 1.1rem;
   letter-spacing: 1px;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    font-size: 0.95rem;
+    padding: 12px 14px;
+  }
 `;
 
 const SectionTitle = styled.h2`
@@ -86,6 +124,12 @@ const SectionTitle = styled.h2`
   text-align: center;
   margin-bottom: 60px;
   letter-spacing: 2px;
+
+  @media (max-width: 768px) {
+    font-size: 1.45rem;
+    margin-bottom: 18px;
+    letter-spacing: 0.6px;
+  }
 `;
 
 const FeaturesGrid = styled.div`
@@ -93,6 +137,12 @@ const FeaturesGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   gap: 40px;
   margin-bottom: 80px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
 `;
 
 const FeatureCard = styled(Card).attrs({ variant: 'outlined' })`
@@ -104,6 +154,18 @@ const FeatureCard = styled(Card).attrs({ variant: 'outlined' })`
   transition: all 0.3s ease;
 
   &:hover { transform: translateY(-10px); border-color: ${({ theme }) => theme.colors.border.strong}; box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+
+  @media (max-width: 768px) {
+    padding: 18px 14px;
+    border-radius: 12px;
+    transition: none;
+
+    &:hover {
+      transform: none;
+      box-shadow: none;
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+  }
 `;
 
 const FeatureIcon = styled.div`
@@ -117,6 +179,14 @@ const FeatureIcon = styled.div`
   font-size: 2rem;
   margin: 0 auto 25px;
   color: #ffffff;
+
+  @media (max-width: 768px) {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    margin: 0 auto 10px;
+    font-size: 1.35rem;
+  }
 `;
 
 const FeatureTitle = styled.h3`
@@ -124,12 +194,22 @@ const FeatureTitle = styled.h3`
   font-weight: 700;
   color: #ffffff;
   margin-bottom: 15px;
+
+  @media (max-width: 768px) {
+    font-size: 1.05rem;
+    margin-bottom: 6px;
+  }
 `;
 
 const FeatureDescription = styled.p`
   color: #cccccc;
   line-height: 1.6;
   font-size: 1rem;
+
+  @media (max-width: 768px) {
+    font-size: 0.88rem;
+    line-height: 1.45;
+  }
 `;
 
 const StatsSection = styled.section`
@@ -137,6 +217,12 @@ const StatsSection = styled.section`
   border-radius: 20px;
   padding: 60px 40px;
   margin-bottom: 80px;
+
+  @media (max-width: 768px) {
+    padding: 20px 14px;
+    border-radius: 14px;
+    margin-bottom: 20px;
+  }
 `;
 
 const StatsTitle = styled.h2`
@@ -146,12 +232,23 @@ const StatsTitle = styled.h2`
   text-align: center;
   margin-bottom: 50px;
   letter-spacing: 2px;
+
+  @media (max-width: 768px) {
+    font-size: 1.35rem;
+    margin-bottom: 14px;
+    letter-spacing: 0.5px;
+  }
 `;
 
 const StatsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 40px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
 `;
 
 const StatCard = styled(Card).attrs({ variant: 'outlined' })`
@@ -160,6 +257,10 @@ const StatCard = styled(Card).attrs({ variant: 'outlined' })`
   background: ${({ theme }) => theme.colors.bg.secondary};
   border-radius: 12px;
   border: 1px solid ${({ theme }) => theme.colors.border.medium};
+
+  @media (max-width: 768px) {
+    padding: 12px 8px;
+  }
 `;
 
 const StatNumber = styled.div`
@@ -167,12 +268,21 @@ const StatNumber = styled.div`
   font-weight: 900;
   color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 10px;
+
+  @media (max-width: 768px) {
+    font-size: 1.35rem;
+    margin-bottom: 4px;
+  }
 `;
 
 const StatLabel = styled.div`
   color: #cccccc;
   font-size: 1.1rem;
   font-weight: 500;
+
+  @media (max-width: 768px) {
+    font-size: 0.78rem;
+  }
 `;
 
 const HomePage: React.FC = () => {
@@ -223,11 +333,8 @@ const HomePage: React.FC = () => {
           {/* silent loader without text */}
           <div style={{
             width: 48, height: 48, border: '3px solid #444', borderTopColor: '#a3a3a3',
-            borderRadius: '50%', animation: 'spin 1s linear infinite'
+            borderRadius: '50%'
           }} />
-          <style>
-            {`@keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }`}
-          </style>
         </div>
       </Container>
     );

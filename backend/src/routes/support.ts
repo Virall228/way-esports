@@ -42,8 +42,15 @@ const sanitizeDisplayText = (value: unknown): string => {
   if (!text) return '';
 
   const questionMarks = (text.match(/\?/g) || []).length;
-  if (questionMarks >= 8 && (text.includes('->') || text.length >= 40)) {
-    return 'Сообщение повреждено кодировкой. Отправьте новый запрос, и мы ответим корректно.';
+  const mojibakeHits = (text.match(/�[�-��-�A-Za-z]/g) || []).length;
+  const hasReplacementChar = text.includes('\uFFFD');
+
+  if (
+    (questionMarks >= 8 && (text.includes('->') || text.length >= 40)) ||
+    mojibakeHits >= 6 ||
+    hasReplacementChar
+  ) {
+    return 'Message was corrupted by encoding. Please resend your request and we will reply correctly.';
   }
 
   return text;
@@ -81,7 +88,7 @@ const normalizeConversation = (conv: any) => ({
 const getSupportSettings = async () => {
   const settings = await SupportSettings.findOneAndUpdate(
     { key: 'global' },
-    { $setOnInsert: { key: 'global', aiEnabled: true } },
+    { $setOnInsert: { key: 'global', aiEnabled: false } },
     { new: true, upsert: true }
   ).lean();
   return {
@@ -552,3 +559,4 @@ router.get('/admin/stream', isAdmin, async (req: any, res: any) => {
 });
 
 export default router;
+

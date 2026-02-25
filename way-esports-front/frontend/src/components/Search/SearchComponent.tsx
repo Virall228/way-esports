@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { api } from '../../services/api';
+import FlameAuraAvatar from '../UI/FlameAuraAvatar';
+import { getIntensityByPointsAndRank, getTierByRank } from '../../utils/flameRank';
 
 type SearchItemType = 'player' | 'team' | 'tournament' | 'news';
 
@@ -147,19 +149,10 @@ const SearchResultItem = styled.div`
   }
 `;
 
-const ResultAvatar = styled.div<{ $imageUrl?: string }>`
+const ResultAvatarWrap = styled.div`
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  background: ${({ $imageUrl }) => $imageUrl ? `url(${$imageUrl})` : 'linear-gradient(135deg, #ff6b00, #ffd700)'};
-  background-size: cover;
-  background-position: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  font-weight: 700;
-  border: 2px solid rgba(255, 107, 0, 0.3);
+  min-width: 40px;
 `;
 
 const ResultInfo = styled.div`
@@ -387,6 +380,24 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
   };
 
   const totalCount = results.length;
+  const getAvatarVisual = (result: SearchResult) => {
+    const relevance = Number(result.relevance || 50);
+    if (result.type === 'team') {
+      const pseudoRank = Math.max(1, 200 - Math.min(180, Math.round(relevance)));
+      return {
+        tier: getTierByRank(pseudoRank),
+        intensity: getIntensityByPointsAndRank(1200 + relevance * 4, pseudoRank)
+      };
+    }
+    if (result.type === 'player') {
+      const pseudoRank = Math.max(1, 250 - Math.min(220, Math.round(relevance)));
+      return {
+        tier: getTierByRank(pseudoRank),
+        intensity: getIntensityByPointsAndRank(1100 + relevance * 3, pseudoRank)
+      };
+    }
+    return { tier: 'default' as const, intensity: 0.45 };
+  };
 
   return (
     <SearchContainer ref={searchRef} className={className}>
@@ -449,7 +460,16 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
                   </CategoryTitle>
                   {groupedResults.players.map(result => (
                     <SearchResultItem key={result.id} onClick={() => handleResultClick(result)}>
-                      <ResultAvatar $imageUrl={result.avatar}>{result.avatar}</ResultAvatar>
+                      <ResultAvatarWrap>
+                        <FlameAuraAvatar
+                          image={result.avatar || undefined}
+                          alt={result.name}
+                          size={40}
+                          tier={getAvatarVisual(result).tier}
+                          intensity={getAvatarVisual(result).intensity}
+                          fallbackText={result.name.slice(0, 1).toUpperCase()}
+                        />
+                      </ResultAvatarWrap>
                       <ResultInfo>
                         <ResultName>{result.name}</ResultName>
                         <ResultDetails>{result.details}</ResultDetails>
@@ -470,7 +490,16 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
                   </CategoryTitle>
                   {groupedResults.teams.map(result => (
                     <SearchResultItem key={result.id} onClick={() => handleResultClick(result)}>
-                      <ResultAvatar $imageUrl={result.avatar}>{result.avatar}</ResultAvatar>
+                      <ResultAvatarWrap>
+                        <FlameAuraAvatar
+                          image={result.avatar || undefined}
+                          alt={result.name}
+                          size={40}
+                          tier={getAvatarVisual(result).tier}
+                          intensity={getAvatarVisual(result).intensity}
+                          fallbackText={result.name.slice(0, 1).toUpperCase()}
+                        />
+                      </ResultAvatarWrap>
                       <ResultInfo>
                         <ResultName>{result.name}</ResultName>
                         <ResultDetails>{result.details}</ResultDetails>
@@ -491,7 +520,16 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
                   </CategoryTitle>
                   {groupedResults.tournaments.map(result => (
                     <SearchResultItem key={result.id} onClick={() => handleResultClick(result)}>
-                      <ResultAvatar $imageUrl={result.avatar}>{result.avatar}</ResultAvatar>
+                      <ResultAvatarWrap>
+                        <FlameAuraAvatar
+                          image={result.avatar || undefined}
+                          alt={result.name}
+                          size={40}
+                          tier="default"
+                          intensity={0.45}
+                          fallbackText={result.name.slice(0, 1).toUpperCase()}
+                        />
+                      </ResultAvatarWrap>
                       <ResultInfo>
                         <ResultName>{result.name}</ResultName>
                         <ResultDetails>{result.details}</ResultDetails>
@@ -512,7 +550,16 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
                   </CategoryTitle>
                   {groupedResults.news.map(result => (
                     <SearchResultItem key={result.id} onClick={() => handleResultClick(result)}>
-                      <ResultAvatar $imageUrl={result.avatar}>{result.avatar}</ResultAvatar>
+                      <ResultAvatarWrap>
+                        <FlameAuraAvatar
+                          image={result.avatar || undefined}
+                          alt={result.name}
+                          size={40}
+                          tier="default"
+                          intensity={0.45}
+                          fallbackText={result.name.slice(0, 1).toUpperCase()}
+                        />
+                      </ResultAvatarWrap>
                       <ResultInfo>
                         <ResultName>{result.name}</ResultName>
                         <ResultDetails>{result.details}</ResultDetails>

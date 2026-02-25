@@ -57,6 +57,23 @@ Use:
 powershell -ExecutionPolicy Bypass -File scripts/smoke-system.ps1 -BaseUrl https://wayesports.duckdns.org
 ```
 
+Admin smoke (requires JWT admin token):
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/smoke-admin.ps1 -BaseUrl https://wayesports.duckdns.org -Token "<JWT>"
+```
+
+Unified release check (runs system smoke + optional admin smoke):
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/release-check.ps1 -BaseUrl https://wayesports.duckdns.org -AdminToken "<JWT>"
+```
+
+Linux/macOS equivalents:
+```bash
+bash scripts/smoke-system.sh https://wayesports.duckdns.org
+bash scripts/smoke-admin.sh https://wayesports.duckdns.org "<JWT>"
+bash scripts/release-check.sh https://wayesports.duckdns.org "<JWT>"
+```
+
 Pass criteria:
 - `/api/health` = 200
 - `/api/tournaments` = 200

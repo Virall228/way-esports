@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import Match, { IMatch } from '../models/Match';
 import Tournament from '../models/Tournament';
 import Team from '../models/Team';
@@ -1235,6 +1236,124 @@ router.put('/:id/score', authenticateJWT, isAdmin, async (req, res) => {
   }
 });
 
+// Set match winner directly (admin quick action)
+router.put('/:id/winner', authenticateJWT, isAdmin, async (req, res) => {
+  try {
+    const match = await Match.findById(req.params.id);
+    if (!match) {
+      return res.status(404).json({ success: false, error: 'Match not found' });
+    }
+
+    const winnerId = String(req.body?.winner || '').trim();
+    if (!winnerId) {
+      return res.status(400).json({ success: false, error: 'winner is required' });
+    }
+
+    const team1Id = match.team1 ? String(match.team1) : '';
+    const team2Id = match.team2 ? String(match.team2) : '';
+    if (!team1Id || !team2Id || (winnerId !== team1Id && winnerId !== team2Id)) {
+      return res.status(400).json({ success: false, error: 'winner must be one of match teams' });
+    }
+
+    const wasCompleted = match.status === 'completed';
+    match.winner = winnerId as any;
+    if (String(req.body?.markCompleted || '').toLowerCase() === 'false') {
+      // keep current status if explicitly requested
+    } else {
+      match.status = 'completed' as any;
+      if (!match.endTime) match.endTime = new Date();
+    }
+
+    await match.save();
+
+    if (!wasCompleted && match.status === 'completed') {
+      await handleMatchCompleted((match as any)._id.toString(), winnerId);
+    }
+
+    void writeAdminAudit(req, {
+      entity: 'match_winner_update',
+      entityId: String(match._id),
+      statusCode: 200,
+      details: {
+        winnerId,
+        status: String(match.status || '')
+      }
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        id: String(match._id),
+        winner: String(match.winner || ''),
+        status: String(match.status || '')
+      }
+    });
+  } catch (error: any) {
+    console.error('Error updating match winner:', error);
+    return res.status(500).json({ success: false, error: 'Failed to update match winner' });
+  }
+});
+
+// Update match meta (round/map/start time) for admin bracket correction
+router.patch('/:id/meta', authenticateJWT, isAdmin, async (req, res) => {
+  try {
+    const match = await Match.findById(req.params.id);
+    if (!match) {
+      return res.status(404).json({ success: false, error: 'Match not found' });
+    }
+
+    const roundRaw = req.body?.round;
+    const mapRaw = req.body?.map;
+    const startTimeRaw = req.body?.startTime;
+
+    if (roundRaw !== undefined) {
+      const value = String(roundRaw || '').trim();
+      if (!value) return res.status(400).json({ success: false, error: 'round must be non-empty string' });
+      match.round = value;
+    }
+
+    if (mapRaw !== undefined) {
+      const value = String(mapRaw || '').trim();
+      if (!value) return res.status(400).json({ success: false, error: 'map must be non-empty string' });
+      match.map = value;
+    }
+
+    if (startTimeRaw !== undefined) {
+      const parsed = new Date(startTimeRaw);
+      if (Number.isNaN(parsed.getTime())) {
+        return res.status(400).json({ success: false, error: 'startTime must be valid ISO date' });
+      }
+      match.startTime = parsed as any;
+    }
+
+    await match.save();
+
+    void writeAdminAudit(req, {
+      entity: 'match_meta_update',
+      entityId: String(match._id),
+      statusCode: 200,
+      details: {
+        round: match.round || '',
+        map: match.map || '',
+        startTime: match.startTime ? new Date(match.startTime as any).toISOString() : null
+      }
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        id: String(match._id),
+        round: match.round || '',
+        map: match.map || '',
+        startTime: match.startTime ? new Date(match.startTime as any).toISOString() : null
+      }
+    });
+  } catch (error: any) {
+    console.error('Error updating match meta:', error);
+    return res.status(500).json({ success: false, error: 'Failed to update match meta' });
+  }
+});
+
 // Update match status
 router.put('/:id/status', authenticateJWT, isAdmin, async (req, res) => {
   try {
@@ -1466,6 +1585,120 @@ router.post('/status/bulk', authenticateJWT, isAdmin, async (req, res) => {
       success: false,
       error: error?.message || 'Failed to bulk update match statuses'
     });
+  }
+});
+
+// Bulk infer winners from existing scores (admin)
+router.post('/winner/bulk-infer', authenticateJWT, isAdmin, async (req, res) => {
+  try {
+    const tournamentId = String(req.body?.tournamentId || '').trim();
+    const markCompleted = req.body?.markCompleted !== false;
+    const matchIds = Array.isArray(req.body?.matchIds)
+      ? req.body.matchIds.map((id: any) => String(id || '').trim()).filter(Boolean)
+      : [];
+
+    const query: any = {};
+    if (tournamentId) query.tournament = tournamentId;
+    if (matchIds.length) query._id = { $in: matchIds };
+
+    const matches: any[] = await Match.find(query).select('_id team1 team2 winner score status endTime');
+    if (!matches.length) {
+      return res.json({ success: true, data: { processed: 0, updated: 0, skipped: 0, failed: 0, details: [] } });
+    }
+
+    let updated = 0;
+    let skipped = 0;
+    let failed = 0;
+    const details: Array<{ matchId: string; status: 'updated' | 'skipped' | 'failed'; reason?: string }> = [];
+
+    for (const match of matches) {
+      const matchId = String(match?._id || '');
+      try {
+        const team1Id = match?.team1 ? String(match.team1) : '';
+        const team2Id = match?.team2 ? String(match.team2) : '';
+        const score1 = Number(match?.score?.team1);
+        const score2 = Number(match?.score?.team2);
+        const currentWinner = match?.winner ? String(match.winner) : '';
+
+        if (!team1Id || !team2Id) {
+          skipped += 1;
+          details.push({ matchId, status: 'skipped', reason: 'Teams are not set' });
+          continue;
+        }
+
+        if (!Number.isFinite(score1) || !Number.isFinite(score2)) {
+          skipped += 1;
+          details.push({ matchId, status: 'skipped', reason: 'Score is missing' });
+          continue;
+        }
+
+        if (score1 === score2) {
+          skipped += 1;
+          details.push({ matchId, status: 'skipped', reason: 'Draw score' });
+          continue;
+        }
+
+        const inferredWinner = score1 > score2 ? team1Id : team2Id;
+        const shouldSetStatus = markCompleted && String(match?.status || '') !== 'completed';
+        const noChangesNeeded = currentWinner === inferredWinner && !shouldSetStatus;
+
+        if (noChangesNeeded) {
+          skipped += 1;
+          details.push({ matchId, status: 'skipped', reason: 'Already consistent' });
+          continue;
+        }
+
+        match.winner = new mongoose.Types.ObjectId(inferredWinner);
+        if (markCompleted) {
+          match.status = 'completed';
+          if (!match.endTime) match.endTime = new Date();
+        }
+        await match.save();
+
+        if (shouldSetStatus) {
+          await handleMatchCompleted(matchId, inferredWinner);
+        }
+
+        updated += 1;
+        details.push({ matchId, status: 'updated' });
+      } catch (error: any) {
+        failed += 1;
+        details.push({ matchId, status: 'failed', reason: error?.message || 'Failed to infer winner' });
+      }
+    }
+
+    void writeAdminAudit(req, {
+      entity: 'match_winner_bulk_infer',
+      entityId: tournamentId || undefined,
+      statusCode: 200,
+      details: {
+        tournamentId: tournamentId || null,
+        requested: matchIds.length || matches.length,
+        markCompleted,
+        updated,
+        skipped,
+        failed
+      }
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        processed: matches.length,
+        updated,
+        skipped,
+        failed,
+        details
+      }
+    });
+  } catch (error: any) {
+    console.error('Error bulk inferring winners:', error);
+    void writeAdminAudit(req, {
+      entity: 'match_winner_bulk_infer',
+      statusCode: 500,
+      details: { error: error?.message || 'Failed to bulk infer winners' }
+    });
+    return res.status(500).json({ success: false, error: 'Failed to bulk infer winners' });
   }
 });
 

@@ -72,7 +72,7 @@ type AnalyticsPayload = {
     clutchFactor: number;
     teamplay: number;
   };
-  trend30d: Array<{ date: string; rating: number }>;
+  trend30d: Array<{ date: string; points?: number; rating?: number }>;
   heatmap: Array<{ x: number; y: number; count: number; eventType: string }>;
 };
 
@@ -90,6 +90,9 @@ type RankUpdateEvent = {
   previousRating: number;
   newRating: number;
   delta: number;
+  previousPoints?: number;
+  newPoints?: number;
+  pointsDelta?: number;
   at: string;
 };
 
@@ -151,17 +154,18 @@ const RadarChart: React.FC<{ skills: AnalyticsPayload['skills'] }> = ({ skills }
   );
 };
 
-const TrendChart: React.FC<{ trend: Array<{ date: string; rating: number }> }> = ({ trend }) => {
+const TrendChart: React.FC<{ trend: Array<{ date: string; points?: number; rating?: number }> }> = ({ trend }) => {
   const width = 720;
   const height = 220;
   const padding = 24;
   const points = trend.slice(-30);
-  const max = Math.max(100, ...points.map((p) => p.rating));
-  const min = Math.min(0, ...points.map((p) => p.rating));
+  const metric = (p: { points?: number; rating?: number }) => Number(p.points ?? p.rating ?? 0);
+  const max = Math.max(100, ...points.map(metric));
+  const min = Math.min(0, ...points.map(metric));
 
   const path = points.map((p, idx) => {
     const x = padding + (idx * (width - padding * 2)) / Math.max(1, points.length - 1);
-    const y = height - padding - ((p.rating - min) / Math.max(1, max - min)) * (height - padding * 2);
+    const y = height - padding - ((metric(p) - min) / Math.max(1, max - min)) * (height - padding * 2);
     return `${idx === 0 ? 'M' : 'L'}${x},${y}`;
   }).join(' ');
 
@@ -215,7 +219,7 @@ const AnalyticsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [leftRating, setLeftRating] = useState('1000');
   const [rightRating, setRightRating] = useState('1000');
-  const [winProbability, setWinProbability] = useState<{ leftProbability: number; rightProbability: number } | null>(null);
+  const [winProbability, setWinProbability] = useState<{ leftProbability: number; rightProbability: number; leftPoints?: number; rightPoints?: number } | null>(null);
   const [leftTeamId, setLeftTeamId] = useState('');
   const [rightTeamId, setRightTeamId] = useState('');
   const [teamCompareResult, setTeamCompareResult] = useState<any | null>(null);
@@ -313,10 +317,10 @@ const AnalyticsPage: React.FC = () => {
   const handleCompare = async () => {
     try {
       const res: any = await api.post('/api/intelligence/compare/win-probability', {
-        left: { rating: Number(leftRating) || 1000, winRate: 50 },
-        right: { rating: Number(rightRating) || 1000, winRate: 50 }
+        left: { points: Number(leftRating) || 1000, rating: Number(leftRating) || 1000, winRate: 50 },
+        right: { points: Number(rightRating) || 1000, rating: Number(rightRating) || 1000, winRate: 50 }
       });
-      setWinProbability(unwrapApiData<{ leftProbability: number; rightProbability: number } | null>(res));
+      setWinProbability(unwrapApiData<{ leftProbability: number; rightProbability: number; leftPoints?: number; rightPoints?: number } | null>(res));
     } catch {
       setWinProbability(null);
     }
@@ -336,8 +340,8 @@ const AnalyticsPage: React.FC = () => {
   const handleCompareTeams = async () => {
     try {
       const res: any = await api.post('/api/intelligence/compare/team-vs-team', {
-        left: { teamId: leftTeamId || undefined, rating: Number(leftRating) || 1000 },
-        right: { teamId: rightTeamId || undefined, rating: Number(rightRating) || 1000 }
+        left: { teamId: leftTeamId || undefined, points: Number(leftRating) || 1000, rating: Number(leftRating) || 1000 },
+        right: { teamId: rightTeamId || undefined, points: Number(rightRating) || 1000, rating: Number(rightRating) || 1000 }
       });
       setTeamCompareResult(unwrapApiData<any>(res));
     } catch {
@@ -411,10 +415,10 @@ const AnalyticsPage: React.FC = () => {
             />
           </div>
           {rankUpdates
-            .filter((row) => Math.abs(row.delta) >= (Number(minDeltaFilter) || 0))
+            .filter((row) => Math.abs(Number(row.pointsDelta ?? row.delta ?? 0)) >= (Number(minDeltaFilter) || 0))
             .map((row, index) => (
             <div key={`${row.userId || 'user'}-${row.at}-${index}`} style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-              User: <strong>{row.userId || 'unknown'}</strong> | {row.previousRating} -&gt; {row.newRating} ({row.delta >= 0 ? '+' : ''}{row.delta})
+              User: <strong>{row.userId || 'unknown'}</strong> | {Number(row.previousPoints ?? row.previousRating)} -&gt; {Number(row.newPoints ?? row.newRating)} points ({Number(row.pointsDelta ?? row.delta) >= 0 ? '+' : ''}{Number(row.pointsDelta ?? row.delta)})
             </div>
           ))}
         </Card>
@@ -422,8 +426,8 @@ const AnalyticsPage: React.FC = () => {
         <Card>
           <Title>Comparison Engine</Title>
           <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr auto' }}>
-            <Input value={leftRating} onChange={(e) => setLeftRating(e.target.value)} placeholder="Left rating" />
-            <Input value={rightRating} onChange={(e) => setRightRating(e.target.value)} placeholder="Right rating" />
+            <Input value={leftRating} onChange={(e) => setLeftRating(e.target.value)} placeholder="Left points" />
+            <Input value={rightRating} onChange={(e) => setRightRating(e.target.value)} placeholder="Right points" />
             <ActionButton onClick={handleCompare}>Compare</ActionButton>
           </div>
           {winProbability && (
@@ -431,6 +435,10 @@ const AnalyticsPage: React.FC = () => {
               <div>
                 Left: <strong>{(winProbability.leftProbability * 100).toFixed(1)}%</strong> | Right:{' '}
                 <strong>{(winProbability.rightProbability * 100).toFixed(1)}%</strong>
+              </div>
+              <div style={{ color: '#bbb', fontSize: 13 }}>
+                Points baseline: <strong>{Number(winProbability.leftPoints ?? (Number(leftRating) || 1000))}</strong> vs{' '}
+                <strong>{Number(winProbability.rightPoints ?? (Number(rightRating) || 1000))}</strong>
               </div>
               <div style={{ height: 10, borderRadius: 6, background: 'rgba(255,255,255,0.1)', overflow: 'hidden', display: 'flex' }}>
                 <div style={{ width: `${Math.round(winProbability.leftProbability * 100)}%`, background: '#ff6b00' }} />
@@ -451,6 +459,10 @@ const AnalyticsPage: React.FC = () => {
               <div>
                 {teamCompareResult.left?.name || 'Left'}: <strong>{((teamCompareResult.left?.probability || 0) * 100).toFixed(1)}%</strong> |{' '}
                 {teamCompareResult.right?.name || 'Right'}: <strong>{((teamCompareResult.right?.probability || 0) * 100).toFixed(1)}%</strong>
+              </div>
+              <div style={{ color: '#bbb', fontSize: 13 }}>
+                Team points: <strong>{Number(teamCompareResult?.left?.points ?? teamCompareResult?.left?.rating ?? (Number(leftRating) || 1000))}</strong> vs{' '}
+                <strong>{Number(teamCompareResult?.right?.points ?? teamCompareResult?.right?.rating ?? (Number(rightRating) || 1000))}</strong>
               </div>
               <div style={{ height: 10, borderRadius: 6, background: 'rgba(255,255,255,0.1)', overflow: 'hidden', display: 'flex' }}>
                 <div style={{ width: `${Math.round(Number(teamCompareResult?.left?.probability || 0) * 100)}%`, background: '#ff6b00' }} />

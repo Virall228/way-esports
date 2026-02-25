@@ -520,6 +520,11 @@ interface PaginationMeta {
   hasPrev: boolean;
 }
 
+interface PagedResult<T> {
+  data: T[];
+  pagination: PaginationMeta | null;
+}
+
 interface OpsMetrics {
   status: string;
   uptimeSeconds: number;
@@ -740,6 +745,36 @@ interface AdminTournamentRequestRow {
   requestedAt?: string | null;
 }
 
+interface AdminTournamentRequestHistoryRow {
+  id: string;
+  tournamentId: string;
+  tournamentName: string;
+  game: string;
+  tournamentStatus: string;
+  teamId: string;
+  teamName: string;
+  teamTag: string;
+  status: 'approved' | 'rejected';
+  note?: string;
+  requestedAt?: string | null;
+  reviewedAt?: string | null;
+  requestedBy?: {
+    id: string;
+    username?: string;
+    firstName?: string;
+    lastName?: string;
+    telegramId?: number | null;
+  } | null;
+  reviewedBy?: {
+    id: string;
+    username?: string;
+    firstName?: string;
+    lastName?: string;
+    telegramId?: number | null;
+    role?: string;
+  } | null;
+}
+
 interface AdminTournamentOverview {
   tournament: {
     id: string;
@@ -868,6 +903,15 @@ const AdminPage: React.FC = () => {
     search: ''
   });
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'pending_withdrawals'>('all');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<'all' | 'pending' | 'completed' | 'failed' | 'refund_pending' | 'refunded' | 'refund_denied'>('all');
+  const [paymentSearch, setPaymentSearch] = useState('');
+  const [paymentsPage, setPaymentsPage] = useState(1);
+  const [tournamentRequestSearch, setTournamentRequestSearch] = useState('');
+  const [tournamentRequestsPage, setTournamentRequestsPage] = useState(1);
+  const [matchesPage, setMatchesPage] = useState(1);
+  const [recentDecisionsSearch, setRecentDecisionsSearch] = useState('');
+  const [recentDecisionsPage, setRecentDecisionsPage] = useState(1);
+  const [recentRequestsStatusFilter, setRecentRequestsStatusFilter] = useState<'all' | 'approved' | 'rejected'>('all');
   const [prospectsFilter, setProspectsFilter] = useState<'all' | 'hidden_gem'>('all');
   const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
   const [supportStatusFilter, setSupportStatusFilter] = useState<'all' | 'open' | 'waiting_user' | 'waiting_admin' | 'resolved'>('all');
@@ -901,7 +945,7 @@ const AdminPage: React.FC = () => {
   const [newTournamentRequestCounts, setNewTournamentRequestCounts] = useState<Record<string, number>>({});
   const [tournamentRequestSoundEnabled, setTournamentRequestSoundEnabled] = useState(true);
   const [pointsInput, setPointsInput] = useState({ playerRating: 1000, opponentRating: 1000, result: 1 });
-  const [pointsOutput, setPointsOutput] = useState<{ newRating: number; delta: number } | null>(null);
+  const [pointsOutput, setPointsOutput] = useState<{ newPoints: number; pointsDelta: number } | null>(null);
   const [statsInput, setStatsInput] = useState({
     kills: 10,
     deaths: 8,
@@ -1850,11 +1894,21 @@ const AdminPage: React.FC = () => {
     }));
   };
 
-  const fetchTournamentRequests = async (): Promise<AdminTournamentRequestRow[]> => {
-    if (!selectedTournamentId) return [];
-    const result: any = await api.get(`/api/tournaments/${selectedTournamentId}/requests?status=pending`);
+  const fetchTournamentRequests = async (): Promise<PagedResult<AdminTournamentRequestRow>> => {
+    if (!selectedTournamentId) {
+      return { data: [], pagination: null };
+    }
+    const params = new URLSearchParams({
+      status: 'pending',
+      page: String(tournamentRequestsPage),
+      limit: '12'
+    });
+    if (tournamentRequestSearch.trim()) {
+      params.set('search', tournamentRequestSearch.trim());
+    }
+    const result: any = await api.get(`/api/tournaments/${selectedTournamentId}/requests?${params.toString()}`);
     const items: any[] = (result && result.data) || [];
-    return items.map((item: any) => ({
+    const rows = items.map((item: any) => ({
       id: String(item.id || ''),
       teamId: String(item.teamId || ''),
       teamName: String(item.teamName || ''),
@@ -1870,12 +1924,63 @@ const AdminPage: React.FC = () => {
       status: item.status || 'pending',
       requestedAt: item.requestedAt || null
     }));
+    return {
+      data: rows,
+      pagination: result?.pagination || null
+    };
   };
 
   const fetchTournamentOverview = async (): Promise<AdminTournamentOverview | null> => {
     if (!selectedTournamentId) return null;
     const result: any = await api.get(`/api/tournaments/${selectedTournamentId}/admin-overview`);
     return (result?.data || result || null) as AdminTournamentOverview | null;
+  };
+
+  const fetchPendingTournamentQueue = async (): Promise<any[]> => {
+    const result: any = await api.get('/api/tournaments/admin/requests/pending-overview?limit=50');
+    const items: any[] = (result && result.data) || [];
+    return items.map((row: any) => ({
+      id: String(row.tournamentId || ''),
+      name: String(row.tournamentName || ''),
+      game: String(row.game || ''),
+      status: String(row.status || 'upcoming'),
+      startDate: row.startDate || null,
+      pendingRequestsCount: Number(row.pendingRequestsCount || 0),
+      firstPendingAt: row.firstPendingAt || null
+    }));
+  };
+
+  const fetchRecentTournamentRequests = async (): Promise<PagedResult<AdminTournamentRequestHistoryRow>> => {
+    const params = new URLSearchParams({
+      limit: '14',
+      page: String(recentDecisionsPage),
+      status: recentRequestsStatusFilter
+    });
+    if (recentDecisionsSearch.trim()) {
+      params.set('search', recentDecisionsSearch.trim());
+    }
+    const result: any = await api.get(`/api/tournaments/admin/requests/recent?${params.toString()}`);
+    const items: any[] = (result && result.data) || [];
+    const rows = items.map((row: any) => ({
+      id: String(row.id || ''),
+      tournamentId: String(row.tournamentId || ''),
+      tournamentName: String(row.tournamentName || ''),
+      game: String(row.game || ''),
+      tournamentStatus: String(row.tournamentStatus || 'upcoming'),
+      teamId: String(row.teamId || ''),
+      teamName: String(row.teamName || ''),
+      teamTag: String(row.teamTag || ''),
+      status: row.status === 'approved' ? 'approved' : 'rejected',
+      note: String(row.note || ''),
+      requestedAt: row.requestedAt || null,
+      reviewedAt: row.reviewedAt || null,
+      requestedBy: row.requestedBy || null,
+      reviewedBy: row.reviewedBy || null
+    }));
+    return {
+      data: rows,
+      pagination: result?.pagination || null
+    };
   };
 
   const fetchNews = async () => {
@@ -1926,10 +2031,26 @@ const AdminPage: React.FC = () => {
     }));
   };
 
-  const fetchWalletTransactions = async (): Promise<AdminWalletTransaction[]> => {
-    const result: any = await api.get('/api/admin/wallet/transactions?limit=300');
+  const fetchWalletTransactions = async (): Promise<PagedResult<AdminWalletTransaction>> => {
+    const params = new URLSearchParams({
+      page: String(paymentsPage),
+      limit: '20'
+    });
+    if (paymentStatusFilter !== 'all') {
+      params.set('status', paymentStatusFilter);
+    }
+    if (paymentFilter === 'pending_withdrawals') {
+      params.set('type', 'withdrawal');
+      if (paymentStatusFilter === 'all') {
+        params.set('status', 'pending');
+      }
+    }
+    if (paymentSearch.trim()) {
+      params.set('search', paymentSearch.trim());
+    }
+    const result: any = await api.get(`/api/admin/wallet/transactions?${params.toString()}`);
     const items: any[] = Array.isArray(result) ? result : (result?.data || []);
-    return items.map((tx: any) => ({
+    const rows = items.map((tx: any) => ({
       id: (tx.id || tx._id || '').toString(),
       userId: (tx.userId || '').toString(),
       source: tx.source === 'wallet' ? 'wallet' : 'user',
@@ -1948,6 +2069,10 @@ const AdminPage: React.FC = () => {
       processedAt: tx.processedAt || null,
       balance: Number(tx.balance || 0)
     }));
+    return {
+      data: rows,
+      pagination: result?.pagination || null
+    };
   };
 
   const fetchAuditLogs = async () => {
@@ -2134,7 +2259,7 @@ const AdminPage: React.FC = () => {
   });
 
   const tournamentRequestsQuery = useQuery({
-    queryKey: ['admin', 'tournament-requests', selectedTournamentId],
+    queryKey: ['admin', 'tournament-requests', selectedTournamentId, tournamentRequestsPage, tournamentRequestSearch],
     queryFn: fetchTournamentRequests,
     enabled: hasAdminAccess && activeTab === 'tournaments' && Boolean(selectedTournamentId),
     staleTime: 5000,
@@ -2146,6 +2271,22 @@ const AdminPage: React.FC = () => {
     queryFn: fetchTournamentOverview,
     enabled: hasAdminAccess && activeTab === 'tournaments' && Boolean(selectedTournamentId),
     staleTime: 5000,
+    refetchOnWindowFocus: false
+  });
+
+  const pendingTournamentQueueQuery = useQuery({
+    queryKey: ['admin', 'pending-tournament-queue'],
+    queryFn: fetchPendingTournamentQueue,
+    enabled: hasAdminAccess && activeTab === 'tournaments',
+    staleTime: 5000,
+    refetchOnWindowFocus: false
+  });
+
+  const recentTournamentRequestsQuery = useQuery({
+    queryKey: ['admin', 'recent-tournament-requests', recentRequestsStatusFilter, recentDecisionsPage, recentDecisionsSearch],
+    queryFn: fetchRecentTournamentRequests,
+    enabled: hasAdminAccess && activeTab === 'tournaments',
+    staleTime: 15000,
     refetchOnWindowFocus: false
   });
 
@@ -2327,7 +2468,7 @@ const AdminPage: React.FC = () => {
   });
 
   const walletTransactionsQuery = useQuery({
-    queryKey: ['admin', 'wallet-transactions'],
+    queryKey: ['admin', 'wallet-transactions', paymentsPage, paymentStatusFilter, paymentFilter, paymentSearch],
     queryFn: fetchWalletTransactions,
     enabled: hasAdminAccess,
     staleTime: 15000,
@@ -2425,7 +2566,18 @@ const AdminPage: React.FC = () => {
   const users = usersQuery.data?.items || [];
   const usersPagination = usersQuery.data?.pagination || null;
   const tournaments = tournamentsQuery.data || [];
-  const tournamentRequests = tournamentRequestsQuery.data || [];
+  const tournamentsWithPending = Array.isArray(tournaments)
+    ? [...tournaments]
+      .filter((row: any) => Number(row?.pendingRequestsCount || 0) > 0)
+      .sort((a: any, b: any) => Number(b?.pendingRequestsCount || 0) - Number(a?.pendingRequestsCount || 0))
+    : [];
+  const pendingTournamentQueue = (pendingTournamentQueueQuery.data && pendingTournamentQueueQuery.data.length > 0)
+    ? pendingTournamentQueueQuery.data
+    : tournamentsWithPending;
+  const recentTournamentRequests = recentTournamentRequestsQuery.data?.data || [];
+  const recentTournamentRequestsPagination = recentTournamentRequestsQuery.data?.pagination || null;
+  const tournamentRequests = tournamentRequestsQuery.data?.data || [];
+  const tournamentRequestsPagination = tournamentRequestsQuery.data?.pagination || null;
   const tournamentOverview = tournamentOverviewQuery.data || null;
   const news = newsQuery.data || [];
   const achievements = achievementsQuery.data || [];
@@ -2442,7 +2594,8 @@ const AdminPage: React.FC = () => {
   const supportAuditEvents = supportAuditEventsQuery.data?.items || [];
   const supportAuditPagination = supportAuditEventsQuery.data?.pagination || null;
   const systemSmokeAuditEvents = systemSmokeAuditEventsQuery.data || [];
-  const walletTransactions = walletTransactionsQuery.data || [];
+  const walletTransactions = walletTransactionsQuery.data?.data || [];
+  const walletTransactionsPagination = walletTransactionsQuery.data?.pagination || null;
   const auditLogs = auditLogsQuery.data || [];
   const authLogs = authLogsQuery.data || [];
   const opsMetrics = opsMetricsQuery.data || null;
@@ -2512,6 +2665,12 @@ const AdminPage: React.FC = () => {
       setSelectedTournamentId(tournaments[0].id);
     }
   }, [activeTab, tournaments, selectedTournamentId]);
+
+  useEffect(() => {
+    setTournamentRequestsPage(1);
+    setMatchesPage(1);
+    setRecentDecisionsPage(1);
+  }, [selectedTournamentId]);
 
   useEffect(() => {
     if (activeTab !== 'support') return;
@@ -2788,9 +2947,11 @@ const AdminPage: React.FC = () => {
   };
 
   const handleApproveTournamentRequest = async (tournamentId: string, teamId: string) => {
+    const noteInput = window.prompt('Approval note (optional)', '') || '';
+    const note = noteInput.trim();
     try {
       setError(null);
-      await api.post(`/api/tournaments/${tournamentId}/requests/${teamId}/approve`, {});
+      await api.post(`/api/tournaments/${tournamentId}/requests/${teamId}/approve`, note ? { note } : {});
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests', tournamentId] }),
@@ -2807,13 +2968,16 @@ const AdminPage: React.FC = () => {
   };
 
   const handleRejectTournamentRequest = async (tournamentId: string, teamId: string) => {
+    const noteInput = window.prompt('Reject reason (optional)', '') || '';
+    const note = noteInput.trim();
     try {
       setError(null);
-      await api.post(`/api/tournaments/${tournamentId}/requests/${teamId}/reject`, {});
+      await api.post(`/api/tournaments/${tournamentId}/requests/${teamId}/reject`, note ? { note } : {});
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests', tournamentId] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', tournamentId] }),
-        queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] })
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'recent-tournament-requests'] })
       ]);
       notify('success', 'Request rejected', 'Team request was rejected');
     } catch (e: any) {
@@ -3141,6 +3305,375 @@ const AdminPage: React.FC = () => {
     }).catch((e: any) => {
       notify('error', 'Preview failed', formatApiError(e, 'Dry-run failed'));
     });
+  };
+
+  const handleBulkInferWinners = async () => {
+    if (!selectedTournamentId) return;
+    const { filteredMatches } = getFilteredTournamentMatches();
+    const matchIds = filteredMatches.map((m: any) => String(m.id || '')).filter(Boolean);
+    if (!matchIds.length) {
+      notify('info', 'No matches', 'No matches in current filter');
+      return;
+    }
+
+    const confirmed = window.confirm(`Infer winners by score for ${matchIds.length} filtered matches?`);
+    if (!confirmed) return;
+
+    try {
+      setError(null);
+      const result: any = await api.post('/api/matches/winner/bulk-infer', {
+        tournamentId: selectedTournamentId,
+        matchIds,
+        markCompleted: true
+      });
+      const payload = result?.data || result || {};
+      await Promise.all([
+        invalidateTournamentMatchViews(selectedTournamentId),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'match-ops-summary', selectedTournamentId] })
+      ]);
+      notify(
+        'success',
+        'Winners inferred',
+        `Updated: ${Number(payload.updated || 0)}, skipped: ${Number(payload.skipped || 0)}, failed: ${Number(payload.failed || 0)}`
+      );
+    } catch (e: any) {
+      const message = formatApiError(e, 'Failed to infer winners');
+      setError(message);
+      notify('error', 'Infer winners failed', message);
+    }
+  };
+
+  const handleSetCustomMatchRoom = async (match: any) => {
+    if (!selectedTournamentId) return;
+    const defaultRoomId = String(match?.roomCredentials?.roomId || '');
+    const defaultPassword = String(match?.roomCredentials?.password || '');
+    const roomIdInput = window.prompt('Custom Room ID', defaultRoomId);
+    if (roomIdInput === null) return;
+    const passwordInput = window.prompt('Custom Room Password', defaultPassword);
+    if (passwordInput === null) return;
+
+    const roomId = roomIdInput.trim().toUpperCase();
+    const password = passwordInput.trim();
+    if (!roomId || !password) {
+      notify('warning', 'Invalid room', 'Room ID and password are required');
+      return;
+    }
+
+    try {
+      setError(null);
+      const result: any = await api.post(`/api/matches/${match.id}/room`, {
+        force: true,
+        roomId,
+        password
+      });
+      const payload = result?.data || result || {};
+      await Promise.all([
+        invalidateTournamentMatchViews(selectedTournamentId),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'match-ops-summary', selectedTournamentId] })
+      ]);
+      notify(
+        'success',
+        'Custom room set',
+        payload?.roomId ? `Room ${payload.roomId} updated` : 'Room credentials updated'
+      );
+    } catch (e: any) {
+      const message = formatApiError(e, 'Failed to set custom room');
+      setError(message);
+      notify('error', 'Custom room failed', message);
+    }
+  };
+
+  const handleEditMatchMeta = async (match: any) => {
+    const currentRound = String(match?.round || '');
+    const currentMap = String(match?.map || '');
+    const currentStart = match?.startTime ? new Date(match.startTime).toISOString().slice(0, 16) : '';
+
+    const nextRound = window.prompt('Round', currentRound);
+    if (nextRound === null) return;
+    const nextMap = window.prompt('Map', currentMap);
+    if (nextMap === null) return;
+    const nextStart = window.prompt('Start time (YYYY-MM-DDTHH:mm)', currentStart);
+    if (nextStart === null) return;
+
+    const payload: any = {
+      round: nextRound.trim(),
+      map: nextMap.trim()
+    };
+
+    if (nextStart.trim()) {
+      const asIso = new Date(nextStart.trim());
+      if (Number.isNaN(asIso.getTime())) {
+        notify('warning', 'Invalid date', 'Use format YYYY-MM-DDTHH:mm');
+        return;
+      }
+      payload.startTime = asIso.toISOString();
+    }
+
+    try {
+      setError(null);
+      await api.patch(`/api/matches/${match.id}/meta`, payload);
+      if (selectedTournamentId) {
+        await Promise.all([
+          invalidateTournamentMatchViews(selectedTournamentId),
+          queryClient.invalidateQueries({ queryKey: ['admin', 'match-ops-summary', selectedTournamentId] })
+        ]);
+      }
+      notify('success', 'Match meta updated', 'Round, map and schedule were updated');
+    } catch (e: any) {
+      const message = formatApiError(e, 'Failed to update match meta');
+      setError(message);
+      notify('error', 'Match meta update failed', message);
+    }
+  };
+
+  const handleSetMatchWinner = async (match: any, winnerId: string) => {
+    if (!winnerId) return;
+    try {
+      setError(null);
+      await api.put(`/api/matches/${match.id}/winner`, { winner: winnerId, markCompleted: true });
+      if (selectedTournamentId) {
+        await Promise.all([
+          invalidateTournamentMatchViews(selectedTournamentId),
+          queryClient.invalidateQueries({ queryKey: ['admin', 'match-ops-summary', selectedTournamentId] })
+        ]);
+      }
+      notify('success', 'Winner set', 'Match winner has been updated');
+    } catch (e: any) {
+      const message = formatApiError(e, 'Failed to set winner');
+      setError(message);
+      notify('error', 'Winner update failed', message);
+    }
+  };
+
+  const handleBulkTournamentRequests = async (action: 'approve' | 'reject', teamIds?: string[]) => {
+    if (!selectedTournamentId) return;
+    const pendingRows = Array.isArray(tournamentRequests) ? tournamentRequests : [];
+    const selectedTeamIds = Array.isArray(teamIds) && teamIds.length
+      ? teamIds
+      : pendingRows.map((row) => row.teamId).filter(Boolean);
+    if (!selectedTeamIds.length) {
+      notify('info', 'No requests', 'No pending requests to process');
+      return;
+    }
+
+    const noteInput = window.prompt(
+      action === 'approve' ? 'Bulk approval note (optional)' : 'Bulk reject reason (optional)',
+      ''
+    ) || '';
+    const note = noteInput.trim();
+
+    const result: any = await api.post(`/api/tournaments/${selectedTournamentId}/requests/bulk`, {
+      action,
+      teamIds: selectedTeamIds,
+      ...(note ? { note } : {})
+    });
+    const payload = result?.data || result || {};
+    const ok = Number(payload?.processed || 0);
+    const failed = Number(payload?.failed || 0);
+
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests', selectedTournamentId] }),
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', selectedTournamentId] }),
+      queryClient.invalidateQueries({ queryKey: ['admin', 'recent-tournament-requests'] }),
+      queryClient.invalidateQueries({ queryKey: ['tournaments'] }),
+      queryClient.invalidateQueries({ queryKey: ['matches'] })
+    ]);
+
+    notify(
+      failed === 0 ? 'success' : 'warning',
+      action === 'approve' ? 'Bulk approve done' : 'Bulk reject done',
+      `Processed: ${ok}, failed: ${failed}`
+    );
+  };
+
+  const handleBulkTournamentRequestsForTournament = async (tournamentId: string, action: 'approve' | 'reject') => {
+    const noteInput = window.prompt(
+      action === 'approve' ? 'Bulk approval note (optional)' : 'Bulk reject reason (optional)',
+      ''
+    ) || '';
+    const note = noteInput.trim();
+    try {
+      setError(null);
+      const result: any = await api.post(`/api/tournaments/${tournamentId}/requests/bulk`, note ? { action, note } : { action });
+      const payload = result?.data || result || {};
+      const ok = Number(payload?.processed || 0);
+      const failed = Number(payload?.failed || 0);
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests', tournamentId] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', tournamentId] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'pending-tournament-queue'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'recent-tournament-requests'] }),
+        queryClient.invalidateQueries({ queryKey: ['tournaments'] }),
+        queryClient.invalidateQueries({ queryKey: ['matches'] })
+      ]);
+
+      notify(
+        failed === 0 ? 'success' : 'warning',
+        action === 'approve' ? 'Tournament queue approved' : 'Tournament queue rejected',
+        `Processed: ${ok}, failed: ${failed}`
+      );
+
+      if (selectedTournamentId === tournamentId) {
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests', selectedTournamentId] });
+      }
+    } catch (e: any) {
+      const message = formatApiError(e, `Failed to ${action} tournament requests`);
+      setError(message);
+      notify('error', action === 'approve' ? 'Approve failed' : 'Reject failed', message);
+    }
+  };
+
+  const handleReopenTournamentRequest = async (row: AdminTournamentRequestHistoryRow) => {
+    const noteInput = window.prompt('Reopen note (optional)', row.note || '') || '';
+    const note = noteInput.trim();
+    try {
+      setError(null);
+      await api.post(
+        `/api/tournaments/${row.tournamentId}/requests/${row.teamId}/reopen`,
+        note ? { note } : {}
+      );
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'pending-tournament-queue'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'recent-tournament-requests'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests', row.tournamentId] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', row.tournamentId] }),
+        queryClient.invalidateQueries({ queryKey: ['tournaments'] }),
+        queryClient.invalidateQueries({ queryKey: ['matches'] })
+      ]);
+      notify('success', 'Request reopened', 'Moved back to pending queue');
+    } catch (e: any) {
+      const message = formatApiError(e, 'Failed to reopen request');
+      setError(message);
+      notify('error', 'Reopen failed', message);
+    }
+  };
+
+  const handleForceAddTournamentParticipant = async (tournamentId: string, teamId: string) => {
+    try {
+      setError(null);
+      await api.post(`/api/tournaments/${tournamentId}/participants/${teamId}/add`, {});
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests', tournamentId] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', tournamentId] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'recent-tournament-requests'] }),
+        queryClient.invalidateQueries({ queryKey: ['tournaments'] }),
+        queryClient.invalidateQueries({ queryKey: ['matches'] })
+      ]);
+      notify('success', 'Participant added', 'Team has been added to tournament participants');
+    } catch (e: any) {
+      const message = formatApiError(e, 'Failed to add participant');
+      setError(message);
+      notify('error', 'Add participant failed', message);
+    }
+  };
+
+  const handleRemoveTournamentParticipant = async (tournamentId: string, teamId: string) => {
+    try {
+      setError(null);
+      await api.delete(`/api/tournaments/${tournamentId}/participants/${teamId}/remove`);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-requests', tournamentId] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', tournamentId] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'recent-tournament-requests'] }),
+        queryClient.invalidateQueries({ queryKey: ['tournaments'] }),
+        queryClient.invalidateQueries({ queryKey: ['matches'] })
+      ]);
+      notify('success', 'Participant removed', 'Team has been removed from tournament participants');
+    } catch (e: any) {
+      const message = formatApiError(e, 'Failed to remove participant');
+      setError(message);
+      notify('error', 'Remove participant failed', message);
+    }
+  };
+
+  const handleEditParticipantStats = async (tournamentId: string, team: any) => {
+    const currentWins = Number(team?.stats?.wins || 0);
+    const currentLosses = Number(team?.stats?.losses || 0);
+    const currentPoints = Number(team?.stats?.points || 0);
+    const currentRank = Number(team?.stats?.rank || 0);
+
+    const nextWinsRaw = window.prompt(`Wins for ${team?.name || 'team'}`, String(currentWins));
+    if (nextWinsRaw === null) return;
+    const nextLossesRaw = window.prompt(`Losses for ${team?.name || 'team'}`, String(currentLosses));
+    if (nextLossesRaw === null) return;
+    const nextPointsRaw = window.prompt(`Points for ${team?.name || 'team'}`, String(currentPoints));
+    if (nextPointsRaw === null) return;
+    const nextRankRaw = window.prompt(`Rank for ${team?.name || 'team'}`, String(currentRank));
+    if (nextRankRaw === null) return;
+
+    const wins = Number(nextWinsRaw);
+    const losses = Number(nextLossesRaw);
+    const points = Number(nextPointsRaw);
+    const rank = Number(nextRankRaw);
+
+    if (
+      !Number.isFinite(wins) ||
+      !Number.isFinite(losses) ||
+      !Number.isFinite(points) ||
+      !Number.isFinite(rank) ||
+      wins < 0 ||
+      losses < 0 ||
+      points < 0 ||
+      rank < 0
+    ) {
+      notify('warning', 'Invalid values', 'Wins, losses, points and rank must be non-negative numbers');
+      return;
+    }
+
+    try {
+      setError(null);
+      await api.patch(`/api/tournaments/${tournamentId}/participants/${team.id}/stats`, {
+        wins,
+        losses,
+        points,
+        rank
+      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', tournamentId] }),
+        queryClient.invalidateQueries({ queryKey: ['rankings'] }),
+        queryClient.invalidateQueries({ queryKey: ['teams'] })
+      ]);
+      notify('success', 'Stats updated', `Updated stats for ${team?.name || 'team'}`);
+    } catch (e: any) {
+      const message = formatApiError(e, 'Failed to update participant stats');
+      setError(message);
+      notify('error', 'Stats update failed', message);
+    }
+  };
+
+  const handleRecalculateParticipantStats = async (tournamentId: string) => {
+    const confirmed = window.confirm('Recalculate all participant stats from completed matches for this tournament?');
+    if (!confirmed) return;
+
+    try {
+      setError(null);
+      const result: any = await api.post(`/api/tournaments/${tournamentId}/participants/recalculate-stats`, {});
+      const payload = result?.data || result || {};
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournament-overview', tournamentId] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
+        queryClient.invalidateQueries({ queryKey: ['rankings'] }),
+        queryClient.invalidateQueries({ queryKey: ['teams'] })
+      ]);
+      notify(
+        'success',
+        'Stats recalculated',
+        `Updated teams: ${Number(payload?.updatedTeams || 0)}, matches: ${Number(payload?.completedMatches || 0)}`
+      );
+    } catch (e: any) {
+      const message = formatApiError(e, 'Failed to recalculate participant stats');
+      setError(message);
+      notify('error', 'Recalculate failed', message);
+    }
   };
 
   const handleWalletAdjust = async (targetUserId: string, username: string) => {
@@ -3521,6 +4054,51 @@ const AdminPage: React.FC = () => {
     ]);
   };
 
+  const handleBulkPendingWithdrawals = async (nextStatus: 'completed' | 'failed') => {
+    const pending = walletTransactions.filter((tx) => tx.type === 'withdrawal' && tx.status === 'pending');
+    if (!pending.length) {
+      notify('info', 'No pending withdrawals', 'Nothing to process');
+      return;
+    }
+
+    const confirmText =
+      nextStatus === 'completed'
+        ? `Approve ${pending.length} pending withdrawals on this page?`
+        : `Reject ${pending.length} pending withdrawals on this page?`;
+    const confirmed = window.confirm(confirmText);
+    if (!confirmed) return;
+
+    let done = 0;
+    let failed = 0;
+    const chunkSize = 6;
+    const chunks: AdminWalletTransaction[][] = [];
+    for (let i = 0; i < pending.length; i += chunkSize) {
+      chunks.push(pending.slice(i, i + chunkSize));
+    }
+
+    for (const chunk of chunks) {
+      const results = await Promise.allSettled(
+        chunk.map((tx) => api.patch(`/api/admin/wallet/transactions/${tx.userId}/${tx.id}`, {
+          status: nextStatus,
+          source: tx.source
+        }))
+      );
+      for (const result of results) {
+        if (result.status === 'fulfilled') done += 1;
+        else failed += 1;
+      }
+    }
+
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'wallet-transactions'] });
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+
+    notify(
+      failed === 0 ? 'success' : 'warning',
+      nextStatus === 'completed' ? 'Bulk withdrawal approve complete' : 'Bulk withdrawal reject complete',
+      `Updated: ${done}, failed: ${failed}`
+    );
+  };
+
   const handleRunBackup = async () => {
     try {
       await api.post('/api/admin/ops/backups/run', {});
@@ -3835,18 +4413,73 @@ const AdminPage: React.FC = () => {
   }
 
   function renderPayments() {
-    const filtered = paymentFilter === 'pending_withdrawals'
-      ? walletTransactions.filter((tx) => tx.type === 'withdrawal' && tx.status === 'pending')
-      : walletTransactions;
+    const pageRows = walletTransactions;
+    const totalFiltered = Number(walletTransactionsPagination?.total || pageRows.length || 0);
+    const pageLimit = Number(walletTransactionsPagination?.limit || 20);
+    const currentPage = Number(walletTransactionsPagination?.page || paymentsPage || 1);
+    const totalPages = Number(walletTransactionsPagination?.totalPages || 1);
+    const pageStart = (Math.max(1, currentPage) - 1) * pageLimit;
 
-    const sorted = [...filtered].sort((a, b) => {
-      const left = new Date(a.date).getTime();
-      const right = new Date(b.date).getTime();
-      return right - left;
-    });
+    const pendingWithdrawals = walletTransactions.filter((tx) => tx.type === 'withdrawal' && tx.status === 'pending');
+    const completedWithdrawals = walletTransactions.filter((tx) => tx.type === 'withdrawal' && tx.status === 'completed');
+    const pendingWithdrawAmount = pendingWithdrawals.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+    const completedWithdrawAmount = completedWithdrawals.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+
+    const exportPaymentsCsv = () => {
+      if (!pageRows.length) {
+        notify('info', 'Export skipped', 'No transactions to export');
+        return;
+      }
+      const csvCell = (value: any) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+      const header = ['username', 'email', 'telegramId', 'source', 'type', 'amount', 'status', 'walletAddress', 'network', 'txHash', 'description', 'date'];
+      const rows = pageRows.map((tx) => [
+        tx.username || '',
+        tx.email || '',
+        tx.telegramId || '',
+        tx.source || '',
+        tx.type || '',
+        Number(tx.amount || 0).toFixed(2),
+        tx.status || '',
+        tx.walletAddress || '',
+        tx.network || '',
+        tx.txHash || '',
+        tx.description || '',
+        tx.date || ''
+      ]);
+      const csv = [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `wallet_transactions_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      notify('success', 'Export complete', `Downloaded ${pageRows.length} transactions`);
+    };
 
     return (
       <div>
+        <StatsGrid style={{ marginBottom: '16px' }}>
+          <StatCard>
+            <StatValue>{pendingWithdrawals.length}</StatValue>
+            <StatLabel>Pending Withdrawals</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>${pendingWithdrawAmount.toFixed(2)}</StatValue>
+            <StatLabel>Pending Amount</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>{completedWithdrawals.length}</StatValue>
+            <StatLabel>Completed Withdrawals</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>${completedWithdrawAmount.toFixed(2)}</StatValue>
+            <StatLabel>Paid Amount</StatLabel>
+          </StatCard>
+        </StatsGrid>
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
           <h3>Payments & Wallet Transactions</h3>
           <ActionsCell>
@@ -3858,7 +4491,52 @@ const AdminPage: React.FC = () => {
             <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'wallet-transactions'] })}>
               Refresh
             </ActionButton>
+            <ActionButton $variant="success" onClick={() => handleBulkPendingWithdrawals('completed')}>
+              Approve Visible Pending
+            </ActionButton>
+            <ActionButton $variant="danger" onClick={() => handleBulkPendingWithdrawals('failed')}>
+              Reject Visible Pending
+            </ActionButton>
+            <ActionButton onClick={exportPaymentsCsv}>
+              Export CSV
+            </ActionButton>
           </ActionsCell>
+        </div>
+        <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginBottom: '14px' }}>
+          <label style={{ display: 'grid', gap: '6px', color: '#cccccc', fontSize: '13px' }}>
+            Status
+            <select
+              value={paymentStatusFilter}
+              onChange={(e) => {
+                setPaymentStatusFilter(e.target.value as typeof paymentStatusFilter);
+                setPaymentsPage(1);
+              }}
+              style={{ minHeight: '40px', borderRadius: '10px', background: '#151515', color: '#ffffff', border: '1px solid rgba(255,255,255,0.15)', padding: '0 10px' }}
+            >
+              <option value="all">All statuses</option>
+              <option value="pending">Pending</option>
+              <option value="completed">Completed</option>
+              <option value="failed">Failed</option>
+              <option value="refund_pending">Refund pending</option>
+              <option value="refunded">Refunded</option>
+              <option value="refund_denied">Refund denied</option>
+            </select>
+          </label>
+          <label style={{ display: 'grid', gap: '6px', color: '#cccccc', fontSize: '13px' }}>
+            Search
+            <input
+              value={paymentSearch}
+              onChange={(e) => {
+                setPaymentSearch(e.target.value);
+                setPaymentsPage(1);
+              }}
+              placeholder="username, email, wallet, tx hash..."
+              style={{ minHeight: '40px', borderRadius: '10px', background: '#151515', color: '#ffffff', border: '1px solid rgba(255,255,255,0.15)', padding: '0 10px' }}
+            />
+          </label>
+        </div>
+        <div style={{ color: '#999', fontSize: '12px', marginBottom: '10px' }}>
+          Showing {totalFiltered ? pageStart + 1 : 0}-{Math.min(pageStart + pageRows.length, totalFiltered)} of {totalFiltered} filtered transactions
         </div>
 
         <TableWrap>
@@ -3879,7 +4557,7 @@ const AdminPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {sorted.map((tx) => {
+              {pageRows.map((tx) => {
                 const canApprove = tx.status === 'pending';
                 const canReviewRefund = tx.status === 'refund_pending';
 
@@ -3941,6 +4619,25 @@ const AdminPage: React.FC = () => {
             </tbody>
           </Table>
         </TableWrap>
+        <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ color: '#cccccc', fontSize: '13px' }}>
+            Page {currentPage} of {totalPages}
+          </div>
+          <ActionsCell>
+            <ActionButton
+              onClick={() => setPaymentsPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage <= 1}
+            >
+              Prev
+            </ActionButton>
+            <ActionButton
+              onClick={() => setPaymentsPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage >= totalPages}
+            >
+              Next
+            </ActionButton>
+          </ActionsCell>
+        </div>
 
       </div>
     );
@@ -4018,6 +4715,28 @@ const AdminPage: React.FC = () => {
     const selectedTournament = tournaments.find((item: any) => item.id === selectedTournamentId) || null;
     const overview = tournamentOverview;
     const { allMatches, filteredMatches } = getFilteredTournamentMatches();
+    const filteredTournamentRequests = tournamentRequests;
+    const sortedTournamentRequests = tournamentRequests;
+    const tournamentRequestsTotalPages = Number(tournamentRequestsPagination?.totalPages || 1);
+    const tournamentRequestsCurrentPage = Number(tournamentRequestsPagination?.page || tournamentRequestsPage || 1);
+    const tournamentRequestsStart = tournamentRequestsPagination
+      ? (Math.max(1, tournamentRequestsCurrentPage) - 1) * Number(tournamentRequestsPagination.limit || 12)
+      : 0;
+    const paginatedTournamentRequests = tournamentRequests;
+
+    const matchesPageSize = 12;
+    const matchesTotalPages = Math.max(1, Math.ceil(filteredMatches.length / matchesPageSize));
+    const matchesCurrentPage = Math.min(matchesPage, matchesTotalPages);
+    const matchesStart = (matchesCurrentPage - 1) * matchesPageSize;
+    const paginatedFilteredMatches = filteredMatches.slice(matchesStart, matchesStart + matchesPageSize);
+    const filteredRecentDecisions = recentTournamentRequests;
+    const recentDecisionsTotalPages = Number(recentTournamentRequestsPagination?.totalPages || 1);
+    const recentDecisionsCurrentPage = Number(recentTournamentRequestsPagination?.page || recentDecisionsPage || 1);
+    const recentDecisionsStart = recentTournamentRequestsPagination
+      ? (Math.max(1, recentDecisionsCurrentPage) - 1) * Number(recentTournamentRequestsPagination.limit || 14)
+      : 0;
+    const paginatedRecentDecisions = recentTournamentRequests;
+
     const trackedEntities = new Set([
       'match_status_update',
       'match_status_bulk_update',
@@ -4077,6 +4796,37 @@ const AdminPage: React.FC = () => {
     const preparedRoomsCount = Array.isArray(overview?.matches)
       ? overview.matches.filter((match: any) => Boolean(match?.hasRoomCredentials)).length
       : 0;
+
+    const exportRecentTournamentDecisionsCsv = () => {
+      if (!filteredRecentDecisions.length) {
+        notify('info', 'Export skipped', 'No recent decisions to export');
+        return;
+      }
+      const csvCell = (value: any) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+      const header = ['reviewedAt', 'tournament', 'game', 'team', 'teamTag', 'status', 'note', 'requestedBy', 'reviewedBy'];
+      const rows = filteredRecentDecisions.map((row: AdminTournamentRequestHistoryRow) => [
+        row.reviewedAt || '',
+        row.tournamentName || '',
+        row.game || '',
+        row.teamName || '',
+        row.teamTag || '',
+        row.status || '',
+        row.note || '',
+        row.requestedBy?.username || row.requestedBy?.firstName || '',
+        row.reviewedBy?.username || row.reviewedBy?.firstName || ''
+      ]);
+      const csv = [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tournament_decisions_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      notify('success', 'Export complete', `Downloaded ${filteredRecentDecisions.length} decision rows`);
+    };
 
     const exportFilteredMatchesCsv = () => {
       if (!selectedTournamentId) {
@@ -4416,8 +5166,195 @@ const AdminPage: React.FC = () => {
               )}
             </div>
 
-            <h5 style={{ marginTop: 0 }}>Pending Tournament Requests</h5>
-            {!tournamentRequests.length ? (
+            <h5 style={{ marginTop: 0 }}>Pending Requests Across Tournaments</h5>
+            {!pendingTournamentQueue.length ? (
+              <div style={{ color: '#999', marginBottom: '12px' }}>No tournaments with pending requests</div>
+            ) : (
+              <TableWrap style={{ marginBottom: '14px' }}>
+                <Table>
+                  <thead>
+                    <tr>
+                      <Th>Tournament</Th>
+                      <Th>Game</Th>
+                      <Th>Pending</Th>
+                      <Th>Oldest</Th>
+                      <Th>Action</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingTournamentQueue.slice(0, 12).map((row: any) => (
+                      <tr key={`pending-tournament-${row.id}`}>
+                        <Td>{row.name}</Td>
+                        <Td>{row.game || '-'}</Td>
+                        <Td>{Number(row.pendingRequestsCount || 0)}</Td>
+                        <Td>{row.firstPendingAt ? new Date(row.firstPendingAt).toLocaleString() : '-'}</Td>
+                        <Td>
+                          <ActionsCell>
+                            <ActionButton onClick={() => setSelectedTournamentId(row.id)}>
+                              Open
+                            </ActionButton>
+                            <ActionButton
+                              $variant="success"
+                              onClick={() => handleBulkTournamentRequestsForTournament(row.id, 'approve')}
+                              disabled={Number(row.pendingRequestsCount || 0) <= 0}
+                            >
+                              Approve All
+                            </ActionButton>
+                            <ActionButton
+                              $variant="danger"
+                              onClick={() => handleBulkTournamentRequestsForTournament(row.id, 'reject')}
+                              disabled={Number(row.pendingRequestsCount || 0) <= 0}
+                            >
+                              Reject All
+                            </ActionButton>
+                          </ActionsCell>
+                        </Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </TableWrap>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <h5 style={{ marginTop: 0, marginBottom: 0 }}>Recent Decisions (Approved / Rejected)</h5>
+              <ActionsCell>
+                <Select
+                  value={recentRequestsStatusFilter}
+                  onChange={(e) => {
+                    setRecentRequestsStatusFilter(e.target.value as 'all' | 'approved' | 'rejected');
+                    setRecentDecisionsPage(1);
+                  }}
+                >
+                  <option value="all">All</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </Select>
+                <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'recent-tournament-requests'] })}>
+                  Refresh
+                </ActionButton>
+                <ActionButton onClick={exportRecentTournamentDecisionsCsv}>
+                  Export CSV
+                </ActionButton>
+              </ActionsCell>
+            </div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+              <Input
+                value={recentDecisionsSearch}
+                onChange={(e) => {
+                  setRecentDecisionsSearch(e.target.value);
+                  setRecentDecisionsPage(1);
+                }}
+                placeholder="Search by tournament / team / reviewer / note"
+                style={{ minWidth: 300 }}
+              />
+              <span style={{ color: '#aaa', fontSize: 12 }}>
+                Showing {filteredRecentDecisions.length ? recentDecisionsStart + 1 : 0}-{Math.min(recentDecisionsStart + paginatedRecentDecisions.length, Number(recentTournamentRequestsPagination?.total || filteredRecentDecisions.length))} of {Number(recentTournamentRequestsPagination?.total || filteredRecentDecisions.length)}
+              </span>
+            </div>
+            {!filteredRecentDecisions.length ? (
+              <div style={{ color: '#999', marginBottom: '12px' }}>No recent processed requests</div>
+            ) : (
+              <TableWrap style={{ marginBottom: '14px' }}>
+                <Table>
+                  <thead>
+                    <tr>
+                      <Th>Tournament</Th>
+                      <Th>Team</Th>
+                      <Th>Status</Th>
+                      <Th>Note</Th>
+                      <Th>Reviewed By</Th>
+                      <Th>Reviewed At</Th>
+                      <Th>Action</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedRecentDecisions.map((row: AdminTournamentRequestHistoryRow) => (
+                      <tr key={row.id}>
+                        <Td>{row.tournamentName}</Td>
+                        <Td>{row.teamName} {row.teamTag ? `(${row.teamTag})` : ''}</Td>
+                        <Td style={{ color: row.status === 'approved' ? '#81c784' : '#ffab91' }}>{row.status}</Td>
+                        <Td>{row.note || '-'}</Td>
+                        <Td>{row.reviewedBy?.username || row.reviewedBy?.firstName || '-'}</Td>
+                        <Td>{row.reviewedAt ? new Date(row.reviewedAt).toLocaleString() : '-'}</Td>
+                        <Td>
+                          <ActionsCell>
+                            <ActionButton onClick={() => setSelectedTournamentId(row.tournamentId)}>
+                              Open Tournament
+                            </ActionButton>
+                            <ActionButton
+                              $variant="primary"
+                              onClick={() => handleReopenTournamentRequest(row)}
+                            >
+                              Reopen
+                            </ActionButton>
+                          </ActionsCell>
+                        </Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+                <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <div style={{ color: '#cccccc', fontSize: '13px' }}>
+                    Page {recentDecisionsCurrentPage} of {recentDecisionsTotalPages}
+                  </div>
+                  <ActionsCell>
+                    <ActionButton
+                      onClick={() => setRecentDecisionsPage((prev) => Math.max(1, prev - 1))}
+                      disabled={recentDecisionsCurrentPage <= 1}
+                    >
+                      Prev
+                    </ActionButton>
+                    <ActionButton
+                      onClick={() => setRecentDecisionsPage((prev) => Math.min(recentDecisionsTotalPages, prev + 1))}
+                      disabled={recentDecisionsCurrentPage >= recentDecisionsTotalPages}
+                    >
+                      Next
+                    </ActionButton>
+                  </ActionsCell>
+                </div>
+              </TableWrap>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <h5 style={{ marginTop: 0, marginBottom: 0 }}>Pending Tournament Requests</h5>
+              <ActionsCell>
+                <ActionButton onClick={() => handleBulkTournamentRequests('approve')} disabled={!sortedTournamentRequests.length}>
+                  Approve All
+                </ActionButton>
+                <ActionButton $variant="danger" onClick={() => handleBulkTournamentRequests('reject')} disabled={!sortedTournamentRequests.length}>
+                  Reject All
+                </ActionButton>
+                <ActionButton
+                  onClick={() => handleBulkTournamentRequests('approve', paginatedTournamentRequests.map((row) => row.teamId).filter(Boolean))}
+                  disabled={!paginatedTournamentRequests.length}
+                >
+                  Approve Visible
+                </ActionButton>
+                <ActionButton
+                  $variant="danger"
+                  onClick={() => handleBulkTournamentRequests('reject', paginatedTournamentRequests.map((row) => row.teamId).filter(Boolean))}
+                  disabled={!paginatedTournamentRequests.length}
+                >
+                  Reject Visible
+                </ActionButton>
+              </ActionsCell>
+            </div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+              <Input
+                value={tournamentRequestSearch}
+                onChange={(e) => {
+                  setTournamentRequestSearch(e.target.value);
+                  setTournamentRequestsPage(1);
+                }}
+                placeholder="Search by team / tag / requester"
+                style={{ minWidth: 260 }}
+              />
+              <span style={{ color: '#aaa', fontSize: 12 }}>
+                Showing {sortedTournamentRequests.length ? tournamentRequestsStart + 1 : 0}-{Math.min(tournamentRequestsStart + paginatedTournamentRequests.length, Number(tournamentRequestsPagination?.total || sortedTournamentRequests.length))} of {Number(tournamentRequestsPagination?.total || sortedTournamentRequests.length)}
+              </span>
+            </div>
+            {!sortedTournamentRequests.length ? (
               <div style={{ color: '#999', marginBottom: '18px' }}>No pending requests</div>
             ) : (
               <TableWrap>
@@ -4433,7 +5370,7 @@ const AdminPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {tournamentRequests.map((request: AdminTournamentRequestRow) => (
+                    {paginatedTournamentRequests.map((request: AdminTournamentRequestRow) => (
                       <tr key={request.id}>
                         <Td>{request.teamName} {request.teamTag ? `(${request.teamTag})` : ''}</Td>
                         <Td>{request.membersCount}</Td>
@@ -4454,16 +5391,45 @@ const AdminPage: React.FC = () => {
                             >
                               Reject
                             </ActionButton>
+                            <ActionButton
+                              onClick={() => handleForceAddTournamentParticipant(selectedTournamentId, request.teamId)}
+                            >
+                              Add Now
+                            </ActionButton>
                           </ActionsCell>
                         </Td>
                       </tr>
                     ))}
                   </tbody>
                 </Table>
+                <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <div style={{ color: '#cccccc', fontSize: '13px' }}>
+                    Page {tournamentRequestsCurrentPage} of {tournamentRequestsTotalPages}
+                  </div>
+                  <ActionsCell>
+                    <ActionButton
+                      onClick={() => setTournamentRequestsPage((prev) => Math.max(1, prev - 1))}
+                      disabled={tournamentRequestsCurrentPage <= 1}
+                    >
+                      Prev
+                    </ActionButton>
+                    <ActionButton
+                      onClick={() => setTournamentRequestsPage((prev) => Math.min(tournamentRequestsTotalPages, prev + 1))}
+                      disabled={tournamentRequestsCurrentPage >= tournamentRequestsTotalPages}
+                    >
+                      Next
+                    </ActionButton>
+                  </ActionsCell>
+                </div>
               </TableWrap>
             )}
 
             <h5>Approved Teams and Stats</h5>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+              <ActionButton onClick={() => handleRecalculateParticipantStats(selectedTournamentId)}>
+                Recalculate Stats From Matches
+              </ActionButton>
+            </div>
             {!overview?.teams?.length ? (
               <div style={{ color: '#999', marginBottom: '18px' }}>No approved teams yet</div>
             ) : (
@@ -4477,6 +5443,7 @@ const AdminPage: React.FC = () => {
                       <Th>Wins</Th>
                       <Th>Losses</Th>
                       <Th>Win Rate</Th>
+                      <Th>Actions</Th>
                     </tr>
                   </thead>
                   <tbody>
@@ -4488,6 +5455,21 @@ const AdminPage: React.FC = () => {
                         <Td>{team.stats?.wins || 0}</Td>
                         <Td>{team.stats?.losses || 0}</Td>
                         <Td>{Number(team.stats?.winRate || 0).toFixed(1)}%</Td>
+                        <Td>
+                          <ActionsCell>
+                            <ActionButton
+                              onClick={() => handleEditParticipantStats(selectedTournamentId, team)}
+                            >
+                              Edit Stats
+                            </ActionButton>
+                            <ActionButton
+                              $variant="danger"
+                              onClick={() => handleRemoveTournamentParticipant(selectedTournamentId, team.id)}
+                            >
+                              Remove
+                            </ActionButton>
+                          </ActionsCell>
+                        </Td>
                       </tr>
                     ))}
                   </tbody>
@@ -4497,26 +5479,26 @@ const AdminPage: React.FC = () => {
 
             <h5>Matches and Results</h5>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-              <Select value={matchStatusFilter} onChange={(e) => setMatchStatusFilter(e.target.value as any)}>
+              <Select value={matchStatusFilter} onChange={(e) => { setMatchStatusFilter(e.target.value as any); setMatchesPage(1); }}>
                 <option value="all">All statuses</option>
                 <option value="scheduled">Scheduled</option>
                 <option value="live">Live</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
               </Select>
-              <Select value={matchRoomFilter} onChange={(e) => setMatchRoomFilter(e.target.value as any)}>
+              <Select value={matchRoomFilter} onChange={(e) => { setMatchRoomFilter(e.target.value as any); setMatchesPage(1); }}>
                 <option value="all">All rooms</option>
                 <option value="with_room">With room</option>
                 <option value="without_room">Without room</option>
               </Select>
-              <Select value={matchWinnerFilter} onChange={(e) => setMatchWinnerFilter(e.target.value as any)}>
+              <Select value={matchWinnerFilter} onChange={(e) => { setMatchWinnerFilter(e.target.value as any); setMatchesPage(1); }}>
                 <option value="all">All winners</option>
                 <option value="with_winner">With winner</option>
                 <option value="without_winner">Without winner</option>
               </Select>
               <Input
                 value={matchSearch}
-                onChange={(e) => setMatchSearch(e.target.value)}
+                onChange={(e) => { setMatchSearch(e.target.value); setMatchesPage(1); }}
                 placeholder="Search by team or round"
                 style={{ minWidth: 240 }}
               />
@@ -4525,12 +5507,13 @@ const AdminPage: React.FC = () => {
               <ActionButton onClick={() => handlePrepareFilteredMatchRooms(false, true)}>Preview Rooms (Filtered)</ActionButton>
               <ActionButton onClick={() => handlePrepareFilteredMatchRooms(false)}>Prepare Rooms (Filtered)</ActionButton>
               <ActionButton onClick={() => handlePrepareFilteredMatchRooms(true)}>Regenerate Rooms (Filtered)</ActionButton>
+              <ActionButton onClick={handleBulkInferWinners}>Infer Winners (Filtered)</ActionButton>
               <ActionButton onClick={() => handleBulkMatchStatus('live')}>Bulk Live</ActionButton>
               <ActionButton onClick={() => handleBulkMatchStatus('completed')}>Bulk Complete</ActionButton>
               <ActionButton onClick={() => handleBulkMatchStatus('scheduled')}>Bulk Schedule</ActionButton>
               <ActionButton $variant="danger" onClick={() => handleBulkMatchStatus('cancelled')}>Bulk Cancel</ActionButton>
               <span style={{ color: '#aaa', fontSize: 12 }}>
-                Showing {filteredMatches.length} of {allMatches.length}
+                Showing {filteredMatches.length ? matchesStart + 1 : 0}-{Math.min(matchesStart + paginatedFilteredMatches.length, filteredMatches.length)} of {filteredMatches.length} filtered ({allMatches.length} total)
               </span>
             </div>
             {!allMatches.length ? (
@@ -4555,7 +5538,7 @@ const AdminPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredMatches.map((match: any) => (
+                    {paginatedFilteredMatches.map((match: any) => (
                       <tr key={match.id}>
                         <Td>{match.round || 'Round'}</Td>
                         <Td>{match.team1?.name || 'TBD'}</Td>
@@ -4619,6 +5602,9 @@ const AdminPage: React.FC = () => {
                             <ActionButton onClick={() => handlePrepareSingleMatchRoom(match.id, true)}>
                               Regenerate
                             </ActionButton>
+                            <ActionButton onClick={() => handleSetCustomMatchRoom(match)}>
+                              Custom Room
+                            </ActionButton>
                             <ActionButton
                               onClick={() => {
                                 const nextTeam1 = window.prompt(`Score: ${match.team1?.name || 'Team 1'}`, String(match.score?.team1 ?? 0));
@@ -4630,6 +5616,19 @@ const AdminPage: React.FC = () => {
                             >
                               Edit Score
                             </ActionButton>
+                            <ActionButton onClick={() => handleEditMatchMeta(match)}>
+                              Edit Meta
+                            </ActionButton>
+                            {match.team1?.id ? (
+                              <ActionButton onClick={() => handleSetMatchWinner(match, String(match.team1.id))}>
+                                Winner: {match.team1?.tag || match.team1?.name || 'Team 1'}
+                              </ActionButton>
+                            ) : null}
+                            {match.team2?.id ? (
+                              <ActionButton onClick={() => handleSetMatchWinner(match, String(match.team2.id))}>
+                                Winner: {match.team2?.tag || match.team2?.name || 'Team 2'}
+                              </ActionButton>
+                            ) : null}
                             {String(match.status || '').toLowerCase() !== 'live' ? (
                               <ActionButton onClick={() => handleUpdateMatchStatus(match.id, 'live')}>
                                 Mark Live
@@ -4675,6 +5674,25 @@ const AdminPage: React.FC = () => {
                     ))}
                   </tbody>
                 </Table>
+                <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <div style={{ color: '#cccccc', fontSize: '13px' }}>
+                    Page {matchesCurrentPage} of {matchesTotalPages}
+                  </div>
+                  <ActionsCell>
+                    <ActionButton
+                      onClick={() => setMatchesPage((prev) => Math.max(1, prev - 1))}
+                      disabled={matchesCurrentPage <= 1}
+                    >
+                      Prev
+                    </ActionButton>
+                    <ActionButton
+                      onClick={() => setMatchesPage((prev) => Math.min(matchesTotalPages, prev + 1))}
+                      disabled={matchesCurrentPage >= matchesTotalPages}
+                    >
+                      Next
+                    </ActionButton>
+                  </ActionsCell>
+                </div>
               </TableWrap>
             )}
           </Card>
@@ -5281,14 +6299,16 @@ const AdminPage: React.FC = () => {
     const calculatePointsPreview = async () => {
       try {
         const res: any = await api.post('/api/intelligence/points/calculate', {
+          playerPoints: Number(pointsInput.playerRating || 1000),
+          opponentPoints: Number(pointsInput.opponentRating || 1000),
           playerRating: Number(pointsInput.playerRating || 1000),
           opponentRating: Number(pointsInput.opponentRating || 1000),
           result: Number(pointsInput.result || 0)
         });
         const row = res?.data || res;
         setPointsOutput({
-          newRating: Number(row?.newRating || 0),
-          delta: Number(row?.delta || 0)
+          newPoints: Number(row?.newPoints ?? row?.newRating ?? 0),
+          pointsDelta: Number(row?.pointsDelta ?? row?.delta ?? 0)
         });
       } catch (e: any) {
         setPointsOutput(null);
@@ -5660,13 +6680,13 @@ const AdminPage: React.FC = () => {
             type="number"
             value={pointsInput.playerRating}
             onChange={(e) => setPointsInput((prev) => ({ ...prev, playerRating: Number(e.target.value) }))}
-            placeholder="Player rating"
+            placeholder="Player points"
           />
           <Input
             type="number"
             value={pointsInput.opponentRating}
             onChange={(e) => setPointsInput((prev) => ({ ...prev, opponentRating: Number(e.target.value) }))}
-            placeholder="Opponent rating"
+            placeholder="Opponent points"
           />
           <Select
             value={String(pointsInput.result)}
@@ -5680,7 +6700,7 @@ const AdminPage: React.FC = () => {
         </div>
         {pointsOutput && (
           <div style={{ color: '#ccc', marginTop: 10 }}>
-            New points: <strong>{pointsOutput.newRating}</strong> | Delta: <strong>{pointsOutput.delta >= 0 ? '+' : ''}{pointsOutput.delta}</strong>
+            New points: <strong>{pointsOutput.newPoints}</strong> | Delta: <strong>{pointsOutput.pointsDelta >= 0 ? '+' : ''}{pointsOutput.pointsDelta}</strong>
           </div>
         )}
 
@@ -6114,6 +7134,34 @@ const AdminPage: React.FC = () => {
             <StatLabel>Telegram Bot Username</StatLabel>
           </StatCard>
           <StatCard>
+            <StatValue style={{ color: readinessIntegrations?.telegramBotTokenConfigured ? '#81c784' : '#ffab91' }}>
+              {readinessIntegrations?.telegramBotTokenConfigured ? 'OK' : 'MISS'}
+            </StatValue>
+            <StatLabel>Telegram Bot Token</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue style={{ color: readinessIntegrations?.botWebhookEnabled ? '#ffb74d' : '#81c784' }}>
+              {readinessIntegrations?.botWebhookEnabled ? 'WEBHOOK' : 'POLLING'}
+            </StatValue>
+            <StatLabel>Bot Delivery Mode</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue
+              style={{
+                color: readinessIntegrations?.botWebhookEnabled
+                  ? (readinessIntegrations?.botWebhookPublicUrlConfigured && readinessIntegrations?.botWebhookPathConfigured
+                    ? '#81c784'
+                    : '#ffab91')
+                  : '#81c784'
+              }}
+            >
+              {readinessIntegrations?.botWebhookEnabled
+                ? (readinessIntegrations?.botWebhookPublicUrlConfigured && readinessIntegrations?.botWebhookPathConfigured ? 'OK' : 'MISS')
+                : 'N/A'}
+            </StatValue>
+            <StatLabel>Webhook Routing</StatLabel>
+          </StatCard>
+          <StatCard>
             <StatValue style={{ color: readinessIntegrations?.hallOfFameCronTokenConfigured ? '#81c784' : '#ffab91' }}>
               {readinessIntegrations?.hallOfFameCronTokenConfigured ? 'OK' : 'MISS'}
             </StatValue>
@@ -6165,6 +7213,15 @@ const AdminPage: React.FC = () => {
                 </Td>
                 <Td>
                   {String(readinessProviders?.support?.provider || 'unknown')} • Gemini {readinessProviders?.support?.geminiEnabled ? 'on' : 'off'} • OpenAI {readinessProviders?.support?.openAiEnabled ? 'on' : 'off'}
+                </Td>
+              </tr>
+              <tr>
+                <Td>Telegram Bot Webhook</Td>
+                <Td style={{ color: readinessIntegrations?.botWebhookEnabled ? '#ffb74d' : '#81c784' }}>
+                  {readinessIntegrations?.botWebhookEnabled ? 'webhook' : 'polling'}
+                </Td>
+                <Td>
+                  URL {readinessIntegrations?.botWebhookPublicUrlConfigured ? 'ok' : 'missing'} • Path {readinessIntegrations?.botWebhookPathConfigured ? 'ok' : 'missing'} • Secret {readinessIntegrations?.botWebhookSecretConfigured ? 'set' : 'missing'}
                 </Td>
               </tr>
               <tr>

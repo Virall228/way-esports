@@ -5,6 +5,9 @@ export type RankUpdateEvent = {
   previousRating: number;
   newRating: number;
   delta: number;
+  previousPoints?: number;
+  newPoints?: number;
+  pointsDelta?: number;
   at: string;
 };
 
@@ -15,4 +18,3 @@ class RankRealtimeBus extends EventEmitter {
 }
 
 export const rankRealtimeBus = new RankRealtimeBus();
-

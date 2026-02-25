@@ -28,7 +28,8 @@ $checks = @(
   @{ Name = "Tournaments"; Path = "/api/tournaments" },
   @{ Name = "Rankings"; Path = "/api/rankings/leaderboard" },
   @{ Name = "Intelligence Readiness"; Path = "/api/intelligence/readiness" },
-  @{ Name = "News"; Path = "/api/news" }
+  @{ Name = "News"; Path = "/api/news" },
+  @{ Name = "Telegram Bot Health"; Path = "/telegram/health" }
 )
 
 $passed = 0

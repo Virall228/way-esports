@@ -3,6 +3,8 @@ import styled from 'styled-components';
 import { useQuery } from '@tanstack/react-query';
 import { tournamentService } from '../../services/tournamentService';
 import { resolveTeamLogoUrl } from '../../utils/media';
+import FlameAuraAvatar from '../UI/FlameAuraAvatar';
+import { getIntensityByPointsAndRank, getTeamPoints, getTierByPoints, type FlameTier } from '../../utils/flameRank';
 
 const BracketContainer = styled.div`
   padding: 20px;
@@ -101,18 +103,6 @@ const TeamInfo = styled.div`
   gap: 12px;
 `;
 
-const TeamLogo = styled.div<{ $imageUrl?: string }>`
-  width: 32px;
-  height: 32px;
-  background: ${({ $imageUrl }) => ($imageUrl ? `url(${$imageUrl}) center/cover no-repeat` : 'linear-gradient(135deg, #ff6b00, #ffd700)')};
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  font-weight: 700;
-`;
-
 const TeamName = styled.span<{ $isWinner?: boolean }>`
   color: ${({ $isWinner }) => $isWinner ? '#ffd700' : '#ffffff'};
   font-weight: 600;
@@ -192,6 +182,8 @@ interface Team {
   logo: string;
   players: Player[];
   score: number;
+  tier: FlameTier;
+  intensity: number;
 }
 
 interface Match {
@@ -230,16 +222,29 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tou
 
     const buildTeam = (team: any, score: number): Team => {
       if (!team) {
-        return { id: 0, name: 'TBD', logo: '', players: [], score };
+        return { id: 0, name: 'TBD', logo: '', players: [], score, tier: 'default', intensity: 0.35 };
       }
       if (typeof team === 'string') {
         const safeName = team || 'TBD';
-        return { id: 0, name: safeName, logo: '', players: [], score };
+        return { id: 0, name: safeName, logo: '', players: [], score, tier: 'default', intensity: 0.35 };
       }
       const id = Number(team.id || team._id || 0);
       const name = String(team.name || team.tag || team.username || 'TBD');
       const logo = resolveTeamLogoUrl(team.logo || '');
-      return { id, name, logo, players: [], score };
+      const wins = Number(team?.stats?.wins || 0);
+      const losses = Number(team?.stats?.losses || 0);
+      const winRate = Number(team?.stats?.winRate || 0);
+      const tournaments = Number(team?.stats?.tournaments || team?.stats?.tournamentsPlayed || 0);
+      const points = getTeamPoints(wins, losses, winRate, tournaments);
+      return {
+        id,
+        name,
+        logo,
+        players: [],
+        score,
+        tier: getTierByPoints(points),
+        intensity: getIntensityByPointsAndRank(points)
+      };
     };
 
     const normalizeMatch = (match: any, fallbackIndex: number): Match => {
@@ -313,9 +318,14 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tou
 
       <TeamContainer $isWinner={match.winner?.id === match.team1.id}>
         <TeamInfo>
-          <TeamLogo $imageUrl={match.team1.logo}>
-            {!match.team1.logo ? match.team1.name.slice(0, 1).toUpperCase() : null}
-          </TeamLogo>
+          <FlameAuraAvatar
+            image={match.team1.logo || undefined}
+            alt={match.team1.name}
+            size={32}
+            tier={match.team1.tier}
+            intensity={match.team1.intensity}
+            fallbackText={match.team1.name.slice(0, 1).toUpperCase()}
+          />
           <TeamName $isWinner={match.winner?.id === match.team1.id}>
             {match.team1.name}
           </TeamName>
@@ -327,9 +337,14 @@ const TournamentBracket: React.FC<TournamentBracketProps> = ({ tournamentId, tou
 
       <TeamContainer $isWinner={match.winner?.id === match.team2.id}>
         <TeamInfo>
-          <TeamLogo $imageUrl={match.team2.logo}>
-            {!match.team2.logo ? match.team2.name.slice(0, 1).toUpperCase() : null}
-          </TeamLogo>
+          <FlameAuraAvatar
+            image={match.team2.logo || undefined}
+            alt={match.team2.name}
+            size={32}
+            tier={match.team2.tier}
+            intensity={match.team2.intensity}
+            fallbackText={match.team2.name.slice(0, 1).toUpperCase()}
+          />
           <TeamName $isWinner={match.winner?.id === match.team2.id}>
             {match.team2.name}
           </TeamName>

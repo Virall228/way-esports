@@ -5,6 +5,28 @@ import Tournament from '../models/Tournament';
 
 const router = express.Router();
 
+const normalizePlayerDisplayName = (user: any): string => {
+  const username = String(user?.username || '').trim();
+  const firstName = String(user?.firstName || '').trim();
+  const lastName = String(user?.lastName || '').trim();
+  const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
+
+  const autoUsername =
+    !username ||
+    /^user(_|-)?\d+$/i.test(username) ||
+    /^player(_|-)?\d+$/i.test(username) ||
+    username.toLowerCase() === 'user';
+
+  if (!autoUsername) return username;
+  if (fullName) return fullName;
+  if (username) return username;
+
+  const emailPrefix = String(user?.email || '').split('@')[0]?.trim();
+  if (emailPrefix) return emailPrefix;
+
+  return 'Player';
+};
+
 // Get team rankings
 router.get('/teams/rankings', async (req, res) => {
   try {
@@ -83,9 +105,11 @@ router.get('/players/rankings', async (req, res) => {
       .lean();
 
     // Calculate rankings
-    const rankedPlayers = users.map((user: any, index) => ({
-      displayName: [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.username || 'Player',
-      name: [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.username || 'Player',
+    const rankedPlayers = users.map((user: any, index) => {
+      const displayName = normalizePlayerDisplayName(user);
+      return {
+      displayName,
+      name: displayName,
       _id: user._id,
       username: user.username,
       firstName: user.firstName,
@@ -100,7 +124,8 @@ router.get('/players/rankings', async (req, res) => {
       losses: user?.stats?.losses || 0,
       winRate: user?.stats?.winRate || 0,
       teams: user.teams
-    }));
+    };
+    });
 
     res.json(rankedPlayers);
   } catch (error: any) {

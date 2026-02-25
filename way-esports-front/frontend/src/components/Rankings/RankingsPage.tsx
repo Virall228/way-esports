@@ -114,17 +114,6 @@ const RankChange = styled.div<{ change: number }>`
         props.change < 0 ? '#F44336' : '#999'};
 `;
 
-const Avatar = styled.div<{ imageUrl?: string }>`
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    margin: 0 20px;
-    background: ${props => props.imageUrl ? `url(${props.imageUrl})` : '#333'};
-    background-size: cover;
-    background-position: center;
-    border: 1px solid ${({ theme }) => theme.colors.border.medium};
-`;
-
 const Info = styled.div`
     flex: 1;
 `;
@@ -402,7 +391,10 @@ const RankingsPage: React.FC = () => {
                                 fallbackText={team.name || team.tag || '?'}
                                 size={50}
                                 tier={getTierByRank(team.rank)}
-                                intensity={getIntensityByPointsAndRank(getTeamPoints(team.wins, 0, team.winRate, team.tournamentWins), team.rank)}
+                                intensity={getIntensityByPointsAndRank(
+                                    getTeamPoints(team.weeklyStats.wins, team.weeklyStats.losses, team.winRate, team.tournamentWins),
+                                    team.rank
+                                )}
                                 rounded
                             />
                         </div>

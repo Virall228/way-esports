@@ -9,8 +9,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
+import FlameAuraAvatar from '../../components/UI/FlameAuraAvatar';
 import TournamentBracket from '../../components/Tournaments/TournamentBracket';
 import { resolveMediaUrl, resolveTeamLogoUrl } from '../../utils/media';
+import { getIntensityByPointsAndRank, getTeamPoints, getTierByPoints } from '../../utils/flameRank';
 
 type MatchItem = {
   id?: string;
@@ -29,6 +31,14 @@ type RoomData = {
   password: string;
   visibleAt?: string;
   expiresAt?: string;
+};
+
+type TeamVisual = {
+  name: string;
+  logo: string;
+  tier: ReturnType<typeof getTierByPoints>;
+  intensity: number;
+  points: number;
 };
 
 const Container = styled.div`
@@ -122,21 +132,6 @@ const TeamCell = styled.div<{ $align?: 'left' | 'right' }>`
   justify-content: ${({ $align }) => ($align === 'right' ? 'flex-end' : 'flex-start')};
   width: 100%;
   flex-direction: ${({ $align }) => ($align === 'right' ? 'row-reverse' : 'row')};
-`;
-
-const TeamLogo = styled.div<{ $imageUrl?: string }>`
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: ${({ $imageUrl }) => ($imageUrl ? `url(${$imageUrl}) center/cover no-repeat` : 'rgba(255, 107, 0, 0.2)')};
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-  font-size: 0.75rem;
-  font-weight: 700;
 `;
 
 const Vs = styled.div`
@@ -263,20 +258,29 @@ const TournamentDetailsPage: React.FC = () => {
     return list.map((team: any) => ({
       id: String(team?.id || team?._id || ''),
       name: String(team?.name || team?.tag || 'Team'),
-      logo: resolveTeamLogoUrl(team?.logo || '')
+      logo: resolveTeamLogoUrl(team?.logo || ''),
+      stats: team?.stats || {}
     }));
   }, [tournament?.registeredTeams]);
 
-  const getTeamDisplay = (rawTeam: any) => {
+  const getTeamDisplay = (rawTeam: any): TeamVisual => {
     if (!rawTeam) {
-      return { name: 'TBD', logo: '' };
+      return { name: 'TBD', logo: '', tier: 'default', intensity: 0.35, points: 1000 };
     }
     if (typeof rawTeam === 'string') {
-      return { name: rawTeam || 'TBD', logo: '' };
+      return { name: rawTeam || 'TBD', logo: '', tier: 'default', intensity: 0.35, points: 1000 };
     }
+    const wins = Number(rawTeam?.stats?.wins || 0);
+    const losses = Number(rawTeam?.stats?.losses || 0);
+    const winRate = Number(rawTeam?.stats?.winRate || 0);
+    const tournamentsCount = Number(rawTeam?.stats?.tournaments || rawTeam?.stats?.tournamentsPlayed || 0);
+    const points = getTeamPoints(wins, losses, winRate, tournamentsCount);
     return {
       name: String(rawTeam.name || rawTeam.tag || rawTeam.username || 'TBD'),
-      logo: resolveTeamLogoUrl(rawTeam.logo || '')
+      logo: resolveTeamLogoUrl(rawTeam.logo || ''),
+      tier: getTierByPoints(points),
+      intensity: getIntensityByPointsAndRank(points),
+      points
     };
   };
 
@@ -395,12 +399,21 @@ const TournamentDetailsPage: React.FC = () => {
             <Meta>{registeredTeams.length}</Meta>
           </Row>
           <RegisteredTeamsGrid>
-            {registeredTeams.map((team: { id: string; name: string; logo: string }) => (
+            {registeredTeams.map((team: any) => {
+              const visual = getTeamDisplay(team);
+              return (
               <RegisteredTeamItem key={team.id || team.name}>
-                <TeamLogo $imageUrl={team.logo}>{!team.logo ? team.name.slice(0, 1).toUpperCase() : null}</TeamLogo>
-                <TeamName>{team.name}</TeamName>
+                <FlameAuraAvatar
+                  image={visual.logo || undefined}
+                  alt={visual.name}
+                  size={28}
+                  tier={visual.tier}
+                  intensity={visual.intensity}
+                  fallbackText={visual.name.slice(0, 1).toUpperCase()}
+                />
+                <TeamName>{visual.name}</TeamName>
               </RegisteredTeamItem>
-            ))}
+            )})}
           </RegisteredTeamsGrid>
         </RegisteredTeamsCard>
       )}
@@ -429,12 +442,26 @@ const TournamentDetailsPage: React.FC = () => {
 
                 <TeamsRow>
                   <TeamCell>
-                    <TeamLogo $imageUrl={t1.logo}>{!t1.logo ? t1.name.slice(0, 1).toUpperCase() : null}</TeamLogo>
+                    <FlameAuraAvatar
+                      image={t1.logo || undefined}
+                      alt={t1.name}
+                      size={28}
+                      tier={t1.tier}
+                      intensity={t1.intensity}
+                      fallbackText={t1.name.slice(0, 1).toUpperCase()}
+                    />
                     <TeamName>{t1.name}</TeamName>
                   </TeamCell>
                   <Vs>{tab === 'schedule' ? 'vs' : score}</Vs>
                   <TeamCell $align="right">
-                    <TeamLogo $imageUrl={t2.logo}>{!t2.logo ? t2.name.slice(0, 1).toUpperCase() : null}</TeamLogo>
+                    <FlameAuraAvatar
+                      image={t2.logo || undefined}
+                      alt={t2.name}
+                      size={28}
+                      tier={t2.tier}
+                      intensity={t2.intensity}
+                      fallbackText={t2.name.slice(0, 1).toUpperCase()}
+                    />
                     <TeamName>{t2.name}</TeamName>
                   </TeamCell>
                 </TeamsRow>

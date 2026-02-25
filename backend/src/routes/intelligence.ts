@@ -43,10 +43,10 @@ const handlePointsCalculate = (
   req: Request,
   res: Response
 ) => {
-  const previousRating = toNumber(req.body.playerRating, 1000);
+  const previousRating = toNumber(req.body.playerPoints ?? req.body.playerRating, 1000);
   const output = calculateElo({
     playerRating: previousRating,
-    opponentRating: toNumber(req.body.opponentRating, 1000),
+    opponentRating: toNumber(req.body.opponentPoints ?? req.body.opponentRating, 1000),
     result: Number(req.body.result) as 0 | 0.5 | 1,
     kFactor: req.body.kFactor !== undefined ? toNumber(req.body.kFactor) : undefined
   });
@@ -56,32 +56,49 @@ const handlePointsCalculate = (
     previousRating,
     newRating: output.newRating,
     delta: output.delta,
+    previousPoints: previousRating,
+    newPoints: output.newRating,
+    pointsDelta: output.delta,
     at: new Date().toISOString()
   });
 
-  return res.json({ success: true, data: output });
+  return res.json({
+    success: true,
+    data: {
+      ...output,
+      previousPoints: previousRating,
+      pointsDelta: output.delta,
+      newPoints: output.newRating
+    }
+  });
 };
+
+const pointsCalculateValidation = [
+  body().custom((payload: any) => {
+    const left = payload?.playerPoints ?? payload?.playerRating;
+    const right = payload?.opponentPoints ?? payload?.opponentRating;
+    if (!Number.isFinite(Number(left))) {
+      throw new Error('playerPoints or playerRating must be numeric');
+    }
+    if (!Number.isFinite(Number(right))) {
+      throw new Error('opponentPoints or opponentRating must be numeric');
+    }
+    return true;
+  }),
+  body('result').isIn([0, 0.5, 1]),
+  body('kFactor').optional().isNumeric()
+];
 
 router.post(
   '/elo/calculate',
-  [
-    body('playerRating').isNumeric(),
-    body('opponentRating').isNumeric(),
-    body('result').isIn([0, 0.5, 1]),
-    body('kFactor').optional().isNumeric()
-  ],
+  pointsCalculateValidation,
   validateRequest,
   handlePointsCalculate
 );
 
 router.post(
   '/points/calculate',
-  [
-    body('playerRating').isNumeric(),
-    body('opponentRating').isNumeric(),
-    body('result').isIn([0, 0.5, 1]),
-    body('kFactor').optional().isNumeric()
-  ],
+  pointsCalculateValidation,
   validateRequest,
   handlePointsCalculate
 );
@@ -95,7 +112,7 @@ router.get('/readiness', async (_req: Request, res: Response) => {
 
     const supportSettings = await SupportSettings.findOneAndUpdate(
       { key: 'global' },
-      { $setOnInsert: { key: 'global', aiEnabled: true } },
+      { $setOnInsert: { key: 'global', aiEnabled: false } },
       { new: true, upsert: true }
     ).lean();
 
@@ -105,6 +122,11 @@ router.get('/readiness', async (_req: Request, res: Response) => {
       aiEnabled: Boolean(supportSettings?.aiEnabled)
     };
     const telegramConfigured = Boolean(String(process.env.TELEGRAM_BOT_USERNAME || '').trim());
+    const telegramTokenConfigured = Boolean(String(process.env.TELEGRAM_BOT_TOKEN || '').trim());
+    const botWebhookEnabled = ['1', 'true', 'yes'].includes(String(process.env.BOT_USE_WEBHOOK || '').toLowerCase().trim());
+    const botWebhookPublicUrlConfigured = Boolean(String(process.env.BOT_WEBHOOK_PUBLIC_URL || '').trim());
+    const botWebhookPathConfigured = Boolean(String(process.env.BOT_WEBHOOK_PATH || '').trim());
+    const botWebhookSecretConfigured = Boolean(String(process.env.BOT_WEBHOOK_SECRET || '').trim());
     const cronConfigured = Boolean(String(process.env.HALL_OF_FAME_CRON_TOKEN || '').trim());
 
     const checks = [
@@ -139,6 +161,32 @@ router.get('/readiness', async (_req: Request, res: Response) => {
         message: 'Set TELEGRAM_BOT_USERNAME in .env'
       },
       {
+        key: 'telegram_bot_token',
+        ok: telegramTokenConfigured,
+        message: 'Set TELEGRAM_BOT_TOKEN in .env'
+      },
+      {
+        key: 'telegram_bot_webhook_url',
+        ok: !botWebhookEnabled || botWebhookPublicUrlConfigured,
+        message: botWebhookEnabled
+          ? 'Set BOT_WEBHOOK_PUBLIC_URL when BOT_USE_WEBHOOK=true'
+          : 'Webhook is optional while BOT_USE_WEBHOOK=false'
+      },
+      {
+        key: 'telegram_bot_webhook_path',
+        ok: !botWebhookEnabled || botWebhookPathConfigured,
+        message: botWebhookEnabled
+          ? 'Set BOT_WEBHOOK_PATH when BOT_USE_WEBHOOK=true'
+          : 'Webhook path not required in polling mode'
+      },
+      {
+        key: 'telegram_bot_webhook_secret',
+        ok: !botWebhookEnabled || botWebhookSecretConfigured,
+        message: botWebhookEnabled
+          ? 'Set BOT_WEBHOOK_SECRET in production for webhook validation'
+          : 'Webhook secret not required in polling mode'
+      },
+      {
         key: 'hall_of_fame_cron_token',
         ok: cronConfigured,
         message: 'Set HALL_OF_FAME_CRON_TOKEN in .env'
@@ -158,6 +206,11 @@ router.get('/readiness', async (_req: Request, res: Response) => {
         },
         integrations: {
           telegramBotUsernameConfigured: telegramConfigured,
+          telegramBotTokenConfigured: telegramTokenConfigured,
+          botWebhookEnabled,
+          botWebhookPublicUrlConfigured,
+          botWebhookPathConfigured,
+          botWebhookSecretConfigured,
           hallOfFameCronTokenConfigured: cronConfigured
         },
         infrastructure: {
@@ -411,15 +464,27 @@ router.post(
   '/compare/win-probability',
   intelligencePublicLimiter,
   [
-    body('left.rating').isNumeric(),
-    body('right.rating').isNumeric(),
+    body('left').custom((value) => {
+      const metric = value?.points ?? value?.rating;
+      if (!Number.isFinite(Number(metric))) {
+        throw new Error('left.points or left.rating must be numeric');
+      }
+      return true;
+    }),
+    body('right').custom((value) => {
+      const metric = value?.points ?? value?.rating;
+      if (!Number.isFinite(Number(metric))) {
+        throw new Error('right.points or right.rating must be numeric');
+      }
+      return true;
+    }),
     body('left.winRate').optional().isNumeric(),
     body('right.winRate').optional().isNumeric()
   ],
   validateRequest,
   (req: Request, res: Response) => {
-    const leftRating = toNumber(req.body?.left?.rating, 1000);
-    const rightRating = toNumber(req.body?.right?.rating, 1000);
+    const leftRating = toNumber(req.body?.left?.points ?? req.body?.left?.rating, 1000);
+    const rightRating = toNumber(req.body?.right?.points ?? req.body?.right?.rating, 1000);
     const leftExpected = 1 / (1 + Math.pow(10, (rightRating - leftRating) / 400));
     const rightExpected = 1 - leftExpected;
 
@@ -440,6 +505,8 @@ router.post(
     return res.json({
       success: true,
       data: {
+        leftPoints: Number(leftRating.toFixed(1)),
+        rightPoints: Number(rightRating.toFixed(1)),
         leftProbability: Number((leftProbability / normalization).toFixed(4)),
         rightProbability: Number((rightProbability / normalization).toFixed(4))
       }
@@ -454,7 +521,9 @@ router.post(
     body('left.teamId').optional().isString(),
     body('right.teamId').optional().isString(),
     body('left.rating').optional().isNumeric(),
-    body('right.rating').optional().isNumeric()
+    body('right.rating').optional().isNumeric(),
+    body('left.points').optional().isNumeric(),
+    body('right.points').optional().isNumeric()
   ],
   validateRequest,
   async (req: Request, res: Response) => {
@@ -477,8 +546,8 @@ router.post(
         return Math.max(600, Math.min(2400, core));
       };
 
-      const leftRating = resolveTeamRating(leftTeam, toNumber(req.body?.left?.rating, 1000));
-      const rightRating = resolveTeamRating(rightTeam, toNumber(req.body?.right?.rating, 1000));
+      const leftRating = resolveTeamRating(leftTeam, toNumber(req.body?.left?.points ?? req.body?.left?.rating, 1000));
+      const rightRating = resolveTeamRating(rightTeam, toNumber(req.body?.right?.points ?? req.body?.right?.rating, 1000));
 
       const leftExpected = 1 / (1 + Math.pow(10, (rightRating - leftRating) / 400));
       const rightExpected = 1 - leftExpected;
@@ -497,12 +566,14 @@ router.post(
             teamId: leftTeamId || null,
             name: (leftTeam as any)?.name || 'Left',
             rating: Number(leftRating.toFixed(1)),
+            points: Number(leftRating.toFixed(1)),
             probability: Number((leftScore / normalization).toFixed(4))
           },
           right: {
             teamId: rightTeamId || null,
             name: (rightTeam as any)?.name || 'Right',
             rating: Number((rightRating).toFixed(1)),
+            points: Number((rightRating).toFixed(1)),
             probability: Number((rightScore / normalization).toFixed(4))
           }
         }

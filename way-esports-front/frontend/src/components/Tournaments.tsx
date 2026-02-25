@@ -1,6 +1,8 @@
 import React from 'react';
 import styled from 'styled-components';
 import { resolveTeamLogoUrl } from '../utils/media';
+import FlameAuraAvatar from './UI/FlameAuraAvatar';
+import { getIntensityByPointsAndRank, getTeamPoints, getTierByPoints } from '../utils/flameRank';
 
 const TournamentsContainer = styled.div`
     padding-bottom: 80px;
@@ -92,19 +94,6 @@ const TeamLeft = styled.div`
   gap: 8px;
 `;
 
-const TeamLogo = styled.div<{ $imageUrl?: string }>`
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: ${({ $imageUrl }) => ($imageUrl ? `url(${$imageUrl}) center/cover no-repeat` : 'linear-gradient(135deg, #ff6b00, #ffd700)')};
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-  color: #000;
-`;
-
 const ActionButton = styled.button<{ variant?: 'primary' | 'secondary' }>`
   background-color: ${props => props.variant === 'secondary' ? '#333' : '#3a3a3a'};
     color: white;
@@ -183,6 +172,13 @@ interface Tournament {
         name: string;
         logo?: string;
         players: string[];
+        stats?: {
+          wins?: number;
+          losses?: number;
+          winRate?: number;
+          tournaments?: number;
+          tournamentsPlayed?: number;
+        };
     }>;
     prizePool?: number;
 }
@@ -231,17 +227,29 @@ const Tournaments: React.FC<TournamentsProps> = ({ tournaments, onRegister, onVi
 
                     {tournament.registeredTeams.length > 0 && (
                         <TeamsList>
-                            {tournament.registeredTeams.map((team, index) => (
+                            {tournament.registeredTeams.map((team, index) => {
+                              const wins = Number(team?.stats?.wins || 0);
+                              const losses = Number(team?.stats?.losses || 0);
+                              const winRate = Number(team?.stats?.winRate || 0);
+                              const tournamentsPlayed = Number(team?.stats?.tournaments || team?.stats?.tournamentsPlayed || 0);
+                              const points = getTeamPoints(wins, losses, winRate, tournamentsPlayed);
+                              return (
                                 <Team key={index}>
                                     <TeamLeft>
-                                        <TeamLogo $imageUrl={resolveTeamLogoUrl(team.logo || '')}>
-                                          {!team.logo ? (team.name || '?').slice(0, 1).toUpperCase() : null}
-                                        </TeamLogo>
+                                        <FlameAuraAvatar
+                                          image={resolveTeamLogoUrl(team.logo || '') || undefined}
+                                          alt={team.name || 'Team'}
+                                          size={24}
+                                          tier={getTierByPoints(points)}
+                                          intensity={getIntensityByPointsAndRank(points)}
+                                          fallbackText={(team.name || '?').slice(0, 1).toUpperCase()}
+                                        />
                                         <span>{team.name}</span>
                                     </TeamLeft>
                                     <span>{team.players.length} players</span>
                                 </Team>
-                            ))}
+                              );
+                            })}
                         </TeamsList>
                     )}
                 </TournamentCard>
