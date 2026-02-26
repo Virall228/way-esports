@@ -67,6 +67,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         mvps: Number(stats?.mvps ?? 0),
         kdRatio: Number(stats?.kdRatio ?? 0)
       },
+      profileWallpaper: source?.profileWallpaper
+        ? {
+            url: source.profileWallpaper?.url,
+            status: source.profileWallpaper?.status,
+            uploadedAt: source.profileWallpaper?.uploadedAt,
+            removedAt: source.profileWallpaper?.removedAt,
+            moderationNote: source.profileWallpaper?.moderationNote
+          }
+        : undefined,
+      winStreak: Number(source?.winStreak || 0),
       createdAt: source?.createdAt ? new Date(source.createdAt) : new Date()
     };
   };

@@ -26,6 +26,14 @@ export interface User {
     mvps?: number;
     kdRatio?: number;
   };
+  profileWallpaper?: {
+    url?: string;
+    status?: 'active' | 'removed';
+    uploadedAt?: string | Date;
+    removedAt?: string | Date;
+    moderationNote?: string;
+  };
+  winStreak?: number;
   createdAt: Date;
 }
 
