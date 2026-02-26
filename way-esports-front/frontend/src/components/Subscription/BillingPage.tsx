@@ -5,7 +5,7 @@ import { BillingCycle, PlanId, PRICING_PLANS, equivalentMonthly, getPlanCycle } 
 
 const Container = styled.div`
   min-height: 100vh;
-  background: #0a0d12;
+  background: #060708;
   padding: 24px;
   width: 100%;
   max-width: 100%;
@@ -20,9 +20,9 @@ const Container = styled.div`
 const Header = styled.div`
   text-align: center;
   background:
-    linear-gradient(180deg, rgba(44, 48, 55, 0.75) 0%, rgba(23, 26, 32, 0.9) 100%),
-    #171a20;
-  border: 1px solid rgba(132, 139, 151, 0.2);
+    linear-gradient(180deg, rgba(22, 24, 28, 0.9) 0%, rgba(12, 13, 16, 0.96) 100%),
+    #0b0c10;
+  border: 1px solid rgba(110, 118, 130, 0.16);
   border-radius: 16px;
   padding: 18px 16px;
   box-shadow:
@@ -39,7 +39,7 @@ const Title = styled.h1`
 `;
 
 const Subtitle = styled.p`
-  color: #99a3af;
+  color: #87909c;
   margin: 0;
 `;
 
@@ -50,8 +50,8 @@ const ToggleWrap = styled.div`
 
 const Toggle = styled.div`
   display: inline-flex;
-  background: rgba(41, 46, 53, 0.72);
-  border: 1px solid rgba(132, 139, 151, 0.26);
+  background: rgba(20, 23, 29, 0.86);
+  border: 1px solid rgba(110, 118, 130, 0.2);
   border-radius: 999px;
   padding: 4px;
   gap: 4px;
@@ -79,9 +79,9 @@ const Grid = styled.div`
 
 const Card = styled.div<{ $highlight?: boolean }>`
   background:
-    linear-gradient(180deg, rgba(44, 48, 55, 0.78) 0%, rgba(24, 27, 32, 0.9) 100%),
-    #171a20;
-  border: 1px solid ${({ $highlight }) => ($highlight ? 'rgba(255,107,0,0.82)' : 'rgba(132, 139, 151, 0.24)')};
+    linear-gradient(180deg, rgba(22, 24, 28, 0.92) 0%, rgba(12, 13, 16, 0.97) 100%),
+    #0b0c10;
+  border: 1px solid ${({ $highlight }) => ($highlight ? 'rgba(255,107,0,0.82)' : 'rgba(110, 118, 130, 0.18)')};
   border-radius: 16px;
   padding: 18px;
   color: #f4f7fb;
@@ -126,7 +126,7 @@ const Price = styled.div`
 `;
 
 const Meta = styled.div`
-  color: #aeb6c2;
+  color: #8e97a4;
   font-size: 13px;
   margin-top: 4px;
   min-height: 18px;
@@ -135,7 +135,7 @@ const Meta = styled.div`
 const Features = styled.ul`
   margin: 14px 0;
   padding-left: 18px;
-  color: #d7dde6;
+  color: #c2c9d3;
   display: grid;
   gap: 6px;
 `;
@@ -166,7 +166,7 @@ const Cta = styled.button`
 
 const Message = styled.div<{ $error?: boolean }>`
   color: ${({ $error }) => ($error ? '#ff8b8b' : '#8fe2ad')};
-  background: rgba(41, 46, 53, 0.62);
+  background: rgba(20, 23, 29, 0.88);
   border: 1px solid ${({ $error }) => ($error ? 'rgba(255,139,139,0.34)' : 'rgba(143,226,173,0.32)')};
   border-radius: 12px;
   padding: 10px 12px;

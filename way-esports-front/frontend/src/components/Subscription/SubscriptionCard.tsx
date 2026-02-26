@@ -5,11 +5,11 @@ import { PRICING_PLANS } from '../../config/pricing';
 
 const Container = styled.div`
   background:
-    linear-gradient(180deg, rgba(44, 48, 55, 0.78) 0%, rgba(24, 27, 32, 0.9) 100%),
-    #171a20;
+    linear-gradient(180deg, rgba(22, 24, 28, 0.92) 0%, rgba(12, 13, 16, 0.97) 100%),
+    #0b0c10;
   border-radius: 16px;
   padding: 18px;
-  border: 1px solid rgba(132, 139, 151, 0.24);
+  border: 1px solid rgba(110, 118, 130, 0.18);
   margin-bottom: 20px;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 8px 24px rgba(0,0,0,0.28);
 `;
@@ -43,8 +43,8 @@ const StatusBadge = styled.div<{ $active: boolean }>`
 `;
 
 const SubscriptionInfo = styled.div`
-  background: rgba(52, 57, 66, 0.54);
-  border: 1px solid rgba(128, 137, 149, 0.2);
+  background: rgba(20, 23, 29, 0.88);
+  border: 1px solid rgba(108, 116, 128, 0.18);
   border-radius: 12px;
   padding: 14px;
   margin-bottom: 20px;
@@ -62,7 +62,7 @@ const InfoRow = styled.div`
 `;
 
 const InfoLabel = styled.div`
-  color: #9fa8b4;
+  color: #8e96a3;
   font-size: 0.9rem;
 `;
 
@@ -114,7 +114,7 @@ const BenefitItem = styled.div`
   align-items: center;
   gap: 10px;
   margin-bottom: 10px;
-  color: #c7cfd9;
+  color: #bcc5d0;
   font-size: 0.9rem;
 
   &:last-child {
@@ -130,7 +130,7 @@ const CheckIcon = styled.div`
 const LoadingState = styled.div`
   text-align: center;
   padding: 40px;
-  color: #9fa8b4;
+  color: #8e96a3;
 `;
 
 interface SubscriptionData {

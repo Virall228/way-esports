@@ -18,9 +18,9 @@ const Container = styled.div`
 
 const WalletCard = styled.div`
     background:
-      linear-gradient(180deg, rgba(44, 48, 55, 0.78) 0%, rgba(24, 27, 32, 0.9) 100%),
-      #171a20;
-    border: 1px solid rgba(132, 139, 151, 0.2);
+      linear-gradient(180deg, rgba(22, 24, 28, 0.9) 0%, rgba(12, 13, 16, 0.96) 100%),
+      #0b0c10;
+    border: 1px solid rgba(110, 118, 130, 0.16);
     border-radius: 16px;
     padding: 18px;
     box-shadow:
@@ -43,7 +43,7 @@ const Balance = styled.div`
 `;
 
 const BalanceLabel = styled.div`
-    color: #9fa8b4;
+    color: #8e96a3;
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -56,7 +56,7 @@ const BalanceValue = styled.div`
 `;
 
 const BalanceHint = styled.div`
-    color: #8f99a7;
+    color: #7e8794;
     font-size: 12px;
 `;
 
@@ -116,7 +116,7 @@ const Input = styled.input`
     padding: 12px 13px;
     border: 1px solid rgba(147, 156, 170, 0.24);
     border-radius: 10px;
-    background: #242a32;
+    background: #14171d;
     color: #ecf1f6;
     font-size: 14px;
 
@@ -127,7 +127,7 @@ const Input = styled.input`
     }
 
     &::placeholder {
-      color: #7f8895;
+      color: #6f7987;
     }
 `;
 
@@ -136,7 +136,7 @@ const Select = styled.select`
     padding: 12px 13px;
     border: 1px solid rgba(147, 156, 170, 0.24);
     border-radius: 10px;
-    background: #242a32;
+    background: #14171d;
     color: #ecf1f6;
     font-size: 14px;
 
@@ -154,8 +154,8 @@ const TransactionHistory = styled.div`
 `;
 
 const Transaction = styled.div`
-    background: rgba(52, 57, 66, 0.54);
-    border: 1px solid rgba(128, 137, 149, 0.2);
+    background: rgba(24, 27, 33, 0.88);
+    border: 1px solid rgba(108, 116, 128, 0.18);
     padding: 13px;
     border-radius: 12px;
     display: flex;
@@ -172,20 +172,20 @@ const TxAmount = styled.div<{ $positive: boolean }>`
 
 const TxMeta = styled.div`
     font-size: 12px;
-    color: #9ba4b1;
+    color: #8b94a1;
     margin-top: 3px;
 `;
 
 const TxExtra = styled.div`
     font-size: 12px;
-    color: #7f8b9a;
+    color: #778190;
     margin-top: 3px;
     word-break: break-all;
 `;
 
 const TxDate = styled.div`
     font-size: 12px;
-    color: #9ba4b1;
+    color: #8b94a1;
     white-space: nowrap;
 `;
 
@@ -196,7 +196,7 @@ const ErrorText = styled.div`
 `;
 
 const Muted = styled.div`
-    color: #8b95a3;
+    color: #7f8998;
     font-size: 13px;
 `;
 

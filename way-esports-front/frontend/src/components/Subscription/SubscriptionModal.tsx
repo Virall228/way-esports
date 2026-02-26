@@ -9,7 +9,7 @@ const ModalOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(5, 8, 12, 0.84);
+  background: rgba(2, 3, 5, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -19,9 +19,9 @@ const ModalOverlay = styled.div`
 
 const ModalContent = styled.div`
   background:
-    linear-gradient(180deg, rgba(44, 48, 55, 0.78) 0%, rgba(24, 27, 32, 0.9) 100%),
-    #171a20;
-  border: 1px solid rgba(132, 139, 151, 0.24);
+    linear-gradient(180deg, rgba(22, 24, 28, 0.92) 0%, rgba(12, 13, 16, 0.97) 100%),
+    #0b0c10;
+  border: 1px solid rgba(110, 118, 130, 0.18);
   border-radius: 16px;
   padding: 30px;
   width: 90%;
@@ -63,7 +63,7 @@ const Title = styled.h2`
 `;
 
 const Subtitle = styled.p`
-  color: #9fa8b4;
+  color: #8e96a3;
   font-size: 1.1rem;
 `;
 
@@ -75,8 +75,8 @@ const PlansContainer = styled.div`
 `;
 
 const PlanCard = styled.div<{ $popular?: boolean }>`
-  background: rgba(52, 57, 66, 0.54);
-  border: 1px solid ${({ $popular }) => $popular ? 'rgba(255,107,0,0.82)' : 'rgba(132,139,151,0.24)'};
+  background: rgba(20, 23, 29, 0.88);
+  border: 1px solid ${({ $popular }) => $popular ? 'rgba(255,107,0,0.82)' : 'rgba(110,118,130,0.18)'};
   border-radius: 16px;
   padding: 30px;
   position: relative;
@@ -111,7 +111,7 @@ const PlanName = styled.h3`
 `;
 
 const PlanDescription = styled.p`
-  color: #aeb6c2;
+  color: #8e97a4;
   text-align: center;
   margin-bottom: 20px;
 `;
@@ -129,7 +129,7 @@ const Price = styled.div`
 `;
 
 const PriceLabel = styled.div`
-  color: #aeb6c2;
+  color: #8e97a4;
   font-size: 0.9rem;
 `;
 
@@ -140,7 +140,7 @@ const FeaturesList = styled.ul`
 `;
 
 const Feature = styled.li`
-  color: #c7cfd9;
+  color: #bcc5d0;
   margin-bottom: 12px;
   display: flex;
   align-items: center;
@@ -154,8 +154,8 @@ const Feature = styled.li`
 `;
 
 const PaymentSection = styled.div`
-  background: rgba(52, 57, 66, 0.54);
-  border: 1px solid rgba(128, 137, 149, 0.2);
+  background: rgba(20, 23, 29, 0.88);
+  border: 1px solid rgba(108, 116, 128, 0.18);
   border-radius: 12px;
   padding: 25px;
   margin-bottom: 20px;
@@ -170,8 +170,8 @@ const PaymentTitle = styled.h4`
 `;
 
 const CryptoAddress = styled.div`
-  background: #242a32;
-  border: 1px solid rgba(147, 156, 170, 0.24);
+  background: #14171d;
+  border: 1px solid rgba(108, 116, 128, 0.18);
   border-radius: 8px;
   padding: 15px;
   font-family: monospace;
@@ -199,7 +199,7 @@ const CopyButton = styled.button`
 `;
 
 const PaymentInstructions = styled.p`
-  color: #9fa8b4;
+  color: #8e96a3;
   font-size: 0.9rem;
   margin-bottom: 15px;
 `;
@@ -229,8 +229,8 @@ const ToggleWrap = styled.div`
 
 const Toggle = styled.div`
   display: inline-flex;
-  border: 1px solid rgba(132, 139, 151, 0.26);
-  background: rgba(41, 46, 53, 0.72);
+  border: 1px solid rgba(110, 118, 130, 0.2);
+  background: rgba(20, 23, 29, 0.88);
   border-radius: 999px;
   padding: 4px;
   gap: 4px;
