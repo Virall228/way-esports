@@ -11,6 +11,8 @@ const USE_WEBHOOK = ['1', 'true', 'yes'].includes(String(process.env.USE_WEBHOOK
 const WEBHOOK_PATH = String(process.env.WEBHOOK_PATH || '/telegram/webhook').trim() || '/telegram/webhook';
 const WEBHOOK_SECRET = String(process.env.WEBHOOK_SECRET || '').trim();
 const WEBHOOK_PUBLIC_URL = String(process.env.WEBHOOK_PUBLIC_URL || '').trim().replace(/\/+$/, '');
+const SUPPORT_EMAIL = String(process.env.SUPPORT_EMAIL || 'wayesports.org@gmail.com').trim();
+const COLLAB_TELEGRAM = String(process.env.COLLAB_TELEGRAM || '@wayesports').trim();
 
 if (!BOT_TOKEN) {
   console.error('TELEGRAM_BOT_TOKEN is required');
@@ -36,6 +38,10 @@ const I18N = {
     analytics: 'Analytics',
     support: 'Support',
     profile: 'Profile',
+    contacts: 'Contacts',
+    contactsTitle: 'Contact & Collaboration',
+    contactsBody: `Support: ${SUPPORT_EMAIL}\nCollaboration: ${COLLAB_TELEGRAM}`,
+    openSection: 'Open section',
     cardMissing: 'No player card found yet. Open app and play matches first:',
     cardUnavailable: 'Unable to identify Telegram account.',
     inviteAccepted: 'Invite accepted.\nOpen team page and submit join request:',
@@ -55,6 +61,10 @@ const I18N = {
     analytics: 'Аналитика',
     support: 'Поддержка',
     profile: 'Профиль',
+    contacts: 'Контакты',
+    contactsTitle: 'Связь и коллаборация',
+    contactsBody: `Поддержка: ${SUPPORT_EMAIL}\nКоллаборации: ${COLLAB_TELEGRAM}`,
+    openSection: 'Открыть раздел',
     cardMissing: 'Карточка игрока пока не найдена. Откройте приложение и сыграйте матчи:',
     cardUnavailable: 'Не удалось определить Telegram-аккаунт.',
     inviteAccepted: 'Инвайт принят.\nОткрой страницу команды и отправь запрос на вступление:',
@@ -144,8 +154,27 @@ async function sendQuickMenu(chatId, lang) {
         [
           { text: t(lang, 'support'), url: appUrl('/support') },
           { text: t(lang, 'profile'), url: appUrl('/profile') }
+        ],
+        [
+          { text: t(lang, 'contacts'), callback_data: 'contacts' }
         ]
       ]
+    }
+  });
+}
+
+async function sendOpenSection(chatId, lang, title, path) {
+  await answerMessage(chatId, `${t(lang, 'openSection')}: ${title}`, {
+    reply_markup: {
+      inline_keyboard: [[{ text: title, web_app: { url: appUrl(path) } }]]
+    }
+  });
+}
+
+async function sendContacts(chatId, lang) {
+  await answerMessage(chatId, `${t(lang, 'contactsTitle')}\n\n${t(lang, 'contactsBody')}`, {
+    reply_markup: {
+      inline_keyboard: [[{ text: t(lang, 'support'), web_app: { url: appUrl('/support') } }]]
     }
   });
 }
@@ -174,7 +203,7 @@ async function handleStart(chatId, payload, from) {
 
   await answerMessage(
     chatId,
-    `${t(lang, 'welcomeTitle')}\n\n${t(lang, 'welcome')}\n\n${t(lang, 'commands')}:\n/start\n/menu\n/webapp\n/tournaments\n/wallet\n/analytics\n/support\n/profile\n/card\n\n${t(lang, 'openApp')}: ${WEBAPP_URL}`
+    `${t(lang, 'welcomeTitle')}\n\n${t(lang, 'welcome')}\n\n${t(lang, 'commands')}:\n/start\n/menu\n/webapp\n/tournaments\n/wallet\n/analytics\n/support\n/profile\n/contacts\n/card`
   );
   await sendQuickMenu(chatId, lang);
 }
@@ -242,6 +271,18 @@ async function handleUpdate(update) {
     await handleInlineQuery(update.inline_query);
     return;
   }
+  if (update.callback_query) {
+    const q = update.callback_query;
+    const chatId = q?.message?.chat?.id;
+    const lang = pickLang(q?.from || {});
+    if (chatId && q?.data === 'contacts') {
+      await sendContacts(chatId, lang);
+    }
+    if (q?.id) {
+      await tg('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
+    }
+    return;
+  }
 
   const message = update.message;
   if (!message || !message.chat) return;
@@ -263,7 +304,7 @@ async function handleUpdate(update) {
   }
 
   if (command === '/webapp') {
-    await answerMessage(chatId, `${t(lang, 'openApp')}:\n${WEBAPP_URL}`, {
+    await answerMessage(chatId, t(lang, 'openApp'), {
       reply_markup: {
         inline_keyboard: [[{ text: t(lang, 'openLabel'), web_app: { url: WEBAPP_URL } }]]
       }
@@ -272,27 +313,32 @@ async function handleUpdate(update) {
   }
 
   if (command === '/tournaments') {
-    await answerMessage(chatId, `${t(lang, 'tournaments')}:\n${appUrl('/tournaments')}`);
+    await sendOpenSection(chatId, lang, t(lang, 'tournaments'), '/tournaments');
     return;
   }
 
   if (command === '/wallet') {
-    await answerMessage(chatId, `${t(lang, 'wallet')}:\n${appUrl('/wallet')}`);
+    await sendOpenSection(chatId, lang, t(lang, 'wallet'), '/wallet');
     return;
   }
 
   if (command === '/analytics') {
-    await answerMessage(chatId, `${t(lang, 'analytics')}:\n${appUrl('/analytics')}`);
+    await sendOpenSection(chatId, lang, t(lang, 'analytics'), '/analytics');
     return;
   }
 
   if (command === '/support') {
-    await answerMessage(chatId, `${t(lang, 'support')}:\n${appUrl('/support')}`);
+    await sendOpenSection(chatId, lang, t(lang, 'support'), '/support');
     return;
   }
 
   if (command === '/profile') {
-    await answerMessage(chatId, `${t(lang, 'profile')}:\n${appUrl('/profile')}`);
+    await sendOpenSection(chatId, lang, t(lang, 'profile'), '/profile');
+    return;
+  }
+
+  if (command === '/contacts') {
+    await sendContacts(chatId, lang);
     return;
   }
 
@@ -320,7 +366,7 @@ async function pollLoop() {
       const result = await tg('getUpdates', {
         timeout: POLL_TIMEOUT_SEC,
         offset: lastUpdateId ? lastUpdateId + 1 : undefined,
-        allowed_updates: ['message', 'inline_query']
+        allowed_updates: ['message', 'inline_query', 'callback_query']
       });
 
       for (const update of result || []) {
@@ -399,7 +445,7 @@ healthServer.listen(PORT, '0.0.0.0', () => {
       tg('setWebhook', {
         url: webhookUrl,
         secret_token: WEBHOOK_SECRET || undefined,
-        allowed_updates: ['message', 'inline_query']
+        allowed_updates: ['message', 'inline_query', 'callback_query']
       })
         .then(() => console.log(`Webhook set: ${webhookUrl}`))
         .catch((error) => console.error('Failed to set webhook:', error.message));
@@ -418,6 +464,7 @@ healthServer.listen(PORT, '0.0.0.0', () => {
       { command: 'analytics', description: 'Open analytics' },
       { command: 'support', description: 'Open support' },
       { command: 'profile', description: 'Open profile' },
+      { command: 'contacts', description: 'Contacts & collaboration' },
       { command: 'card', description: 'Show status card' },
       { command: 'status', description: 'Bot health status' }
     ]
