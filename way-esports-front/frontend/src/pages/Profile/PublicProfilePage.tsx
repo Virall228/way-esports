@@ -28,7 +28,7 @@ const ProfileHeader = styled(Card)<{
   margin-bottom: 2rem;
   background: ${({ theme, $wallpaper }) =>
     $wallpaper
-      ? `linear-gradient(180deg, rgba(10, 10, 12, 0.38) 0%, rgba(4, 5, 8, 0.62) 100%), url("${$wallpaper}") center / cover no-repeat`
+      ? `linear-gradient(180deg, rgba(10, 10, 12, 0.48) 0%, rgba(4, 5, 8, 0.72) 100%), url("${$wallpaper}") center / cover no-repeat`
       : `linear-gradient(135deg, ${theme.colors.bg.secondary}, ${theme.colors.bg.tertiary})`};
   background-size: cover;
   background-position: center;

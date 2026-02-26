@@ -48,7 +48,7 @@ const ProfileHeader = styled(Card).attrs({ variant: 'elevated' })<{
 }>`
   background: ${({ $wallpaperUrl }) =>
     $wallpaperUrl
-      ? `linear-gradient(180deg, rgba(10, 10, 12, 0.38) 0%, rgba(4, 5, 8, 0.6) 100%), url("${$wallpaperUrl}") center / cover no-repeat`
+      ? `linear-gradient(180deg, rgba(10, 10, 12, 0.48) 0%, rgba(4, 5, 8, 0.7) 100%), url("${$wallpaperUrl}") center / cover no-repeat`
       : `linear-gradient(180deg, rgba(12, 13, 16, 0.74) 0%, rgba(7, 8, 10, 0.86) 100%), rgba(255, 255, 255, 0.05)`};
   background-size: cover;
   background-position: center;
@@ -548,9 +548,6 @@ const ProfilePage: React.FC = () => {
                     Remove wallpaper
                   </Button>
                 ) : null}
-                <span style={{ color: '#9ea7b4', fontSize: '12px' }}>
-                  Unlock: subscription 5+ days and at least 1 played tournament (admins free).
-                </span>
               </WallpaperActionRow>
             </div>
           </ProfileTop>

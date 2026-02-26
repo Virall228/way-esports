@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+ï»¿import React, { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { api } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 type SenderType = 'user' | 'ai' | 'admin' | 'system';
 
@@ -137,6 +138,16 @@ const Hint = styled.div`
   color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
+const DiagnosticToggle = styled.button`
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #ddd;
+  font-size: 12px;
+  padding: 6px 10px;
+  cursor: pointer;
+`;
+
 const formatSender = (sender: SenderType) => {
   if (sender === 'user') return 'You';
   if (sender === 'admin') return 'Admin';
@@ -155,6 +166,7 @@ const SupportChat: React.FC<SupportChatProps> = ({
   source = 'settings',
   subject = 'Emergency Support'
 }) => {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [conversation, setConversation] = useState<SupportConversation | null>(null);
   const [value, setValue] = useState('');
@@ -162,6 +174,8 @@ const SupportChat: React.FC<SupportChatProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [aiStatus, setAiStatus] = useState<SupportAiStatus | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const isAdminViewer = user?.role === 'admin' || user?.role === 'developer';
 
   const loadThread = async () => {
     if (!api.hasToken()) return;
@@ -231,8 +245,8 @@ const SupportChat: React.FC<SupportChatProps> = ({
     [messages]
   );
 
-  const statusHint = useMemo(() => {
-    if (!aiStatus) return 'Support mode: status unavailable, admin replies manually';
+  const diagnosticsHint = useMemo(() => {
+    if (!aiStatus) return 'Diagnostics unavailable';
     if (!aiStatus.aiEnabled) return 'Admin-only mode: AI auto-replies are disabled';
     const provider = String(aiStatus.provider || 'auto').toUpperCase();
     const circuit = aiStatus.circuit || {};
@@ -245,6 +259,15 @@ const SupportChat: React.FC<SupportChatProps> = ({
     return `AI: ${provider} (Gemini: ${aiStatus.geminiEnabled ? 'ON' : 'OFF'}, OpenAI: ${aiStatus.openAiEnabled ? 'ON' : 'OFF'})`;
   }, [aiStatus]);
 
+  const statusHint = useMemo(() => {
+    if (showDiagnostics && isAdminViewer) return diagnosticsHint;
+    const base = aiStatus?.aiEnabled
+      ? 'Support online: AI first response + admin follow-up'
+      : 'Support online: admin replies';
+    if (!lastUpdatedAt) return base;
+    return `${base} | Updated: ${new Date(lastUpdatedAt).toLocaleTimeString()}`;
+  }, [showDiagnostics, isAdminViewer, diagnosticsHint, aiStatus?.aiEnabled, lastUpdatedAt]);
+
   return (
     <Wrapper>
       <StatusRow>
@@ -253,8 +276,12 @@ const SupportChat: React.FC<SupportChatProps> = ({
         </StatusBadge>
         <Hint>
           {statusHint}
-          {lastUpdatedAt ? ` | Updated: ${new Date(lastUpdatedAt).toLocaleTimeString()}` : ''}
         </Hint>
+        {isAdminViewer && (
+          <DiagnosticToggle type="button" onClick={() => setShowDiagnostics((prev) => !prev)}>
+            {showDiagnostics ? 'Hide diagnostics' : 'Show diagnostics'}
+          </DiagnosticToggle>
+        )}
       </StatusRow>
 
       <Messages>
@@ -265,8 +292,8 @@ const SupportChat: React.FC<SupportChatProps> = ({
           <Bubble key={msg.id} $sender={msg.senderType}>
             <BubbleMeta>
               {formatSender(msg.senderType)}
-              {msg.provider ? ` • ${msg.provider}` : ''}
-              {msg.createdAt ? ` • ${new Date(msg.createdAt).toLocaleString()}` : ''}
+              {msg.provider ? ` â€¢ ${msg.provider}` : ''}
+              {msg.createdAt ? ` â€¢ ${new Date(msg.createdAt).toLocaleString()}` : ''}
             </BubbleMeta>
             <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
           </Bubble>
@@ -292,4 +319,6 @@ const SupportChat: React.FC<SupportChatProps> = ({
 };
 
 export default SupportChat;
+
+
 
