@@ -42,16 +42,22 @@ const Container = styled.div`
   color: ${({ theme }) => theme.colors.text.primary};
 `;
 
-const ProfileHeader = styled(Card).attrs({ variant: 'elevated' })`
-  background:
-    linear-gradient(180deg, rgba(12, 13, 16, 0.74) 0%, rgba(7, 8, 10, 0.86) 100%),
-    rgba(255, 255, 255, 0.05);
+const ProfileHeader = styled(Card).attrs({ variant: 'elevated' })<{
+  $wallpaperUrl?: string | null;
+  $streakGlowColor?: string;
+}>`
+  background: ${({ $wallpaperUrl }) =>
+    $wallpaperUrl
+      ? `linear-gradient(180deg, rgba(10, 10, 12, 0.38) 0%, rgba(4, 5, 8, 0.6) 100%), url("${$wallpaperUrl}") center / cover no-repeat`
+      : `linear-gradient(180deg, rgba(12, 13, 16, 0.74) 0%, rgba(7, 8, 10, 0.86) 100%), rgba(255, 255, 255, 0.05)`};
   background-size: cover;
   background-position: center;
   border-radius: 16px;
   padding: 30px;
   margin-bottom: 30px;
   border: 1px solid ${({ theme }) => theme.colors.border.light};
+  box-shadow: ${({ $streakGlowColor = 'rgba(255,255,255,0.1)' }) =>
+    `0 0 0 1px ${$streakGlowColor}, 0 0 28px ${$streakGlowColor.replace('0.9', '0.35').replace('0.85', '0.3')}`};
   display: flex;
   align-items: flex-start;
   gap: 30px;
@@ -448,14 +454,7 @@ const ProfilePage: React.FC = () => {
 
   return (
     <Container>
-      <ProfileHeader
-        style={{
-          background: wallpaperUrl
-            ? `linear-gradient(180deg, rgba(10, 10, 12, 0.6) 0%, rgba(4, 5, 8, 0.8) 100%), url("${wallpaperUrl}") center / cover no-repeat`
-            : undefined,
-          boxShadow: `0 0 0 1px ${streakGlowColor}, 0 0 28px ${streakGlowColor.replace('0.9', '0.35').replace('0.85', '0.3')}`
-        }}
-      >
+      <ProfileHeader $wallpaperUrl={wallpaperUrl} $streakGlowColor={streakGlowColor}>
         <Avatar
           $hasImage={!!(profile?.profileLogo || profile?.photoUrl)}
           $imageUrl={profile?.profileLogo || profile?.photoUrl}
