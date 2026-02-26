@@ -90,11 +90,17 @@ const FlameAuraAvatar: React.FC<FlameAuraAvatarProps> = ({
   rounded = true,
   borderColor
 }) => {
+  const [imageBroken, setImageBroken] = React.useState(false);
+  React.useEffect(() => {
+    setImageBroken(false);
+  }, [imageUrl]);
+
   const auraColor = borderColor || tierToColor(tier);
+  const safeImageUrl = imageUrl && !imageBroken ? imageUrl : null;
   return (
     <Wrapper $size={size} $rounded={rounded} $auraColor={auraColor} $intensity={intensity}>
-      {imageUrl ? (
-        <AvatarImage src={imageUrl} alt="avatar" $rounded={rounded} />
+      {safeImageUrl ? (
+        <AvatarImage src={safeImageUrl} alt="avatar" $rounded={rounded} onError={() => setImageBroken(true)} />
       ) : (
         <Fallback $rounded={rounded}>{fallbackText.slice(0, 1).toUpperCase()}</Fallback>
       )}

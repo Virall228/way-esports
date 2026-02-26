@@ -380,6 +380,7 @@ interface Team {
   name: string;
   tag: string;
   logo?: string;
+  captainProfileLogo?: string;
   game: string;
   tournamentId?: string | null;
   description: string;
@@ -475,6 +476,7 @@ const TeamsPage: React.FC = () => {
         name: t.name || '',
         tag: t.tag || '',
         logo: resolveTeamLogoUrl(t.logo || ''),
+        captainProfileLogo: resolveTeamLogoUrl(t.captain?.profileLogo || ''),
         game: t.game || '',
         tournamentId: t.tournamentId || null,
         description: t.description || '',
@@ -818,7 +820,7 @@ const TeamsPage: React.FC = () => {
                   <TeamCard key={team.id}>
                     <TeamHeader>
                       <FlameAuraAvatar
-                        imageUrl={team.logo || undefined}
+                        imageUrl={team.logo || team.captainProfileLogo || undefined}
                         fallbackText={team.tag.replace('#', '').slice(0, 2) || team.name || '?'}
                         size={60}
                         tier={getTierByPoints(getTeamPoints(team.wins, 0, team.winRate, team.tournaments))}
