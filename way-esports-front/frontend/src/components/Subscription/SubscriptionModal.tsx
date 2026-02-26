@@ -9,7 +9,7 @@ const ModalOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(5, 8, 12, 0.84);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -18,7 +18,10 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
+  background:
+    linear-gradient(180deg, rgba(44, 48, 55, 0.78) 0%, rgba(24, 27, 32, 0.9) 100%),
+    #171a20;
+  border: 1px solid rgba(132, 139, 151, 0.24);
   border-radius: 16px;
   padding: 30px;
   width: 90%;
@@ -50,17 +53,17 @@ const CloseButton = styled.button`
 
 const Header = styled.div`
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 24px;
 `;
 
 const Title = styled.h2`
-  color: #ffffff;
+  color: #f3f5f7;
   font-size: 2rem;
   margin-bottom: 10px;
 `;
 
 const Subtitle = styled.p`
-  color: #cccccc;
+  color: #9fa8b4;
   font-size: 1.1rem;
 `;
 
@@ -72,13 +75,13 @@ const PlansContainer = styled.div`
 `;
 
 const PlanCard = styled.div<{ $popular?: boolean }>`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ $popular }) => $popular ? 'rgba(255,107,0,0.7)' : 'rgba(255,255,255,0.12)'};
+  background: rgba(52, 57, 66, 0.54);
+  border: 1px solid ${({ $popular }) => $popular ? 'rgba(255,107,0,0.82)' : 'rgba(132,139,151,0.24)'};
   border-radius: 16px;
   padding: 30px;
   position: relative;
   transition: all 0.3s ease;
-  box-shadow: ${({ $popular }) => $popular ? '0 0 24px rgba(255,107,0,0.2)' : 'none'};
+  box-shadow: ${({ $popular }) => $popular ? '0 0 24px rgba(255,107,0,0.18)' : 'none'};
 
   &:hover {
     transform: translateY(-5px);
@@ -91,8 +94,8 @@ const PopularBadge = styled.div`
   top: -12px;
   left: 50%;
   transform: translateX(-50%);
-  background: #ff6b00;
-  color: #000000;
+  background: linear-gradient(180deg, #ff7d24 0%, #ff6b00 100%);
+  color: #111;
   padding: 6px 20px;
   border-radius: 20px;
   font-size: 0.9rem;
@@ -108,7 +111,7 @@ const PlanName = styled.h3`
 `;
 
 const PlanDescription = styled.p`
-  color: #cccccc;
+  color: #aeb6c2;
   text-align: center;
   margin-bottom: 20px;
 `;
@@ -126,7 +129,7 @@ const Price = styled.div`
 `;
 
 const PriceLabel = styled.div`
-  color: #cccccc;
+  color: #aeb6c2;
   font-size: 0.9rem;
 `;
 
@@ -137,7 +140,7 @@ const FeaturesList = styled.ul`
 `;
 
 const Feature = styled.li`
-  color: #cccccc;
+  color: #c7cfd9;
   margin-bottom: 12px;
   display: flex;
   align-items: center;
@@ -151,14 +154,15 @@ const Feature = styled.li`
 `;
 
 const PaymentSection = styled.div`
-  background: ${({ theme }) => theme.colors.background};
+  background: rgba(52, 57, 66, 0.54);
+  border: 1px solid rgba(128, 137, 149, 0.2);
   border-radius: 12px;
   padding: 25px;
   margin-bottom: 20px;
 `;
 
 const PaymentTitle = styled.h4`
-  color: #e5e5e5;
+  color: #edf1f6;
   margin-bottom: 15px;
   display: flex;
   align-items: center;
@@ -166,8 +170,8 @@ const PaymentTitle = styled.h4`
 `;
 
 const CryptoAddress = styled.div`
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid rgba(255,255,255,0.12);
+  background: #242a32;
+  border: 1px solid rgba(147, 156, 170, 0.24);
   border-radius: 8px;
   padding: 15px;
   font-family: monospace;
@@ -181,8 +185,8 @@ const CopyButton = styled.button`
   position: absolute;
   top: 10px;
   right: 10px;
-  background: #ff6b00;
-  color: white;
+  background: linear-gradient(180deg, #ff7d24 0%, #ff6b00 100%);
+  color: #111;
   border: none;
   padding: 5px 10px;
   border-radius: 4px;
@@ -195,16 +199,16 @@ const CopyButton = styled.button`
 `;
 
 const PaymentInstructions = styled.p`
-  color: #cccccc;
+  color: #9fa8b4;
   font-size: 0.9rem;
   margin-bottom: 15px;
 `;
 
 const ConfirmButton = styled.button`
   width: 100%;
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: linear-gradient(180deg, #373b43 0%, #2a2f37 100%);
+  color: #eef2f7;
+  border: 1px solid rgba(160,168,180,0.25);
   padding: 15px;
   border-radius: 8px;
   font-weight: 600;
@@ -213,7 +217,7 @@ const ConfirmButton = styled.button`
   text-transform: uppercase;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.2);
+    filter: brightness(1.05);
   }
 `;
 
@@ -225,7 +229,8 @@ const ToggleWrap = styled.div`
 
 const Toggle = styled.div`
   display: inline-flex;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(132, 139, 151, 0.26);
+  background: rgba(41, 46, 53, 0.72);
   border-radius: 999px;
   padding: 4px;
   gap: 4px;
@@ -239,8 +244,8 @@ const ToggleButton = styled.button<{ $active: boolean }>`
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 0.7px;
-  color: ${({ $active }) => ($active ? '#000' : '#fff')};
-  background: ${({ $active }) => ($active ? '#ff6b00' : 'transparent')};
+  color: ${({ $active }) => ($active ? '#111' : '#edf1f6')};
+  background: ${({ $active }) => ($active ? 'linear-gradient(180deg, #ff7d24 0%, #ff6b00 100%)' : 'transparent')};
 `;
 
 interface SubscriptionModalProps {

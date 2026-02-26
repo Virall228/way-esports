@@ -5,40 +5,53 @@ import { BillingCycle, PlanId, PRICING_PLANS, equivalentMonthly, getPlanCycle } 
 
 const Container = styled.div`
   min-height: 100vh;
-  background: #000000;
-  padding: 20px;
+  background: #0a0d12;
+  padding: 24px;
   width: 100%;
   max-width: 100%;
+  display: grid;
+  gap: 14px;
+
+  @media (max-width: 768px) {
+    padding: 14px;
+  }
 `;
 
 const Header = styled.div`
   text-align: center;
-  margin-bottom: 28px;
+  background:
+    linear-gradient(180deg, rgba(44, 48, 55, 0.75) 0%, rgba(23, 26, 32, 0.9) 100%),
+    #171a20;
+  border: 1px solid rgba(132, 139, 151, 0.2);
+  border-radius: 16px;
+  padding: 18px 16px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 8px 24px rgba(0, 0, 0, 0.28);
 `;
 
 const Title = styled.h1`
-  color: #ffffff;
+  color: #f3f5f7;
   font-size: clamp(1.6rem, 5vw, 2.5rem);
-  margin-bottom: 6px;
+  margin: 0 0 6px 0;
   text-transform: uppercase;
   letter-spacing: 1px;
 `;
 
 const Subtitle = styled.p`
-  color: #9ca3af;
+  color: #99a3af;
   margin: 0;
 `;
 
 const ToggleWrap = styled.div`
   display: flex;
   justify-content: center;
-  margin: 12px 0 24px;
 `;
 
 const Toggle = styled.div`
   display: inline-flex;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(41, 46, 53, 0.72);
+  border: 1px solid rgba(132, 139, 151, 0.26);
   border-radius: 999px;
   padding: 4px;
   gap: 4px;
@@ -50,8 +63,8 @@ const ToggleButton = styled.button<{ $active: boolean }>`
   border-radius: 999px;
   border: none;
   cursor: pointer;
-  color: ${({ $active }) => ($active ? '#000' : '#fff')};
-  background: ${({ $active }) => ($active ? '#FF6B00' : 'transparent')};
+  color: ${({ $active }) => ($active ? '#111' : '#edf1f6')};
+  background: ${({ $active }) => ($active ? 'linear-gradient(180deg, #ff7d24 0%, #ff6b00 100%)' : 'transparent')};
   text-transform: uppercase;
   font-size: 12px;
   letter-spacing: 0.8px;
@@ -65,13 +78,15 @@ const Grid = styled.div`
 `;
 
 const Card = styled.div<{ $highlight?: boolean }>`
-  background: #0a0a0a;
-  border: 1px solid ${({ $highlight }) => ($highlight ? 'rgba(255,107,0,0.8)' : 'rgba(148,163,184,0.35)')};
-  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(44, 48, 55, 0.78) 0%, rgba(24, 27, 32, 0.9) 100%),
+    #171a20;
+  border: 1px solid ${({ $highlight }) => ($highlight ? 'rgba(255,107,0,0.82)' : 'rgba(132, 139, 151, 0.24)')};
+  border-radius: 16px;
   padding: 18px;
-  color: #fff;
+  color: #f4f7fb;
   transition: border-color 220ms ease, box-shadow 220ms ease;
-  box-shadow: ${({ $highlight }) => ($highlight ? '0 0 22px rgba(255,107,0,0.2)' : 'none')};
+  box-shadow: ${({ $highlight }) => ($highlight ? '0 0 24px rgba(255,107,0,0.18), inset 0 1px 0 rgba(255,255,255,0.04)' : 'inset 0 1px 0 rgba(255,255,255,0.03)')};
 `;
 
 const PlanTitle = styled.h3`
@@ -85,16 +100,17 @@ const Badge = styled.span`
   margin-top: 8px;
   font-size: 11px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 107, 0, 0.7);
+  border: 1px solid rgba(255, 107, 0, 0.75);
   color: #ffb280;
   padding: 4px 8px;
+  background: rgba(255, 107, 0, 0.08);
 `;
 
 const Price = styled.div`
   margin-top: 14px;
   font-size: 2rem;
   font-weight: 700;
-  color: #fff;
+  color: #f2f6fa;
   animation: priceFade 220ms ease;
 
   @keyframes priceFade {
@@ -110,7 +126,7 @@ const Price = styled.div`
 `;
 
 const Meta = styled.div`
-  color: #cbd5e1;
+  color: #aeb6c2;
   font-size: 13px;
   margin-top: 4px;
   min-height: 18px;
@@ -119,7 +135,7 @@ const Meta = styled.div`
 const Features = styled.ul`
   margin: 14px 0;
   padding-left: 18px;
-  color: #e5e7eb;
+  color: #d7dde6;
   display: grid;
   gap: 6px;
 `;
@@ -127,10 +143,10 @@ const Features = styled.ul`
 const Cta = styled.button`
   width: 100%;
   min-height: 44px;
-  border: none;
+  border: 1px solid rgba(255, 145, 72, 0.65);
   border-radius: 10px;
-  background: #FF6B00;
-  color: #000;
+  background: linear-gradient(180deg, #ff7d24 0%, #ff6b00 100%);
+  color: #111;
   font-weight: 800;
   letter-spacing: 0.8px;
   text-transform: uppercase;
@@ -149,8 +165,11 @@ const Cta = styled.button`
 `;
 
 const Message = styled.div<{ $error?: boolean }>`
-  margin-top: 14px;
-  color: ${({ $error }) => ($error ? '#f87171' : '#86efac')};
+  color: ${({ $error }) => ($error ? '#ff8b8b' : '#8fe2ad')};
+  background: rgba(41, 46, 53, 0.62);
+  border: 1px solid ${({ $error }) => ($error ? 'rgba(255,139,139,0.34)' : 'rgba(143,226,173,0.32)')};
+  border-radius: 12px;
+  padding: 10px 12px;
 `;
 
 type BillingData = {

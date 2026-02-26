@@ -4,11 +4,14 @@ import { api } from '../../services/api';
 import { PRICING_PLANS } from '../../config/pricing';
 
 const Container = styled.div`
-  background: rgba(255, 255, 255, 0.06);
+  background:
+    linear-gradient(180deg, rgba(44, 48, 55, 0.78) 0%, rgba(24, 27, 32, 0.9) 100%),
+    #171a20;
   border-radius: 16px;
-  padding: 25px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 18px;
+  border: 1px solid rgba(132, 139, 151, 0.24);
   margin-bottom: 20px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 8px 24px rgba(0,0,0,0.28);
 `;
 
 const Header = styled.div`
@@ -19,29 +22,31 @@ const Header = styled.div`
 `;
 
 const Icon = styled.div`
-  font-size: 2rem;
+  font-size: 1.4rem;
+  color: #ff7d24;
 `;
 
 const Title = styled.h3`
-  color: #ffffff;
+  color: #f3f5f7;
   margin: 0;
   font-size: 1.3rem;
 `;
 
 const StatusBadge = styled.div<{ $active: boolean }>`
-  background: ${({ $active }) => $active ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)'};
-  color: ${({ $active }) => $active ? '#4CAF50' : '#F44336'};
+  background: ${({ $active }) => $active ? 'rgba(122, 216, 159, 0.18)' : 'rgba(255, 139, 139, 0.18)'};
+  color: ${({ $active }) => $active ? '#7ad89f' : '#ff8b8b'};
   padding: 6px 12px;
   border-radius: 20px;
   font-size: 0.8rem;
   font-weight: 600;
-  border: 1px solid ${({ $active }) => $active ? 'rgba(76, 175, 80, 0.3)' : 'rgba(244, 67, 54, 0.3)'};
+  border: 1px solid ${({ $active }) => $active ? 'rgba(122, 216, 159, 0.34)' : 'rgba(255, 139, 139, 0.34)'};
 `;
 
 const SubscriptionInfo = styled.div`
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(52, 57, 66, 0.54);
+  border: 1px solid rgba(128, 137, 149, 0.2);
   border-radius: 12px;
-  padding: 20px;
+  padding: 14px;
   margin-bottom: 20px;
 `;
 
@@ -57,12 +62,12 @@ const InfoRow = styled.div`
 `;
 
 const InfoLabel = styled.div`
-  color: #cccccc;
+  color: #9fa8b4;
   font-size: 0.9rem;
 `;
 
 const InfoValue = styled.div`
-  color: #ffffff;
+  color: #ecf1f6;
   font-weight: 600;
 `;
 
@@ -73,24 +78,25 @@ const ActionButton = styled.button<{ $variant: 'primary' | 'secondary' }>`
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  border: none;
+  border: 1px solid transparent;
   margin-bottom: 10px;
 
   ${({ $variant }) => $variant === 'primary' ? `
-    background: linear-gradient(135deg, #ff6b00, #ff8533);
-    color: white;
+    background: linear-gradient(180deg, #ff7d24 0%, #ff6b00 100%);
+    color: #111;
+    border-color: rgba(255,145,72,0.65);
     
     &:hover {
       transform: translateY(-2px);
       box-shadow: 0 8px 25px rgba(255, 107, 0, 0.3);
     }
   ` : `
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: linear-gradient(180deg, #373b43 0%, #2a2f37 100%);
+    color: #eef2f7;
+    border-color: rgba(160,168,180,0.25);
     
     &:hover {
-      background: rgba(255, 255, 255, 0.2);
+      filter: brightness(1.05);
     }
   `}
 
@@ -108,7 +114,7 @@ const BenefitItem = styled.div`
   align-items: center;
   gap: 10px;
   margin-bottom: 10px;
-  color: #cccccc;
+  color: #c7cfd9;
   font-size: 0.9rem;
 
   &:last-child {
@@ -117,14 +123,14 @@ const BenefitItem = styled.div`
 `;
 
 const CheckIcon = styled.div`
-  color: #4CAF50;
+  color: #7ad89f;
   font-weight: bold;
 `;
 
 const LoadingState = styled.div`
   text-align: center;
   padding: 40px;
-  color: #cccccc;
+  color: #9fa8b4;
 `;
 
 interface SubscriptionData {
@@ -216,7 +222,7 @@ const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ onManageSubscriptio
   return (
     <Container>
       <Header>
-        <Icon>{'\u{1F48E}'}</Icon>
+        <Icon>◆</Icon>
         <Title>Subscription</Title>
         <StatusBadge $active={subscription.isSubscribed && !isExpired}>
           {subscription.isSubscribed && !isExpired ? 'Active' : 'Inactive'}

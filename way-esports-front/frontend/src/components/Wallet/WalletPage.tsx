@@ -3,97 +3,201 @@ import styled from 'styled-components';
 import { api } from '../../services/api';
 
 const Container = styled.div`
-    padding: 20px;
+    padding: 24px;
     width: 100%;
     max-width: 100%;
     margin: 0;
+    display: grid;
+    gap: 16px;
+
+    @media (max-width: 768px) {
+        padding: 14px;
+        gap: 12px;
+    }
 `;
 
 const WalletCard = styled.div`
-    background-color: #2a2a2a;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    background:
+      linear-gradient(180deg, rgba(44, 48, 55, 0.78) 0%, rgba(24, 27, 32, 0.9) 100%),
+      #171a20;
+    border: 1px solid rgba(132, 139, 151, 0.2);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      0 10px 25px rgba(0, 0, 0, 0.32);
 `;
 
 const Title = styled.h2`
-    color: #FF6B00;
-    margin: 0 0 20px 0;
+    color: #f3f5f7;
+    margin: 0;
+    letter-spacing: 0.6px;
+    font-size: 20px;
+    font-weight: 700;
 `;
 
 const Balance = styled.div`
-    font-size: 24px;
-    color: #4CAF50;
-    margin: 20px 0;
+    display: grid;
+    gap: 4px;
+    margin-top: 14px;
+`;
+
+const BalanceLabel = styled.div`
+    color: #9fa8b4;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+`;
+
+const BalanceValue = styled.div`
+    font-size: 32px;
+    color: #f2f6fa;
+    font-weight: 800;
+`;
+
+const BalanceHint = styled.div`
+    color: #8f99a7;
+    font-size: 12px;
+`;
+
+const FormGrid = styled.div`
+    margin-top: 14px;
+    display: grid;
+    gap: 10px;
+`;
+
+const InlineGrid = styled.div`
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+
+    @media (max-width: 640px) {
+        grid-template-columns: 1fr;
+    }
+`;
+
+const FieldLabel = styled.label`
+    color: #aeb6c2;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
 `;
 
 const Button = styled.button<{ variant?: 'primary' | 'secondary' }>`
-    background-color: ${props => props.variant === 'secondary' ? '#333' : '#FF6B00'};
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
+    background: ${props =>
+      props.variant === 'secondary'
+        ? 'linear-gradient(180deg, #373b43 0%, #2a2f37 100%)'
+        : 'linear-gradient(180deg, #ff7d24 0%, #ff6b00 100%)'};
+    color: ${props => (props.variant === 'secondary' ? '#eef2f7' : '#111')};
+    border: 1px solid ${props => (props.variant === 'secondary' ? 'rgba(160, 168, 180, 0.25)' : 'rgba(255, 145, 72, 0.65)')};
+    padding: 12px 14px;
+    border-radius: 10px;
     cursor: pointer;
-    font-size: 16px;
-    margin: 10px 0;
+    font-size: 14px;
+    font-weight: 700;
     width: 100%;
-    transition: background-color 0.3s ease;
+    transition: transform 0.15s ease, filter 0.15s ease;
 
     &:hover {
-        background-color: ${props => props.variant === 'secondary' ? '#444' : '#ff8533'};
+        transform: translateY(-1px);
+        filter: brightness(1.04);
     }
 
     &:disabled {
-        background-color: #555;
         cursor: not-allowed;
+        filter: grayscale(0.2);
+        opacity: 0.65;
+        transform: none;
     }
 `;
 
 const Input = styled.input`
     width: 100%;
-    padding: 12px;
-    margin: 10px 0;
-    border: 1px solid #333;
-    border-radius: 8px;
-    background-color: #333;
-    color: white;
-    font-size: 16px;
+    padding: 12px 13px;
+    border: 1px solid rgba(147, 156, 170, 0.24);
+    border-radius: 10px;
+    background: #242a32;
+    color: #ecf1f6;
+    font-size: 14px;
 
     &:focus {
         outline: none;
-        border-color: #FF6B00;
+        border-color: #ff7b1f;
+        box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.14);
+    }
+
+    &::placeholder {
+      color: #7f8895;
     }
 `;
 
 const Select = styled.select`
     width: 100%;
-    padding: 12px;
-    margin: 10px 0;
-    border: 1px solid #333;
-    border-radius: 8px;
-    background-color: #333;
-    color: white;
-    font-size: 16px;
+    padding: 12px 13px;
+    border: 1px solid rgba(147, 156, 170, 0.24);
+    border-radius: 10px;
+    background: #242a32;
+    color: #ecf1f6;
+    font-size: 14px;
 
     &:focus {
         outline: none;
-        border-color: #FF6B00;
+        border-color: #ff7b1f;
+        box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.14);
     }
 `;
 
 const TransactionHistory = styled.div`
-    margin-top: 20px;
+    margin-top: 12px;
+    display: grid;
+    gap: 9px;
 `;
 
 const Transaction = styled.div`
-    background-color: #333;
-    padding: 15px;
-    border-radius: 8px;
-    margin: 10px 0;
+    background: rgba(52, 57, 66, 0.54);
+    border: 1px solid rgba(128, 137, 149, 0.2);
+    padding: 13px;
+    border-radius: 12px;
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+    gap: 10px;
+`;
+
+const TxAmount = styled.div<{ $positive: boolean }>`
+    color: ${({ $positive }) => ($positive ? '#7ad89f' : '#ff8b8b')};
+    font-weight: 800;
+    font-size: 16px;
+`;
+
+const TxMeta = styled.div`
+    font-size: 12px;
+    color: #9ba4b1;
+    margin-top: 3px;
+`;
+
+const TxExtra = styled.div`
+    font-size: 12px;
+    color: #7f8b9a;
+    margin-top: 3px;
+    word-break: break-all;
+`;
+
+const TxDate = styled.div`
+    font-size: 12px;
+    color: #9ba4b1;
+    white-space: nowrap;
+`;
+
+const ErrorText = styled.div`
+    color: #ff8b8b;
+    margin-top: 2px;
+    font-size: 13px;
+`;
+
+const Muted = styled.div`
+    color: #8b95a3;
+    font-size: 13px;
 `;
 
 const WalletPage: React.FC = () => {
@@ -234,34 +338,47 @@ const WalletPage: React.FC = () => {
         <Container>
             <WalletCard>
                 <Title>My Wallet</Title>
-                <Balance>Balance: ${balance.toFixed(2)}</Balance>
-                
-                <div>
+                <Balance>
+                    <BalanceLabel>Available Balance</BalanceLabel>
+                    <BalanceValue>${balance.toFixed(2)}</BalanceValue>
+                    <BalanceHint>USDT withdrawal minimum: ${MIN_WITHDRAW_USD}</BalanceHint>
+                </Balance>
+
+                <FormGrid>
+                    <FieldLabel>Amount</FieldLabel>
                     <Input
                         type="number"
                         placeholder="Enter amount to withdraw"
                         value={withdrawAmount}
                         onChange={(e) => setWithdrawAmount(e.target.value)}
                     />
-                    <Input
-                        type="text"
-                        placeholder="USDT wallet address"
-                        value={withdrawAddress}
-                        onChange={(e) => {
-                            const value = e.target.value;
-                            setWithdrawAddress(value);
-                            const detected = detectNetworkByAddress(value);
-                            if (detected) setWithdrawNetwork(detected);
-                        }}
-                    />
-                    <Select
-                        value={withdrawNetwork}
-                        onChange={(e) => setWithdrawNetwork(e.target.value)}
-                    >
-                        <option value="USDT-TRC20">USDT-TRC20</option>
-                        <option value="USDT-ERC20">USDT-ERC20</option>
-                        <option value="USDT-BEP20">USDT-BEP20</option>
-                    </Select>
+                    <InlineGrid>
+                        <div>
+                            <FieldLabel>USDT Address</FieldLabel>
+                            <Input
+                                type="text"
+                                placeholder="USDT wallet address"
+                                value={withdrawAddress}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    setWithdrawAddress(value);
+                                    const detected = detectNetworkByAddress(value);
+                                    if (detected) setWithdrawNetwork(detected);
+                                }}
+                            />
+                        </div>
+                        <div>
+                            <FieldLabel>Network</FieldLabel>
+                            <Select
+                                value={withdrawNetwork}
+                                onChange={(e) => setWithdrawNetwork(e.target.value)}
+                            >
+                                <option value="USDT-TRC20">USDT-TRC20</option>
+                                <option value="USDT-ERC20">USDT-ERC20</option>
+                                <option value="USDT-BEP20">USDT-BEP20</option>
+                            </Select>
+                        </div>
+                    </InlineGrid>
                     <Button variant="secondary" onClick={handlePasteAddress} disabled={isWithdrawing || loading}>
                         Paste Address
                     </Button>
@@ -269,19 +386,19 @@ const WalletPage: React.FC = () => {
                         {isWithdrawing ? 'Processing...' : 'Withdraw Funds'}
                     </Button>
                     {error && (
-                        <div style={{ color: '#ff6b6b', marginTop: '10px' }}>{error}</div>
+                        <ErrorText>{error}</ErrorText>
                     )}
-                </div>
+                </FormGrid>
             </WalletCard>
 
             <WalletCard>
                 <Title>Transaction History</Title>
                 <TransactionHistory>
                     {loading && (
-                        <div style={{ color: '#888' }}>Loading...</div>
+                        <Muted>Loading...</Muted>
                     )}
                     {!loading && !transactions.length && (
-                        <div style={{ color: '#888' }}>No transactions yet.</div>
+                        <Muted>No transactions yet.</Muted>
                     )}
                     {!loading && transactions.map((transaction) => {
                         const amount = toNumber(transaction.amount, 0);
@@ -292,30 +409,27 @@ const WalletPage: React.FC = () => {
                         return (
                             <Transaction key={transaction._id || transaction.id}>
                                 <div>
-                                    <div style={{ 
-                                        color: displayAmount >= 0 ? '#4CAF50' : '#ff4757',
-                                        fontWeight: 'bold'
-                                    }}>
+                                    <TxAmount $positive={displayAmount >= 0}>
                                         {displayAmount > 0 ? '+' : ''}{displayAmount}
-                                    </div>
-                                    <div style={{ fontSize: '12px', color: '#888' }}>
+                                    </TxAmount>
+                                    <TxMeta>
                                         {(transaction.type || '').replace('_', ' ').toUpperCase()}
                                         {transaction.status ? ` \u2022 ${transaction.status}` : ''}
-                                    </div>
+                                    </TxMeta>
                                     {transaction.type === 'withdrawal' && transaction.walletAddress && (
-                                        <div style={{ fontSize: '12px', color: '#999' }}>
+                                        <TxExtra>
                                             {transaction.network || 'USDT'}: {transaction.walletAddress}
-                                        </div>
+                                        </TxExtra>
                                     )}
                                     {transaction.txHash && (
-                                        <div style={{ fontSize: '12px', color: '#999' }}>
+                                        <TxExtra>
                                             TX: {transaction.txHash}
-                                        </div>
+                                        </TxExtra>
                                     )}
                                 </div>
-                                <div style={{ fontSize: '12px', color: '#888' }}>
+                                <TxDate>
                                     {displayDate}
-                                </div>
+                                </TxDate>
                             </Transaction>
                         );
                     })}
