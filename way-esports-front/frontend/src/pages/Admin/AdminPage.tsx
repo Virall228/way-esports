@@ -371,6 +371,7 @@ interface SupportConversationRow {
   unreadForAdmin: number;
   lastMessagePreview: string;
   lastMessageAt?: string | null;
+  expiresAt?: string | null;
 }
 
 interface SupportMessageRow {
@@ -962,6 +963,7 @@ const AdminPage: React.FC = () => {
   const [supportStreamConnected, setSupportStreamConnected] = useState(false);
   const [supportStreamData, setSupportStreamData] = useState<SupportStreamPayload | null>(null);
   const [supportStreamUpdatedAt, setSupportStreamUpdatedAt] = useState<string | null>(null);
+  const [supportTtlTick, setSupportTtlTick] = useState<number>(() => Date.now());
   const [supportAuditAiFilter, setSupportAuditAiFilter] = useState<'all' | 'on' | 'off'>('all');
   const [supportAuditRoleFilter, setSupportAuditRoleFilter] = useState('all');
   const [supportAuditDateFrom, setSupportAuditDateFrom] = useState('');
@@ -1789,6 +1791,29 @@ const AdminPage: React.FC = () => {
     };
   };
 
+  const formatSupportTtl = (expiresAt?: string | null) => {
+    try {
+      if (!expiresAt) return 'TTL: -';
+      const expiryTs = new Date(expiresAt).getTime();
+      if (!Number.isFinite(expiryTs)) return 'TTL: -';
+      const diff = expiryTs - supportTtlTick;
+      if (diff <= 0) return 'TTL: expired';
+      const hours = Math.floor(diff / (60 * 60 * 1000));
+      const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
+      return `TTL: ${hours}h ${minutes}m`;
+    } catch {
+      return 'TTL: -';
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab !== 'support') return;
+    const timer = setInterval(() => {
+      setSupportTtlTick(Date.now());
+    }, 60 * 1000);
+    return () => clearInterval(timer);
+  }, [activeTab]);
+
   const handleRemoveUserWallpaper = async (targetUser: AdminUserRow) => {
     try {
       if (!targetUser.wallpaperUrl) {
@@ -1917,7 +1942,8 @@ const AdminPage: React.FC = () => {
       unreadForUser: Number(row?.unreadForUser || 0),
       unreadForAdmin: Number(row?.unreadForAdmin || 0),
       lastMessagePreview: String(row?.lastMessagePreview || ''),
-      lastMessageAt: row?.lastMessageAt || null
+      lastMessageAt: row?.lastMessageAt || null,
+      expiresAt: row?.expiresAt || null
     }));
   };
 
@@ -7016,6 +7042,9 @@ const AdminPage: React.FC = () => {
                   {row.subject} {row.teamName ? `• Team: ${row.teamName}` : ''}
                 </div>
                 <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>{row.lastMessagePreview || '-'}</div>
+                <div style={{ fontSize: 11, color: '#8fb3ff', marginTop: 4 }}>
+                  {formatSupportTtl(row.expiresAt)} {row.expiresAt ? `• Expires: ${formatDateTime(row.expiresAt)}` : ''}
+                </div>
               </button>
             ))}
             {!supportConversations.length && (
@@ -7026,6 +7055,11 @@ const AdminPage: React.FC = () => {
           <div style={{ border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: 12, minHeight: 500, display: 'grid', gridTemplateRows: 'auto 1fr auto' }}>
             <div style={{ marginBottom: 10 }}>
               <strong>{selectedConversation ? `${selectedConversation.username || selectedConversation.email}` : 'Select conversation'}</strong>
+              {selectedConversation && (
+                <div style={{ fontSize: 12, color: '#8fb3ff', marginTop: 6 }}>
+                  {formatSupportTtl(selectedConversation.expiresAt)} {selectedConversation.expiresAt ? `• Expires: ${formatDateTime(selectedConversation.expiresAt)}` : ''}
+                </div>
+              )}
               {selectedConversation && (
                 <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <ActionButton onClick={() => updateStatus('open')}>Open</ActionButton>

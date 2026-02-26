@@ -1,4 +1,4 @@
-import express from 'express';
+ï»¿import express from 'express';
 import mongoose from 'mongoose';
 import { body } from 'express-validator';
 import SupportConversation from '../models/SupportConversation';
@@ -13,6 +13,8 @@ import { generateSupportReply, getSupportAiStatus } from '../services/supportAiS
 const router = express.Router();
 
 const MESSAGE_MAX_LEN = 2000;
+const SUPPORT_TTL_MS = 24 * 60 * 60 * 1000;
+const nextSupportExpiry = () => new Date(Date.now() + SUPPORT_TTL_MS);
 
 const asObjectId = (value: unknown): mongoose.Types.ObjectId | null => {
   if (!value) return null;
@@ -42,7 +44,7 @@ const sanitizeDisplayText = (value: unknown): string => {
   if (!text) return '';
 
   const questionMarks = (text.match(/\?/g) || []).length;
-  const mojibakeHits = (text.match(/Ð[À-ßà-ÿA-Za-z]/g) || []).length;
+  const mojibakeHits = (text.match(/Ð [Ð-Ð¯Ð°-ÑA-Za-z]/g) || []).length;
   const hasReplacementChar = text.includes('\uFFFD');
 
   if (
@@ -82,6 +84,7 @@ const normalizeConversation = (conv: any) => ({
   unreadForAdmin: Number(conv?.unreadForAdmin || 0),
   lastMessagePreview: conv?.lastMessagePreview || '',
   lastMessageAt: conv?.lastMessageAt || conv?.updatedAt || null,
+  expiresAt: conv?.expiresAt || null,
   createdAt: conv?.createdAt || null
 });
 
@@ -178,7 +181,7 @@ router.get('/thread', async (req: any, res) => {
       if (!allowed) return res.status(403).json({ success: false, error: 'Team access denied' });
     }
 
-    const query: any = { userId };
+    const query: any = { userId, expiresAt: { $gt: new Date() } };
     if (teamId) query.teamId = teamId;
     else query.teamId = { $exists: false };
 
@@ -188,7 +191,8 @@ router.get('/thread', async (req: any, res) => {
         userId,
         subject: 'Emergency Support',
         source: 'settings',
-        status: 'open'
+        status: 'open',
+        expiresAt: nextSupportExpiry()
       });
       conversation = await SupportConversation.findById((conversation as any)._id).lean();
     }
@@ -247,7 +251,7 @@ router.post(
         if (!allowed) return res.status(403).json({ success: false, error: 'Team access denied' });
       }
 
-      const query: any = { userId };
+      const query: any = { userId, expiresAt: { $gt: new Date() } };
       if (teamId) query.teamId = teamId;
       else query.teamId = { $exists: false };
 
@@ -260,7 +264,8 @@ router.post(
           source,
           status: 'open',
           unreadForAdmin: 0,
-          unreadForUser: 0
+          unreadForUser: 0,
+          expiresAt: nextSupportExpiry()
         });
       }
 
@@ -270,7 +275,8 @@ router.post(
         senderId: userId,
         content,
         readByUser: true,
-        readByAdmin: false
+        readByAdmin: false,
+        expiresAt: nextSupportExpiry()
       });
 
       await SupportConversation.updateOne(
@@ -281,7 +287,8 @@ router.post(
             source,
             subject,
             lastMessageAt: new Date(),
-            lastMessagePreview: sanitizePreview(content)
+            lastMessagePreview: sanitizePreview(content),
+            expiresAt: nextSupportExpiry()
           },
           $inc: { unreadForAdmin: 1 }
         }
@@ -312,7 +319,8 @@ router.post(
             $set: {
               status: 'waiting_admin',
               lastMessageAt: new Date(),
-              lastMessagePreview: sanitizePreview(content)
+              lastMessagePreview: sanitizePreview(content),
+              expiresAt: nextSupportExpiry()
             }
           }
         );
@@ -332,7 +340,8 @@ router.post(
         content: ai.text,
         provider: ai.provider,
         readByUser: false,
-        readByAdmin: false
+        readByAdmin: false,
+        expiresAt: nextSupportExpiry()
       });
 
       await SupportConversation.updateOne(
@@ -341,7 +350,8 @@ router.post(
           $set: {
             status: 'waiting_user',
             lastMessageAt: new Date(),
-            lastMessagePreview: sanitizePreview(ai.text)
+            lastMessagePreview: sanitizePreview(ai.text),
+            expiresAt: nextSupportExpiry()
           },
           $inc: { unreadForUser: 1, unreadForAdmin: 1 }
         }
@@ -363,7 +373,7 @@ router.post(
 router.get('/admin/conversations', isAdmin, async (req, res) => {
   try {
     const statusFilter = typeof req.query?.status === 'string' ? req.query.status.trim() : '';
-    const query: any = {};
+    const query: any = { expiresAt: { $gt: new Date() } };
     if (statusFilter) query.status = statusFilter;
 
     const conversations = await SupportConversation.find(query)
@@ -438,7 +448,8 @@ router.post(
         senderId: adminId || undefined,
         content,
         readByAdmin: true,
-        readByUser: false
+        readByUser: false,
+        expiresAt: nextSupportExpiry()
       });
 
       conversation.status = 'waiting_user';
@@ -447,6 +458,7 @@ router.post(
       conversation.lastMessagePreview = sanitizePreview(content);
       conversation.unreadForUser = Number(conversation.unreadForUser || 0) + 1;
       conversation.unreadForAdmin = 0;
+      conversation.expiresAt = nextSupportExpiry();
       await conversation.save();
 
       return res.status(201).json({
@@ -471,7 +483,7 @@ router.patch('/admin/conversations/:id/status', isAdmin, async (req: any, res: a
 
     const updated = await SupportConversation.findByIdAndUpdate(
       conversationId,
-      { $set: { status } },
+      { $set: { status, expiresAt: nextSupportExpiry() } },
       { new: true }
     ).lean();
 
@@ -495,7 +507,7 @@ router.get('/admin/stream', isAdmin, async (req: any, res: any) => {
   const writeSnapshot = async () => {
     if (closed) return;
     try {
-      const rows: any[] = await SupportConversation.find({})
+      const rows: any[] = await SupportConversation.find({ expiresAt: { $gt: new Date() } })
         .select('_id status unreadForAdmin updatedAt')
         .lean();
 
@@ -559,4 +571,5 @@ router.get('/admin/stream', isAdmin, async (req: any, res: any) => {
 });
 
 export default router;
+
 

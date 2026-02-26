@@ -14,6 +14,7 @@ export interface ISupportConversation extends Document<mongoose.Types.ObjectId> 
   unreadForAdmin: number;
   lastMessagePreview?: string;
   lastMessageAt?: Date;
+  expiresAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -74,6 +75,10 @@ const supportConversationSchema = new Schema<ISupportConversation>(
     lastMessageAt: {
       type: Date,
       default: Date.now
+    },
+    expiresAt: {
+      type: Date,
+      default: () => new Date(Date.now() + 24 * 60 * 60 * 1000)
     }
   },
   {
@@ -84,7 +89,8 @@ const supportConversationSchema = new Schema<ISupportConversation>(
 supportConversationSchema.index({ userId: 1, teamId: 1, status: 1 });
 supportConversationSchema.index({ status: 1, lastMessageAt: -1 });
 supportConversationSchema.index({ unreadForAdmin: 1, lastMessageAt: -1 });
+supportConversationSchema.index({ userId: 1, expiresAt: -1 });
+supportConversationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 export default mongoose.models.SupportConversation ||
   mongoose.model<ISupportConversation>('SupportConversation', supportConversationSchema);
-

@@ -10,6 +10,7 @@ export interface ISupportMessage extends Document<mongoose.Types.ObjectId> {
   meta?: Record<string, any>;
   readByUser: boolean;
   readByAdmin: boolean;
+  expiresAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -50,6 +51,10 @@ const supportMessageSchema = new Schema<ISupportMessage>(
     readByAdmin: {
       type: Boolean,
       default: false
+    },
+    expiresAt: {
+      type: Date,
+      default: () => new Date(Date.now() + 24 * 60 * 60 * 1000)
     }
   },
   {
@@ -59,7 +64,8 @@ const supportMessageSchema = new Schema<ISupportMessage>(
 
 supportMessageSchema.index({ conversationId: 1, createdAt: 1 });
 supportMessageSchema.index({ senderType: 1, createdAt: -1 });
+supportMessageSchema.index({ conversationId: 1, expiresAt: -1, createdAt: 1 });
+supportMessageSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 export default mongoose.models.SupportMessage ||
   mongoose.model<ISupportMessage>('SupportMessage', supportMessageSchema);
-
