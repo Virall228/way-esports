@@ -9,7 +9,7 @@ const ModalOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(2, 3, 5, 0.9);
+  background: rgba(0, 0, 0, 0.92);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -19,9 +19,9 @@ const ModalOverlay = styled.div`
 
 const ModalContent = styled.div`
   background:
-    linear-gradient(180deg, rgba(22, 24, 28, 0.92) 0%, rgba(12, 13, 16, 0.97) 100%),
-    #0b0c10;
-  border: 1px solid rgba(110, 118, 130, 0.18);
+    linear-gradient(180deg, rgba(13, 14, 17, 0.97) 0%, rgba(7, 8, 10, 0.995) 100%),
+    #050607;
+  border: 1px solid rgba(95, 102, 114, 0.14);
   border-radius: 16px;
   padding: 30px;
   width: 90%;
@@ -75,8 +75,8 @@ const PlansContainer = styled.div`
 `;
 
 const PlanCard = styled.div<{ $popular?: boolean }>`
-  background: rgba(20, 23, 29, 0.88);
-  border: 1px solid ${({ $popular }) => $popular ? 'rgba(255,107,0,0.82)' : 'rgba(110,118,130,0.18)'};
+  background: rgba(12, 14, 18, 0.94);
+  border: 1px solid ${({ $popular }) => $popular ? 'rgba(255,107,0,0.82)' : 'rgba(95,102,114,0.14)'};
   border-radius: 16px;
   padding: 30px;
   position: relative;
@@ -154,8 +154,8 @@ const Feature = styled.li`
 `;
 
 const PaymentSection = styled.div`
-  background: rgba(20, 23, 29, 0.88);
-  border: 1px solid rgba(108, 116, 128, 0.18);
+  background: rgba(12, 14, 18, 0.94);
+  border: 1px solid rgba(92, 99, 110, 0.16);
   border-radius: 12px;
   padding: 25px;
   margin-bottom: 20px;
@@ -170,8 +170,8 @@ const PaymentTitle = styled.h4`
 `;
 
 const CryptoAddress = styled.div`
-  background: #14171d;
-  border: 1px solid rgba(108, 116, 128, 0.18);
+  background: #0d1014;
+  border: 1px solid rgba(92, 99, 110, 0.16);
   border-radius: 8px;
   padding: 15px;
   font-family: monospace;
@@ -229,8 +229,8 @@ const ToggleWrap = styled.div`
 
 const Toggle = styled.div`
   display: inline-flex;
-  border: 1px solid rgba(110, 118, 130, 0.2);
-  background: rgba(20, 23, 29, 0.88);
+  border: 1px solid rgba(95, 102, 114, 0.16);
+  background: rgba(12, 14, 18, 0.94);
   border-radius: 999px;
   padding: 4px;
   gap: 4px;

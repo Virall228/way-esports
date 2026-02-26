@@ -5,7 +5,7 @@ import { BillingCycle, PlanId, PRICING_PLANS, equivalentMonthly, getPlanCycle } 
 
 const Container = styled.div`
   min-height: 100vh;
-  background: #060708;
+  background: #030405;
   padding: 24px;
   width: 100%;
   max-width: 100%;
@@ -20,9 +20,9 @@ const Container = styled.div`
 const Header = styled.div`
   text-align: center;
   background:
-    linear-gradient(180deg, rgba(22, 24, 28, 0.9) 0%, rgba(12, 13, 16, 0.96) 100%),
-    #0b0c10;
-  border: 1px solid rgba(110, 118, 130, 0.16);
+    linear-gradient(180deg, rgba(13, 14, 17, 0.96) 0%, rgba(7, 8, 10, 0.99) 100%),
+    #050607;
+  border: 1px solid rgba(95, 102, 114, 0.14);
   border-radius: 16px;
   padding: 18px 16px;
   box-shadow:
@@ -50,8 +50,8 @@ const ToggleWrap = styled.div`
 
 const Toggle = styled.div`
   display: inline-flex;
-  background: rgba(20, 23, 29, 0.86);
-  border: 1px solid rgba(110, 118, 130, 0.2);
+  background: rgba(12, 14, 18, 0.94);
+  border: 1px solid rgba(95, 102, 114, 0.16);
   border-radius: 999px;
   padding: 4px;
   gap: 4px;
@@ -79,9 +79,9 @@ const Grid = styled.div`
 
 const Card = styled.div<{ $highlight?: boolean }>`
   background:
-    linear-gradient(180deg, rgba(22, 24, 28, 0.92) 0%, rgba(12, 13, 16, 0.97) 100%),
-    #0b0c10;
-  border: 1px solid ${({ $highlight }) => ($highlight ? 'rgba(255,107,0,0.82)' : 'rgba(110, 118, 130, 0.18)')};
+    linear-gradient(180deg, rgba(13, 14, 17, 0.97) 0%, rgba(7, 8, 10, 0.995) 100%),
+    #050607;
+  border: 1px solid ${({ $highlight }) => ($highlight ? 'rgba(255,107,0,0.82)' : 'rgba(95, 102, 114, 0.14)')};
   border-radius: 16px;
   padding: 18px;
   color: #f4f7fb;
@@ -166,7 +166,7 @@ const Cta = styled.button`
 
 const Message = styled.div<{ $error?: boolean }>`
   color: ${({ $error }) => ($error ? '#ff8b8b' : '#8fe2ad')};
-  background: rgba(20, 23, 29, 0.88);
+  background: rgba(12, 14, 18, 0.94);
   border: 1px solid ${({ $error }) => ($error ? 'rgba(255,139,139,0.34)' : 'rgba(143,226,173,0.32)')};
   border-radius: 12px;
   padding: 10px 12px;

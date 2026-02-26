@@ -18,9 +18,9 @@ const Container = styled.div`
 
 const WalletCard = styled.div`
     background:
-      linear-gradient(180deg, rgba(22, 24, 28, 0.9) 0%, rgba(12, 13, 16, 0.96) 100%),
-      #0b0c10;
-    border: 1px solid rgba(110, 118, 130, 0.16);
+      linear-gradient(180deg, rgba(13, 14, 17, 0.96) 0%, rgba(7, 8, 10, 0.99) 100%),
+      #050607;
+    border: 1px solid rgba(95, 102, 114, 0.14);
     border-radius: 16px;
     padding: 18px;
     box-shadow:
@@ -116,7 +116,7 @@ const Input = styled.input`
     padding: 12px 13px;
     border: 1px solid rgba(147, 156, 170, 0.24);
     border-radius: 10px;
-    background: #14171d;
+    background: #0d1014;
     color: #ecf1f6;
     font-size: 14px;
 
@@ -127,7 +127,7 @@ const Input = styled.input`
     }
 
     &::placeholder {
-      color: #6f7987;
+      color: #68727f;
     }
 `;
 
@@ -136,7 +136,7 @@ const Select = styled.select`
     padding: 12px 13px;
     border: 1px solid rgba(147, 156, 170, 0.24);
     border-radius: 10px;
-    background: #14171d;
+    background: #0d1014;
     color: #ecf1f6;
     font-size: 14px;
 
@@ -154,8 +154,8 @@ const TransactionHistory = styled.div`
 `;
 
 const Transaction = styled.div`
-    background: rgba(24, 27, 33, 0.88);
-    border: 1px solid rgba(108, 116, 128, 0.18);
+    background: rgba(14, 16, 20, 0.94);
+    border: 1px solid rgba(92, 99, 110, 0.16);
     padding: 13px;
     border-radius: 12px;
     display: flex;

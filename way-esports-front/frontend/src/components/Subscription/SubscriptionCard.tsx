@@ -5,11 +5,11 @@ import { PRICING_PLANS } from '../../config/pricing';
 
 const Container = styled.div`
   background:
-    linear-gradient(180deg, rgba(22, 24, 28, 0.92) 0%, rgba(12, 13, 16, 0.97) 100%),
-    #0b0c10;
+    linear-gradient(180deg, rgba(13, 14, 17, 0.97) 0%, rgba(7, 8, 10, 0.995) 100%),
+    #050607;
   border-radius: 16px;
   padding: 18px;
-  border: 1px solid rgba(110, 118, 130, 0.18);
+  border: 1px solid rgba(95, 102, 114, 0.14);
   margin-bottom: 20px;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 8px 24px rgba(0,0,0,0.28);
 `;
@@ -43,8 +43,8 @@ const StatusBadge = styled.div<{ $active: boolean }>`
 `;
 
 const SubscriptionInfo = styled.div`
-  background: rgba(20, 23, 29, 0.88);
-  border: 1px solid rgba(108, 116, 128, 0.18);
+  background: rgba(12, 14, 18, 0.94);
+  border: 1px solid rgba(92, 99, 110, 0.16);
   border-radius: 12px;
   padding: 14px;
   margin-bottom: 20px;
