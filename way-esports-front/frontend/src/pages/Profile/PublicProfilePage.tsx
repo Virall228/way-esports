@@ -134,7 +134,16 @@ const PublicProfilePage: React.FC = () => {
     const points = getPlayerPoints(wins, losses);
     const profileTier = getTierByPoints(points);
     const profileIntensity = getIntensityByPointsAndRank(points);
-    const wallpaper = toAvatarUrl(profile?.profileWallpaper?.url || '');
+    const wallpaperMeta = profile?.profileWallpaper;
+    const wallpaperBase = wallpaperMeta?.status === 'removed'
+      ? ''
+      : toAvatarUrl(wallpaperMeta?.url || '');
+    const wallpaperVersion = wallpaperMeta?.uploadedAt
+      ? new Date(wallpaperMeta.uploadedAt).getTime()
+      : 1;
+    const wallpaper = wallpaperBase
+      ? `${wallpaperBase}${wallpaperBase.includes('?') ? '&' : '?'}v=${wallpaperVersion || 1}`
+      : '';
     const winStreak = Number(profile?.winStreak || 0);
     const streakGlowColor = winStreak > 5 ? 'rgba(51, 181, 255, 0.9)' : (winStreak > 3 ? 'rgba(176, 122, 255, 0.85)' : 'rgba(255,255,255,0.12)');
 
@@ -152,8 +161,8 @@ const PublicProfilePage: React.FC = () => {
         <Container>
             <ProfileHeader
                 style={{
-                    backgroundImage: profile?.profileWallpaper?.url
-                      ? `linear-gradient(180deg, rgba(10, 10, 12, 0.62) 0%, rgba(4, 5, 8, 0.84) 100%), url(${wallpaper})`
+                    background: wallpaper
+                      ? `linear-gradient(180deg, rgba(10, 10, 12, 0.62) 0%, rgba(4, 5, 8, 0.84) 100%), url("${wallpaper}") center / cover no-repeat`
                       : undefined,
                     boxShadow: `0 0 0 1px ${streakGlowColor}, 0 0 26px ${streakGlowColor.replace('0.9', '0.35').replace('0.85', '0.3')}`
                 }}
