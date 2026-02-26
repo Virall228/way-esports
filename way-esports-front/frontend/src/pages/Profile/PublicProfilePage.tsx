@@ -24,6 +24,8 @@ const ProfileHeader = styled(Card)`
   padding: 2rem;
   margin-bottom: 2rem;
   background: linear-gradient(135deg, ${({ theme }) => theme.colors.bg.secondary}, ${({ theme }) => theme.colors.bg.tertiary});
+  background-size: cover;
+  background-position: center;
 
   @media (max-width: 600px) {
     flex-direction: column;
@@ -132,6 +134,9 @@ const PublicProfilePage: React.FC = () => {
     const points = getPlayerPoints(wins, losses);
     const profileTier = getTierByPoints(points);
     const profileIntensity = getIntensityByPointsAndRank(points);
+    const wallpaper = toAvatarUrl(profile?.profileWallpaper?.url || '');
+    const winStreak = Number(profile?.winStreak || 0);
+    const streakGlowColor = winStreak > 5 ? 'rgba(51, 181, 255, 0.9)' : (winStreak > 3 ? 'rgba(176, 122, 255, 0.85)' : 'rgba(255,255,255,0.12)');
 
     const copyPlayerCardLink = async () => {
         if (!id) return;
@@ -145,7 +150,14 @@ const PublicProfilePage: React.FC = () => {
 
     return (
         <Container>
-            <ProfileHeader>
+            <ProfileHeader
+                style={{
+                    backgroundImage: profile?.profileWallpaper?.url
+                      ? `linear-gradient(180deg, rgba(10, 10, 12, 0.62) 0%, rgba(4, 5, 8, 0.84) 100%), url(${wallpaper})`
+                      : undefined,
+                    boxShadow: `0 0 0 1px ${streakGlowColor}, 0 0 26px ${streakGlowColor.replace('0.9', '0.35').replace('0.85', '0.3')}`
+                }}
+            >
                 <AvatarWrap>
                     <FlameAuraAvatar
                         imageUrl={toAvatarUrl(profile.profileLogo || profile.photoUrl)}

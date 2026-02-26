@@ -730,6 +730,8 @@ interface AdminUserRow {
   lastName: string;
   email: string;
   avatarUrl?: string;
+  wallpaperUrl?: string;
+  wallpaperStatus?: 'active' | 'removed' | string;
   role: string;
   isBanned: boolean;
   isSubscribed: boolean;
@@ -1771,6 +1773,8 @@ const AdminPage: React.FC = () => {
         lastName: u.lastName || '',
         email: u.email || '',
         avatarUrl: resolveMediaUrl(u.profileLogo || u.photoUrl || u.avatar || ''),
+        wallpaperUrl: resolveMediaUrl(u.profileWallpaper?.url || ''),
+        wallpaperStatus: u.profileWallpaper?.status || 'removed',
         role: u.role || 'user',
         isBanned: !!u.isBanned,
         isSubscribed: !!u.isSubscribed,
@@ -1783,6 +1787,22 @@ const AdminPage: React.FC = () => {
       pagination,
       summary
     };
+  };
+
+  const handleRemoveUserWallpaper = async (targetUser: AdminUserRow) => {
+    try {
+      if (!targetUser.wallpaperUrl) {
+        notify('info', 'No wallpaper', 'User has no active wallpaper');
+        return;
+      }
+      const confirmed = window.confirm(`Remove wallpaper for ${targetUser.username}?`);
+      if (!confirmed) return;
+      await api.delete(`/api/admin/users/${targetUser.id}/wallpaper`);
+      await usersQuery.refetch();
+      notify('success', 'Wallpaper removed', `Wallpaper removed for ${targetUser.username}`);
+    } catch (e: any) {
+      notify('error', 'Failed', formatApiError(e, 'Failed to remove wallpaper'));
+    }
   };
 
   const fetchTeams = async (): Promise<{ items: any[]; pagination: PaginationMeta | null; summary: TeamsSummary | null }> => {
@@ -4832,6 +4852,7 @@ const AdminPage: React.FC = () => {
               <tr>
                 <Th>Avatar</Th>
                 <Th>Username</Th>
+                <Th>Wallpaper</Th>
                 <Th>Role</Th>
                 <Th>Subscription</Th>
                 <Th>Balance</Th>
@@ -4854,6 +4875,20 @@ const AdminPage: React.FC = () => {
                     </UserCell>
                   </Td>
                   <Td>{user.username}</Td>
+                  <Td>
+                    {user.wallpaperUrl ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <a href={user.wallpaperUrl} target="_blank" rel="noreferrer" style={{ color: '#ff6b00', fontSize: 12 }}>
+                          View
+                        </a>
+                        <span style={{ color: user.wallpaperStatus === 'active' ? '#81c784' : '#ffab91', fontSize: 11 }}>
+                          {user.wallpaperStatus}
+                        </span>
+                      </div>
+                    ) : (
+                      <span style={{ color: '#888', fontSize: 12 }}>None</span>
+                    )}
+                  </Td>
                   <Td>{user.role}</Td>
                   <Td>{user.isSubscribed ? '\u2705 Active' : '\u274C None'} {user.freeEntriesCount > 0 ? `(${user.freeEntriesCount} free)` : ''}</Td>
                   <Td>${user.balance}</Td>
@@ -4873,6 +4908,11 @@ const AdminPage: React.FC = () => {
                       <ActionButton onClick={() => setActiveTab('payments')}>
                         Payments
                       </ActionButton>
+                      {user.wallpaperUrl ? (
+                        <ActionButton $variant="danger" onClick={() => handleRemoveUserWallpaper(user)}>
+                          Remove wallpaper
+                        </ActionButton>
+                      ) : null}
                     </ActionsCell>
                   </Td>
                 </tr>

@@ -43,7 +43,11 @@ const Container = styled.div`
 `;
 
 const ProfileHeader = styled(Card).attrs({ variant: 'elevated' })`
-  background: rgba(255, 255, 255, 0.05);
+  background:
+    linear-gradient(180deg, rgba(12, 13, 16, 0.74) 0%, rgba(7, 8, 10, 0.86) 100%),
+    rgba(255, 255, 255, 0.05);
+  background-size: cover;
+  background-position: center;
   border-radius: 16px;
   padding: 30px;
   margin-bottom: 30px;
@@ -81,6 +85,13 @@ const Avatar = styled.div<{ $hasImage?: boolean; $imageUrl?: string | null }>`
     border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
+`;
+
+const WallpaperActionRow = styled.div`
+  margin-top: 14px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 `;
 
 const ProfileInfo = styled.div`
@@ -212,6 +223,7 @@ const ProfilePage: React.FC = () => {
   const [isSavingUsername, setIsSavingUsername] = useState(false);
   const [aiGhostBadge, setAiGhostBadge] = useState<string>('');
   const [statusCardData, setStatusCardData] = useState<TelegramStatusCardData | null>(null);
+  const [isUploadingWallpaper, setIsUploadingWallpaper] = useState(false);
 
   useEffect(() => {
     if (profile?.bio) {
@@ -343,11 +355,23 @@ const ProfilePage: React.FC = () => {
     return normalized;
   };
 
+  const getFullMediaUrl = (path: string | null | undefined) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    const normalized = path.startsWith('/') ? path : `/${path}`;
+    if (normalized.startsWith('/api/uploads/')) return getFullUrl(normalized);
+    if (normalized.startsWith('/uploads/')) return getFullUrl(`/api${normalized}`);
+    return normalized;
+  };
+
   const wins = Number(profile?.stats?.wins || 0);
   const losses = Number(profile?.stats?.losses || 0);
   const points = getPlayerPoints(wins, losses);
   const profileTier = getTierByPoints(points);
   const profileIntensity = getIntensityByPointsAndRank(points);
+  const wallpaperUrl = getFullMediaUrl((profile as any)?.profileWallpaper?.url);
+  const winStreak = Number((profile as any)?.winStreak || 0);
+  const streakGlowColor = winStreak > 5 ? 'rgba(51, 181, 255, 0.9)' : (winStreak > 3 ? 'rgba(176, 122, 255, 0.85)' : 'rgba(255, 255, 255, 0.1)');
 
   const copyStatusCard = async () => {
     const targetId = String(profile?.id || user?.id || '').trim();
@@ -369,9 +393,60 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const handleWallpaperUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    try {
+      setIsUploadingWallpaper(true);
+      const uploaded = await api.uploadImage(file);
+      await api.post('/api/profile/wallpaper', { wallpaperUrl: uploaded.url });
+      await refetchProfile();
+      addNotification({
+        type: 'success',
+        title: 'Wallpaper updated',
+        message: 'Your profile wallpaper is now public'
+      });
+    } catch (error: any) {
+      addNotification({
+        type: 'error',
+        title: 'Wallpaper update failed',
+        message: error?.message || 'You need active subscription (5 days) and at least 1 played tournament'
+      });
+    } finally {
+      setIsUploadingWallpaper(false);
+    }
+  };
+
+  const removeWallpaper = async () => {
+    try {
+      await api.delete('/api/profile/wallpaper');
+      await refetchProfile();
+      addNotification({
+        type: 'success',
+        title: 'Wallpaper removed',
+        message: 'Profile wallpaper removed'
+      });
+    } catch (error: any) {
+      addNotification({
+        type: 'error',
+        title: 'Failed',
+        message: error?.message || 'Failed to remove wallpaper'
+      });
+    }
+  };
+
   return (
     <Container>
-      <ProfileHeader>
+      <ProfileHeader
+        style={{
+          backgroundImage: wallpaperUrl
+            ? `linear-gradient(180deg, rgba(10, 10, 12, 0.6) 0%, rgba(4, 5, 8, 0.8) 100%), url(${wallpaperUrl})`
+            : undefined,
+          boxShadow: `0 0 0 1px ${streakGlowColor}, 0 0 28px ${streakGlowColor.replace('0.9', '0.35').replace('0.85', '0.3')}`
+        }}
+      >
         <Avatar
           $hasImage={!!(profile?.profileLogo || profile?.photoUrl)}
           $imageUrl={profile?.profileLogo || profile?.photoUrl}
@@ -447,6 +522,28 @@ const ProfilePage: React.FC = () => {
                   </span>
                 ) : null}
               </div>
+              <WallpaperActionRow>
+                <label style={{ display: 'inline-flex' }}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={handleWallpaperUpload}
+                    disabled={isUploadingWallpaper}
+                  />
+                  <Button size="small" variant="outline" as="span">
+                    {isUploadingWallpaper ? 'Uploading wallpaper...' : 'Set Public Wallpaper'}
+                  </Button>
+                </label>
+                {wallpaperUrl ? (
+                  <Button size="small" variant="text" onClick={removeWallpaper}>
+                    Remove wallpaper
+                  </Button>
+                ) : null}
+                <span style={{ color: '#9ea7b4', fontSize: '12px' }}>
+                  Unlock: subscription 5+ days and at least 1 played tournament (admins free).
+                </span>
+              </WallpaperActionRow>
             </div>
           </ProfileTop>
           <UserStats>

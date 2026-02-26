@@ -20,6 +20,14 @@ export interface IUser extends Document<mongoose.Types.ObjectId> {
   bio?: string;
   photoUrl?: string;
   profileLogo?: string;
+  profileWallpaper?: {
+    url?: string;
+    uploadedAt?: Date;
+    status?: 'active' | 'removed';
+    removedAt?: Date;
+    removedBy?: mongoose.Types.ObjectId;
+    moderationNote?: string;
+  };
   teams: mongoose.Types.ObjectId[];
   role: 'user' | 'admin' | 'developer';
   primaryRole?: 'Entry' | 'Sniper' | 'Support' | 'Lurker' | 'Flex';
@@ -143,6 +151,32 @@ const userSchema = new Schema<IUser>({
   lastName: String,
   photoUrl: String,
   profileLogo: String,
+  profileWallpaper: {
+    url: {
+      type: String,
+      trim: true
+    },
+    uploadedAt: {
+      type: Date
+    },
+    status: {
+      type: String,
+      enum: ['active', 'removed'],
+      default: 'active'
+    },
+    removedAt: {
+      type: Date
+    },
+    removedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    moderationNote: {
+      type: String,
+      trim: true,
+      maxlength: 280
+    }
+  },
   teams: [{
     type: Schema.Types.ObjectId,
     ref: 'Team'

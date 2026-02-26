@@ -859,6 +859,77 @@ router.get('/users', async (req, res) => {
   }
 });
 
+router.get('/users/wallpapers', async (req, res) => {
+  try {
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    const status = typeof req.query.status === 'string' ? req.query.status.trim() : 'active';
+    const limitRaw = Number(req.query.limit || 200);
+    const limit = Math.max(1, Math.min(500, Number.isFinite(limitRaw) ? limitRaw : 200));
+
+    const query: any = {
+      'profileWallpaper.url': { $exists: true, $nin: ['', null] }
+    };
+    if (status === 'active' || status === 'removed') {
+      query['profileWallpaper.status'] = status;
+    }
+    if (search) {
+      const regex = new RegExp(escapeRegExp(search), 'i');
+      query.$or = [{ username: regex }, { firstName: regex }, { lastName: regex }, { email: regex }];
+    }
+
+    const users = await User.find(query)
+      .select('username firstName lastName email role profileWallpaper')
+      .sort({ 'profileWallpaper.uploadedAt': -1, updatedAt: -1 })
+      .limit(limit)
+      .lean();
+
+    return res.json({
+      success: true,
+      data: users.map((user: any) => ({
+        id: String(user._id),
+        username: user.username || '',
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        role: user.role || 'user',
+        profileWallpaper: user.profileWallpaper || null
+      }))
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to load wallpapers' });
+  }
+});
+
+router.delete('/users/:id/wallpaper', async (req: any, res) => {
+  try {
+    const userId = String(req.params.id || '').trim();
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ success: false, error: 'Invalid user id' });
+    }
+
+    const note = typeof req.body?.note === 'string' ? req.body.note.trim().slice(0, 280) : '';
+
+    const user: any = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    user.profileWallpaper = {
+      ...(user.profileWallpaper || {}),
+      url: '',
+      status: 'removed',
+      removedAt: new Date(),
+      removedBy: req.user?._id || req.user?.id,
+      moderationNote: note || 'Removed by admin moderation'
+    };
+    await user.save();
+
+    return res.json({ success: true });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to remove wallpaper' });
+  }
+});
+
 // Export filtered users (CSV)
 router.get('/users/export.csv', async (req, res) => {
   try {

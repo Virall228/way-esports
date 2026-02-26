@@ -1,5 +1,7 @@
 import User from '../models/User';
 import Wallet from '../models/Wallet';
+import Team from '../models/Team';
+import Match from '../models/Match';
 import express from 'express';
 import { body } from 'express-validator';
 import { validateRequest } from '../middleware/validate';
@@ -17,6 +19,85 @@ const USERNAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const EMOJI_REGEX = /\p{Extended_Pictographic}/u;
 
 const hasEmoji = (value: string): boolean => EMOJI_REGEX.test(value);
+
+const PROFILE_WALLPAPER_REQUIRED_SUB_DAYS = 5;
+const PROFILE_WALLPAPER_REQUIRED_TOURNAMENTS_PLAYED = 1;
+
+const normalizeWallpaperUrl = (input: unknown): string => {
+  if (typeof input !== 'string') {
+    throw new Error('Wallpaper URL must be a string');
+  }
+  const trimmed = input.trim();
+  if (!trimmed) {
+    throw new Error('Wallpaper URL is required');
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+
+  const normalized = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  if (normalized.startsWith('/api/uploads/') || normalized.startsWith('/uploads/')) {
+    return normalized;
+  }
+
+  throw new Error('Wallpaper must be an uploaded image URL');
+};
+
+const hasActiveSubscriptionForDays = (user: any, requiredDays: number): boolean => {
+  if (!user?.isSubscribed) return false;
+  const requiredMs = requiredDays * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+
+  const completedSubscriptionTxDates = (user?.wallet?.transactions || [])
+    .filter((tx: any) => tx?.type === 'subscription' && tx?.status === 'completed' && tx?.date)
+    .map((tx: any) => new Date(tx.date).getTime())
+    .filter((value: number) => Number.isFinite(value))
+    .sort((a: number, b: number) => a - b);
+
+  if (completedSubscriptionTxDates.length > 0) {
+    return now - completedSubscriptionTxDates[0] >= requiredMs;
+  }
+
+  // Fallback for legacy accounts: infer from current subscription expiry window (30-day cycle).
+  if (user?.subscriptionExpiresAt) {
+    const expiresAt = new Date(user.subscriptionExpiresAt).getTime();
+    if (Number.isFinite(expiresAt)) {
+      const approxActivatedAt = expiresAt - 30 * 24 * 60 * 60 * 1000;
+      return now - approxActivatedAt >= requiredMs;
+    }
+  }
+
+  return false;
+};
+
+const getCurrentWinStreak = async (userId: string): Promise<number> => {
+  const teams = await Team.find({
+    $or: [{ captain: userId }, { members: userId }]
+  })
+    .select('_id')
+    .lean();
+  const teamIds = teams.map((team: any) => team?._id).filter(Boolean);
+  if (!teamIds.length) return 0;
+
+  const matches = await Match.find({
+    status: 'completed',
+    winner: { $exists: true, $ne: null },
+    $or: [{ team1: { $in: teamIds } }, { team2: { $in: teamIds } }]
+  })
+    .sort({ endTime: -1, updatedAt: -1 })
+    .limit(20)
+    .select('winner team1 team2')
+    .lean();
+
+  let streak = 0;
+  for (const match of matches) {
+    const winnerId = match?.winner?.toString?.() || '';
+    if (!winnerId) break;
+    const didWin = teamIds.some((teamId: any) => teamId.toString() === winnerId);
+    if (didWin) streak += 1;
+    else break;
+  }
+  return streak;
+};
 
 // Get user profile
 router.get('/', authenticateJWT, async (req, res) => {
@@ -40,10 +121,13 @@ router.get('/', authenticateJWT, async (req, res) => {
     const wallet = await Wallet.findOne({ user: user._id })
       .select('balance withdrawalLimit lastWithdrawal');
 
+    const winStreak = await getCurrentWinStreak(String(user._id));
+
     res.json({
       success: true,
       data: {
         ...user.toObject(),
+        winStreak,
         wallet
       }
     });
@@ -207,7 +291,7 @@ router.get('/:identifier/public', async (req, res) => {
 
     const user = await User.findOne(query)
       .populate('teams', 'name tag logo')
-      .select('username firstName lastName bio profileLogo photoUrl teams stats gameProfiles achievements createdAt');
+      .select('username firstName lastName bio profileLogo photoUrl profileWallpaper teams stats gameProfiles achievements createdAt');
 
     if (!user) {
       return res.status(404).json({
@@ -216,9 +300,14 @@ router.get('/:identifier/public', async (req, res) => {
       });
     }
 
+    const winStreak = await getCurrentWinStreak(String(user._id));
+
     res.json({
       success: true,
-      data: user
+      data: {
+        ...user.toObject(),
+        winStreak
+      }
     });
   } catch (error) {
     console.error('Error fetching public profile:', error);
@@ -226,6 +315,81 @@ router.get('/:identifier/public', async (req, res) => {
       success: false,
       error: 'Failed to fetch public profile'
     });
+  }
+});
+
+router.post('/wallpaper', authenticateJWT, async (req: any, res) => {
+  try {
+    const userFilter = getUserFilter(req);
+    if (!userFilter) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const user: any = await User.findOne(userFilter);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const isPrivileged = user.role === 'admin' || user.role === 'developer';
+    const hasRequiredSub = hasActiveSubscriptionForDays(user, PROFILE_WALLPAPER_REQUIRED_SUB_DAYS);
+    const tournamentsPlayed = Number(user?.stats?.tournamentsPlayed || 0);
+    const hasRequiredTournaments = tournamentsPlayed >= PROFILE_WALLPAPER_REQUIRED_TOURNAMENTS_PLAYED;
+
+    if (!isPrivileged && (!hasRequiredSub || !hasRequiredTournaments)) {
+      return res.status(403).json({
+        success: false,
+        error: `Wallpaper unlock requires active subscription for at least ${PROFILE_WALLPAPER_REQUIRED_SUB_DAYS} days and ${PROFILE_WALLPAPER_REQUIRED_TOURNAMENTS_PLAYED}+ played tournament`
+      });
+    }
+
+    const wallpaperUrl = normalizeWallpaperUrl(req.body?.wallpaperUrl);
+
+    user.profileWallpaper = {
+      ...(user.profileWallpaper || {}),
+      url: wallpaperUrl,
+      uploadedAt: new Date(),
+      status: 'active',
+      removedAt: undefined,
+      removedBy: undefined,
+      moderationNote: undefined
+    };
+    await user.save();
+
+    return res.json({
+      success: true,
+      data: {
+        profileWallpaper: user.profileWallpaper
+      }
+    });
+  } catch (error: any) {
+    return res.status(400).json({
+      success: false,
+      error: error?.message || 'Failed to update wallpaper'
+    });
+  }
+});
+
+router.delete('/wallpaper', authenticateJWT, async (req: any, res) => {
+  try {
+    const userFilter = getUserFilter(req);
+    if (!userFilter) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+    const user: any = await User.findOne(userFilter);
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+
+    user.profileWallpaper = {
+      ...(user.profileWallpaper || {}),
+      url: '',
+      status: 'removed',
+      removedAt: new Date(),
+      moderationNote: 'Removed by user'
+    };
+    await user.save();
+
+    return res.json({ success: true });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error?.message || 'Failed to remove wallpaper' });
   }
 });
 
