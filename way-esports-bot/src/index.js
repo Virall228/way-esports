@@ -21,6 +21,65 @@ const TG_BASE = `https://api.telegram.org/bot${BOT_TOKEN}`;
 let lastUpdateId = 0;
 let polling = true;
 
+const SUPPORTED_LANGS = new Set(['en', 'ru', 'uk', 'es', 'de', 'fr', 'it', 'pt', 'tr', 'ar', 'hi']);
+
+const I18N = {
+  en: {
+    welcomeTitle: 'WAY ESPORTS BOT',
+    welcome: 'Welcome to WAY ESPORTS. Use quick commands or open app directly.',
+    commands: 'Commands',
+    openApp: 'Open app',
+    quick: 'Quick sections',
+    openLabel: 'Open App',
+    tournaments: 'Tournaments',
+    wallet: 'Wallet',
+    analytics: 'Analytics',
+    support: 'Support',
+    profile: 'Profile',
+    cardMissing: 'No player card found yet. Open app and play matches first:',
+    cardUnavailable: 'Unable to identify Telegram account.',
+    inviteAccepted: 'Invite accepted.\nOpen team page and submit join request:',
+    playerCard: 'Player status card',
+    statusLinked: 'Profile linked',
+    statusNo: 'no'
+  },
+  ru: {
+    welcomeTitle: 'БОТ WAY ESPORTS',
+    welcome: 'Добро пожаловать в WAY ESPORTS. Используйте быстрые команды или откройте приложение.',
+    commands: 'Команды',
+    openApp: 'Открыть приложение',
+    quick: 'Быстрые разделы',
+    openLabel: 'Открыть App',
+    tournaments: 'Турниры',
+    wallet: 'Кошелек',
+    analytics: 'Аналитика',
+    support: 'Поддержка',
+    profile: 'Профиль',
+    cardMissing: 'Карточка игрока пока не найдена. Откройте приложение и сыграйте матчи:',
+    cardUnavailable: 'Не удалось определить Telegram-аккаунт.',
+    inviteAccepted: 'Инвайт принят.\nОткрой страницу команды и отправь запрос на вступление:',
+    playerCard: 'Карточка игрока',
+    statusLinked: 'Профиль привязан',
+    statusNo: 'нет'
+  }
+};
+
+const pickLang = (from) => {
+  const raw = String(from?.language_code || 'en').toLowerCase();
+  const short = raw.split('-')[0];
+  if (!SUPPORTED_LANGS.has(short)) return 'en';
+  if (!I18N[short]) return 'en';
+  return short;
+};
+
+const t = (lang, key) => (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+
+const appUrl = (path = '') => {
+  if (!path) return WEBAPP_URL;
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  return `${WEBAPP_URL}${normalized}`;
+};
+
 async function ensureTelegramReachability() {
   const healthUrl = `${API_BASE_URL}/api/health`;
   const response = await fetch(healthUrl, { method: 'GET' });
@@ -70,13 +129,35 @@ async function getPlayerCardByTelegramId(telegramId) {
   return cardJson?.data || null;
 }
 
-async function handleStart(chatId, payload) {
+async function sendQuickMenu(chatId, lang) {
+  await answerMessage(chatId, `${t(lang, 'quick')}:`, {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: t(lang, 'openLabel'), web_app: { url: appUrl('/') } },
+          { text: t(lang, 'tournaments'), url: appUrl('/tournaments') }
+        ],
+        [
+          { text: t(lang, 'wallet'), url: appUrl('/wallet') },
+          { text: t(lang, 'analytics'), url: appUrl('/analytics') }
+        ],
+        [
+          { text: t(lang, 'support'), url: appUrl('/support') },
+          { text: t(lang, 'profile'), url: appUrl('/profile') }
+        ]
+      ]
+    }
+  });
+}
+
+async function handleStart(chatId, payload, from) {
+  const lang = pickLang(from);
   if (payload && payload.startsWith('invite_team_')) {
     const teamId = payload.slice('invite_team_'.length);
-    const link = `${WEBAPP_URL}/team/${encodeURIComponent(teamId)}`;
+    const link = appUrl(`/team/${encodeURIComponent(teamId)}`);
     await answerMessage(
       chatId,
-      `Invite accepted.\nOpen team page and submit join request:\n${link}`
+      `${t(lang, 'inviteAccepted')}\n${link}`
     );
     return;
   }
@@ -86,27 +167,29 @@ async function handleStart(chatId, payload) {
     const cardUrl = `${API_BASE_URL}/api/intelligence/telegram/player-card/${encodeURIComponent(userId)}.svg`;
     await answerMessage(
       chatId,
-      `Player status card:\n${cardUrl}\n\nOpen platform: ${WEBAPP_URL}`
+      `${t(lang, 'playerCard')}:\n${cardUrl}\n\n${t(lang, 'openApp')}: ${WEBAPP_URL}`
     );
     return;
   }
 
   await answerMessage(
     chatId,
-    `WAY ESPORTS BOT\n\nCommands:\n/start\n/card\n/webapp\n\nOpen app: ${WEBAPP_URL}`
+    `${t(lang, 'welcomeTitle')}\n\n${t(lang, 'welcome')}\n\n${t(lang, 'commands')}:\n/start\n/menu\n/webapp\n/tournaments\n/wallet\n/analytics\n/support\n/profile\n/card\n\n${t(lang, 'openApp')}: ${WEBAPP_URL}`
   );
+  await sendQuickMenu(chatId, lang);
 }
 
 async function handleCard(chatId, from) {
+  const lang = pickLang(from);
   const telegramId = from?.id;
   if (!telegramId) {
-    await answerMessage(chatId, 'Unable to identify Telegram account.');
+    await answerMessage(chatId, t(lang, 'cardUnavailable'));
     return;
   }
 
   const card = await getPlayerCardByTelegramId(telegramId);
   if (!card) {
-    await answerMessage(chatId, `No player card found yet. Open app and play matches first:\n${WEBAPP_URL}`);
+    await answerMessage(chatId, `${t(lang, 'cardMissing')}\n${WEBAPP_URL}`);
     return;
   }
 
@@ -165,32 +248,64 @@ async function handleUpdate(update) {
   const chatId = message.chat.id;
   const text = String(message.text || '').trim();
   const from = message.from || {};
+  const lang = pickLang(from);
+  const command = text.split(/\s+/)[0].split('@')[0].toLowerCase();
 
-  if (text.startsWith('/start')) {
+  if (command === '/start') {
     const payload = text.split(' ').slice(1).join(' ').trim();
-    await handleStart(chatId, payload);
+    await handleStart(chatId, payload, from);
     return;
   }
 
-  if (text === '/webapp') {
-    await answerMessage(chatId, `Open WAY ESPORTS:\n${WEBAPP_URL}`, {
+  if (command === '/menu') {
+    await sendQuickMenu(chatId, lang);
+    return;
+  }
+
+  if (command === '/webapp') {
+    await answerMessage(chatId, `${t(lang, 'openApp')}:\n${WEBAPP_URL}`, {
       reply_markup: {
-        inline_keyboard: [[{ text: 'Open App', web_app: { url: WEBAPP_URL } }]]
+        inline_keyboard: [[{ text: t(lang, 'openLabel'), web_app: { url: WEBAPP_URL } }]]
       }
     });
     return;
   }
 
-  if (text === '/card') {
+  if (command === '/tournaments') {
+    await answerMessage(chatId, `${t(lang, 'tournaments')}:\n${appUrl('/tournaments')}`);
+    return;
+  }
+
+  if (command === '/wallet') {
+    await answerMessage(chatId, `${t(lang, 'wallet')}:\n${appUrl('/wallet')}`);
+    return;
+  }
+
+  if (command === '/analytics') {
+    await answerMessage(chatId, `${t(lang, 'analytics')}:\n${appUrl('/analytics')}`);
+    return;
+  }
+
+  if (command === '/support') {
+    await answerMessage(chatId, `${t(lang, 'support')}:\n${appUrl('/support')}`);
+    return;
+  }
+
+  if (command === '/profile') {
+    await answerMessage(chatId, `${t(lang, 'profile')}:\n${appUrl('/profile')}`);
+    return;
+  }
+
+  if (command === '/card') {
     await handleCard(chatId, from);
     return;
   }
 
-  if (text === '/status') {
+  if (command === '/status') {
     const card = await getPlayerCardByTelegramId(from?.id);
     const statusLine = card
-      ? `Profile linked: @${card.username} (${card.points} points)`
-      : 'Profile linked: no';
+      ? `${t(lang, 'statusLinked')}: @${card.username} (${card.points} points)`
+      : `${t(lang, 'statusLinked')}: ${t(lang, 'statusNo')}`;
     await answerMessage(
       chatId,
       `Bot status: OK\nMode: ${USE_WEBHOOK ? 'webhook' : 'polling'}\n${statusLine}\nWebApp: ${WEBAPP_URL}`
@@ -292,6 +407,21 @@ healthServer.listen(PORT, '0.0.0.0', () => {
   } else {
     void pollLoop();
   }
+
+  tg('setMyCommands', {
+    commands: [
+      { command: 'start', description: 'Welcome + quick menu' },
+      { command: 'menu', description: 'Quick sections' },
+      { command: 'webapp', description: 'Open app' },
+      { command: 'tournaments', description: 'Open tournaments' },
+      { command: 'wallet', description: 'Open wallet' },
+      { command: 'analytics', description: 'Open analytics' },
+      { command: 'support', description: 'Open support' },
+      { command: 'profile', description: 'Open profile' },
+      { command: 'card', description: 'Show status card' },
+      { command: 'status', description: 'Bot health status' }
+    ]
+  }).catch((error) => console.error('Failed to set bot commands:', error.message));
 });
 
 process.on('SIGINT', () => {
