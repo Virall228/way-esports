@@ -288,7 +288,7 @@ async function handleInvite(chatId, from) {
   }
 
   const progress = await getViralProgress(telegramId);
-  const botUsername = String(process.env.BOT_USERNAME || '').replace('@', '').trim() || 'way_esports_bot';
+  const botUsername = String(process.env.BOT_USERNAME || '').replace('@', '').trim() || 'WAYEsports_bot';
   const deepLink = `https://t.me/${botUsername}?start=invite_user_${telegramId}`;
   const count = Number(progress?.invitesCount || 0);
   const left = Math.max(0, Number(progress?.remaining || VIRAL_TARGET));
