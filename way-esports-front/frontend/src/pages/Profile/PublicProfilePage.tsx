@@ -28,12 +28,7 @@ const ProfileHeader = styled(Card)<{
   gap: 2rem;
   padding: 2rem;
   margin-bottom: 2rem;
-  background: ${({ theme, $wallpaper }) =>
-    $wallpaper
-      ? `linear-gradient(180deg, rgba(10, 10, 12, 0.66) 0%, rgba(4, 5, 8, 0.82) 100%), url("${$wallpaper}") center / cover no-repeat`
-      : `linear-gradient(135deg, ${theme.colors.bg.secondary}, ${theme.colors.bg.tertiary})`};
-  background-size: cover;
-  background-position: center;
+  background: ${({ theme }) => `linear-gradient(135deg, ${theme.colors.bg.secondary}, ${theme.colors.bg.tertiary})`};
   box-shadow: ${({ $streakGlowColor = 'rgba(255,255,255,0.12)' }) =>
     `0 0 0 1px ${$streakGlowColor}, 0 0 26px ${$streakGlowColor.replace('0.9', '0.35').replace('0.85', '0.3')}`};
   min-width: 0;
@@ -42,15 +37,41 @@ const ProfileHeader = styled(Card)<{
     z-index: 1;
   }
 
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: ${({ $wallpaper }) => ($wallpaper ? `url("${$wallpaper}")` : 'none')};
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: ${({ $wallpaper }) => ($wallpaper ? 0.28 : 0)};
+    filter: blur(2px) saturate(0.9) contrast(0.9);
+    transform: scale(1.04);
+    z-index: 0;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba(4, 5, 8, 0.14) 0%, rgba(4, 5, 8, 0.52) 65%, rgba(4, 5, 8, 0.8) 100%),
+      radial-gradient(120% 85% at 15% 10%, rgba(255, 107, 0, 0.08) 0%, rgba(255, 107, 0, 0) 55%);
+    z-index: 0;
+  }
+
   @media (max-width: 600px) {
     flex-direction: column;
     text-align: center;
     padding: 1.1rem;
     gap: 1rem;
-    background-size: contain;
-    background-position: top center;
-    background-repeat: no-repeat;
-    background-color: #090a0d;
+
+    &::before {
+      background-position: center 28%;
+      opacity: ${({ $wallpaper }) => ($wallpaper ? 0.22 : 0)};
+      filter: blur(3px) saturate(0.86) contrast(0.86);
+    }
   }
 `;
 

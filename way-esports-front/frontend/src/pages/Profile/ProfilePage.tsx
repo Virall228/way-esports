@@ -48,12 +48,7 @@ const ProfileHeader = styled(Card).attrs({ variant: 'elevated' })<{
 }>`
   position: relative;
   overflow: hidden;
-  background: ${({ $wallpaperUrl }) =>
-    $wallpaperUrl
-      ? `linear-gradient(180deg, rgba(10, 10, 12, 0.64) 0%, rgba(4, 5, 8, 0.8) 100%), url("${$wallpaperUrl}") center / cover no-repeat`
-      : `linear-gradient(180deg, rgba(12, 13, 16, 0.74) 0%, rgba(7, 8, 10, 0.86) 100%), rgba(255, 255, 255, 0.05)`};
-  background-size: cover;
-  background-position: center;
+  background: linear-gradient(180deg, rgba(12, 13, 16, 0.92) 0%, rgba(7, 8, 10, 0.95) 100%);
   border-radius: 16px;
   padding: 30px;
   margin-bottom: 30px;
@@ -70,13 +65,39 @@ const ProfileHeader = styled(Card).attrs({ variant: 'elevated' })<{
     z-index: 1;
   }
 
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: ${({ $wallpaperUrl }) => ($wallpaperUrl ? `url("${$wallpaperUrl}")` : 'none')};
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: ${({ $wallpaperUrl }) => ($wallpaperUrl ? 0.28 : 0)};
+    filter: blur(2px) saturate(0.9) contrast(0.9);
+    transform: scale(1.04);
+    z-index: 0;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba(4, 5, 8, 0.12) 0%, rgba(4, 5, 8, 0.5) 65%, rgba(4, 5, 8, 0.78) 100%),
+      radial-gradient(120% 85% at 15% 10%, rgba(255, 107, 0, 0.09) 0%, rgba(255, 107, 0, 0) 55%);
+    z-index: 0;
+  }
+
   @media (max-width: 768px) {
     padding: 18px;
     gap: 16px;
-    background-size: contain;
-    background-position: top center;
-    background-repeat: no-repeat;
-    background-color: rgba(8, 9, 12, 0.98);
+
+    &::before {
+      background-position: center 28%;
+      opacity: ${({ $wallpaperUrl }) => ($wallpaperUrl ? 0.22 : 0)};
+      filter: blur(3px) saturate(0.86) contrast(0.86);
+    }
   }
 `;
 
