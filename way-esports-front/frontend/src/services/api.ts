@@ -30,6 +30,16 @@ const buildUrl = (endpoint: string): string => {
 let notifyHandler: ((type: 'success' | 'error', title: string, message: string) => void) | null = null;
 let lastServerUnavailableNotifyAt = 0;
 const SERVER_UNAVAILABLE_NOTIFY_COOLDOWN_MS = 15000;
+let lastNetworkNotifyAt = 0;
+const NETWORK_NOTIFY_COOLDOWN_MS = 15000;
+
+const notifyNetworkError = (title: string, message: string) => {
+  if (!notifyHandler) return;
+  const now = Date.now();
+  if (now - lastNetworkNotifyAt < NETWORK_NOTIFY_COOLDOWN_MS) return;
+  lastNetworkNotifyAt = now;
+  notifyHandler('error', title, message);
+};
 
 const requestJson = async <T = any>(endpoint: string, method: HttpMethod, data?: any, includeTelegramData = false): Promise<T> => {
   const token = getToken();
@@ -109,17 +119,13 @@ const requestJson = async <T = any>(endpoint: string, method: HttpMethod, data?:
   } catch (error: any) {
     if (error?.name === 'AbortError') {
       const timeoutError = new ApiError(504, `Request timeout (${timeoutMs} ms)`);
-      if (notifyHandler) {
-        notifyHandler('error', 'Network Error', timeoutError.message);
-      }
+      notifyNetworkError('Network Error', timeoutError.message);
       throw timeoutError;
     }
 
     if (error instanceof ApiError) throw error;
 
-    if (notifyHandler) {
-      notifyHandler('error', 'Network Error', error.message || 'Check your internet connection');
-    }
+    notifyNetworkError('Network Error', error.message || 'Check your internet connection');
     throw error;
   } finally {
     clearTimeout(timeoutId);

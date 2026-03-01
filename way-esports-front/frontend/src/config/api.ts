@@ -4,7 +4,7 @@ export const API_CONFIG = {
   BASE_URL: getApiUrl(),
   
   // Timeouts
-  TIMEOUT: 10000,
+  TIMEOUT: getApiTimeoutMs(),
   
   // Default headers
   DEFAULT_HEADERS: {
@@ -77,6 +77,21 @@ function getApiUrl(): string {
   }
   
   return '';
+}
+
+function getApiTimeoutMs(): number {
+  const fallback = 30000;
+  try {
+    const raw =
+      (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_TIMEOUT_MS) ||
+      (typeof process !== 'undefined' && process.env?.REACT_APP_API_TIMEOUT_MS) ||
+      '';
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed) && parsed >= 5000) return parsed;
+  } catch {
+    // ignore and use fallback
+  }
+  return fallback;
 }
 
 // Check API health
