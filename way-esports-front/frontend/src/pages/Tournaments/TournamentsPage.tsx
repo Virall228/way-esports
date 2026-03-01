@@ -236,6 +236,8 @@ const TournamentsPage: React.FC = () => {
   const [showGuard, setShowGuard] = useState(false);
   const [pendingTournamentId, setPendingTournamentId] = useState<string | null>(null);
   const [joinFeedback, setJoinFeedback] = useState<string | null>(null);
+  const [ingameNickname, setIngameNickname] = useState('');
+  const [ingameId, setIngameId] = useState('');
 
   const { joinTournament } = useTournamentAccess();
   const queryClient = useQueryClient();
@@ -329,6 +331,12 @@ const TournamentsPage: React.FC = () => {
 
   const onRegistrationConfirm = async () => {
     if (!pendingTournamentId) return;
+    const normalizedNick = ingameNickname.trim();
+    const normalizedId = ingameId.trim();
+    if (!normalizedNick || !normalizedId) {
+      setJoinFeedback('Enter in-game nickname and in-game ID before registration.');
+      return;
+    }
     try {
       const selectedTournament = tournaments.find((item) => item.id === pendingTournamentId);
       let teamId: string | undefined;
@@ -361,7 +369,12 @@ const TournamentsPage: React.FC = () => {
         }
       }
 
-      const result: any = await joinTournament(pendingTournamentId, teamId);
+      const result: any = await joinTournament(
+        pendingTournamentId,
+        teamId,
+        normalizedNick,
+        normalizedId
+      );
       if (result?.pendingApproval) {
         setJoinFeedback('Team request sent. Waiting for admin approval.');
       } else {
@@ -374,6 +387,8 @@ const TournamentsPage: React.FC = () => {
     } finally {
       setShowGuard(false);
       setPendingTournamentId(null);
+      setIngameNickname('');
+      setIngameId('');
     }
   };
 
@@ -456,9 +471,39 @@ const TournamentsPage: React.FC = () => {
               background: 'rgba(0,0,0,0.8)', zIndex: 1100, display: 'flex',
               alignItems: 'center', justifyContent: 'center'
             }}>
-              <div style={{ background: '#1a1a1a', padding: '30px', borderRadius: '16px', maxWidth: '400px', textAlign: 'center' }}>
+            <div style={{ background: '#1a1a1a', padding: '30px', borderRadius: '16px', maxWidth: '400px', textAlign: 'center' }}>
               <h2>{t('confirmEntry')}</h2>
               <p>{t('confirmEntryText')}</p>
+              <input
+                type="text"
+                placeholder="In-game nickname"
+                value={ingameNickname}
+                onChange={(e) => setIngameNickname(e.target.value)}
+                style={{
+                  width: '100%',
+                  marginBottom: 10,
+                  padding: '10px 12px',
+                  borderRadius: 10,
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  background: '#101010',
+                  color: '#fff'
+                }}
+              />
+              <input
+                type="text"
+                placeholder="In-game ID"
+                value={ingameId}
+                onChange={(e) => setIngameId(e.target.value)}
+                style={{
+                  width: '100%',
+                  marginBottom: 12,
+                  padding: '10px 12px',
+                  borderRadius: 10,
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  background: '#101010',
+                  color: '#fff'
+                }}
+              />
               <ActionButton onClick={onRegistrationConfirm}>{t('confirmJoin')}</ActionButton>
               <ActionButton $variant="outline" onClick={() => setShowGuard(false)} style={{ marginTop: '10px' }}>{t('cancel')}</ActionButton>
             </div>

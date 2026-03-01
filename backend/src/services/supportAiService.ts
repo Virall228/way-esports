@@ -19,16 +19,19 @@ type SupportReplyResult = {
   provider: 'gemini' | 'openai' | 'heuristic' | 'none';
 };
 
-const supportProvider = (process.env.SUPPORT_AI_PROVIDER || process.env.AI_SCOUT_PROVIDER || 'gemini')
-  .trim()
-  .toLowerCase();
-const geminiKey = (
-  process.env.GEMINI_API_KEY ||
-  process.env.GEMINI_KEY ||
-  process.env.GOOGLE_API_KEY ||
-  ''
-).trim();
-const openAiKey = (process.env.OPENAI_API_KEY || '').trim();
+const getSupportConfig = () => {
+  const provider = (process.env.SUPPORT_AI_PROVIDER || process.env.AI_SCOUT_PROVIDER || 'gemini')
+    .trim()
+    .toLowerCase();
+  const geminiKey = (
+    process.env.GEMINI_API_KEY ||
+    process.env.GEMINI_KEY ||
+    process.env.GOOGLE_API_KEY ||
+    ''
+  ).trim();
+  const openAiKey = (process.env.OPENAI_API_KEY || '').trim();
+  return { provider, geminiKey, openAiKey };
+};
 
 const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash'];
 
@@ -112,7 +115,7 @@ const parseGeminiText = (payload: any): string | null => {
   return trimmed ? trimmed.slice(0, 900) : null;
 };
 
-const callGeminiModel = async (model: string, input: SupportReplyInput): Promise<string | null> => {
+const callGeminiModel = async (model: string, geminiKey: string, input: SupportReplyInput): Promise<string | null> => {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(geminiKey)}`;
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -134,13 +137,15 @@ const callGeminiModel = async (model: string, input: SupportReplyInput): Promise
 };
 
 const callGemini = async (input: SupportReplyInput): Promise<SupportReplyResult | null> => {
+  const { geminiKey } = getSupportConfig();
   if (!canCallProvider('gemini')) return null;
   if (!geminiKey) return null;
 
   for (const model of GEMINI_MODELS) {
-    const text = await callGeminiModel(model, input);
+    const text = await callGeminiModel(model, geminiKey, input);
     if (text) {
       markProviderSuccess('gemini');
+      console.info(`[support-ai] provider=gemini model=${model} status=ok`);
       return { provider: 'gemini', text };
     }
   }
@@ -150,6 +155,7 @@ const callGemini = async (input: SupportReplyInput): Promise<SupportReplyResult 
 };
 
 const callOpenAI = async (input: SupportReplyInput): Promise<SupportReplyResult | null> => {
+  const { openAiKey } = getSupportConfig();
   if (!canCallProvider('openai')) return null;
   if (!openAiKey) return null;
 
@@ -181,30 +187,35 @@ const callOpenAI = async (input: SupportReplyInput): Promise<SupportReplyResult 
     return null;
   }
   markProviderSuccess('openai');
+  console.info('[support-ai] provider=openai status=ok');
   return { provider: 'openai', text: text.trim().slice(0, 900) };
 };
 
-export const getSupportAiStatus = () => ({
-  provider: supportProvider,
-  geminiEnabled: Boolean(geminiKey),
-  openAiEnabled: Boolean(openAiKey),
-  circuit: getCircuitStatus()
-});
+export const getSupportAiStatus = () => {
+  const { provider, geminiKey, openAiKey } = getSupportConfig();
+  return {
+    provider,
+    geminiEnabled: Boolean(geminiKey),
+    openAiEnabled: Boolean(openAiKey),
+    circuit: getCircuitStatus()
+  };
+};
 
 export const generateSupportReply = async (input: SupportReplyInput): Promise<SupportReplyResult> => {
   try {
-    if (supportProvider === 'none') {
+    const { provider } = getSupportConfig();
+    if (provider === 'none') {
       return {
         provider: 'none',
         text: 'AI reply is temporarily disabled. Your request has been routed to admin for manual response.'
       };
     }
 
-    if (supportProvider === 'openai') {
+    if (provider === 'openai') {
       return (await callOpenAI(input)) || heuristicReply(input);
     }
 
-    if (supportProvider === 'gemini') {
+    if (provider === 'gemini') {
       return (await callGemini(input)) || heuristicReply(input);
     }
 

@@ -138,8 +138,11 @@ const matchSchema = new Schema<IMatch>({
 
 // Indexes
 matchSchema.index({ tournament: 1, startTime: 1 });
+matchSchema.index({ tournament: 1, status: 1, startTime: 1 });
+matchSchema.index({ tournament: 1, status: 1, winner: 1 });
 matchSchema.index({ status: 1 });
 matchSchema.index({ game: 1 });
 matchSchema.index({ 'roomCredentials.roomId': 1 }, { sparse: true });
+matchSchema.index({ tournament: 1, 'roomCredentials.roomId': 1, 'roomCredentials.password': 1 }, { sparse: true });
 
 export default mongoose.model<IMatch>('Match', matchSchema); 

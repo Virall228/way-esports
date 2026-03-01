@@ -34,6 +34,7 @@ const ProfileHeader = styled(Card)<{
   background-position: center;
   box-shadow: ${({ $streakGlowColor = 'rgba(255,255,255,0.12)' }) =>
     `0 0 0 1px ${$streakGlowColor}, 0 0 26px ${$streakGlowColor.replace('0.9', '0.35').replace('0.85', '0.3')}`};
+  min-width: 0;
 
   @media (max-width: 600px) {
     flex-direction: column;
@@ -51,18 +52,28 @@ const AvatarWrap = styled.div`
 
 const Info = styled.div`
   flex: 1;
+  min-width: 0;
 `;
 
 const Username = styled.h1`
   font-size: 2.5rem;
   margin-bottom: 0.5rem;
   color: #ff6b00;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+
+  @media (max-width: 600px) {
+    font-size: 1.7rem;
+    line-height: 1.2;
+  }
 `;
 
 const RealName = styled.h2`
   font-size: 1.2rem;
   color: #ccc;
   margin-bottom: 1rem;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 `;
 
 const Bio = styled.p`

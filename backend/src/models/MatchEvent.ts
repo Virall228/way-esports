@@ -39,6 +39,8 @@ const matchEventSchema = new Schema<IMatchEvent>(
 
 matchEventSchema.index({ playerId: 1, createdAt: -1 });
 matchEventSchema.index({ matchId: 1, playerId: 1 });
+matchEventSchema.index({ matchId: 1, eventType: 1 });
+matchEventSchema.index({ matchId: 1, createdAt: -1 });
 matchEventSchema.index({ tournamentId: 1, createdAt: -1 });
 matchEventSchema.index({ eventType: 1, createdAt: -1 });
 matchEventSchema.index({ dedupeKey: 1 }, { unique: true, sparse: true });

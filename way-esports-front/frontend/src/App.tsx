@@ -33,6 +33,7 @@ import Settings from './pages/Settings';
 import AnalyticsPage from './pages/Analytics/AnalyticsPage';
 import AdminPage from './pages/Admin/AdminPage';
 import AdminAccessPage from './pages/Admin/AdminAccessPage';
+import AdminOcrPage from './pages/Admin/AdminOcrPage';
 import AuthPage from './pages/Auth/AuthPage';
 import TournamentDetailsPage from './pages/Tournaments/TournamentDetailsPage';
 import BillingPage from './pages/Billing/BillingPage';
@@ -497,6 +498,7 @@ const AppContent: React.FC = () => {
 
     if (hasAdminAccess) {
       items.push({ label: 'Control', to: '/admin', icon: <Shield {...iconProps} />, adminOnly: true });
+      items.push({ label: 'OCR', to: '/admin/ocr', icon: <Shield {...iconProps} />, adminOnly: true });
     }
 
     return items;
@@ -615,6 +617,7 @@ const AppContent: React.FC = () => {
               <Route path="/teams/:id" element={<TeamPage />} />
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/admin" element={<AdminRoute />} />
+              <Route path="/admin/ocr" element={<AdminOcrRoute />} />
               <Route path="/auth" element={isAuthenticated ? <Navigate to="/" replace /> : <AuthPage />} />
               <Route path="/admin-access" element={<AdminAccessPage />} />
               <Route path="/control-access" element={<AdminAccessPage />} />
@@ -684,6 +687,20 @@ const AdminRoute: React.FC = () => {
   }
 
   return <AdminPage />;
+};
+
+const AdminOcrRoute: React.FC = () => {
+  const { isAuthenticated, user } = useAuth();
+  const hasAdminAccess = isAuthenticated && (user?.role === 'admin' || user?.role === 'developer');
+
+  if (!isAuthenticated) {
+    return <Navigate to="/auth" replace />;
+  }
+  if (!hasAdminAccess) {
+    return <Navigate to="/control-access" replace />;
+  }
+
+  return <AdminOcrPage />;
 };
 
 const RequireAuth: React.FC<{ children: React.ReactElement }> = ({ children }) => {

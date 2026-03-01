@@ -25,9 +25,11 @@ type ScoutOutput = {
   source: 'heuristic' | 'gemini' | 'openai';
 };
 
-const provider = (process.env.AI_SCOUT_PROVIDER || 'gemini').trim().toLowerCase();
-const geminiKey = (process.env.GEMINI_API_KEY || '').trim();
-const openAiKey = (process.env.OPENAI_API_KEY || '').trim();
+const getScoutConfig = () => ({
+  provider: (process.env.AI_SCOUT_PROVIDER || 'gemini').trim().toLowerCase(),
+  geminiKey: (process.env.GEMINI_API_KEY || '').trim(),
+  openAiKey: (process.env.OPENAI_API_KEY || '').trim()
+});
 
 const basePrompt = (input: ScoutInput) => `
 You are an esports scout assistant.
@@ -55,6 +57,7 @@ const parseModelJson = (text: string): Omit<ScoutOutput, 'source'> | null => {
 };
 
 const callGemini = async (input: ScoutInput): Promise<ScoutOutput | null> => {
+  const { geminiKey } = getScoutConfig();
   if (!canCallProvider('gemini')) return null;
   if (!geminiKey) return null;
   try {
@@ -86,6 +89,7 @@ const callGemini = async (input: ScoutInput): Promise<ScoutOutput | null> => {
       return null;
     }
     markProviderSuccess('gemini');
+    console.info('[scout-ai] provider=gemini status=ok');
     return { ...parsed, source: 'gemini' };
   } catch {
     markProviderFailure('gemini');
@@ -94,6 +98,7 @@ const callGemini = async (input: ScoutInput): Promise<ScoutOutput | null> => {
 };
 
 const callOpenAI = async (input: ScoutInput): Promise<ScoutOutput | null> => {
+  const { openAiKey } = getScoutConfig();
   if (!canCallProvider('openai')) return null;
   if (!openAiKey) return null;
   try {
@@ -126,6 +131,7 @@ const callOpenAI = async (input: ScoutInput): Promise<ScoutOutput | null> => {
       return null;
     }
     markProviderSuccess('openai');
+    console.info('[scout-ai] provider=openai status=ok');
     return { ...parsed, source: 'openai' };
   } catch {
     markProviderFailure('openai');
@@ -133,15 +139,19 @@ const callOpenAI = async (input: ScoutInput): Promise<ScoutOutput | null> => {
   }
 };
 
-export const getScoutProviderStatus = () => ({
-  provider,
-  geminiEnabled: Boolean(geminiKey),
-  openAiEnabled: Boolean(openAiKey),
-  circuit: getCircuitStatus()
-});
+export const getScoutProviderStatus = () => {
+  const { provider, geminiKey, openAiKey } = getScoutConfig();
+  return {
+    provider,
+    geminiEnabled: Boolean(geminiKey),
+    openAiEnabled: Boolean(openAiKey),
+    circuit: getCircuitStatus()
+  };
+};
 
 export const generateAiScoutInsight = async (input: ScoutInput): Promise<ScoutOutput | null> => {
   try {
+    const { provider } = getScoutConfig();
     if (provider === 'none') return null;
     if (provider === 'openai') return await callOpenAI(input);
     if (provider === 'gemini') return await callGemini(input);

@@ -2,6 +2,7 @@ import express from 'express';
 import Team from '../models/Team';
 import User from '../models/User';
 import Tournament from '../models/Tournament';
+import cacheService from '../services/cacheService';
 
 const router = express.Router();
 
@@ -35,6 +36,8 @@ router.get('/teams/rankings', async (req, res) => {
     const timeFrame = timeFrameRaw.toLowerCase();
     const game = gameRaw.toLowerCase();
     const query: any = {};
+    const limitRaw = Number(req.query.limit || 100);
+    const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(300, limitRaw)) : 100;
     
     // Add game filter if specified
     if (game && game !== 'all') {
@@ -49,10 +52,17 @@ router.get('/teams/rankings', async (req, res) => {
       query.createdAt = { $gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) };
     }
 
-    // Get teams with stats
-    const teams = await Team.find(query)
-      .sort({ 'stats.winRate': -1, 'stats.totalPrizeMoney': -1 })
-      .lean();
+    const cacheKey = `rankings:teams:${timeFrame}:${game}:${limit}`;
+    const teams = (await cacheService.getOrSet(
+      cacheKey,
+      async () =>
+        Team.find(query)
+          .select('name tag logo game stats achievements')
+          .sort({ 'stats.winRate': -1, 'stats.totalPrizeMoney': -1 })
+          .limit(limit)
+          .lean(),
+      { key: cacheKey, ttl: 20 }
+    )) || [];
 
     // Calculate rankings
     const rankedTeams = teams.map((team: any, index) => ({
@@ -85,6 +95,8 @@ router.get('/players/rankings', async (req, res) => {
     const timeFrame = timeFrameRaw.toLowerCase();
     const game = gameRaw.toLowerCase();
     const query: any = {};
+    const limitRaw = Number(req.query.limit || 100);
+    const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(300, limitRaw)) : 100;
     
     // Add game filter if specified
     if (game && game !== 'all') {
@@ -98,11 +110,18 @@ router.get('/players/rankings', async (req, res) => {
       query.createdAt = { $gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) };
     }
 
-    // Get users with stats
-    const users = await User.find(query)
-      .populate('teams', 'name tag')
-      .sort({ 'stats.totalPrizeMoney': -1, 'stats.wins': -1 })
-      .lean();
+    const cacheKey = `rankings:players:${timeFrame}:${game}:${limit}`;
+    const users = (await cacheService.getOrSet(
+      cacheKey,
+      async () =>
+        User.find(query)
+          .select('username firstName lastName email profileLogo stats teams')
+          .populate('teams', 'name tag')
+          .sort({ 'stats.totalPrizeMoney': -1, 'stats.wins': -1 })
+          .limit(limit)
+          .lean(),
+      { key: cacheKey, ttl: 20 }
+    )) || [];
 
     // Calculate rankings
     const rankedPlayers = users.map((user: any, index) => {

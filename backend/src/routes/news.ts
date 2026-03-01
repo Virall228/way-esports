@@ -2,6 +2,7 @@ import express from 'express';
 import News, { INews } from '../models/News';
 import { authenticateJWT, isAdmin } from '../middleware/auth';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination';
+import cacheService from '../services/cacheService';
 
 const router = express.Router();
 
@@ -9,10 +10,20 @@ type NewsDocument = INews & { [key: string]: any };
 
 router.get('/', async (req, res) => {
   try {
-    const items = await News.find({ status: 'published' })
-      .populate('author', 'username firstName lastName')
-      .sort({ publishDate: -1, createdAt: -1 })
-      .lean();
+    const limitRaw = Number(req.query.limit || 50);
+    const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(100, limitRaw)) : 50;
+    const cacheKey = `news:published:list:${limit}`;
+    const items = (await cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return News.find({ status: 'published' })
+          .populate('author', 'username firstName lastName')
+          .sort({ publishDate: -1, createdAt: -1 })
+          .limit(limit)
+          .lean();
+      },
+      { key: cacheKey, ttl: 30 }
+    )) || [];
 
     res.json({ success: true, data: items });
   } catch (error) {
@@ -97,6 +108,7 @@ router.post('/', authenticateJWT, isAdmin, async (req, res) => {
 
     const item = await new News(payload).save();
     const populated: any = await News.findById(item._id).populate('author', 'username firstName lastName').lean();
+    await cacheService.invalidatePattern('news:published:list:*');
 
     res.status(201).json({ success: true, data: populated || item });
   } catch (error: any) {
@@ -141,6 +153,7 @@ router.put('/:id', authenticateJWT, isAdmin, async (req, res) => {
     }
 
     await item.save();
+    await cacheService.invalidatePattern('news:published:list:*');
 
     const populated: any = await News.findById(item._id).populate('author', 'username firstName lastName').lean();
     res.json({ success: true, data: populated || item });
@@ -156,6 +169,8 @@ router.delete('/:id', authenticateJWT, isAdmin, async (req, res) => {
     if (!item) {
       return res.status(404).json({ success: false, error: 'News not found' });
     }
+
+    await cacheService.invalidatePattern('news:published:list:*');
 
     res.json({ success: true, data: item });
   } catch (error) {

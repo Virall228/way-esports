@@ -151,6 +151,9 @@ const walletSchema = new Schema<IWallet>({
 walletSchema.index({ user: 1 }, { unique: true });
 walletSchema.index({ 'transactions.date': -1 });
 walletSchema.index({ 'transactions.status': 1 });
+walletSchema.index({ 'transactions.type': 1, 'transactions.date': -1 });
+walletSchema.index({ 'transactions.status': 1, 'transactions.date': -1 });
+walletSchema.index({ 'transactions.reference': 1 });
 
 // Pre-save middleware to ensure only one default payment method
 walletSchema.pre('save', function(next) {

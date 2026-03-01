@@ -89,9 +89,10 @@ const normalizeConversation = (conv: any) => ({
 });
 
 const getSupportSettings = async () => {
+  const defaultAiEnabled = String(process.env.SUPPORT_AI_ENABLED_DEFAULT || 'true').trim().toLowerCase() !== 'false';
   const settings = await SupportSettings.findOneAndUpdate(
     { key: 'global' },
-    { $setOnInsert: { key: 'global', aiEnabled: false } },
+    { $setOnInsert: { key: 'global', aiEnabled: defaultAiEnabled } },
     { new: true, upsert: true }
   ).lean();
   return {

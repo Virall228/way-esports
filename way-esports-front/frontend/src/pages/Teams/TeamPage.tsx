@@ -27,6 +27,14 @@ const TeamHeader = styled(Card)`
   padding: 2rem;
   margin-bottom: 2rem;
   background: linear-gradient(135deg, ${({ theme }) => theme.colors.bg.secondary}, ${({ theme }) => theme.colors.bg.tertiary});
+  min-width: 0;
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem;
+  }
 `;
 
 const Logo = styled.img`
@@ -54,12 +62,20 @@ const TeamTitle = styled.h1`
   font-size: 2.5rem;
   margin: 0;
   color: #ff6b00;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    font-size: 1.6rem;
+    line-height: 1.2;
+  }
 `;
 
 const TeamHeaderMeta = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  min-width: 0;
 `;
 
 const TeamTag = styled.span`
@@ -70,6 +86,14 @@ const TeamTag = styled.span`
   font-size: 1rem;
   margin-left: 1rem;
   vertical-align: middle;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    margin-left: 0;
+    margin-top: 0.35rem;
+    display: inline-flex;
+  }
 `;
 
 const TeamLogoActions = styled.div`
@@ -148,6 +172,7 @@ const MemberCard = styled(Link)`
   border-radius:12px;
   border: 1px solid transparent;
   transition: all 0.3s ease;
+  min-width: 0;
 
   &:hover {
     border-color: #ff6b00;
@@ -173,6 +198,12 @@ const AvatarPlaceholder = styled.div`
   justify-content: center;
   font-weight: bold;
   color: white;
+`;
+
+const MemberText = styled.div`
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 `;
 
 const AchievementCard = styled(Card)`
@@ -545,12 +576,12 @@ const TeamPage: React.FC = () => {
                   {member.username?.charAt(0)?.toUpperCase() || '?'}
                 </AvatarPlaceholder>
               )}
-              <div>
+              <MemberText>
                 <h4 style={{ margin: '0 0 4px 0' }}>{member.username || 'Unknown'}</h4>
                 <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.7 }}>
                   {member.id === team.captain?.id ? '\u{1F451} Captain' : 'Player'}
                 </p>
-              </div>
+              </MemberText>
             </MemberCard>
           ))}
         </MemberList>

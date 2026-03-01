@@ -4,6 +4,9 @@ export interface ITournamentRegistration extends Document<mongoose.Types.ObjectI
   userId: mongoose.Types.ObjectId;
   teamId: mongoose.Types.ObjectId;
   tournamentId: mongoose.Types.ObjectId;
+  game?: string;
+  ingameNickname: string;
+  ingameId: string;
   role: 'owner' | 'member';
   status: 'pending' | 'active' | 'rejected' | 'left' | 'removed';
   createdAt: Date;
@@ -26,6 +29,22 @@ const tournamentRegistrationSchema = new Schema<ITournamentRegistration>({
     ref: 'Tournament',
     required: true
   },
+  game: {
+    type: String,
+    trim: true
+  },
+  ingameNickname: {
+    type: String,
+    trim: true,
+    maxlength: 80,
+    required: true
+  },
+  ingameId: {
+    type: String,
+    trim: true,
+    maxlength: 80,
+    required: true
+  },
   role: {
     type: String,
     enum: ['owner', 'member'],
@@ -43,5 +62,6 @@ const tournamentRegistrationSchema = new Schema<ITournamentRegistration>({
 tournamentRegistrationSchema.index({ userId: 1, tournamentId: 1 }, { unique: true });
 tournamentRegistrationSchema.index({ teamId: 1, tournamentId: 1 });
 tournamentRegistrationSchema.index({ tournamentId: 1, status: 1 });
+tournamentRegistrationSchema.index({ tournamentId: 1, ingameId: 1 });
 
 export default mongoose.model<ITournamentRegistration>('TournamentRegistration', tournamentRegistrationSchema);

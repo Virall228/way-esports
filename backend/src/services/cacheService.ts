@@ -56,6 +56,33 @@ class CacheService {
   }
 
   /**
+   * Get JSON value directly from cache by key
+   */
+  async getJson<T = any>(key: string): Promise<T | null> {
+    if (!this.isConnected || !this.redis) return null;
+    try {
+      const raw = await this.redis.get(key);
+      if (!raw) return null;
+      return JSON.parse(raw) as T;
+    } catch (error) {
+      logError('cache_get_json_failed', error as Error, { key });
+      return null;
+    }
+  }
+
+  /**
+   * Set JSON value directly to cache by key
+   */
+  async setJson(key: string, value: any, ttl = 300): Promise<void> {
+    if (!this.isConnected || !this.redis) return;
+    try {
+      await this.redis.setex(key, Math.max(1, ttl), JSON.stringify(value));
+    } catch (error) {
+      logError('cache_set_json_failed', error as Error, { key, ttl });
+    }
+  }
+
+  /**
    * Get cached data or fetch and cache it
    */
   async getOrSet<T>(

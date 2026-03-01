@@ -158,10 +158,75 @@ const buildTeamParticipantRows = (team: any): Array<{ userId: string; role: 'own
   return Array.from(rows.entries()).map(([userId, role]) => ({ userId, role }));
 };
 
+const normalizeIdentityValue = (value: unknown): string => String(value || '').trim();
+
+const upsertUserGameIdentity = async (
+  userId: string,
+  game: string,
+  ingameNickname: string,
+  ingameId: string
+) => {
+  const user: any = await User.findById(userId);
+  if (!user) return;
+  const normalizedGame = normalizeIdentityValue(game);
+  if (!normalizedGame) return;
+  const profiles = Array.isArray(user.gameProfiles) ? user.gameProfiles : [];
+  const existing = profiles.find((item: any) => normalizeIdentityValue(item?.game).toLowerCase() === normalizedGame.toLowerCase());
+  if (existing) {
+    existing.username = ingameNickname;
+    existing.ingameId = ingameId;
+  } else {
+    profiles.push({
+      game: normalizedGame,
+      username: ingameNickname,
+      ingameId
+    });
+    user.gameProfiles = profiles;
+  }
+  await user.save();
+};
+
+const resolveUserIdentityForGame = (user: any, game: string) => {
+  const normalizedGame = normalizeIdentityValue(game).toLowerCase();
+  const profiles = Array.isArray(user?.gameProfiles) ? user.gameProfiles : [];
+  const byGame = profiles.find((profile: any) => normalizeIdentityValue(profile?.game).toLowerCase() === normalizedGame);
+  const fallback = profiles[0];
+  const selected = byGame || fallback || {};
+
+  const ingameNickname = normalizeIdentityValue(selected?.username || user?.username || user?.firstName || '');
+  const ingameId = normalizeIdentityValue(selected?.ingameId || '');
+  return { ingameNickname, ingameId };
+};
+
+const buildTeamParticipantRowsWithIdentity = async (
+  team: any,
+  game: string
+): Promise<Array<{ userId: string; role: 'owner' | 'member'; ingameNickname: string; ingameId: string }>> => {
+  const rows = buildTeamParticipantRows(team);
+  if (!rows.length) return [];
+
+  const userDocs: any[] = await User.find({ _id: { $in: rows.map((row) => new mongoose.Types.ObjectId(row.userId)) } })
+    .select('_id username firstName gameProfiles')
+    .lean();
+  const byUserId = new Map<string, any>(userDocs.map((doc: any) => [String(doc._id), doc]));
+
+  return rows.map((row) => {
+    const userDoc = byUserId.get(row.userId) || {};
+    const identity = resolveUserIdentityForGame(userDoc, game);
+    return {
+      ...row,
+      ingameNickname: identity.ingameNickname,
+      ingameId: identity.ingameId
+    };
+  });
+};
+
 const handleTournamentRegistration = async (req: any, res: any) => {
   try {
     const user = req.tournamentUser || req.user;
     const { teamId } = req.body;
+    const ingameNickname = normalizeIdentityValue(req.body?.ingameNickname);
+    const ingameId = normalizeIdentityValue(req.body?.ingameId);
     const userId = user?._id?.toString?.() || user?.id;
     if (!userId) {
       return res.status(401).json({ success: false, error: 'Authentication required' });
@@ -172,6 +237,15 @@ const handleTournamentRegistration = async (req: any, res: any) => {
 
     const existing: any = await Tournament.findById(tournamentId).lean();
     if (!existing) return res.status(404).json({ success: false, error: 'Tournament not found' });
+
+    if (!ingameNickname || !ingameId) {
+      return res.status(400).json({
+        success: false,
+        error: 'ingameNickname and ingameId are required'
+      });
+    }
+
+    await upsertUserGameIdentity(userId, existing.game || '', ingameNickname, ingameId);
 
     if (existing.status !== 'upcoming' && existing.status !== 'open') {
       return res.status(400).json({ success: false, error: 'Tournament registration is closed' });
@@ -279,6 +353,9 @@ const handleTournamentRegistration = async (req: any, res: any) => {
           {
             $set: {
               teamId,
+              game: String(existing.game || ''),
+              ingameNickname,
+              ingameId,
               role,
               status: 'pending'
             }
@@ -288,6 +365,7 @@ const handleTournamentRegistration = async (req: any, res: any) => {
       }
 
       await cacheService.invalidateTournamentCaches();
+      invalidateAdminOverviewCache(String(tournamentId || ''));
 
       return res.json({
         success: true,
@@ -364,7 +442,15 @@ const handleTournamentRegistration = async (req: any, res: any) => {
     }
 
     if (teamId && teamForRegistration) {
-      const participantRows = buildTeamParticipantRows(teamForRegistration);
+      const participantRows = await buildTeamParticipantRowsWithIdentity(teamForRegistration, String(existing.game || ''));
+      const missingIdentity = participantRows.filter((row) => !row.ingameNickname || !row.ingameId);
+      if (missingIdentity.length) {
+        return res.status(400).json({
+          success: false,
+          error: 'Every team member must have ingameNickname and ingameId linked in profile before registration',
+          missingUserIds: missingIdentity.map((row) => row.userId)
+        });
+      }
       const participantIds = participantRows.map((row) => row.userId);
 
       if (participantIds.length) {
@@ -378,6 +464,9 @@ const handleTournamentRegistration = async (req: any, res: any) => {
             {
               $set: {
                 teamId,
+                game: String(existing.game || ''),
+                ingameNickname: row.ingameNickname,
+                ingameId: row.ingameId,
                 role: row.role,
                 status: 'active'
               }
@@ -449,6 +538,7 @@ const handleTournamentRegistration = async (req: any, res: any) => {
     });
 
     await cacheService.invalidateTournamentCaches();
+    invalidateAdminOverviewCache();
     await cacheService.invalidateUserCaches(user._id.toString());
   } catch (error) {
     console.error('Error registering for tournament:', error);
@@ -481,14 +571,26 @@ router.get('/', async (req, res) => {
     }
 
     const total = await Tournament.countDocuments(query);
-
-    const tournaments = await Tournament.find(query)
-      .populate('registeredTeams', 'name tag logo members')
-      .populate('matches', 'team1 team2 status startTime')
-      .sort({ startDate: 1 })
-      .skip(skip)
-      .limit(limit)
-      .lean();
+    const canUseCache = !search;
+    const listKey = `tournaments:list:${game || 'all'}:${status || 'all'}:${page}:${limit}`;
+    const tournaments = canUseCache
+      ? ((await cacheService.getOrSet(
+          listKey,
+          async () =>
+            Tournament.find(query)
+              .select('name game image coverImage status type startDate prizePool participants currentParticipants maxParticipants maxTeams registrationRequests')
+              .sort({ startDate: 1 })
+              .skip(skip)
+              .limit(limit)
+              .lean(),
+          { key: listKey, ttl: 20 }
+        )) || [])
+      : await Tournament.find(query)
+          .select('name game image coverImage status type startDate prizePool participants currentParticipants maxParticipants maxTeams registrationRequests')
+          .sort({ startDate: 1 })
+          .skip(skip)
+          .limit(limit)
+          .lean();
 
     // Transform for frontend compatibility
     const transformed = tournaments.map((t: any) => ({
@@ -685,71 +787,79 @@ router.get('/:id/stream', async (req, res) => {
 // Get tournament by ID
 router.get('/:id', async (req, res) => {
   try {
-    const tournament: any = await Tournament.findById(req.params.id)
-      .populate('registeredTeams', 'name tag logo members captain')
-      .populate('matches', 'team1 team2 status startTime endTime score winner')
-      .populate('createdBy', 'username firstName lastName')
-      .lean();
+    const tournamentId = String(req.params.id || '').trim();
+    const cacheKey = `tournament:detail:${tournamentId}`;
+    const transformed: any = await cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const tournament: any = await Tournament.findById(tournamentId)
+          .populate('registeredTeams', 'name tag logo members captain')
+          .populate('matches', 'team1 team2 status startTime endTime score winner')
+          .populate('createdBy', 'username firstName lastName')
+          .lean();
 
-    if (!tournament) {
+        if (!tournament) return null;
+
+        return {
+          id: String(tournament._id),
+          name: tournament.name,
+          title: tournament.name,
+          game: tournament.game,
+          image: tournament.image || tournament.coverImage || '',
+          coverImage: tournament.coverImage || tournament.image || '',
+          status: tournament.status === 'ongoing' ? 'in_progress' : tournament.status,
+          startDate: tournament.startDate?.toISOString() || new Date().toISOString(),
+          endDate: tournament.endDate?.toISOString() || new Date().toISOString(),
+          prizePool: tournament.prizePool || 0,
+          maxTeams: tournament.maxTeams || 0,
+          maxParticipants: tournament.maxParticipants ?? tournament.maxTeams ?? 0,
+          registeredTeams: (tournament.registeredTeams || []).map((team: any) => ({
+            id: team._id?.toString() || team.toString(),
+            name: team.name || '',
+            tag: team.tag || '',
+            logo: team.logo || '',
+            players: team.members?.map((m: any) => m.toString()) || [],
+            captain: team.captain?.toString() || ''
+          })),
+          participants: tournament.registeredTeams?.length || 0,
+          currentParticipants: tournament.registeredTeams?.length || 0,
+          pendingRequestsCount: Array.isArray(tournament.registrationRequests)
+            ? tournament.registrationRequests.filter((entry: any) => entry?.status === 'pending').length
+            : 0,
+          format: tournament.format || 'single_elimination',
+          type: tournament.type || 'team',
+          description: tournament.description || '',
+          rules: tournament.rules || '',
+          matches: (tournament.matches || []).map((m: any) => ({
+            id: m._id?.toString() || m.toString(),
+            team1: m.team1?.toString() || m.team1,
+            team2: m.team2?.toString() || m.team2,
+            status: m.status || 'upcoming',
+            startTime: m.startTime?.toISOString(),
+            endTime: m.endTime?.toISOString(),
+            score: m.score || {},
+            winner: m.winner?.toString() || m.winner
+          })),
+          bracket: tournament.bracket || { matches: [] },
+          createdBy: tournament.createdBy ? {
+            id: tournament.createdBy._id?.toString() || '',
+            username: tournament.createdBy.username || '',
+            firstName: tournament.createdBy.firstName || '',
+            lastName: tournament.createdBy.lastName || ''
+          } : null,
+          createdAt: tournament.createdAt?.toISOString(),
+          updatedAt: tournament.updatedAt?.toISOString()
+        };
+      },
+      { key: cacheKey, ttl: 20 }
+    );
+
+    if (!transformed) {
       return res.status(404).json({
         success: false,
         error: 'Tournament not found'
       });
     }
-
-    // Transform for frontend compatibility
-    const transformed: any = {
-      id: String(tournament._id),
-      name: tournament.name,
-      title: tournament.name,
-      game: tournament.game,
-      image: tournament.image || tournament.coverImage || '',
-      coverImage: tournament.coverImage || tournament.image || '',
-      status: tournament.status === 'ongoing' ? 'in_progress' : tournament.status,
-      startDate: tournament.startDate?.toISOString() || new Date().toISOString(),
-      endDate: tournament.endDate?.toISOString() || new Date().toISOString(),
-      prizePool: tournament.prizePool || 0,
-      maxTeams: tournament.maxTeams || 0,
-      maxParticipants: tournament.maxParticipants ?? tournament.maxTeams ?? 0,
-      registeredTeams: (tournament.registeredTeams || []).map((team: any) => ({
-        id: team._id?.toString() || team.toString(),
-        name: team.name || '',
-        tag: team.tag || '',
-        logo: team.logo || '',
-        players: team.members?.map((m: any) => m.toString()) || [],
-        captain: team.captain?.toString() || ''
-      })),
-      participants: tournament.registeredTeams?.length || 0,
-      currentParticipants: tournament.registeredTeams?.length || 0,
-      pendingRequestsCount: Array.isArray(tournament.registrationRequests)
-        ? tournament.registrationRequests.filter((entry: any) => entry?.status === 'pending').length
-        : 0,
-      format: tournament.format || 'single_elimination',
-      type: tournament.type || 'team',
-      description: tournament.description || '',
-      rules: tournament.rules || '',
-      matches: (tournament.matches || []).map((m: any) => ({
-        id: m._id?.toString() || m.toString(),
-        team1: m.team1?.toString() || m.team1,
-        team2: m.team2?.toString() || m.team2,
-        status: m.status || 'upcoming',
-        startTime: m.startTime?.toISOString(),
-        endTime: m.endTime?.toISOString(),
-        score: m.score || {},
-        winner: m.winner?.toString() || m.winner
-      })),
-
-      bracket: tournament.bracket || { matches: [] },
-      createdBy: tournament.createdBy ? {
-        id: tournament.createdBy._id?.toString() || '',
-        username: tournament.createdBy.username || '',
-        firstName: tournament.createdBy.firstName || '',
-        lastName: tournament.createdBy.lastName || ''
-      } : null,
-      createdAt: tournament.createdAt?.toISOString(),
-      updatedAt: tournament.updatedAt?.toISOString()
-    };
 
     res.json({
       success: true,
@@ -859,6 +969,7 @@ router.post('/',
 
       // Invalidate caches
       await cacheService.invalidateTournamentCaches();
+      invalidateAdminOverviewCache(String(tournament?._id || ''));
 
       res.status(201).json({
         success: true,
@@ -896,6 +1007,7 @@ router.post('/batch', authenticateJWT, isAdmin, async (req, res) => {
 
     // Invalidate caches
     await cacheService.invalidateTournamentCaches();
+    invalidateAdminOverviewCache();
 
     res.status(201).json({
       success: true,
@@ -1189,68 +1301,105 @@ router.get('/:id/requests', authenticateJWT, isAdmin, async (req: any, res: any)
       defaultLimit: 25,
       maxLimit: 200
     });
-    const tournament: any = await Tournament.findById(req.params.id)
-      .populate('registrationRequests.team', 'name tag logo members captain stats')
-      .populate('registrationRequests.requestedBy', 'username firstName lastName telegramId')
-      .lean();
-
-    if (!tournament) {
+    const tournamentId = String(req.params.id || '');
+    if (!mongoose.Types.ObjectId.isValid(tournamentId)) {
+      return res.status(400).json({ success: false, error: 'Invalid tournament id' });
+    }
+    const tournamentExists = await Tournament.exists({ _id: new mongoose.Types.ObjectId(tournamentId) });
+    if (!tournamentExists) {
       return res.status(404).json({ success: false, error: 'Tournament not found' });
     }
-
-    const requests = Array.isArray(tournament.registrationRequests) ? tournament.registrationRequests : [];
-    const filtered = requests.filter((entry: any) => {
-      if (!statusFilter || statusFilter === 'all') return true;
-      return entry?.status === statusFilter;
-    }).filter((entry: any) => {
-      if (!searchFilter) return true;
-      const haystack = [
-        entry?.team?.name,
-        entry?.team?.tag,
-        entry?.requestedBy?.username,
-        entry?.requestedBy?.firstName,
-        entry?.requestedBy?.lastName,
-        String(entry?.requestedBy?.telegramId || ''),
-        entry?.note
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      return haystack.includes(searchFilter);
-    });
-
-    const sorted = filtered.sort((a: any, b: any) => {
-      const left = a?.requestedAt ? new Date(a.requestedAt).getTime() : 0;
-      const right = b?.requestedAt ? new Date(b.requestedAt).getTime() : 0;
-      return right - left;
-    });
-    const total = sorted.length;
-    const paged = sorted.slice(skip, skip + limit);
-
-    const data = paged.map((entry: any) => ({
-      id: `${entry?.team?._id?.toString?.() || entry?.team?.toString?.() || ''}:${entry?.requestedAt || ''}`,
-      teamId: entry?.team?._id?.toString?.() || entry?.team?.toString?.() || '',
-      teamName: entry?.team?.name || '',
-      teamTag: entry?.team?.tag || '',
-      teamLogo: entry?.team?.logo || '',
-      membersCount: Array.isArray(entry?.team?.members) ? entry.team.members.length : 0,
-      stats: {
-        wins: Number(entry?.team?.stats?.wins || 0),
-        losses: Number(entry?.team?.stats?.losses || 0),
-        winRate: Number(entry?.team?.stats?.winRate || 0)
+    const basePipeline: any[] = [
+      { $match: { _id: new mongoose.Types.ObjectId(tournamentId) } },
+      { $unwind: '$registrationRequests' },
+      {
+        $lookup: {
+          from: 'teams',
+          localField: 'registrationRequests.team',
+          foreignField: '_id',
+          as: 'teamDoc'
+        }
       },
-      requestedBy: entry?.requestedBy ? {
-        id: entry.requestedBy._id?.toString?.() || '',
-        username: entry.requestedBy.username || '',
-        firstName: entry.requestedBy.firstName || '',
-        lastName: entry.requestedBy.lastName || '',
-        telegramId: entry.requestedBy.telegramId || null
-      } : null,
-      status: entry?.status || 'pending',
-      requestedAt: entry?.requestedAt?.toISOString?.() || null,
-      reviewedAt: entry?.reviewedAt?.toISOString?.() || null,
-      note: entry?.note || ''
-    }));
+      { $unwind: { path: '$teamDoc', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'registrationRequests.requestedBy',
+          foreignField: '_id',
+          as: 'requestedByDoc'
+        }
+      },
+      { $unwind: { path: '$requestedByDoc', preserveNullAndEmptyArrays: true } }
+    ];
+
+    if (statusFilter && statusFilter !== 'all') {
+      basePipeline.push({ $match: { 'registrationRequests.status': statusFilter } });
+    }
+    if (searchFilter) {
+      const regex = new RegExp(escapeRegex(searchFilter), 'i');
+      basePipeline.push({
+        $match: {
+          $or: [
+            { 'teamDoc.name': regex },
+            { 'teamDoc.tag': regex },
+            { 'requestedByDoc.username': regex },
+            { 'requestedByDoc.firstName': regex },
+            { 'requestedByDoc.lastName': regex },
+            { 'registrationRequests.note': regex }
+          ]
+        }
+      });
+    }
+
+    const [facetRow] = await Tournament.aggregate([
+      ...basePipeline,
+      { $sort: { 'registrationRequests.requestedAt': -1 } },
+      {
+        $facet: {
+          data: [
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $project: {
+                _id: 0,
+                id: {
+                  $concat: [
+                    { $ifNull: [{ $toString: '$teamDoc._id' }, ''] },
+                    ':',
+                    { $ifNull: [{ $toString: '$registrationRequests.requestedAt' }, ''] }
+                  ]
+                },
+                teamId: { $ifNull: [{ $toString: '$teamDoc._id' }, ''] },
+                teamName: { $ifNull: ['$teamDoc.name', ''] },
+                teamTag: { $ifNull: ['$teamDoc.tag', '' ] },
+                teamLogo: { $ifNull: ['$teamDoc.logo', '' ] },
+                membersCount: { $size: { $ifNull: ['$teamDoc.members', []] } },
+                stats: {
+                  wins: { $toDouble: { $ifNull: ['$teamDoc.stats.wins', 0] } },
+                  losses: { $toDouble: { $ifNull: ['$teamDoc.stats.losses', 0] } },
+                  winRate: { $toDouble: { $ifNull: ['$teamDoc.stats.winRate', 0] } }
+                },
+                requestedBy: {
+                  id: { $ifNull: [{ $toString: '$requestedByDoc._id' }, '' ] },
+                  username: { $ifNull: ['$requestedByDoc.username', '' ] },
+                  firstName: { $ifNull: ['$requestedByDoc.firstName', '' ] },
+                  lastName: { $ifNull: ['$requestedByDoc.lastName', '' ] },
+                  telegramId: '$requestedByDoc.telegramId'
+                },
+                status: { $ifNull: ['$registrationRequests.status', 'pending'] },
+                requestedAt: '$registrationRequests.requestedAt',
+                reviewedAt: '$registrationRequests.reviewedAt',
+                note: { $ifNull: ['$registrationRequests.note', '' ] }
+              }
+            }
+          ],
+          total: [{ $count: 'value' }]
+        }
+      }
+    ]);
+
+    const data = Array.isArray(facetRow?.data) ? facetRow.data : [];
+    const total = Number(facetRow?.total?.[0]?.value || 0);
 
     return res.json({
       success: true,
@@ -1268,38 +1417,78 @@ router.get('/:id/requests/export.csv', authenticateJWT, isAdmin, async (req: any
   try {
     const tournamentId = String(req.params.id || '');
     const search = typeof req.query?.search === 'string' ? req.query.search.trim().toLowerCase() : '';
-
-    const tournament: any = await Tournament.findById(tournamentId)
-      .populate('registrationRequests.team', 'name tag members captain stats')
-      .populate('registrationRequests.requestedBy', 'username firstName lastName')
-      .lean();
-
-    if (!tournament) {
+    if (!mongoose.Types.ObjectId.isValid(tournamentId)) {
+      return res.status(400).json({ success: false, error: 'Invalid tournament id' });
+    }
+    const tournamentExists = await Tournament.exists({ _id: new mongoose.Types.ObjectId(tournamentId) });
+    if (!tournamentExists) {
       return res.status(404).json({ success: false, error: 'Tournament not found' });
     }
-
-    const requests = Array.isArray(tournament.registrationRequests) ? tournament.registrationRequests : [];
-    const filtered = requests.filter((entry: any) => {
-      if (String(entry?.status || '').toLowerCase() !== 'pending') return false;
-      if (!search) return true;
-      const teamName = String(entry?.team?.name || '').toLowerCase();
-      const teamTag = String(entry?.team?.tag || '').toLowerCase();
-      const requester = String(entry?.requestedBy?.username || entry?.requestedBy?.firstName || '').toLowerCase();
-      return teamName.includes(search) || teamTag.includes(search) || requester.includes(search);
+    const pipeline: any[] = [
+      { $match: { _id: new mongoose.Types.ObjectId(tournamentId) } },
+      { $unwind: '$registrationRequests' },
+      { $match: { 'registrationRequests.status': 'pending' } },
+      {
+        $lookup: {
+          from: 'teams',
+          localField: 'registrationRequests.team',
+          foreignField: '_id',
+          as: 'teamDoc'
+        }
+      },
+      { $unwind: { path: '$teamDoc', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'registrationRequests.requestedBy',
+          foreignField: '_id',
+          as: 'requestedByDoc'
+        }
+      },
+      { $unwind: { path: '$requestedByDoc', preserveNullAndEmptyArrays: true } }
+    ];
+    if (search) {
+      const regex = new RegExp(escapeRegex(search), 'i');
+      pipeline.push({
+        $match: {
+          $or: [
+            { 'teamDoc.name': regex },
+            { 'teamDoc.tag': regex },
+            { 'requestedByDoc.username': regex },
+            { 'requestedByDoc.firstName': regex }
+          ]
+        }
+      });
+    }
+    pipeline.push({
+      $project: {
+        _id: 0,
+        requestId: { $toString: '$registrationRequests._id' },
+        teamId: { $ifNull: [{ $toString: '$teamDoc._id' }, '' ] },
+        teamName: { $ifNull: ['$teamDoc.name', '' ] },
+        teamTag: { $ifNull: ['$teamDoc.tag', '' ] },
+        membersCount: { $size: { $ifNull: ['$teamDoc.members', []] } },
+        wins: { $toDouble: { $ifNull: ['$teamDoc.stats.wins', 0] } },
+        losses: { $toDouble: { $ifNull: ['$teamDoc.stats.losses', 0] } },
+        winRate: { $toDouble: { $ifNull: ['$teamDoc.stats.winRate', 0] } },
+        requestedBy: { $ifNull: ['$requestedByDoc.username', { $ifNull: ['$requestedByDoc.firstName', ''] }] },
+        requestedAt: '$registrationRequests.requestedAt'
+      }
     });
+    const filtered = await Tournament.aggregate(pipeline);
 
     const csvCell = (value: any) => `"${String(value ?? '').replace(/"/g, '""')}"`;
     const header = ['requestId', 'teamId', 'teamName', 'teamTag', 'membersCount', 'wins', 'losses', 'winRate', 'requestedBy', 'requestedAt'];
     const rows = filtered.map((entry: any) => [
-      String(entry?._id || ''),
-      String(entry?.team?._id || ''),
-      String(entry?.team?.name || ''),
-      String(entry?.team?.tag || ''),
-      Array.isArray(entry?.team?.members) ? entry.team.members.length : 0,
-      Number(entry?.team?.stats?.wins || 0),
-      Number(entry?.team?.stats?.losses || 0),
-      Number(entry?.team?.stats?.winRate || 0),
-      String(entry?.requestedBy?.username || entry?.requestedBy?.firstName || ''),
+      String(entry?.requestId || ''),
+      String(entry?.teamId || ''),
+      String(entry?.teamName || ''),
+      String(entry?.teamTag || ''),
+      Number(entry?.membersCount || 0),
+      Number(entry?.wins || 0),
+      Number(entry?.losses || 0),
+      Number(entry?.winRate || 0),
+      String(entry?.requestedBy || ''),
       entry?.requestedAt ? new Date(entry.requestedAt).toISOString() : ''
     ]);
 
@@ -1340,45 +1529,72 @@ router.get('/:id/participants', authenticateJWT, isAdmin, async (req: any, res: 
       });
     }
 
-    const teams: any[] = await Team.find({
-      _id: { $in: registeredTeamIds.map((id: string) => new mongoose.Types.ObjectId(id)) }
-    })
-      .select('name tag logo members players captain stats')
-      .lean();
-
-    const rows = teams
-      .map((team: any) => {
-        const membersSet = new Set<string>();
-        const captainId = team?.captain ? String(team.captain) : '';
-        if (captainId) membersSet.add(captainId);
-        (Array.isArray(team?.members) ? team.members : []).forEach((value: any) => membersSet.add(String(value)));
-        (Array.isArray(team?.players) ? team.players : []).forEach((value: any) => membersSet.add(String(value)));
-
-        return {
-          id: String(team?._id || ''),
-          name: String(team?.name || ''),
-          tag: String(team?.tag || ''),
-          logo: String(team?.logo || ''),
-          membersCount: membersSet.size,
-          stats: {
-            wins: Number(team?.stats?.wins || 0),
-            losses: Number(team?.stats?.losses || 0),
-            points: Number(team?.stats?.points || 0),
-            rank: Number(team?.stats?.rank || 0),
-            winRate: Number(team?.stats?.winRate || 0),
-            totalMatches: Number(team?.stats?.totalMatches || 0)
+    const teamObjectIds = registeredTeamIds.map((id: string) => new mongoose.Types.ObjectId(id));
+    const matchQuery: any = { _id: { $in: teamObjectIds } };
+    if (search) {
+      const regex = new RegExp(escapeRegex(search), 'i');
+      matchQuery.$or = [{ name: regex }, { tag: regex }];
+    }
+    const [facetRow] = await Team.aggregate([
+      { $match: matchQuery },
+      {
+        $addFields: {
+          _allMembers: {
+            $setUnion: [
+              { $ifNull: ['$members', []] },
+              { $ifNull: ['$players', []] },
+              {
+                $cond: [
+                  { $ifNull: ['$captain', false] },
+                  ['$captain'],
+                  []
+                ]
+              }
+            ]
           }
-        };
-      })
-      .filter((row: any) => {
-        if (!search) return true;
-        return row.name.toLowerCase().includes(search) || row.tag.toLowerCase().includes(search);
-      })
-      .sort((a: any, b: any) => Number(b?.stats?.points || 0) - Number(a?.stats?.points || 0));
-
-    const total = rows.length;
-    const start = (page - 1) * limit;
-    const data = rows.slice(start, start + limit);
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          tag: 1,
+          logo: 1,
+          membersCount: { $size: { $ifNull: ['$_allMembers', []] } },
+          stats: {
+            wins: { $toDouble: { $ifNull: ['$stats.wins', 0] } },
+            losses: { $toDouble: { $ifNull: ['$stats.losses', 0] } },
+            points: { $toDouble: { $ifNull: ['$stats.points', 0] } },
+            rank: { $toDouble: { $ifNull: ['$stats.rank', 0] } },
+            winRate: { $toDouble: { $ifNull: ['$stats.winRate', 0] } },
+            totalMatches: { $toDouble: { $ifNull: ['$stats.totalMatches', 0] } }
+          }
+        }
+      },
+      { $sort: { 'stats.points': -1 } },
+      {
+        $facet: {
+          data: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+          total: [{ $count: 'value' }]
+        }
+      }
+    ]);
+    const total = Number(facetRow?.total?.[0]?.value || 0);
+    const data = (Array.isArray(facetRow?.data) ? facetRow.data : []).map((row: any) => ({
+      id: String(row?._id || ''),
+      name: String(row?.name || ''),
+      tag: String(row?.tag || ''),
+      logo: String(row?.logo || ''),
+      membersCount: Number(row?.membersCount || 0),
+      stats: {
+        wins: Number(row?.stats?.wins || 0),
+        losses: Number(row?.stats?.losses || 0),
+        points: Number(row?.stats?.points || 0),
+        rank: Number(row?.stats?.rank || 0),
+        winRate: Number(row?.stats?.winRate || 0),
+        totalMatches: Number(row?.stats?.totalMatches || 0)
+      }
+    }));
 
     return res.json({
       success: true,
@@ -1413,38 +1629,47 @@ router.get('/:id/participants/export.csv', authenticateJWT, isAdmin, async (req:
       return res.status(200).send('teamId,teamName,tag,membersCount,wins,losses,points,rank,winRate,totalMatches');
     }
 
-    const teams: any[] = await Team.find({
-      _id: { $in: registeredTeamIds.map((id: string) => new mongoose.Types.ObjectId(id)) }
-    })
-      .select('name tag members players captain stats')
-      .lean();
-
-    const rows = teams
-      .map((team: any) => {
-        const membersSet = new Set<string>();
-        const captainId = team?.captain ? String(team.captain) : '';
-        if (captainId) membersSet.add(captainId);
-        (Array.isArray(team?.members) ? team.members : []).forEach((value: any) => membersSet.add(String(value)));
-        (Array.isArray(team?.players) ? team.players : []).forEach((value: any) => membersSet.add(String(value)));
-
-        return {
-          teamId: String(team?._id || ''),
-          teamName: String(team?.name || ''),
-          tag: String(team?.tag || ''),
-          membersCount: membersSet.size,
-          wins: Number(team?.stats?.wins || 0),
-          losses: Number(team?.stats?.losses || 0),
-          points: Number(team?.stats?.points || 0),
-          rank: Number(team?.stats?.rank || 0),
-          winRate: Number(team?.stats?.winRate || 0),
-          totalMatches: Number(team?.stats?.totalMatches || 0)
-        };
-      })
-      .filter((row: any) => {
-        if (!search) return true;
-        return row.teamName.toLowerCase().includes(search) || row.tag.toLowerCase().includes(search);
-      })
-      .sort((a: any, b: any) => Number(b?.points || 0) - Number(a?.points || 0));
+    const teamObjectIds = registeredTeamIds.map((id: string) => new mongoose.Types.ObjectId(id));
+    const matchQuery: any = { _id: { $in: teamObjectIds } };
+    if (search) {
+      const regex = new RegExp(escapeRegex(search), 'i');
+      matchQuery.$or = [{ name: regex }, { tag: regex }];
+    }
+    const rows = await Team.aggregate([
+      { $match: matchQuery },
+      {
+        $addFields: {
+          _allMembers: {
+            $setUnion: [
+              { $ifNull: ['$members', []] },
+              { $ifNull: ['$players', []] },
+              {
+                $cond: [
+                  { $ifNull: ['$captain', false] },
+                  ['$captain'],
+                  []
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        $project: {
+          teamId: { $toString: '$_id' },
+          teamName: { $ifNull: ['$name', ''] },
+          tag: { $ifNull: ['$tag', ''] },
+          membersCount: { $size: { $ifNull: ['$_allMembers', []] } },
+          wins: { $toDouble: { $ifNull: ['$stats.wins', 0] } },
+          losses: { $toDouble: { $ifNull: ['$stats.losses', 0] } },
+          points: { $toDouble: { $ifNull: ['$stats.points', 0] } },
+          rank: { $toDouble: { $ifNull: ['$stats.rank', 0] } },
+          winRate: { $toDouble: { $ifNull: ['$stats.winRate', 0] } },
+          totalMatches: { $toDouble: { $ifNull: ['$stats.totalMatches', 0] } }
+        }
+      },
+      { $sort: { points: -1 } }
+    ]);
 
     const csvCell = (value: any) => `"${String(value ?? '').replace(/"/g, '""')}"`;
     const header = ['teamId', 'teamName', 'tag', 'membersCount', 'wins', 'losses', 'points', 'rank', 'winRate', 'totalMatches'];
@@ -1544,6 +1769,7 @@ router.post('/:id/requests/:teamId/approve', authenticateJWT, isAdmin, idempoten
     }
 
     await cacheService.invalidateTournamentCaches();
+    invalidateAdminOverviewCache(String(req.params.id || ''));
 
     return res.json({
       success: true,
@@ -1595,6 +1821,7 @@ router.post('/:id/requests/:teamId/reject', authenticateJWT, isAdmin, idempotenc
     );
 
     await cacheService.invalidateTournamentCaches();
+    invalidateAdminOverviewCache(String(req.params.id || ''));
 
     return res.json({
       success: true,
@@ -1683,6 +1910,7 @@ router.post('/:id/requests/:teamId/reopen', authenticateJWT, isAdmin, idempotenc
 
     await tournament.save();
     await cacheService.invalidateTournamentCaches();
+    invalidateAdminOverviewCache(tournamentId);
 
     return res.json({
       success: true,
@@ -1848,6 +2076,7 @@ router.post('/:id/requests/bulk', authenticateJWT, isAdmin, idempotency({ requir
     }
 
     await cacheService.invalidateTournamentCaches();
+    invalidateAdminOverviewCache(tournamentId);
 
     return res.json({
       success: true,
@@ -1940,6 +2169,7 @@ router.post('/:id/participants/:teamId/add', authenticateJWT, isAdmin, idempoten
     }
 
     await cacheService.invalidateTournamentCaches();
+    invalidateAdminOverviewCache(tournamentId);
 
     return res.json({
       success: true,
@@ -2004,6 +2234,7 @@ router.delete('/:id/participants/:teamId/remove', authenticateJWT, isAdmin, idem
     }
 
     await cacheService.invalidateTournamentCaches();
+    invalidateAdminOverviewCache(tournamentId);
 
     return res.json({
       success: true,
@@ -2090,6 +2321,7 @@ router.post('/:id/participants/bulk-remove', authenticateJWT, isAdmin, idempoten
     }
 
     await cacheService.invalidateTournamentCaches();
+    invalidateAdminOverviewCache(tournamentId);
 
     return res.json({
       success: true,
@@ -2157,6 +2389,7 @@ router.patch('/:id/participants/:teamId/stats', authenticateJWT, isAdmin, idempo
     await team.save();
 
     await cacheService.invalidateTournamentCaches();
+    invalidateAdminOverviewCache(tournamentId);
 
     return res.json({
       success: true,
@@ -2256,6 +2489,7 @@ router.post('/:id/participants/recalculate-stats', authenticateJWT, isAdmin, ide
     }
 
     await cacheService.invalidateTournamentCaches();
+    invalidateAdminOverviewCache(tournamentId);
 
     return res.json({
       success: true,
@@ -2273,9 +2507,31 @@ router.post('/:id/participants/recalculate-stats', authenticateJWT, isAdmin, ide
 });
 
 // Admin: tournament overview (participants, pending requests, matches, bracket)
+const ADMIN_OVERVIEW_TTL_SEC = Math.max(3, Math.ceil(Math.max(3000, Number(process.env.ADMIN_OVERVIEW_CACHE_MS || 10000)) / 1000));
+const MATCHES_ADMIN_TTL_SEC = Math.max(2, Math.ceil(Math.max(2000, Number(process.env.MATCHES_ADMIN_CACHE_MS || 5000)) / 1000));
+
+function invalidateAdminOverviewCache(tournamentId?: string) {
+  if (tournamentId) {
+    const tournamentKey = String(tournamentId);
+    void cacheService.invalidate(`tournament:admin-overview:${tournamentKey}`);
+    void cacheService.invalidatePattern(`tournament:matches-admin:${tournamentKey}:*`);
+    void cacheService.invalidatePattern(`tournament:matches-admin-ids:${tournamentKey}:*`);
+    return;
+  }
+  void cacheService.invalidatePattern('tournament:admin-overview:*');
+  void cacheService.invalidatePattern('tournament:matches-admin:*');
+  void cacheService.invalidatePattern('tournament:matches-admin-ids:*');
+}
+
 router.get('/:id/admin-overview', authenticateJWT, isAdmin, async (req, res) => {
   try {
     const tournamentId = req.params.id;
+    const cacheKey = `tournament:admin-overview:${tournamentId}`;
+    const cached = await cacheService.getJson<any>(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const tournament: any = await Tournament.findById(tournamentId)
       .populate('registeredTeams', 'name tag logo stats members captain')
       .populate('registrationRequests.team', 'name tag logo stats members captain')
@@ -2427,7 +2683,7 @@ router.get('/:id/admin-overview', authenticateJWT, isAdmin, async (req, res) => 
 
     const pendingRequests = requests.filter((item: any) => String(item?.status || '').toLowerCase() === 'pending').length;
 
-    return res.json({
+    const payload = {
       success: true,
       data: {
         tournament: {
@@ -2504,7 +2760,9 @@ router.get('/:id/admin-overview', authenticateJWT, isAdmin, async (req, res) => 
         })),
         bracket
       }
-    });
+    };
+    await cacheService.setJson(cacheKey, payload, ADMIN_OVERVIEW_TTL_SEC);
+    return res.json(payload);
   } catch (error) {
     console.error('Error fetching admin tournament overview:', error);
     return res.status(500).json({ success: false, error: 'Failed to fetch admin tournament overview' });
@@ -2512,6 +2770,56 @@ router.get('/:id/admin-overview', authenticateJWT, isAdmin, async (req, res) => 
 });
 
 // Admin: paged tournament matches with filters/search
+const applyRoomWinnerFilters = (baseQuery: any, room: string, winner: string) => {
+  const next = { ...(baseQuery || {}) } as any;
+
+  if (room === 'with_room') {
+    next['roomCredentials.roomId'] = { $exists: true, $ne: '' };
+    next['roomCredentials.password'] = { $exists: true, $ne: '' };
+  } else if (room === 'without_room') {
+    next.$or = [
+      { 'roomCredentials.roomId': { $exists: false } },
+      { 'roomCredentials.password': { $exists: false } },
+      { 'roomCredentials.roomId': '' },
+      { 'roomCredentials.password': '' }
+    ];
+  }
+
+  if (winner === 'with_winner') {
+    next.winner = { $exists: true, $ne: null };
+  } else if (winner === 'without_winner') {
+    next.$and = [...(Array.isArray(next.$and) ? next.$and : []), { $or: [{ winner: { $exists: false } }, { winner: null }] }];
+  }
+
+  return next;
+};
+
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const buildMatchSearchPipeline = (baseQuery: any, search: string) => {
+  const pipeline: any[] = [{ $match: baseQuery }];
+
+  pipeline.push(
+    { $lookup: { from: 'teams', localField: 'team1', foreignField: '_id', as: 'team1Doc' } },
+    { $unwind: { path: '$team1Doc', preserveNullAndEmptyArrays: true } },
+    { $lookup: { from: 'teams', localField: 'team2', foreignField: '_id', as: 'team2Doc' } },
+    { $unwind: { path: '$team2Doc', preserveNullAndEmptyArrays: true } },
+    { $lookup: { from: 'teams', localField: 'winner', foreignField: '_id', as: 'winnerDoc' } },
+    { $unwind: { path: '$winnerDoc', preserveNullAndEmptyArrays: true } }
+  );
+
+  if (search) {
+    const regex = new RegExp(escapeRegex(search), 'i');
+    pipeline.push({
+      $match: {
+        $or: [{ round: regex }, { 'team1Doc.name': regex }, { 'team2Doc.name': regex }]
+      }
+    });
+  }
+
+  return pipeline;
+};
+
 router.get('/:id/matches/admin', authenticateJWT, isAdmin, async (req: any, res: any) => {
   try {
     const tournamentId = String(req.params.id || '');
@@ -2525,53 +2833,196 @@ router.get('/:id/matches/admin', authenticateJWT, isAdmin, async (req: any, res:
     if (!tournament) {
       return res.status(404).json({ success: false, error: 'Tournament not found' });
     }
-
-    const dbQuery: any = { tournament: new mongoose.Types.ObjectId(tournamentId) };
-    if (status && status !== 'all') {
-      dbQuery.status = status;
+    const cacheKey = `tournament:matches-admin:${tournamentId}:${JSON.stringify({ page, limit, status, room, winner, search })}`;
+    const cached = await cacheService.getJson<any>(cacheKey);
+    if (cached) {
+      return res.json(cached);
     }
 
-    const rawMatches: any[] = await Match.find(dbQuery)
-      .populate('team1', 'name tag logo')
-      .populate('team2', 'name tag logo')
-      .populate('winner', 'name tag logo')
-      .sort({ startTime: 1 })
-      .lean();
+    const summaryQuery: any = { tournament: new mongoose.Types.ObjectId(tournamentId) };
+    if (status && status !== 'all') {
+      summaryQuery.status = status;
+    }
+    const dbQuery = applyRoomWinnerFilters(summaryQuery, room, winner);
 
-    const filteredMatches = rawMatches.filter((match: any) => {
-      const hasRoom = Boolean(match?.roomCredentials?.roomId && match?.roomCredentials?.password);
-      if (room === 'with_room' && !hasRoom) return false;
-      if (room === 'without_room' && hasRoom) return false;
+    if (!search) {
+      const skip = (page - 1) * limit;
+      const [pageRows, total, totalAll, byStatusRows, roomsPreparedAll, roomsPreparedFiltered, liveWithoutRoom, completedWithoutWinner] = await Promise.all([
+        Match.find(dbQuery)
+          .populate('team1', 'name tag logo')
+          .populate('team2', 'name tag logo')
+          .populate('winner', 'name tag logo')
+          .sort({ startTime: 1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        Match.countDocuments(dbQuery),
+        Match.countDocuments(summaryQuery),
+        Match.aggregate([
+          { $match: summaryQuery },
+          { $group: { _id: '$status', count: { $sum: 1 } } }
+        ]),
+        Match.countDocuments({ ...summaryQuery, 'roomCredentials.roomId': { $exists: true, $ne: '' }, 'roomCredentials.password': { $exists: true, $ne: '' } }),
+        Match.countDocuments({ ...dbQuery, 'roomCredentials.roomId': { $exists: true, $ne: '' }, 'roomCredentials.password': { $exists: true, $ne: '' } }),
+        Match.countDocuments({
+          ...summaryQuery,
+          status: 'live',
+          $or: [
+            { 'roomCredentials.roomId': { $exists: false } },
+            { 'roomCredentials.password': { $exists: false } },
+            { 'roomCredentials.roomId': '' },
+            { 'roomCredentials.password': '' }
+          ]
+        }),
+        Match.countDocuments({ ...summaryQuery, status: 'completed', $or: [{ winner: { $exists: false } }, { winner: null }] })
+      ]);
 
-      const hasWinner = Boolean(match?.winner);
-      if (winner === 'with_winner' && !hasWinner) return false;
-      if (winner === 'without_winner' && hasWinner) return false;
+      const byStatus = { scheduled: 0, live: 0, completed: 0, cancelled: 0 } as Record<string, number>;
+      (byStatusRows || []).forEach((row: any) => {
+        const key = String(row?._id || '').toLowerCase();
+        if (key) byStatus[key] = Number(row?.count || 0);
+      });
 
-      if (!search) return true;
-      const t1 = String(match?.team1?.name || '').toLowerCase();
-      const t2 = String(match?.team2?.name || '').toLowerCase();
-      const round = String(match?.round || '').toLowerCase();
-      return t1.includes(search) || t2.includes(search) || round.includes(search);
-    });
+      const matchIds = pageRows
+        .map((match: any) => match?._id)
+        .filter(Boolean)
+        .map((id: any) => new mongoose.Types.ObjectId(id));
 
-    const total = filteredMatches.length;
-    const totalAll = rawMatches.length;
-    const roomsPreparedAll = rawMatches.filter((match: any) => Boolean(match?.roomCredentials?.roomId && match?.roomCredentials?.password)).length;
-    const roomsPreparedFiltered = filteredMatches.filter((match: any) => Boolean(match?.roomCredentials?.roomId && match?.roomCredentials?.password)).length;
-    const byStatus = rawMatches.reduce((acc: Record<string, number>, match: any) => {
-      const key = String(match?.status || 'scheduled').toLowerCase();
-      acc[key] = Number(acc[key] || 0) + 1;
-      return acc;
-    }, { scheduled: 0, live: 0, completed: 0, cancelled: 0 });
-    const liveWithoutRoom = rawMatches.filter((match: any) =>
-      String(match?.status || '').toLowerCase() === 'live' &&
-      !(match?.roomCredentials?.roomId && match?.roomCredentials?.password)
-    ).length;
-    const completedWithoutWinner = rawMatches.filter((match: any) =>
-      String(match?.status || '').toLowerCase() === 'completed' && !match?.winner
-    ).length;
+      const [eventsByTypeRows, participantsRows] = matchIds.length
+        ? await Promise.all([
+          MatchEvent.aggregate([
+            { $match: { matchId: { $in: matchIds } } },
+            { $group: { _id: { matchId: '$matchId', eventType: '$eventType' }, count: { $sum: 1 } } }
+          ]),
+          MatchEvent.aggregate([
+            { $match: { matchId: { $in: matchIds } } },
+            { $group: { _id: '$matchId', players: { $addToSet: '$playerId' }, teams: { $addToSet: '$teamId' }, totalEvents: { $sum: 1 } } }
+          ])
+        ])
+        : [[], []];
+
+      const eventsByMatch = new Map<string, Record<string, number>>();
+      for (const row of eventsByTypeRows as any[]) {
+        const matchId = row?._id?.matchId ? String(row._id.matchId) : '';
+        const eventType = row?._id?.eventType ? String(row._id.eventType) : '';
+        if (!matchId || !eventType) continue;
+        const next = eventsByMatch.get(matchId) || {};
+        next[eventType] = Number(row?.count || 0);
+        eventsByMatch.set(matchId, next);
+      }
+
+      const participantsByMatch = new Map<string, { players: number; teams: number; totalEvents: number }>();
+      for (const row of participantsRows as any[]) {
+        const matchId = row?._id ? String(row._id) : '';
+        if (!matchId) continue;
+        participantsByMatch.set(matchId, {
+          players: Array.isArray(row?.players) ? row.players.length : 0,
+          teams: Array.isArray(row?.teams) ? row.teams.length : 0,
+          totalEvents: Number(row?.totalEvents || 0)
+        });
+      }
+
+      const data = pageRows.map((match: any) => {
+        const key = String(match?._id || '');
+        const byType = eventsByMatch.get(key) || {};
+        const participantsMeta = participantsByMatch.get(key) || { players: 0, teams: 0, totalEvents: 0 };
+        return {
+          id: key,
+          round: String(match?.round || ''),
+          status: String(match?.status || 'scheduled'),
+          startTime: match?.startTime || null,
+          team1: match?.team1 ? { id: String(match.team1._id || ''), name: String(match.team1.name || ''), tag: String(match.team1.tag || ''), logo: String(match.team1.logo || '') } : null,
+          team2: match?.team2 ? { id: String(match.team2._id || ''), name: String(match.team2.name || ''), tag: String(match.team2.tag || ''), logo: String(match.team2.logo || '') } : null,
+          winnerId: match?.winner ? String(match.winner._id || '') : null,
+          score: { team1: Number(match?.score?.team1 || 0), team2: Number(match?.score?.team2 || 0) },
+          hasRoomCredentials: Boolean(match?.roomCredentials?.roomId && match?.roomCredentials?.password),
+          roomCredentials: match?.roomCredentials?.roomId && match?.roomCredentials?.password
+            ? {
+                roomId: String(match.roomCredentials.roomId || ''),
+                password: String(match.roomCredentials.password || ''),
+                visibleAt: match.roomCredentials.visibleAt || null,
+                expiresAt: match.roomCredentials.expiresAt || null
+              }
+            : null,
+          eventsSummary: {
+            totalEvents: Number(participantsMeta.totalEvents || 0),
+            participants: { players: Number(participantsMeta.players || 0), teams: Number(participantsMeta.teams || 0) },
+            byType
+          }
+        };
+      });
+
+      const payload = {
+        success: true,
+        data,
+        pagination: buildPaginationMeta(page, limit, total),
+        summary: { filteredTotal: total, totalAll, roomsPreparedFiltered, roomsPreparedAll, byStatus, liveWithoutRoom, completedWithoutWinner }
+      };
+      await cacheService.setJson(cacheKey, payload, MATCHES_ADMIN_TTL_SEC);
+      return res.json(payload);
+    }
+
     const skip = (page - 1) * limit;
-    const pageRows = filteredMatches.slice(skip, skip + limit);
+    const searchPipeline = buildMatchSearchPipeline(dbQuery, search);
+    const [countRow] = await Match.aggregate([...searchPipeline, { $count: 'total' }]);
+    const total = Number(countRow?.total || 0);
+    const [pageRows, totalAll, byStatusRows, roomsPreparedAll, liveWithoutRoom, completedWithoutWinner] = await Promise.all([
+      Match.aggregate([
+        ...searchPipeline,
+        { $sort: { startTime: 1 } },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $project: {
+            _id: 1,
+            round: 1,
+            status: 1,
+            startTime: 1,
+            score: 1,
+            roomCredentials: 1,
+            team1: { _id: '$team1Doc._id', name: '$team1Doc.name', tag: '$team1Doc.tag', logo: '$team1Doc.logo' },
+            team2: { _id: '$team2Doc._id', name: '$team2Doc.name', tag: '$team2Doc.tag', logo: '$team2Doc.logo' },
+            winner: { _id: '$winnerDoc._id', name: '$winnerDoc.name', tag: '$winnerDoc.tag', logo: '$winnerDoc.logo' }
+          }
+        }
+      ]),
+      Match.countDocuments(summaryQuery),
+      Match.aggregate([
+        { $match: summaryQuery },
+        { $group: { _id: '$status', count: { $sum: 1 } } }
+      ]),
+      Match.countDocuments({ ...summaryQuery, 'roomCredentials.roomId': { $exists: true, $ne: '' }, 'roomCredentials.password': { $exists: true, $ne: '' } }),
+      Match.countDocuments({
+        ...summaryQuery,
+        status: 'live',
+        $or: [
+          { 'roomCredentials.roomId': { $exists: false } },
+          { 'roomCredentials.password': { $exists: false } },
+          { 'roomCredentials.roomId': '' },
+          { 'roomCredentials.password': '' }
+        ]
+      }),
+      Match.countDocuments({ ...summaryQuery, status: 'completed', $or: [{ winner: { $exists: false } }, { winner: null }] })
+    ]);
+    const byStatus = { scheduled: 0, live: 0, completed: 0, cancelled: 0 } as Record<string, number>;
+    (byStatusRows || []).forEach((row: any) => {
+      const key = String(row?._id || '').toLowerCase();
+      if (key) byStatus[key] = Number(row?.count || 0);
+    });
+    const roomsPreparedFiltered =
+      room === 'without_room'
+        ? 0
+        : room === 'with_room'
+          ? total
+          : Number(
+              (
+                await Match.aggregate([
+                  ...searchPipeline,
+                  { $match: { 'roomCredentials.roomId': { $exists: true, $ne: '' }, 'roomCredentials.password': { $exists: true, $ne: '' } } },
+                  { $count: 'total' }
+                ])
+              )?.[0]?.total || 0
+            );
 
     const matchIds = pageRows
       .map((match: any) => match?._id)
@@ -2677,7 +3128,7 @@ router.get('/:id/matches/admin', authenticateJWT, isAdmin, async (req: any, res:
       };
     });
 
-    return res.json({
+    const payload = {
       success: true,
       data,
       pagination: buildPaginationMeta(page, limit, total),
@@ -2690,7 +3141,9 @@ router.get('/:id/matches/admin', authenticateJWT, isAdmin, async (req: any, res:
         liveWithoutRoom,
         completedWithoutWinner
       }
-    });
+    };
+    await cacheService.setJson(cacheKey, payload, MATCHES_ADMIN_TTL_SEC);
+    return res.json(payload);
   } catch (error) {
     console.error('Error fetching paged tournament matches:', error);
     return res.status(500).json({ success: false, error: 'Failed to fetch tournament matches' });
@@ -2710,42 +3163,49 @@ router.get('/:id/matches/admin/ids', authenticateJWT, isAdmin, async (req: any, 
     if (!tournament) {
       return res.status(404).json({ success: false, error: 'Tournament not found' });
     }
-
-    const dbQuery: any = { tournament: new mongoose.Types.ObjectId(tournamentId) };
-    if (status && status !== 'all') {
-      dbQuery.status = status;
+    const cacheKey = `tournament:matches-admin-ids:${tournamentId}:${JSON.stringify({ status, room, winner, search })}`;
+    const cached = await cacheService.getJson<any>(cacheKey);
+    if (cached) {
+      return res.json(cached);
     }
 
-    const rawMatches: any[] = await Match.find(dbQuery)
-      .populate('team1', 'name')
-      .populate('team2', 'name')
-      .select('_id round status winner roomCredentials team1 team2')
-      .lean();
+    const summaryQuery: any = { tournament: new mongoose.Types.ObjectId(tournamentId) };
+    if (status && status !== 'all') {
+      summaryQuery.status = status;
+    }
+    const dbQuery = applyRoomWinnerFilters(summaryQuery, room, winner);
 
-    const filtered = rawMatches.filter((match: any) => {
-      const hasRoom = Boolean(match?.roomCredentials?.roomId && match?.roomCredentials?.password);
-      if (room === 'with_room' && !hasRoom) return false;
-      if (room === 'without_room' && hasRoom) return false;
+    if (!search) {
+      const rows: any[] = await Match.find(dbQuery)
+        .select('_id')
+        .lean();
+      const payload = {
+        success: true,
+        data: {
+          matchIds: rows.map((m: any) => String(m?._id || '')).filter(Boolean),
+          filteredTotal: rows.length,
+          totalAll: await Match.countDocuments(summaryQuery)
+        }
+      };
+      await cacheService.setJson(cacheKey, payload, MATCHES_ADMIN_TTL_SEC);
+      return res.json(payload);
+    }
 
-      const hasWinner = Boolean(match?.winner);
-      if (winner === 'with_winner' && !hasWinner) return false;
-      if (winner === 'without_winner' && hasWinner) return false;
+    const filtered: any[] = await Match.aggregate([
+      ...buildMatchSearchPipeline(dbQuery, search),
+      { $project: { _id: 1 } }
+    ]);
 
-      if (!search) return true;
-      const t1 = String(match?.team1?.name || '').toLowerCase();
-      const t2 = String(match?.team2?.name || '').toLowerCase();
-      const round = String(match?.round || '').toLowerCase();
-      return t1.includes(search) || t2.includes(search) || round.includes(search);
-    });
-
-    return res.json({
+    const payload = {
       success: true,
       data: {
         matchIds: filtered.map((m: any) => String(m?._id || '')).filter(Boolean),
         filteredTotal: filtered.length,
-        totalAll: rawMatches.length
+        totalAll: await Match.countDocuments(summaryQuery)
       }
-    });
+    };
+    await cacheService.setJson(cacheKey, payload, MATCHES_ADMIN_TTL_SEC);
+    return res.json(payload);
   } catch (error) {
     console.error('Error resolving tournament match ids:', error);
     return res.status(500).json({ success: false, error: 'Failed to resolve match ids' });
@@ -2766,32 +3226,34 @@ router.get('/:id/matches/admin/export.csv', authenticateJWT, isAdmin, async (req
       return res.status(404).json({ success: false, error: 'Tournament not found' });
     }
 
-    const dbQuery: any = { tournament: new mongoose.Types.ObjectId(tournamentId) };
-    if (status && status !== 'all') dbQuery.status = status;
+    const summaryQuery: any = { tournament: new mongoose.Types.ObjectId(tournamentId) };
+    if (status && status !== 'all') summaryQuery.status = status;
+    const dbQuery = applyRoomWinnerFilters(summaryQuery, room, winner);
 
-    const rawMatches: any[] = await Match.find(dbQuery)
-      .populate('team1', 'name')
-      .populate('team2', 'name')
-      .populate('winner', 'name')
-      .sort({ startTime: 1 })
-      .select('_id round status winner score roomCredentials team1 team2')
-      .lean();
-
-    const filtered = rawMatches.filter((match: any) => {
-      const hasRoom = Boolean(match?.roomCredentials?.roomId && match?.roomCredentials?.password);
-      if (room === 'with_room' && !hasRoom) return false;
-      if (room === 'without_room' && hasRoom) return false;
-
-      const hasWinner = Boolean(match?.winner);
-      if (winner === 'with_winner' && !hasWinner) return false;
-      if (winner === 'without_winner' && hasWinner) return false;
-
-      if (!search) return true;
-      const t1 = String(match?.team1?.name || '').toLowerCase();
-      const t2 = String(match?.team2?.name || '').toLowerCase();
-      const round = String(match?.round || '').toLowerCase();
-      return t1.includes(search) || t2.includes(search) || round.includes(search);
-    });
+    const filtered: any[] = search
+      ? await Match.aggregate([
+          ...buildMatchSearchPipeline(dbQuery, search),
+          { $sort: { startTime: 1 } },
+          {
+            $project: {
+              _id: 1,
+              round: 1,
+              status: 1,
+              score: 1,
+              roomCredentials: 1,
+              team1: { name: '$team1Doc.name' },
+              team2: { name: '$team2Doc.name' },
+              winner: { name: '$winnerDoc.name' }
+            }
+          }
+        ])
+      : await Match.find(dbQuery)
+          .populate('team1', 'name')
+          .populate('team2', 'name')
+          .populate('winner', 'name')
+          .sort({ startTime: 1 })
+          .select('_id round status winner score roomCredentials team1 team2')
+          .lean();
 
     const csvCell = (value: any) => `"${String(value ?? '').replace(/"/g, '""')}"`;
     const header = [
@@ -2866,6 +3328,7 @@ router.post('/:id/start', authenticateJWT, isAdmin, async (req, res) => {
     const generated = await generateBracketMatches(tournament);
 
     await cacheService.invalidateTournamentCaches();
+    invalidateAdminOverviewCache(String(req.params.id || ''));
 
     return res.json({
       success: true,
@@ -2978,6 +3441,7 @@ router.put('/:id',
 
       // Invalidate caches
       await cacheService.invalidateTournamentCaches();
+      invalidateAdminOverviewCache(String(populatedTournament?._id || req.params.id || ''));
 
       res.json({
         success: true,
@@ -3017,6 +3481,7 @@ router.delete('/:id', authenticateJWT, isAdmin, async (req, res) => {
 
     // Invalidate caches
     await cacheService.invalidateTournamentCaches();
+    invalidateAdminOverviewCache(String(req.params.id || ''));
 
     res.json({
       success: true,
@@ -3035,34 +3500,41 @@ router.delete('/:id', authenticateJWT, isAdmin, async (req, res) => {
 router.get('/:id/schedule', async (req, res) => {
   try {
     const tournamentId = req.params.id;
-    const matches = await Match.find({ tournament: tournamentId, status: 'scheduled' })
-      .populate('team1', 'name tag logo')
-      .populate('team2', 'name tag logo')
-      .sort({ startTime: 1 })
-      .lean();
+    const cacheKey = `tournament:schedule:${tournamentId}`;
+    const transformed = (await cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const matches = await Match.find({ tournament: tournamentId, status: 'scheduled' })
+          .populate('team1', 'name tag logo')
+          .populate('team2', 'name tag logo')
+          .sort({ startTime: 1 })
+          .lean();
 
-    const transformed = matches.map((m: any) => ({
-      id: String(m._id),
-      tournamentId,
-      game: m.game,
-      team1: m.team1 ? {
-        id: m.team1._id?.toString() || m.team1.toString(),
-        name: m.team1.name || '',
-        tag: m.team1.tag || '',
-        logo: m.team1.logo || ''
-      } : m.team1,
-      team2: m.team2 ? {
-        id: m.team2._id?.toString() || m.team2.toString(),
-        name: m.team2.name || '',
-        tag: m.team2.tag || '',
-        logo: m.team2.logo || ''
-      } : m.team2,
-      status: 'upcoming',
-      startTime: m.startTime?.toISOString() || new Date().toISOString(),
-      round: m.round || '',
-      map: m.map || '',
-      score: m.score || {}
-    }));
+        return matches.map((m: any) => ({
+          id: String(m._id),
+          tournamentId,
+          game: m.game,
+          team1: m.team1 ? {
+            id: m.team1._id?.toString() || m.team1.toString(),
+            name: m.team1.name || '',
+            tag: m.team1.tag || '',
+            logo: m.team1.logo || ''
+          } : m.team1,
+          team2: m.team2 ? {
+            id: m.team2._id?.toString() || m.team2.toString(),
+            name: m.team2.name || '',
+            tag: m.team2.tag || '',
+            logo: m.team2.logo || ''
+          } : m.team2,
+          status: 'upcoming',
+          startTime: m.startTime?.toISOString() || new Date().toISOString(),
+          round: m.round || '',
+          map: m.map || '',
+          score: m.score || {}
+        }));
+      },
+      { key: cacheKey, ttl: 15 }
+    )) || [];
 
     res.json({ success: true, data: transformed });
   } catch (error) {
@@ -3075,41 +3547,48 @@ router.get('/:id/schedule', async (req, res) => {
 router.get('/:id/live', async (req, res) => {
   try {
     const tournamentId = req.params.id;
-    const matches = await Match.find({ tournament: tournamentId, status: 'live' })
-      .populate('team1', 'name tag logo')
-      .populate('team2', 'name tag logo')
-      .populate('winner', 'name tag logo')
-      .sort({ startTime: 1 })
-      .lean();
+    const cacheKey = `tournament:live:${tournamentId}`;
+    const transformed = (await cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const matches = await Match.find({ tournament: tournamentId, status: 'live' })
+          .populate('team1', 'name tag logo')
+          .populate('team2', 'name tag logo')
+          .populate('winner', 'name tag logo')
+          .sort({ startTime: 1 })
+          .lean();
 
-    const transformed = matches.map((m: any) => ({
-      id: String(m._id),
-      tournamentId,
-      game: m.game,
-      team1: m.team1 ? {
-        id: m.team1._id?.toString() || m.team1.toString(),
-        name: m.team1.name || '',
-        tag: m.team1.tag || '',
-        logo: m.team1.logo || ''
-      } : m.team1,
-      team2: m.team2 ? {
-        id: m.team2._id?.toString() || m.team2.toString(),
-        name: m.team2.name || '',
-        tag: m.team2.tag || '',
-        logo: m.team2.logo || ''
-      } : m.team2,
-      status: 'live',
-      startTime: m.startTime?.toISOString() || new Date().toISOString(),
-      round: m.round || '',
-      map: m.map || '',
-      score: m.score || {},
-      winner: m.winner ? {
-        id: m.winner._id?.toString() || m.winner.toString(),
-        name: m.winner.name || '',
-        tag: m.winner.tag || '',
-        logo: m.winner.logo || ''
-      } : m.winner
-    }));
+        return matches.map((m: any) => ({
+          id: String(m._id),
+          tournamentId,
+          game: m.game,
+          team1: m.team1 ? {
+            id: m.team1._id?.toString() || m.team1.toString(),
+            name: m.team1.name || '',
+            tag: m.team1.tag || '',
+            logo: m.team1.logo || ''
+          } : m.team1,
+          team2: m.team2 ? {
+            id: m.team2._id?.toString() || m.team2.toString(),
+            name: m.team2.name || '',
+            tag: m.team2.tag || '',
+            logo: m.team2.logo || ''
+          } : m.team2,
+          status: 'live',
+          startTime: m.startTime?.toISOString() || new Date().toISOString(),
+          round: m.round || '',
+          map: m.map || '',
+          score: m.score || {},
+          winner: m.winner ? {
+            id: m.winner._id?.toString() || m.winner.toString(),
+            name: m.winner.name || '',
+            tag: m.winner.tag || '',
+            logo: m.winner.logo || ''
+          } : m.winner
+        }));
+      },
+      { key: cacheKey, ttl: 10 }
+    )) || [];
 
     res.json({ success: true, data: transformed });
   } catch (error) {
@@ -3165,6 +3644,7 @@ router.put('/:id/reschedule', authenticateJWT, isAdmin, async (req, res) => {
 
     // Invalidate caches
     await cacheService.invalidateTournamentCaches();
+    invalidateAdminOverviewCache(tournamentId);
 
     res.json({
       success: true,
@@ -3183,3 +3663,5 @@ router.put('/:id/reschedule', authenticateJWT, isAdmin, async (req, res) => {
 });
 
 export default router;
+
+

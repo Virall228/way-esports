@@ -70,8 +70,9 @@ authLogSchema.index({ createdAt: -1 });
 authLogSchema.index({ event: 1, createdAt: -1 });
 authLogSchema.index({ method: 1, createdAt: -1 });
 authLogSchema.index({ status: 1, createdAt: -1 });
+authLogSchema.index({ event: 1, status: 1, createdAt: -1 });
+authLogSchema.index({ method: 1, status: 1, createdAt: -1 });
 authLogSchema.index({ userId: 1, createdAt: -1 });
 authLogSchema.index({ identifier: 1, createdAt: -1 });
 
 export default mongoose.model<IAuthLog>('AuthLog', authLogSchema);
-

@@ -4,6 +4,13 @@ import Tournament from '../models/Tournament';
 import News from '../models/News';
 import Team from '../models/Team';
 import Wallet from '../models/Wallet';
+import cacheService from '../services/cacheService';
+
+const getAdminStatsCacheTtlSeconds = (): number => {
+    const ttlMs = Number(process.env.ADMIN_STATS_CACHE_MS || 10000);
+    const safeMs = Number.isFinite(ttlMs) ? Math.max(1000, ttlMs) : 10000;
+    return Math.max(1, Math.ceil(safeMs / 1000));
+};
 
 /**
  * Get dashboard statistics for admin panel
@@ -11,6 +18,12 @@ import Wallet from '../models/Wallet';
  */
 export const getDashboardStats = async (req: Request, res: Response) => {
     try {
+        const cacheKey = 'admin:stats:dashboard:v1';
+        const cached = await cacheService.getJson<any>(cacheKey);
+        if (cached) {
+            return res.json(cached);
+        }
+
         const [
             totalUsers,
             activeTournaments,
@@ -26,7 +39,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
             ])
         ]);
 
-        res.json({
+        const payload = {
             success: true,
             data: {
                 totalUsers,
@@ -34,7 +47,10 @@ export const getDashboardStats = async (req: Request, res: Response) => {
                 newsArticles,
                 totalPrizePool: prizePoolSummary[0]?.total || 0
             }
-        });
+        };
+
+        await cacheService.setJson(cacheKey, payload, getAdminStatsCacheTtlSeconds());
+        return res.json(payload);
     } catch (error) {
         console.error('Admin stats error:', error);
         res.status(500).json({ success: false, error: 'Failed to fetch dashboard statistics' });
@@ -46,6 +62,12 @@ export const getDashboardStats = async (req: Request, res: Response) => {
  */
 export const getAnalytics = async (req: Request, res: Response) => {
     try {
+        const cacheKey = 'admin:stats:analytics:v1';
+        const cached = await cacheService.getJson<any>(cacheKey);
+        if (cached) {
+            return res.json(cached);
+        }
+
         // Aggregation for registrations by day (last 30 days)
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -72,13 +94,16 @@ export const getAnalytics = async (req: Request, res: Response) => {
             ]
         });
 
-        res.json({
+        const payload = {
             success: true,
             data: {
                 userGrowth,
                 activeSubscriptions
             }
-        });
+        };
+
+        await cacheService.setJson(cacheKey, payload, getAdminStatsCacheTtlSeconds());
+        return res.json(payload);
     } catch (error) {
         console.error('Analytics error:', error);
         res.status(500).json({ success: false, error: 'Failed to fetch analytics' });

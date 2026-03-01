@@ -282,5 +282,7 @@ async function distributePrizeToPlayer(
 tournamentSchema.index({ game: 1, status: 1 });
 tournamentSchema.index({ startDate: 1 });
 tournamentSchema.index({ 'registrationRequests.team': 1, 'registrationRequests.status': 1 });
+tournamentSchema.index({ status: 1, startDate: 1 });
+tournamentSchema.index({ 'registrationRequests.status': 1, 'registrationRequests.requestedAt': -1 });
 
 export default mongoose.model<ITournament>('Tournament', tournamentSchema);

@@ -61,6 +61,8 @@ const Title = styled.h1`
   margin: 0 0 0.5rem 0;
   color: ${({ theme }) => theme.colors.text.primary};
   font-size: clamp(1.5rem, 4vw, 2.25rem);
+  word-break: break-word;
+  overflow-wrap: anywhere;
 `;
 
 const Subtitle = styled.div`
@@ -69,6 +71,7 @@ const Subtitle = styled.div`
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  min-width: 0;
 `;
 
 const Tabs = styled.div`
@@ -113,6 +116,7 @@ const TeamsRow = styled.div`
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 
   @media (max-width: 480px) {
     grid-template-columns: 1fr;
@@ -123,6 +127,10 @@ const TeamsRow = styled.div`
 const TeamName = styled.div`
   color: #ffffff;
   font-weight: 700;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.2;
 `;
 
 const TeamCell = styled.div<{ $align?: 'left' | 'right' }>`
@@ -132,6 +140,12 @@ const TeamCell = styled.div<{ $align?: 'left' | 'right' }>`
   justify-content: ${({ $align }) => ($align === 'right' ? 'flex-end' : 'flex-start')};
   width: 100%;
   flex-direction: ${({ $align }) => ($align === 'right' ? 'row-reverse' : 'row')};
+  min-width: 0;
+
+  @media (max-width: 480px) {
+    justify-content: flex-start;
+    flex-direction: row;
+  }
 `;
 
 const Vs = styled.div`
@@ -160,6 +174,7 @@ const RegisteredTeamItem = styled.div`
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  min-width: 0;
 `;
 
 const RegisteredTeamsCard = styled(SurfaceCard)`
@@ -180,6 +195,12 @@ const Banner = styled.div<{ $src?: string }>`
   padding: 2rem;
   position: relative;
   overflow: hidden;
+  min-width: 0;
+
+  @media (max-width: 600px) {
+    height: 220px;
+    padding: 1rem;
+  }
 
   &::after {
     content: '';
@@ -365,7 +386,7 @@ const TournamentDetailsPage: React.FC = () => {
   return (
     <Container>
       <Banner $src={tournamentBanner || '/images/main.png'}>
-        <div>
+        <div style={{ minWidth: 0, width: '100%' }}>
           <Title style={{ color: '#fff', marginBottom: '0.25rem' }}>{title}</Title>
           <Subtitle>
             <span style={{ color: '#ff6b00', fontWeight: 'bold' }}>{tournament?.game || '\u2014'}</span>
@@ -482,7 +503,7 @@ const TournamentDetailsPage: React.FC = () => {
                       {loadingRoomId === m.id ? 'Loading room...' : 'Show Room Credentials'}
                     </Button>
                     {roomByMatch[m.id] && (
-                      <Meta>
+                      <Meta style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                         Room: <strong>{roomByMatch[m.id].roomId}</strong> | Password: <strong>{roomByMatch[m.id].password}</strong>
                       </Meta>
                     )}

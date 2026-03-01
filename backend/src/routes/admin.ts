@@ -15,6 +15,7 @@ import { idempotency } from '../middleware/idempotency';
 import { getMetricsSnapshot } from '../services/monitoringService';
 import { getQueueStats } from '../services/queue';
 import { listJsonBackups, runJsonBackup } from '../services/backupService';
+import cacheService from '../services/cacheService';
 
 const router = express.Router();
 
@@ -68,6 +69,160 @@ const toNumber = (value: unknown, fallback = 0): number => {
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+const getAdminListCacheTtlSeconds = (): number => {
+  const ttlMs = Number(process.env.ADMIN_LIST_CACHE_MS || 10000);
+  const safeMs = Number.isFinite(ttlMs) ? Math.max(1000, ttlMs) : 10000;
+  return Math.max(1, Math.ceil(safeMs / 1000));
+};
+
+const buildAdminListCacheKey = (scope: string, query: Record<string, unknown>): string => {
+  const normalized = Object.keys(query || {})
+    .sort()
+    .map((key) => {
+      const value = query[key];
+      if (Array.isArray(value)) return `${key}=${value.join(',')}`;
+      if (value === undefined || value === null) return `${key}=`;
+      return `${key}=${String(value)}`;
+    })
+    .join('&');
+
+  return `admin:list:${scope}:${normalized}`;
+};
+
+let opsStreamPayloadCache: { expiresAt: number; payload: any } | null = null;
+let opsStreamInFlight: Promise<any> | null = null;
+let tournamentRequestsSnapshotCache: { expiresAt: number; payload: any; signature: string } | null = null;
+let tournamentRequestsInFlight: Promise<{ payload: any; signature: string }> | null = null;
+
+const getOpsStreamPayloadCached = async (): Promise<any> => {
+  const now = Date.now();
+  const ttlMsRaw = Number(process.env.OPS_STREAM_SNAPSHOT_CACHE_MS || 3000);
+  const ttlMs = Number.isFinite(ttlMsRaw) ? Math.max(500, ttlMsRaw) : 3000;
+
+  if (opsStreamPayloadCache && opsStreamPayloadCache.expiresAt > now) {
+    return opsStreamPayloadCache.payload;
+  }
+
+  if (opsStreamInFlight) {
+    return opsStreamInFlight;
+  }
+
+  opsStreamInFlight = (async () => {
+    const payload = {
+      timestamp: new Date().toISOString(),
+      metrics: getMetricsSnapshot(),
+      queue: await getQueueStats()
+    };
+
+    opsStreamPayloadCache = {
+      expiresAt: Date.now() + ttlMs,
+      payload
+    };
+
+    return payload;
+  })();
+
+  try {
+    return await opsStreamInFlight;
+  } finally {
+    opsStreamInFlight = null;
+  }
+};
+
+const getTournamentRequestsSnapshotCached = async (
+  maxRows: number
+): Promise<{ payload: any; signature: string }> => {
+  const now = Date.now();
+  const ttlMsRaw = Number(process.env.TOURNAMENT_REQUESTS_STREAM_CACHE_MS || 3000);
+  const ttlMs = Number.isFinite(ttlMsRaw) ? Math.max(500, ttlMsRaw) : 3000;
+
+  if (
+    tournamentRequestsSnapshotCache &&
+    tournamentRequestsSnapshotCache.expiresAt > now &&
+    Array.isArray(tournamentRequestsSnapshotCache.payload?.pendingByTournament) &&
+    tournamentRequestsSnapshotCache.payload.pendingByTournament.length <= maxRows
+  ) {
+    return {
+      payload: tournamentRequestsSnapshotCache.payload,
+      signature: tournamentRequestsSnapshotCache.signature
+    };
+  }
+
+  if (tournamentRequestsInFlight) {
+    return tournamentRequestsInFlight;
+  }
+
+  tournamentRequestsInFlight = (async () => {
+    const [aggRows, totalRow] = await Promise.all([
+      Tournament.aggregate([
+        { $unwind: '$registrationRequests' },
+        { $match: { 'registrationRequests.status': 'pending' } },
+        {
+          $group: {
+            _id: '$_id',
+            name: { $first: '$name' },
+            updatedAt: { $max: '$updatedAt' },
+            pendingCount: { $sum: 1 }
+          }
+        },
+        { $sort: { pendingCount: -1, updatedAt: -1 } },
+        { $limit: maxRows },
+        {
+          $project: {
+            _id: 0,
+            tournamentId: { $toString: '$_id' },
+            name: 1,
+            updatedAt: 1,
+            pendingCount: 1
+          }
+        }
+      ]),
+      Tournament.aggregate([
+        { $unwind: '$registrationRequests' },
+        { $match: { 'registrationRequests.status': 'pending' } },
+        { $group: { _id: null, totalPending: { $sum: 1 } } }
+      ])
+    ]);
+
+    const pendingByTournament = (aggRows || []).map((row: any) => ({
+      tournamentId: String(row?.tournamentId || ''),
+      name: String(row?.name || ''),
+      pendingCount: Number(row?.pendingCount || 0),
+      updatedAt: row?.updatedAt ? new Date(row.updatedAt).toISOString() : null
+    }));
+
+    const totalPending = Number(totalRow?.[0]?.totalPending || 0);
+    const payload = {
+      timestamp: new Date().toISOString(),
+      totalPending,
+      pendingByTournament
+    };
+
+    const signature = JSON.stringify({
+      totalPending,
+      pendingByTournament: pendingByTournament.map((item: any) => ({
+        tournamentId: item.tournamentId,
+        pendingCount: item.pendingCount,
+        updatedAt: item.updatedAt
+      }))
+    });
+
+    tournamentRequestsSnapshotCache = {
+      expiresAt: Date.now() + ttlMs,
+      payload,
+      signature
+    };
+
+    return { payload, signature };
+  })();
+
+  try {
+    return await tournamentRequestsInFlight;
+  } finally {
+    tournamentRequestsInFlight = null;
+  }
+};
+
 const buildAuthLogQuery = (queryParams: Record<string, unknown>) => {
   const event = typeof queryParams.event === 'string' ? queryParams.event.trim() : '';
   const method = typeof queryParams.method === 'string' ? queryParams.method.trim() : '';
@@ -102,6 +257,16 @@ const csvEscape = (value: unknown): string => {
   const raw = String(value);
   const escaped = raw.replace(/"/g, '""');
   return `"${escaped}"`;
+};
+
+const writeCsvHeader = (res: any, fileName: string, headers: string[]) => {
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+  res.write(`${headers.join(',')}\n`);
+};
+
+const writeCsvRow = (res: any, values: unknown[]) => {
+  res.write(`${values.map((value) => csvEscape(value)).join(',')}\n`);
 };
 
 const ensureWalletDoc = async (userId: mongoose.Types.ObjectId) => {
@@ -142,6 +307,20 @@ router.use((req, res, next) => {
   return next();
 });
 router.use(adminAuditMiddleware);
+
+router.use((req, res, next) => {
+  if (req.method === 'GET') return next();
+
+  res.on('finish', () => {
+    if (res.statusCode >= 400) return;
+
+    cacheService.invalidatePattern('admin:list:*').catch(() => {});
+    cacheService.invalidate('admin:stats:dashboard:v1').catch(() => {});
+    cacheService.invalidate('admin:stats:analytics:v1').catch(() => {});
+  });
+
+  return next();
+});
 
 router.get('/stats', getDashboardStats);
 router.get('/analytics', getAnalytics);
@@ -394,11 +573,7 @@ router.get('/ops/stream', async (req, res) => {
     if (closed) return;
 
     try {
-      const payload = {
-        timestamp: new Date().toISOString(),
-        metrics: getMetricsSnapshot(),
-        queue: await getQueueStats()
-      };
+      const payload = await getOpsStreamPayloadCached();
       res.write(`event: snapshot\n`);
       res.write(`data: ${JSON.stringify(payload)}\n\n`);
     } catch (error: any) {
@@ -443,44 +618,13 @@ router.get('/tournaments/requests/stream', async (req, res) => {
 
   let closed = false;
   let previousSignature = '';
+  const maxRowsRaw = Number(req.query?.limit || process.env.TOURNAMENT_REQUESTS_STREAM_LIMIT || 100);
+  const maxRows = Math.max(10, Math.min(500, Number.isFinite(maxRowsRaw) ? maxRowsRaw : 100));
 
   const writeSnapshot = async () => {
     if (closed) return;
     try {
-      const rows = await Tournament.find({})
-        .select('_id name registrationRequests updatedAt')
-        .lean();
-
-      const pendingByTournament = rows
-        .map((row: any) => {
-          const pendingCount = Array.isArray(row?.registrationRequests)
-            ? row.registrationRequests.filter((request: any) => request?.status === 'pending').length
-            : 0;
-          return {
-            tournamentId: String(row?._id || ''),
-            name: String(row?.name || ''),
-            pendingCount,
-            updatedAt: row?.updatedAt ? new Date(row.updatedAt).toISOString() : null
-          };
-        })
-        .filter((item) => item.pendingCount > 0)
-        .sort((a, b) => b.pendingCount - a.pendingCount);
-
-      const totalPending = pendingByTournament.reduce((sum, item) => sum + item.pendingCount, 0);
-      const payload = {
-        timestamp: new Date().toISOString(),
-        totalPending,
-        pendingByTournament
-      };
-
-      const signature = JSON.stringify({
-        totalPending,
-        pendingByTournament: pendingByTournament.map((item) => ({
-          tournamentId: item.tournamentId,
-          pendingCount: item.pendingCount,
-          updatedAt: item.updatedAt
-        }))
-      });
+      const { payload, signature } = await getTournamentRequestsSnapshotCached(maxRows);
 
       if (signature !== previousSignature) {
         previousSignature = signature;
@@ -494,9 +638,10 @@ router.get('/tournaments/requests/stream', async (req, res) => {
   };
 
   await writeSnapshot();
+  const intervalMs = Math.max(3000, Number(process.env.TOURNAMENT_REQUESTS_STREAM_INTERVAL_MS || 10000));
   const interval = setInterval(() => {
     writeSnapshot().catch(() => {});
-  }, 10000);
+  }, intervalMs);
 
   const heartbeat = setInterval(() => {
     if (!closed) {
@@ -531,6 +676,12 @@ router.post('/ops/backups/run', idempotency({ required: true }), async (_req, re
 
 router.get('/audit', async (req, res) => {
   try {
+    const cacheKey = buildAdminListCacheKey('audit', req.query as Record<string, unknown>);
+    const cached = await cacheService.getJson<any>(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>, {
       defaultLimit: 50,
       maxLimit: 200
@@ -579,11 +730,14 @@ router.get('/audit', async (req, res) => {
         .lean()
     ]);
 
-    return res.json({
+    const payload = {
       success: true,
       data: rows,
       pagination: buildPaginationMeta(page, limit, total)
-    });
+    };
+
+    await cacheService.setJson(cacheKey, payload, getAdminListCacheTtlSeconds());
+    return res.json(payload);
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message || 'Failed to fetch audit logs' });
   }
@@ -628,11 +782,6 @@ router.get('/audit/export.csv', async (req, res) => {
       }
     }
 
-    const rows = await AuditLog.find(query)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean();
-
     const headers = [
       'createdAt',
       'action',
@@ -646,32 +795,31 @@ router.get('/audit/export.csv', async (req, res) => {
       'ip',
       'durationMs'
     ];
-
-    const lines = [
-      headers.join(','),
-      ...rows.map((row: any) =>
-        [
-          csvEscape(row.createdAt),
-          csvEscape(row.action),
-          csvEscape(row.entity),
-          csvEscape(row.entityId || ''),
-          csvEscape(row.statusCode),
-          csvEscape(row.actorRole || ''),
-          csvEscape(row.actorTelegramId || ''),
-          csvEscape(row.method || ''),
-          csvEscape(row.path || ''),
-          csvEscape(row.ip || ''),
-          csvEscape(row.durationMs || '')
-        ].join(',')
-      )
-    ];
-
-    const csv = `${lines.join('\n')}\n`;
     const fileName = `audit_${new Date().toISOString().slice(0, 10)}.csv`;
+    writeCsvHeader(res, fileName, headers);
 
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    return res.status(200).send(csv);
+    const cursor = AuditLog.find(query)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .cursor();
+
+    for await (const row of cursor as any) {
+      writeCsvRow(res, [
+        row?.createdAt || '',
+        row?.action || '',
+        row?.entity || '',
+        row?.entityId || '',
+        row?.statusCode || '',
+        row?.actorRole || '',
+        row?.actorTelegramId || '',
+        row?.method || '',
+        row?.path || '',
+        row?.ip || '',
+        row?.durationMs || ''
+      ]);
+    }
+
+    return res.status(200).end();
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message || 'Failed to export audit CSV' });
   }
@@ -679,6 +827,12 @@ router.get('/audit/export.csv', async (req, res) => {
 
 router.get('/auth-logs', async (req, res) => {
   try {
+    const cacheKey = buildAdminListCacheKey('auth-logs', req.query as Record<string, unknown>);
+    const cached = await cacheService.getJson<any>(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>, {
       defaultLimit: 100,
       maxLimit: 500
@@ -695,11 +849,14 @@ router.get('/auth-logs', async (req, res) => {
         .lean()
     ]);
 
-    return res.json({
+    const payload = {
       success: true,
       data: rows,
       pagination: buildPaginationMeta(page, limit, total)
-    });
+    };
+
+    await cacheService.setJson(cacheKey, payload, getAdminListCacheTtlSeconds());
+    return res.json(payload);
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message || 'Failed to fetch auth logs' });
   }
@@ -710,12 +867,6 @@ router.get('/auth-logs/export.csv', async (req, res) => {
     const rawLimit = toNumber(req.query.limit, 5000);
     const limit = Math.min(Math.max(Math.trunc(rawLimit), 1), 10000);
     const query = buildAuthLogQuery(req.query as Record<string, unknown>);
-
-    const rows = await AuthLog.find(query)
-      .populate('userId', 'username email telegramId role')
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean();
 
     const headers = [
       'createdAt',
@@ -733,34 +884,64 @@ router.get('/auth-logs/export.csv', async (req, res) => {
       'userAgent'
     ];
 
-    const lines = [
-      headers.join(','),
-      ...rows.map((row: any) => {
-        const userData = row?.userId || {};
-        return [
-          csvEscape(row.createdAt),
-          csvEscape(row.event),
-          csvEscape(row.status),
-          csvEscape(row.method),
-          csvEscape(userData?._id || ''),
-          csvEscape(userData?.username || ''),
-          csvEscape(userData?.email || ''),
-          csvEscape(userData?.telegramId || ''),
-          csvEscape(userData?.role || ''),
-          csvEscape(row.identifier || ''),
-          csvEscape(row.reason || ''),
-          csvEscape(row.ip || ''),
-          csvEscape(row.userAgent || '')
-        ].join(',');
-      })
+    const fileName = `auth_logs_${new Date().toISOString().slice(0, 10)}.csv`;
+    writeCsvHeader(res, fileName, headers);
+
+    const pipeline: any[] = [
+      { $match: query },
+      { $sort: { createdAt: -1 } },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'userData'
+        }
+      },
+      { $unwind: { path: '$userData', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          createdAt: 1,
+          event: 1,
+          status: 1,
+          method: 1,
+          identifier: 1,
+          reason: 1,
+          ip: 1,
+          userAgent: 1,
+          userId: '$userData._id',
+          username: '$userData.username',
+          email: '$userData.email',
+          telegramId: '$userData.telegramId',
+          role: '$userData.role'
+        }
+      }
     ];
 
-    const csv = `${lines.join('\n')}\n`;
-    const fileName = `auth_logs_${new Date().toISOString().slice(0, 10)}.csv`;
+    const cursor: any = (AuthLog.aggregate(pipeline).allowDiskUse(true).cursor({ batchSize: 500 }) as any).exec();
+    while (true) {
+      const row = await cursor.next();
+      if (!row) break;
 
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    return res.status(200).send(csv);
+      writeCsvRow(res, [
+        row?.createdAt || '',
+        row?.event || '',
+        row?.status || '',
+        row?.method || '',
+        row?.userId || '',
+        row?.username || '',
+        row?.email || '',
+        row?.telegramId || '',
+        row?.role || '',
+        row?.identifier || '',
+        row?.reason || '',
+        row?.ip || '',
+        row?.userAgent || ''
+      ]);
+    }
+
+    return res.status(200).end();
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message || 'Failed to export auth log CSV' });
   }
@@ -769,6 +950,12 @@ router.get('/auth-logs/export.csv', async (req, res) => {
 // Get all users (for admin panel)
 router.get('/users', async (req, res) => {
   try {
+    const cacheKey = buildAdminListCacheKey('users', req.query as Record<string, unknown>);
+    const cached = await cacheService.getJson<any>(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>, {
       defaultLimit: 25,
       maxLimit: 200
@@ -844,7 +1031,7 @@ router.get('/users', async (req, res) => {
       };
     });
 
-    res.json({
+    const payload = {
       success: true,
       data: normalizedUsers,
       pagination: buildPaginationMeta(page, limit, total),
@@ -853,7 +1040,10 @@ router.get('/users', async (req, res) => {
         filteredSubscribed,
         filteredBanned
       }
-    });
+    };
+
+    await cacheService.setJson(cacheKey, payload, getAdminListCacheTtlSeconds());
+    return res.json(payload);
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -861,6 +1051,12 @@ router.get('/users', async (req, res) => {
 
 router.get('/users/wallpapers', async (req, res) => {
   try {
+    const cacheKey = buildAdminListCacheKey('users-wallpapers', req.query as Record<string, unknown>);
+    const cached = await cacheService.getJson<any>(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
     const status = typeof req.query.status === 'string' ? req.query.status.trim() : 'active';
     const limitRaw = Number(req.query.limit || 200);
@@ -883,7 +1079,7 @@ router.get('/users/wallpapers', async (req, res) => {
       .limit(limit)
       .lean();
 
-    return res.json({
+    const payload = {
       success: true,
       data: users.map((user: any) => ({
         id: String(user._id),
@@ -894,7 +1090,10 @@ router.get('/users/wallpapers', async (req, res) => {
         role: user.role || 'user',
         profileWallpaper: user.profileWallpaper || null
       }))
-    });
+    };
+
+    await cacheService.setJson(cacheKey, payload, getAdminListCacheTtlSeconds());
+    return res.json(payload);
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message || 'Failed to load wallpapers' });
   }
@@ -959,21 +1158,7 @@ router.get('/users/export.csv', async (req, res) => {
       query.$or = searchOr;
     }
 
-    const users: any[] = await User.find(query)
-      .select('-password -passwordHash')
-      .sort({ createdAt: -1 })
-      .limit(5000)
-      .lean();
-
-    const userIds = users.map((item: any) => item?._id).filter(Boolean);
-    const wallets: any[] = await Wallet.find({ user: { $in: userIds } })
-      .select('user balance')
-      .lean();
-    const balanceByUser = new Map<string, number>(
-      wallets.map((wallet: any) => [wallet.user.toString(), Number(wallet.balance || 0)])
-    );
-
-    const header = [
+    const headers = [
       'id',
       'username',
       'firstName',
@@ -989,36 +1174,66 @@ router.get('/users/export.csv', async (req, res) => {
       'isBanned',
       'createdAt'
     ];
+    const fileName = `users_${new Date().toISOString().slice(0, 10)}.csv`;
+    writeCsvHeader(res, fileName, headers);
 
-    const lines = [
-      header.join(','),
-      ...users.map((u: any) => {
-        const id = u?._id?.toString?.() || '';
-        const walletBalance = balanceByUser.get(id) ?? Number(u?.wallet?.balance || 0);
-        return [
-          csvEscape(id),
-          csvEscape(u?.username || ''),
-          csvEscape(u?.firstName || ''),
-          csvEscape(u?.lastName || ''),
-          csvEscape(u?.email || ''),
-          csvEscape(u?.telegramId || ''),
-          csvEscape(u?.role || 'user'),
-          csvEscape(Boolean(u?.isSubscribed)),
-          csvEscape(u?.subscriptionExpiresAt || ''),
-          csvEscape(Number(u?.freeEntriesCount || 0)),
-          csvEscape(Number(u?.bonusEntries || 0)),
-          csvEscape(walletBalance),
-          csvEscape(Boolean(u?.isBanned)),
-          csvEscape(u?.createdAt || '')
-        ].join(',');
-      })
+    const pipeline: any[] = [
+      { $match: query },
+      { $sort: { createdAt: -1 } },
+      { $limit: 5000 },
+      {
+        $lookup: {
+          from: 'wallets',
+          localField: '_id',
+          foreignField: 'user',
+          as: 'walletDoc'
+        }
+      },
+      { $unwind: { path: '$walletDoc', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 1,
+          username: 1,
+          firstName: 1,
+          lastName: 1,
+          email: 1,
+          telegramId: 1,
+          role: 1,
+          isSubscribed: 1,
+          subscriptionExpiresAt: 1,
+          freeEntriesCount: 1,
+          bonusEntries: 1,
+          isBanned: 1,
+          createdAt: 1,
+          walletBalance: { $ifNull: ['$walletDoc.balance', { $ifNull: ['$wallet.balance', 0] }] }
+        }
+      }
     ];
 
-    const csv = `${lines.join('\n')}\n`;
-    const fileName = `users_${new Date().toISOString().slice(0, 10)}.csv`;
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    return res.status(200).send(csv);
+    const cursor: any = (User.aggregate(pipeline).allowDiskUse(true).cursor({ batchSize: 500 }) as any).exec();
+    while (true) {
+      const row = await cursor.next();
+      if (!row) break;
+
+      writeCsvRow(res, [
+        row?._id?.toString?.() || '',
+        row?.username || '',
+        row?.firstName || '',
+        row?.lastName || '',
+        row?.email || '',
+        row?.telegramId || '',
+        row?.role || 'user',
+        Boolean(row?.isSubscribed),
+        row?.subscriptionExpiresAt || '',
+        Number(row?.freeEntriesCount || 0),
+        Number(row?.bonusEntries || 0),
+        Number(row?.walletBalance || 0),
+        Boolean(row?.isBanned),
+        row?.createdAt || ''
+      ]);
+    }
+
+    return res.status(200).end();
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message || 'Failed to export users CSV' });
   }
@@ -1203,121 +1418,149 @@ router.post('/users/:id/wallet/adjust', idempotency({ required: true }), async (
 // Flattened wallet/payment transaction list for admin review
 router.get('/wallet/transactions', async (req, res) => {
   try {
+    const cacheKey = buildAdminListCacheKey('wallet-transactions', req.query as Record<string, unknown>);
+    const cached = await cacheService.getJson<any>(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const statusFilter = typeof req.query.status === 'string' ? req.query.status.trim() : '';
     const typeFilter = typeof req.query.type === 'string' ? req.query.type.trim() : '';
-    const searchFilter = typeof req.query.search === 'string' ? req.query.search.trim().toLowerCase() : '';
+    const sourceFilter = typeof req.query.source === 'string' ? req.query.source.trim() : '';
+    const searchFilter = typeof req.query.search === 'string' ? req.query.search.trim() : '';
     const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>, {
       defaultLimit: 100,
       maxLimit: 500
     });
+    const txMatch: Record<string, unknown> = {};
+    if (statusFilter) txMatch['transactions.status'] = statusFilter;
+    if (typeFilter) txMatch['transactions.type'] = typeFilter;
 
-    const users: any[] = await User.find({}, 'username firstName lastName email telegramId wallet').lean();
-    const wallets: any[] = await Wallet.find({}, 'user balance transactions')
-      .populate('user', 'username email telegramId')
-      .lean();
-    const rows: any[] = [];
+    const projectRow = {
+      id: { $toString: '$transactions._id' },
+      userId: '$userId',
+      source: '$source',
+      username: { $ifNull: ['$username', ''] },
+      email: { $ifNull: ['$email', ''] },
+      telegramId: { $ifNull: ['$telegramId', 0] },
+      type: { $ifNull: ['$transactions.type', ''] },
+      amount: { $ifNull: ['$transactions.amount', 0] },
+      status: { $ifNull: ['$transactions.status', ''] },
+      description: { $ifNull: ['$transactions.description', ''] },
+      walletAddress: { $ifNull: ['$transactions.walletAddress', ''] },
+      network: { $ifNull: ['$transactions.network', ''] },
+      txHash: { $ifNull: ['$transactions.txHash', ''] },
+      processedAt: '$transactions.processedAt',
+      date: { $ifNull: ['$transactions.date', '$updatedAt'] },
+      reference: { $ifNull: ['$transactions.reference', ''] },
+      balance: { $ifNull: ['$balance', 0] },
+      amountText: { $toString: { $ifNull: ['$transactions.amount', 0] } }
+    };
 
-    users.forEach((entry: any) => {
-      const transactions: any[] = Array.isArray(entry?.wallet?.transactions) ? entry.wallet.transactions : [];
-
-      transactions.forEach((tx: any) => {
-        const id = tx?._id?.toString?.() || '';
-        if (!id) return;
-
-        rows.push({
-          id,
-          userId: entry?._id?.toString?.() || '',
-          source: 'user',
-          username: entry?.username || '',
-          email: entry?.email || '',
-          telegramId: Number(entry?.telegramId || 0),
-          type: tx?.type || '',
-          amount: Number(tx?.amount || 0),
-          status: tx?.status || '',
-          description: tx?.description || '',
-          walletAddress: tx?.walletAddress || '',
-          network: tx?.network || '',
-          txHash: tx?.txHash || '',
-          processedAt: tx?.processedAt || null,
-          date: tx?.date || entry?.updatedAt || new Date(),
-          reference: tx?.reference || '',
-          balance: Number(entry?.wallet?.balance || 0)
-        });
-      });
-    });
-
-    wallets.forEach((walletEntry: any) => {
-      const userRef = walletEntry?.user;
-      const userId = userRef?._id?.toString?.() || userRef?.toString?.() || '';
-      if (!userId) return;
-
-      const transactions: any[] = Array.isArray(walletEntry?.transactions) ? walletEntry.transactions : [];
-      transactions.forEach((tx: any) => {
-        const id = tx?._id?.toString?.() || '';
-        if (!id) return;
-
-        rows.push({
-          id,
-          userId,
+    const walletPipeline: any[] = [
+      { $unwind: '$transactions' },
+      ...(Object.keys(txMatch).length > 0 ? [{ $match: txMatch }] : []),
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'userDoc'
+        }
+      },
+      { $unwind: { path: '$userDoc', preserveNullAndEmptyArrays: true } },
+      {
+        $addFields: {
+          userId: {
+            $cond: [
+              { $ifNull: ['$userDoc._id', false] },
+              { $toString: '$userDoc._id' },
+              { $toString: '$user' }
+            ]
+          },
           source: 'wallet',
-          username: userRef?.username || '',
-          email: userRef?.email || '',
-          telegramId: Number(userRef?.telegramId || 0),
-          type: tx?.type || '',
-          amount: Number(tx?.amount || 0),
-          status: tx?.status || '',
-          description: tx?.description || '',
-          walletAddress: tx?.walletAddress || '',
-          network: tx?.network || '',
-          txHash: tx?.txHash || '',
-          processedAt: tx?.processedAt || null,
-          date: tx?.date || walletEntry?.updatedAt || new Date(),
-          reference: tx?.reference || '',
-          balance: Number(walletEntry?.balance || 0)
-        });
+          username: '$userDoc.username',
+          email: '$userDoc.email',
+          telegramId: '$userDoc.telegramId',
+          balance: '$balance'
+        }
+      },
+      { $project: projectRow }
+    ];
+
+    const userPipeline: any[] = [
+      { $unwind: '$wallet.transactions' },
+      {
+        $addFields: {
+          transactions: '$wallet.transactions'
+        }
+      },
+      ...(Object.keys(txMatch).length > 0 ? [{ $match: txMatch }] : []),
+      {
+        $addFields: {
+          userId: { $toString: '$_id' },
+          source: 'user',
+          balance: { $ifNull: ['$wallet.balance', 0] }
+        }
+      },
+      { $project: projectRow }
+    ];
+
+    const source = sourceFilter === 'wallet' || sourceFilter === 'user' ? sourceFilter : 'all';
+    const pipeline: any[] = source === 'wallet' ? [...walletPipeline] : [...userPipeline];
+    if (source === 'all') {
+      pipeline.push({ $unionWith: { coll: 'wallets', pipeline: walletPipeline } });
+    } else if (source === 'wallet') {
+      // already set
+    } else {
+      // already set to user pipeline
+    }
+
+    if (searchFilter) {
+      const searchRegex = new RegExp(escapeRegExp(searchFilter), 'i');
+      pipeline.push({
+        $match: {
+          $or: [
+            { username: searchRegex },
+            { email: searchRegex },
+            { walletAddress: searchRegex },
+            { network: searchRegex },
+            { txHash: searchRegex },
+            { description: searchRegex },
+            { reference: searchRegex },
+            { source: searchRegex },
+            { type: searchRegex },
+            { status: searchRegex },
+            { amountText: searchRegex },
+            { userId: searchRegex }
+          ]
+        }
       });
-    });
+    }
 
-    const filtered = rows.filter((row: any) => {
-      if (statusFilter && row.status !== statusFilter) return false;
-      if (typeFilter && row.type !== typeFilter) return false;
-      if (searchFilter) {
-        const payload = [
-          row.username,
-          row.email,
-          row.telegramId,
-          row.walletAddress,
-          row.network,
-          row.txHash,
-          row.description,
-          row.reference,
-          row.source,
-          row.type,
-          row.status,
-          Number(row.amount || 0).toFixed(2)
-        ]
-          .filter((value) => value !== undefined && value !== null)
-          .join(' ')
-          .toLowerCase();
-        if (!payload.includes(searchFilter)) return false;
+    pipeline.push(
+      { $sort: { date: -1 } },
+      {
+        $facet: {
+          meta: [{ $count: 'total' }],
+          data: [{ $skip: skip }, { $limit: limit }]
+        }
       }
-      return true;
-    });
+    );
 
-    filtered.sort((a: any, b: any) => {
-      const left = new Date(a.date).getTime();
-      const right = new Date(b.date).getTime();
-      return right - left;
-    });
+    const agg = await User.aggregate(pipeline);
+    const bucket = agg?.[0] || {};
+    const total = Number(bucket?.meta?.[0]?.total || 0);
+    const paged = Array.isArray(bucket?.data) ? bucket.data : [];
 
-    const total = filtered.length;
-    const paged = filtered.slice(skip, skip + limit);
-
-    res.json({
+    const payload = {
       success: true,
       data: paged,
       pagination: buildPaginationMeta(page, limit, total)
-    });
+    };
+
+    await cacheService.setJson(cacheKey, payload, getAdminListCacheTtlSeconds());
+    return res.json(payload);
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message || 'Failed to fetch wallet transactions' });
   }
@@ -1560,6 +1803,12 @@ router.patch('/wallet/transactions/:userId/:transactionId', idempotency({ requir
 // Get all teams (for admin panel)
 router.get('/teams', async (req, res) => {
   try {
+    const cacheKey = buildAdminListCacheKey('teams', req.query as Record<string, unknown>);
+    const cached = await cacheService.getJson<any>(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>, {
       defaultLimit: 25,
       maxLimit: 200
@@ -1582,14 +1831,17 @@ router.get('/teams', async (req, res) => {
         .limit(limit)
         .lean()
     ]);
-    res.json({
+    const payload = {
       success: true,
       data: teams,
       pagination: buildPaginationMeta(page, limit, total),
       summary: {
         filteredTotal: total
       }
-    });
+    };
+
+    await cacheService.setJson(cacheKey, payload, getAdminListCacheTtlSeconds());
+    return res.json(payload);
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -1598,6 +1850,12 @@ router.get('/teams', async (req, res) => {
 // Get all contact messages (admin panel)
 router.get('/contacts', async (req, res) => {
   try {
+    const cacheKey = buildAdminListCacheKey('contacts', req.query as Record<string, unknown>);
+    const cached = await cacheService.getJson<any>(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>, {
       defaultLimit: 50,
       maxLimit: 200
@@ -1619,14 +1877,17 @@ router.get('/contacts', async (req, res) => {
       .skip(skip)
       .limit(limit)
       .lean();
-    res.json({
+    const payload = {
       success: true,
       data: messages,
       pagination: buildPaginationMeta(page, limit, total),
       summary: {
         filteredTotal: total
       }
-    });
+    };
+
+    await cacheService.setJson(cacheKey, payload, getAdminListCacheTtlSeconds());
+    return res.json(payload);
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }

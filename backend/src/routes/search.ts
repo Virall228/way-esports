@@ -6,6 +6,8 @@ import User from '../models/User';
 
 const router = express.Router();
 
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 router.get('/', async (req, res) => {
   try {
     const q = String((req.query as any)?.q || '').trim();
@@ -16,11 +18,30 @@ router.get('/', async (req, res) => {
       return res.json({ success: true, data: { players: [], teams: [], tournaments: [], news: [] } });
     }
 
-    const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    const regex = new RegExp(escapeRegExp(q), 'i');
+    const isObjectId = /^[a-fA-F0-9]{24}$/.test(q);
+    const numericTelegramId = /^\d{3,20}$/.test(q) ? Number(q) : null;
+
+    const playerQuery: Record<string, unknown> = {
+      $or: [
+        { username: { $regex: regex } },
+        { firstName: { $regex: regex } },
+        { lastName: { $regex: regex } },
+        { 'gameProfiles.username': { $regex: regex } },
+        { 'gameProfiles.ingameId': { $regex: regex } }
+      ]
+    };
+
+    if (isObjectId) {
+      (playerQuery.$or as any[]).push({ _id: q });
+    }
+    if (numericTelegramId) {
+      (playerQuery.$or as any[]).push({ telegramId: numericTelegramId });
+    }
 
     const [players, teams, tournaments, news] = await Promise.all([
-      User.find({ username: { $regex: regex } })
-        .select('username firstName lastName profileLogo role stats')
+      User.find(playerQuery)
+        .select('username firstName lastName profileLogo role stats gameProfiles telegramId')
         .limit(limit)
         .lean(),
       Team.find({ name: { $regex: regex } })
@@ -38,48 +59,55 @@ router.get('/', async (req, res) => {
     ]);
 
     const data = {
-      players: (players || []).map((p: any) => ({
-        id: String(p._id),
+      players: (players || []).map((player: any) => ({
+        id: String(player._id),
         type: 'player',
-        name: p.username || [p.firstName, p.lastName].filter(Boolean).join(' '),
-        avatar: p.profileLogo || '👤',
-        details: p.stats ? `W:${p.stats.wins ?? 0} L:${p.stats.losses ?? 0}` : '',
+        name: player.username || [player.firstName, player.lastName].filter(Boolean).join(' '),
+        avatar: player.profileLogo || '',
+        internalPlatformId: String(player._id),
+        telegramId: Number(player?.telegramId || 0) || null,
+        ingameIds: Array.isArray(player?.gameProfiles)
+          ? player.gameProfiles
+            .map((profile: any) => String(profile?.ingameId || '').trim())
+            .filter(Boolean)
+          : [],
+        details: player.stats ? `W:${player.stats.wins ?? 0} L:${player.stats.losses ?? 0}` : '',
         relevance: 100
       })),
-      teams: (teams || []).map((t: any) => ({
-        id: String(t._id),
+      teams: (teams || []).map((team: any) => ({
+        id: String(team._id),
         type: 'team',
-        name: t.name,
-        avatar: t.logo || '👥',
-        tag: t.tag || '',
-        game: t.game,
-        status: t.status,
-        details: `${t.game || ''} • ${(t.members || []).length} members`,
+        name: team.name,
+        avatar: team.logo || '',
+        tag: team.tag || '',
+        game: team.game,
+        status: team.status,
+        details: `${team.game || ''} • ${(team.members || []).length} members`,
         relevance: 100
       })),
-      tournaments: (tournaments || []).map((t: any) => ({
-        id: String(t._id),
+      tournaments: (tournaments || []).map((tournament: any) => ({
+        id: String(tournament._id),
         type: 'tournament',
-        name: t.name,
-        avatar: '🏆',
-        status: t.status,
-        details: `Prize Pool: $${Number(t.prizePool || 0).toLocaleString()} • ${Number(t.currentParticipants || 0)}/${Number(t.maxTeams || 0)}`,
+        name: tournament.name,
+        avatar: '',
+        status: tournament.status,
+        details: `Prize Pool: $${Number(tournament.prizePool || 0).toLocaleString()} • ${Number(tournament.currentParticipants || 0)}/${Number(tournament.maxTeams || 0)}`,
         relevance: 100
       })),
-      news: (news || []).map((n: any) => ({
-        id: String(n._id),
+      news: (news || []).map((article: any) => ({
+        id: String(article._id),
         type: 'news',
-        name: n.title,
-        avatar: '📰',
-        details: n.summary || n.category || '',
+        name: article.title,
+        avatar: '',
+        details: article.summary || article.category || '',
         relevance: 80
       }))
     };
 
-    res.json({ success: true, data });
+    return res.json({ success: true, data });
   } catch (error: any) {
     console.error('Error searching:', error);
-    res.status(500).json({ success: false, error: error?.message || 'Failed to search' });
+    return res.status(500).json({ success: false, error: error?.message || 'Failed to search' });
   }
 });
 

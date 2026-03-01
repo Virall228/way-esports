@@ -78,6 +78,11 @@ const auditLogSchema = new Schema<IAuditLog>(
 
 auditLogSchema.index({ createdAt: -1 });
 auditLogSchema.index({ actorId: 1, createdAt: -1 });
+auditLogSchema.index({ actorRole: 1, createdAt: -1 });
+auditLogSchema.index({ action: 1, createdAt: -1 });
+auditLogSchema.index({ statusCode: 1, createdAt: -1 });
+auditLogSchema.index({ path: 1, createdAt: -1 });
+auditLogSchema.index({ path: 1, statusCode: 1, createdAt: -1 });
 auditLogSchema.index({ entity: 1, entityId: 1, createdAt: -1 });
 auditLogSchema.index({ method: 1, path: 1, createdAt: -1 });
 

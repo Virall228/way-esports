@@ -30,6 +30,7 @@ import prizesRouter from './routes/prizes';
 import referralsRouter from './routes/referrals';
 import termsRouter from './routes/terms';
 import adminRouter from './routes/admin';
+import adminMatchOcrRouter from './routes/adminMatchOcr';
 import uploadsRouter from './routes/uploads';
 import refundsRouter from './routes/refunds';
 import statsRouter from './routes/stats';
@@ -136,9 +137,16 @@ app.use(apiLimiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Logging middleware
+// Logging middleware (slow requests only to reduce I/O pressure)
+const SLOW_REQUEST_LOG_MS = Math.max(250, Number(process.env.SLOW_REQUEST_LOG_MS || 1200));
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  const started = Date.now();
+  res.on('finish', () => {
+    const elapsed = Date.now() - started;
+    if (elapsed >= SLOW_REQUEST_LOG_MS || res.statusCode >= 500) {
+      console.log(`${new Date().toISOString()} - ${req.method} ${req.path} ${res.statusCode} ${elapsed}ms`);
+    }
+  });
   next();
 });
 app.use(requestMetricsMiddleware);
@@ -160,6 +168,7 @@ app.use('/api/prizes', prizesRouter);
 app.use('/api/referrals', referralsRouter);
 app.use('/api/terms', termsRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/admin', adminMatchOcrRouter);
 app.use('/api/uploads', uploadsRouter);
 app.use('/api/refunds', authenticateJWT, refundsRouter);
 app.use('/api/stats', statsRouter);

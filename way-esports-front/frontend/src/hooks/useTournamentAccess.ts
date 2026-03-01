@@ -67,12 +67,19 @@ export const useTournamentAccess = () => {
     }
   };
 
-  const joinTournament = async (tournamentId: string, teamId?: string) => {
+  const joinTournament = async (
+    tournamentId: string,
+    teamId?: string,
+    ingameNickname?: string,
+    ingameId?: string
+  ) => {
     try {
       setError(null);
       
       const response: any = await api.post(`/api/tournaments/${tournamentId}/register`, {
-        teamId
+        teamId,
+        ingameNickname,
+        ingameId
       });
 
       return response;
