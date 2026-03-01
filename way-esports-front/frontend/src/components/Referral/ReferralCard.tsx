@@ -173,6 +173,13 @@ interface ReferralStats {
   freeEntriesCount: number;
   isSubscribed: boolean;
   subscriptionExpiresAt?: string;
+  viral?: {
+    invitesCount: number;
+    target: number;
+    remaining: number;
+    rewardIssued: boolean;
+    rewardIssuedAt?: string | null;
+  };
 }
 
 const ReferralCard: React.FC = () => {
@@ -263,6 +270,10 @@ const ReferralCard: React.FC = () => {
 
   const progressPercentage = stats.referralsUntilNextBonus === 0 ? 100 : 
     ((3 - stats.referralsUntilNextBonus) / 3) * 100;
+  const viralTarget = Number(stats.viral?.target || 10);
+  const viralCount = Number(stats.viral?.invitesCount || 0);
+  const viralRemaining = Math.max(0, Number(stats.viral?.remaining ?? Math.max(0, viralTarget - viralCount)));
+  const viralProgress = Math.max(0, Math.min(100, (viralCount / Math.max(1, viralTarget)) * 100));
 
   return (
     <Container>
@@ -307,6 +318,20 @@ const ReferralCard: React.FC = () => {
         </ProgressLabel>
         <ProgressBar>
           <ProgressFill $percentage={progressPercentage} />
+        </ProgressBar>
+      </ProgressSection>
+
+      <ProgressSection>
+        <ProgressLabel>
+          <span>Viral Challenge (Telegram)</span>
+          <span>
+            {stats.viral?.rewardIssued
+              ? 'Reward issued'
+              : `${viralRemaining} more invited users`}
+          </span>
+        </ProgressLabel>
+        <ProgressBar>
+          <ProgressFill $percentage={viralProgress} />
         </ProgressBar>
       </ProgressSection>
 

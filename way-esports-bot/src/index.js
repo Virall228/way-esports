@@ -13,6 +13,10 @@ const WEBHOOK_SECRET = String(process.env.WEBHOOK_SECRET || '').trim();
 const WEBHOOK_PUBLIC_URL = String(process.env.WEBHOOK_PUBLIC_URL || '').trim().replace(/\/+$/, '');
 const SUPPORT_EMAIL = String(process.env.SUPPORT_EMAIL || 'wayesports.org@gmail.com').trim();
 const COLLAB_TELEGRAM = String(process.env.COLLAB_TELEGRAM || '@wayesports').trim();
+const BOT_INTERNAL_TOKEN = String(process.env.BOT_INTERNAL_TOKEN || '').trim();
+const REMINDER_CHECK_MINUTES = Math.max(5, Number(process.env.BOT_REMINDER_CHECK_MINUTES || 60));
+const VIRAL_TARGET = Math.max(1, Number(process.env.BOT_VIRAL_TARGET || 10));
+const BOT_REMINDER_INTERVAL_DAYS = Math.max(1, Number(process.env.BOT_REMINDER_INTERVAL_DAYS || 5));
 
 if (!BOT_TOKEN) {
   console.error('TELEGRAM_BOT_TOKEN is required');
@@ -47,7 +51,16 @@ const I18N = {
     inviteAccepted: 'Invite accepted.\nOpen team page and submit join request:',
     playerCard: 'Player status card',
     statusLinked: 'Profile linked',
-    statusNo: 'no'
+    statusNo: 'no',
+    inviteTitle: 'Invite 10 friends and get reward',
+    inviteProgress: `Your progress: {count}/${VIRAL_TARGET}`,
+    inviteLeft: 'Need {left} more invited users.',
+    inviteDone: 'Goal completed. Reward has been issued.',
+    inviteLink: 'Your viral invite link',
+    reminderTitle: 'WAY ESPORTS UPDATE',
+    reminderBody: 'Join active tournaments and check latest platform news.',
+    reminderNews: 'Latest news',
+    reminderCta: 'Open Tournaments'
   },
   ru: {
     welcomeTitle: 'БОТ WAY ESPORTS',
@@ -83,12 +96,66 @@ const pickLang = (from) => {
 };
 
 const t = (lang, key) => (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+const tf = (lang, key, vars = {}) => {
+  const text = String(t(lang, key));
+  return Object.keys(vars).reduce((acc, k) => acc.replace(new RegExp(`\\{${k}\\}`, 'g'), String(vars[k])), text);
+};
 
 const appUrl = (path = '') => {
   if (!path) return WEBAPP_URL;
   const normalized = path.startsWith('/') ? path : `/${path}`;
   return `${WEBAPP_URL}${normalized}`;
 };
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function backend(method, path, payload) {
+  if (!BOT_INTERNAL_TOKEN) return null;
+  const headers = {
+    'Content-Type': 'application/json',
+    'x-bot-token': BOT_INTERNAL_TOKEN
+  };
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method,
+    headers,
+    body: payload ? JSON.stringify(payload) : undefined
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Backend ${method} ${path} failed (${res.status}): ${body}`);
+  }
+  return res.json();
+}
+
+async function registerSubscriber(from, chatId, payload) {
+  if (!BOT_INTERNAL_TOKEN) return null;
+  try {
+    const data = await backend('POST', '/api/bot/subscribers/register', {
+      telegramId: from?.id,
+      chatId,
+      username: from?.username || '',
+      firstName: from?.first_name || '',
+      lastName: from?.last_name || '',
+      languageCode: from?.language_code || 'en',
+      payload: payload || ''
+    });
+    return data?.data || null;
+  } catch (error) {
+    console.error('Subscriber register failed:', error.message);
+    return null;
+  }
+}
+
+async function getViralProgress(telegramId) {
+  if (!BOT_INTERNAL_TOKEN || !telegramId) return null;
+  try {
+    const data = await backend('GET', `/api/bot/subscribers/viral-progress/${encodeURIComponent(telegramId)}`);
+    return data?.data || null;
+  } catch (error) {
+    console.error('Load viral progress failed:', error.message);
+    return null;
+  }
+}
 
 async function ensureTelegramReachability() {
   const healthUrl = `${API_BASE_URL}/api/health`;
@@ -181,6 +248,10 @@ async function sendContacts(chatId, lang) {
 
 async function handleStart(chatId, payload, from) {
   const lang = pickLang(from);
+  const registration = await registerSubscriber(from, chatId, payload);
+  if (registration?.rewardIssuedNow) {
+    await answerMessage(chatId, `✅ ${t(lang, 'inviteDone')}`);
+  }
   if (payload && payload.startsWith('invite_team_')) {
     const teamId = payload.slice('invite_team_'.length);
     const link = appUrl(`/team/${encodeURIComponent(teamId)}`);
@@ -203,9 +274,93 @@ async function handleStart(chatId, payload, from) {
 
   await answerMessage(
     chatId,
-    `${t(lang, 'welcomeTitle')}\n\n${t(lang, 'welcome')}\n\n${t(lang, 'commands')}:\n/start\n/menu\n/webapp\n/tournaments\n/wallet\n/analytics\n/support\n/profile\n/contacts\n/card`
+    `${t(lang, 'welcomeTitle')}\n\n${t(lang, 'welcome')}\n\n${t(lang, 'commands')}:\n/start\n/menu\n/webapp\n/tournaments\n/wallet\n/analytics\n/support\n/profile\n/contacts\n/card\n/invite`
   );
   await sendQuickMenu(chatId, lang);
+}
+
+async function handleInvite(chatId, from) {
+  const lang = pickLang(from);
+  const telegramId = Number(from?.id || 0);
+  if (!telegramId) {
+    await answerMessage(chatId, 'Unable to read telegram user id');
+    return;
+  }
+
+  const progress = await getViralProgress(telegramId);
+  const botUsername = String(process.env.BOT_USERNAME || '').replace('@', '').trim() || 'way_esports_bot';
+  const deepLink = `https://t.me/${botUsername}?start=invite_user_${telegramId}`;
+  const count = Number(progress?.invitesCount || 0);
+  const left = Math.max(0, Number(progress?.remaining || VIRAL_TARGET));
+  const done = Boolean(progress?.rewardIssued);
+
+  const lines = [
+    `🚀 ${t(lang, 'inviteTitle')}`,
+    tf(lang, 'inviteProgress', { count }),
+    done ? `✅ ${t(lang, 'inviteDone')}` : `📌 ${tf(lang, 'inviteLeft', { left })}`,
+    '',
+    `${t(lang, 'inviteLink')}:`,
+    deepLink
+  ];
+
+  await answerMessage(chatId, lines.join('\n'), {
+    reply_markup: {
+      inline_keyboard: [[{ text: 'Share in Telegram', url: `https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent('Join WAY ESPORTS and play tournaments with me')}` }]]
+    }
+  });
+}
+
+function buildReminderText(lang, news) {
+  const lines = [
+    `🔥 ${t(lang, 'reminderTitle')}`,
+    t(lang, 'reminderBody')
+  ];
+  if (Array.isArray(news) && news.length) {
+    lines.push('');
+    lines.push(`${t(lang, 'reminderNews')}:`);
+    news.forEach((item) => {
+      const title = String(item?.title || '').trim();
+      if (title) lines.push(`• ${title}`);
+    });
+  }
+  return lines.join('\n');
+}
+
+async function processDueReminders() {
+  if (!BOT_INTERNAL_TOKEN) return;
+  try {
+    const response = await backend('GET', '/api/bot/subscribers/due-reminders?limit=150');
+    const payload = response?.data || {};
+    const subscribers = Array.isArray(payload.subscribers) ? payload.subscribers : [];
+    const news = Array.isArray(payload.news) ? payload.news : [];
+    if (!subscribers.length) return;
+
+    const successIds = [];
+    for (const sub of subscribers) {
+      const chatId = Number(sub?.chatId || 0);
+      const telegramId = Number(sub?.telegramId || 0);
+      if (!chatId || !telegramId) continue;
+      const lang = pickLang({ language_code: sub?.languageCode || 'en' });
+      try {
+        await answerMessage(chatId, buildReminderText(lang, news), {
+          reply_markup: {
+            inline_keyboard: [[{ text: t(lang, 'reminderCta'), web_app: { url: appUrl('/tournaments') } }]]
+          }
+        });
+        successIds.push(telegramId);
+      } catch (error) {
+        console.error(`Reminder send failed for ${telegramId}:`, error.message);
+      }
+      await sleep(50);
+    }
+
+    if (successIds.length) {
+      await backend('POST', '/api/bot/subscribers/mark-reminded', { telegramIds: successIds });
+      console.log(`Reminders sent: ${successIds.length}`);
+    }
+  } catch (error) {
+    console.error('Reminder job failed:', error.message);
+  }
 }
 
 async function handleCard(chatId, from) {
@@ -342,6 +497,11 @@ async function handleUpdate(update) {
     return;
   }
 
+  if (command === '/invite') {
+    await handleInvite(chatId, from);
+    return;
+  }
+
   if (command === '/card') {
     await handleCard(chatId, from);
     return;
@@ -454,6 +614,16 @@ healthServer.listen(PORT, '0.0.0.0', () => {
     void pollLoop();
   }
 
+  if (BOT_INTERNAL_TOKEN) {
+    void processDueReminders();
+    setInterval(() => {
+      void processDueReminders();
+    }, REMINDER_CHECK_MINUTES * 60 * 1000);
+    console.log(`Reminder job enabled: every ${REMINDER_CHECK_MINUTES} min (audience interval ${BOT_REMINDER_INTERVAL_DAYS} days)`);
+  } else {
+    console.log('Reminder job disabled: BOT_INTERNAL_TOKEN is not set');
+  }
+
   tg('setMyCommands', {
     commands: [
       { command: 'start', description: 'Welcome + quick menu' },
@@ -465,6 +635,7 @@ healthServer.listen(PORT, '0.0.0.0', () => {
       { command: 'support', description: 'Open support' },
       { command: 'profile', description: 'Open profile' },
       { command: 'contacts', description: 'Contacts & collaboration' },
+      { command: 'invite', description: `Invite friends (${VIRAL_TARGET} target)` },
       { command: 'card', description: 'Show status card' },
       { command: 'status', description: 'Bot health status' }
     ]

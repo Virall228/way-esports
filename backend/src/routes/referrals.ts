@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticateJWT, isAdmin } from '../middleware/auth';
 import ReferralService from '../services/referralService';
+import BotSubscriber from '../models/BotSubscriber';
 
 const router = express.Router();
 const DEFAULT_SUBSCRIPTION_PAYMENT_ADDRESS =
@@ -19,7 +20,29 @@ router.get('/stats', authenticateJWT, async (req, res) => {
       return res.status(401).json({ error: 'User not authenticated' });
     }
     const stats = await ReferralService.getReferralStats(userId);
-    res.json(stats);
+    const telegramId = Number((req as any).user?.telegramId || 0);
+    let viral = {
+      invitesCount: 0,
+      target: Math.max(1, Number(process.env.BOT_VIRAL_TARGET || 10)),
+      remaining: Math.max(1, Number(process.env.BOT_VIRAL_TARGET || 10)),
+      rewardIssued: false,
+      rewardIssuedAt: null as string | null
+    };
+    if (Number.isFinite(telegramId) && telegramId > 0) {
+      const row: any = await BotSubscriber.findOne({ telegramId })
+        .select('viralInvitesCount viralRewardIssuedAt')
+        .lean();
+      const target = Math.max(1, Number(process.env.BOT_VIRAL_TARGET || 10));
+      const count = Number(row?.viralInvitesCount || 0);
+      viral = {
+        invitesCount: count,
+        target,
+        remaining: Math.max(0, target - count),
+        rewardIssued: Boolean(row?.viralRewardIssuedAt),
+        rewardIssuedAt: row?.viralRewardIssuedAt ? new Date(row.viralRewardIssuedAt).toISOString() : null
+      };
+    }
+    res.json({ ...(stats || {}), viral });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
