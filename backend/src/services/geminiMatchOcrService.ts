@@ -7,7 +7,16 @@ export interface ParsedScreenshotRow {
   damage: number;
 }
 
-const GEMINI_MODEL = process.env.GEMINI_OCR_MODEL || 'gemini-2.0-flash';
+const OCR_MODELS = (() => {
+  const raw = String(process.env.GEMINI_OCR_MODELS || '').trim();
+  if (raw) {
+    const fromEnv = raw.split(',').map((m) => m.trim()).filter(Boolean);
+    if (fromEnv.length) return fromEnv;
+  }
+  const single = String(process.env.GEMINI_OCR_MODEL || '').trim();
+  if (single) return [single];
+  return ['gemini-2.0-flash', 'gemini-1.5-flash'];
+})();
 
 const getGeminiKey = (): string =>
   (
@@ -56,8 +65,6 @@ export const parseMatchScreenshotWithGemini = async (
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { GoogleGenerativeAI } = require('@google/generative-ai');
   const client = new GoogleGenerativeAI(apiKey);
-  const model = client.getGenerativeModel({ model: GEMINI_MODEL });
-
   const prompt = [
     'You are an OCR parser for esports scoreboard screenshots.',
     'Return ONLY a JSON array. No markdown. No commentary.',
@@ -66,37 +73,52 @@ export const parseMatchScreenshotWithGemini = async (
     'If a field is missing on screenshot, use 0 for numbers and false for mvp_status.'
   ].join('\n');
 
-  const result = await model.generateContent([
-    {
-      inlineData: {
-        data: imageBuffer.toString('base64'),
-        mimeType: mimeType || 'image/jpeg'
+  let lastError: any = null;
+  for (const modelName of OCR_MODELS) {
+    try {
+      const model = client.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent([
+        {
+          inlineData: {
+            data: imageBuffer.toString('base64'),
+            mimeType: mimeType || 'image/jpeg'
+          }
+        },
+        prompt
+      ]);
+
+      const responseText = String(result?.response?.text?.() || '').trim();
+      if (!responseText) {
+        throw new Error('Gemini returned empty OCR response');
       }
-    },
-    prompt
-  ]);
 
-  const responseText = String(result?.response?.text?.() || '').trim();
-  if (!responseText) {
-    throw new Error('Gemini returned empty OCR response');
+      let parsed: any;
+      try {
+        parsed = JSON.parse(cleanJsonText(responseText));
+      } catch (error) {
+        throw new Error('Gemini OCR response is not valid JSON');
+      }
+
+      if (!Array.isArray(parsed)) {
+        throw new Error('Gemini OCR response must be a JSON array');
+      }
+
+      const normalized = validateRows(parsed.map(normalizeParsedRow));
+      if (!normalized.length) {
+        throw new Error('No valid players detected in screenshot');
+      }
+      console.info(`[ocr-ai] provider=gemini model=${modelName} rows=${normalized.length}`);
+      return normalized;
+    } catch (error: any) {
+      lastError = error;
+      const message = String(error?.message || error || '').toLowerCase();
+      const shouldTryNext =
+        message.includes('429') ||
+        message.includes('quota') ||
+        message.includes('not found') ||
+        message.includes('404');
+      if (!shouldTryNext) break;
+    }
   }
-
-  let parsed: any;
-  try {
-    parsed = JSON.parse(cleanJsonText(responseText));
-  } catch (error) {
-    throw new Error('Gemini OCR response is not valid JSON');
-  }
-
-  if (!Array.isArray(parsed)) {
-    throw new Error('Gemini OCR response must be a JSON array');
-  }
-
-  const normalized = validateRows(parsed.map(normalizeParsedRow));
-  if (!normalized.length) {
-    throw new Error('No valid players detected in screenshot');
-  }
-  console.info(`[ocr-ai] provider=gemini model=${GEMINI_MODEL} rows=${normalized.length}`);
-
-  return normalized;
+  throw lastError || new Error('Gemini OCR failed');
 };
