@@ -52,7 +52,7 @@ router.post('/subscribers/register', requireBotToken, async (req, res) => {
     }
 
     const now = new Date();
-    const existing = await BotSubscriber.findOne({ telegramId }).lean();
+    const existing: any = await BotSubscriber.findOne({ telegramId }).lean();
     const inviterTelegramId = parseInvitePayload(req.body?.payload);
 
     const update: any = {
