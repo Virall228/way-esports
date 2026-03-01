@@ -46,9 +46,11 @@ const ProfileHeader = styled(Card).attrs({ variant: 'elevated' })<{
   $wallpaperUrl?: string | null;
   $streakGlowColor?: string;
 }>`
+  position: relative;
+  overflow: hidden;
   background: ${({ $wallpaperUrl }) =>
     $wallpaperUrl
-      ? `linear-gradient(180deg, rgba(10, 10, 12, 0.48) 0%, rgba(4, 5, 8, 0.7) 100%), url("${$wallpaperUrl}") center / cover no-repeat`
+      ? `linear-gradient(180deg, rgba(10, 10, 12, 0.64) 0%, rgba(4, 5, 8, 0.8) 100%), url("${$wallpaperUrl}") center / cover no-repeat`
       : `linear-gradient(180deg, rgba(12, 13, 16, 0.74) 0%, rgba(7, 8, 10, 0.86) 100%), rgba(255, 255, 255, 0.05)`};
   background-size: cover;
   background-position: center;
@@ -62,6 +64,20 @@ const ProfileHeader = styled(Card).attrs({ variant: 'elevated' })<{
   align-items: flex-start;
   gap: 30px;
   flex-wrap: wrap;
+
+  & > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  @media (max-width: 768px) {
+    padding: 18px;
+    gap: 16px;
+    background-size: contain;
+    background-position: top center;
+    background-repeat: no-repeat;
+    background-color: rgba(8, 9, 12, 0.98);
+  }
 `;
 
 const Avatar = styled.div<{ $hasImage?: boolean; $imageUrl?: string | null }>`
@@ -102,6 +118,7 @@ const WallpaperActionRow = styled.div`
 
 const ProfileInfo = styled.div`
   flex: 1;
+  min-width: 0;
 `;
 
 const ProfileTop = styled.div`
@@ -109,18 +126,27 @@ const ProfileTop = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 20px;
+
+  @media (max-width: 768px) {
+    margin-bottom: 12px;
+  }
 `;
 
 const Username = styled.h1`
-  font-size: 2.5rem;
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
   margin-bottom: 5px;
   color: ${({ theme }) => theme.colors.text.primary};
+  line-height: 1.08;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 `;
 
 const UserOrg = styled.div`
   color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 1.1rem;
   margin-bottom: 15px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 `;
 
 const GhostBadge = styled.div`
@@ -134,12 +160,31 @@ const GhostBadge = styled.div`
   color: #ffd7b8;
   font-size: 0.8rem;
   margin-bottom: 10px;
+  max-width: 100%;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 `;
 
 const UserStats = styled.div`
   display: flex;
   gap: 30px;
   flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    gap: 18px;
+  }
+`;
+
+const HeaderActionRow = styled.div`
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    gap: 8px;
+  }
 `;
 
 const StatItem = styled.div`
@@ -499,7 +544,7 @@ const ProfilePage: React.FC = () => {
               <Link to={`/profile/${profile?.id || user?.id}`} style={{ color: '#ff6b00', fontSize: '0.9rem', textDecoration: 'none' }}>
                 {'\u{1F517}'} {t('viewPublicProfile')}
               </Link>
-              <div style={{ marginTop: 10, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <HeaderActionRow>
                 <Button
                   size="small"
                   variant="outline"
@@ -529,7 +574,7 @@ const ProfilePage: React.FC = () => {
                     Points {Number(statusCardData.points).toFixed(0)} • WinRate {Number(statusCardData.winRate || 0).toFixed(1)}%
                   </span>
                 ) : null}
-              </div>
+              </HeaderActionRow>
               <WallpaperActionRow>
                 <label style={{ display: 'inline-flex' }}>
                   <input

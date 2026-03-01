@@ -21,6 +21,8 @@ const ProfileHeader = styled(Card)<{
   $wallpaper?: string;
   $streakGlowColor?: string;
 }>`
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 2rem;
@@ -28,17 +30,27 @@ const ProfileHeader = styled(Card)<{
   margin-bottom: 2rem;
   background: ${({ theme, $wallpaper }) =>
     $wallpaper
-      ? `linear-gradient(180deg, rgba(10, 10, 12, 0.48) 0%, rgba(4, 5, 8, 0.72) 100%), url("${$wallpaper}") center / cover no-repeat`
+      ? `linear-gradient(180deg, rgba(10, 10, 12, 0.66) 0%, rgba(4, 5, 8, 0.82) 100%), url("${$wallpaper}") center / cover no-repeat`
       : `linear-gradient(135deg, ${theme.colors.bg.secondary}, ${theme.colors.bg.tertiary})`};
   background-size: cover;
   background-position: center;
   box-shadow: ${({ $streakGlowColor = 'rgba(255,255,255,0.12)' }) =>
     `0 0 0 1px ${$streakGlowColor}, 0 0 26px ${$streakGlowColor.replace('0.9', '0.35').replace('0.85', '0.3')}`};
   min-width: 0;
+  & > * {
+    position: relative;
+    z-index: 1;
+  }
 
   @media (max-width: 600px) {
     flex-direction: column;
     text-align: center;
+    padding: 1.1rem;
+    gap: 1rem;
+    background-size: contain;
+    background-position: top center;
+    background-repeat: no-repeat;
+    background-color: #090a0d;
   }
 `;
 
@@ -74,6 +86,23 @@ const RealName = styled.h2`
   margin-bottom: 1rem;
   word-break: break-word;
   overflow-wrap: anywhere;
+
+  @media (max-width: 600px) {
+    font-size: 1rem;
+    line-height: 1.25;
+  }
+`;
+
+const ActionRow = styled.div`
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+
+  @media (max-width: 600px) {
+    justify-content: center;
+  }
 `;
 
 const Bio = styled.p`
@@ -192,7 +221,7 @@ const PublicProfilePage: React.FC = () => {
                     <Username>{profile.username}</Username>
                     <RealName>{profile.firstName} {profile.lastName}</RealName>
                     <Bio>{profile.bio || "This user hasn't set a bio yet."}</Bio>
-                    <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <ActionRow>
                         <Button size="small" variant="outline" onClick={copyPlayerCardLink}>
                             Copy Player Card
                         </Button>
@@ -201,7 +230,7 @@ const PublicProfilePage: React.FC = () => {
                                 Open Telegram Share
                             </a>
                         ) : null}
-                    </div>
+                    </ActionRow>
                 </Info>
             </ProfileHeader>
 

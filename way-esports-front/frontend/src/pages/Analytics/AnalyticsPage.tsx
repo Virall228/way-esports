@@ -105,20 +105,36 @@ const unwrapApiData = <T,>(payload: any): T => {
 
 const radarKeys: Array<keyof AnalyticsPayload['skills']> = ['aiming', 'positioning', 'utility', 'clutchFactor', 'teamplay'];
 
+const RadarWrap = styled.div`
+  width: 100%;
+  display: flex;
+  justify-content: center;
+`;
+
+const RadarSvg = styled.svg`
+  width: min(100%, 360px);
+  height: auto;
+`;
+
 const RadarChart: React.FC<{ skills: AnalyticsPayload['skills'] }> = ({ skills }) => {
-  const size = 240;
+  const size = 300;
   const center = size / 2;
-  const maxR = 90;
+  const maxR = 92;
+  const labelDistance = maxR + 26;
   const points = radarKeys.map((key, index) => {
     const angle = (-Math.PI / 2) + (index * 2 * Math.PI) / radarKeys.length;
     const value = Number(skills[key] || 0) / 100;
     const r = maxR * value;
+    const labelX = center + Math.cos(angle) * labelDistance;
+    const labelY = center + Math.sin(angle) * labelDistance;
+    const anchor = Math.cos(angle) < -0.25 ? 'end' : Math.cos(angle) > 0.25 ? 'start' : 'middle';
     return {
       key,
       x: center + Math.cos(angle) * r,
       y: center + Math.sin(angle) * r,
-      labelX: center + Math.cos(angle) * (maxR + 20),
-      labelY: center + Math.sin(angle) * (maxR + 20)
+      labelX,
+      labelY,
+      anchor
     };
   });
 
@@ -126,7 +142,8 @@ const RadarChart: React.FC<{ skills: AnalyticsPayload['skills'] }> = ({ skills }
   const rings = [20, 40, 60, 80, 100];
 
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+    <RadarWrap>
+    <RadarSvg viewBox={`-18 -18 ${size + 36} ${size + 36}`} preserveAspectRatio="xMidYMid meet">
       {rings.map((ring) => (
         <circle
           key={ring}
@@ -145,12 +162,13 @@ const RadarChart: React.FC<{ skills: AnalyticsPayload['skills'] }> = ({ skills }
       {points.map((p) => (
         <g key={p.key}>
           <circle cx={p.x} cy={p.y} r="3" fill="#ff6b00" />
-          <text x={p.labelX} y={p.labelY} fill="#ddd" fontSize="11" textAnchor="middle">
+          <text x={p.labelX} y={p.labelY} fill="#ddd" fontSize="12" textAnchor={p.anchor}>
             {p.key}
           </text>
         </g>
       ))}
-    </svg>
+    </RadarSvg>
+    </RadarWrap>
   );
 };
 
