@@ -63,7 +63,7 @@ const Logo = styled.div`
   width: 120px;
   height: 120px;
   background:
-    url('/images/way-v-logo.jpg') center/cover no-repeat,
+    url('/images/0.jpg?v=2') center/cover no-repeat,
     url('/images/way-esports-logo.png.jpg') center/cover no-repeat;
   border-radius: 50%;
   display: flex;
