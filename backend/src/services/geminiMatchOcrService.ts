@@ -17,7 +17,16 @@ const OCR_MODELS = (() => {
   if (single) return [single];
   return ['gemini-2.0-flash', 'gemini-1.5-flash'];
 })();
-const OPENAI_OCR_MODEL = String(process.env.OPENAI_OCR_MODEL || 'llama-3.2-11b-vision-preview').trim();
+const OPENAI_OCR_MODELS = (() => {
+  const raw = String(process.env.OPENAI_OCR_MODELS || '').trim();
+  if (raw) {
+    const rows = raw.split(',').map((m) => m.trim()).filter(Boolean);
+    if (rows.length) return rows;
+  }
+  const single = String(process.env.OPENAI_OCR_MODEL || '').trim();
+  if (single) return [single];
+  return ['llama-3.2-90b-vision-preview'];
+})();
 const OCR_PROVIDER = String(process.env.OCR_AI_PROVIDER || 'gemini').trim().toLowerCase();
 
 const getGeminiKey = (): string =>
@@ -91,37 +100,47 @@ const parseMatchScreenshotWithOpenAi = async (
   const baseUrl = getOpenAiBaseUrl();
   const imageDataUrl = `data:${mimeType || 'image/jpeg'};base64,${imageBuffer.toString('base64')}`;
 
-  const response = await fetch(`${baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: OPENAI_OCR_MODEL,
-      temperature: 0,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: `${buildOcrPrompt()}\nOutput strict JSON only.` },
-            { type: 'image_url', image_url: { url: imageDataUrl } }
-          ]
-        }
-      ]
-    })
-  });
+  let lastError: any = null;
+  for (const model of OPENAI_OCR_MODELS) {
+    const response = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: `${buildOcrPrompt()}\nOutput strict JSON only.` },
+              { type: 'image_url', image_url: { url: imageDataUrl } }
+            ]
+          }
+        ]
+      })
+    });
 
-  if (!response.ok) {
-    const body = await response.text().catch(() => '');
-    throw new Error(`OpenAI OCR failed (${response.status}): ${body.slice(0, 240)}`);
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      lastError = new Error(`OpenAI OCR failed (${response.status}): ${body.slice(0, 240)}`);
+      const lower = String(body || '').toLowerCase();
+      const retryableModelError =
+        response.status === 400 &&
+        (lower.includes('decommissioned') || lower.includes('not found') || lower.includes('model'));
+      if (retryableModelError) continue;
+      throw lastError;
+    }
+
+    const payload: any = await response.json();
+    const text = String(payload?.choices?.[0]?.message?.content || '').trim();
+    const rows = parseRowsFromModelText(text);
+    console.info(`[ocr-ai] provider=openai model=${model} rows=${rows.length}`);
+    return rows;
   }
-
-  const payload: any = await response.json();
-  const text = String(payload?.choices?.[0]?.message?.content || '').trim();
-  const rows = parseRowsFromModelText(text);
-  console.info(`[ocr-ai] provider=openai model=${OPENAI_OCR_MODEL} rows=${rows.length}`);
-  return rows;
+  throw lastError || new Error('OpenAI OCR failed');
 };
 
 export const parseMatchScreenshotWithGemini = async (

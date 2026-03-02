@@ -112,7 +112,7 @@ router.get('/readiness', async (_req: Request, res: Response) => {
 
     const supportSettings = await SupportSettings.findOneAndUpdate(
       { key: 'global' },
-      { $setOnInsert: { key: 'global', aiEnabled: false } },
+      { $setOnInsert: { key: 'global', aiEnabled: String(process.env.SUPPORT_AI_ENABLED_DEFAULT || 'true').trim().toLowerCase() !== 'false' } },
       { new: true, upsert: true }
     ).lean();
 
@@ -120,6 +120,14 @@ router.get('/readiness', async (_req: Request, res: Response) => {
     const support = {
       ...getSupportAiStatus(),
       aiEnabled: Boolean(supportSettings?.aiEnabled)
+    };
+    const ocrProvider = String(process.env.OCR_AI_PROVIDER || 'gemini').trim().toLowerCase();
+    const ocrStatus = {
+      provider: ocrProvider,
+      geminiEnabled: Boolean(String(process.env.GEMINI_API_KEY || process.env.GEMINI_KEY || process.env.GOOGLE_API_KEY || '').trim()),
+      openAiEnabled: Boolean(String(process.env.OPENAI_API_KEY || '').trim()),
+      openAiBaseUrl: String(process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').trim(),
+      openAiModels: String(process.env.OPENAI_OCR_MODELS || process.env.OPENAI_OCR_MODEL || '').trim()
     };
     const telegramConfigured = Boolean(String(process.env.TELEGRAM_BOT_USERNAME || '').trim());
     const telegramTokenConfigured = Boolean(String(process.env.TELEGRAM_BOT_TOKEN || '').trim());
@@ -149,6 +157,13 @@ router.get('/readiness', async (_req: Request, res: Response) => {
         key: 'support_provider_key',
         ok: Boolean(support.geminiEnabled || support.openAiEnabled),
         message: 'Set GEMINI_API_KEY or OPENAI_API_KEY for support replies'
+      },
+      {
+        key: 'ocr_provider_key',
+        ok: ocrProvider === 'openai' ? ocrStatus.openAiEnabled : ocrStatus.geminiEnabled,
+        message: ocrProvider === 'openai'
+          ? 'Set OPENAI_API_KEY for OCR when OCR_AI_PROVIDER=openai'
+          : 'Set GEMINI_API_KEY for OCR when OCR_AI_PROVIDER=gemini'
       },
       {
         key: 'support_runtime_enabled',
@@ -202,7 +217,8 @@ router.get('/readiness', async (_req: Request, res: Response) => {
         timestamp: new Date().toISOString(),
         providers: {
           scouting,
-          support
+          support,
+          ocr: ocrStatus
         },
         integrations: {
           telegramBotUsernameConfigured: telegramConfigured,
