@@ -17,6 +17,8 @@ const OCR_MODELS = (() => {
   if (single) return [single];
   return ['gemini-2.0-flash', 'gemini-1.5-flash'];
 })();
+const OPENAI_OCR_MODEL = String(process.env.OPENAI_OCR_MODEL || 'llama-3.2-11b-vision-preview').trim();
+const OCR_PROVIDER = String(process.env.OCR_AI_PROVIDER || 'gemini').trim().toLowerCase();
 
 const getGeminiKey = (): string =>
   (
@@ -25,6 +27,10 @@ const getGeminiKey = (): string =>
     process.env.GOOGLE_API_KEY ||
     ''
   ).trim();
+
+const getOpenAiKey = (): string => String(process.env.OPENAI_API_KEY || '').trim();
+const getOpenAiBaseUrl = (): string =>
+  String(process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').trim().replace(/\/+$/, '');
 
 const cleanJsonText = (text: string): string => {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
@@ -49,6 +55,75 @@ const normalizeParsedRow = (item: any): ParsedScreenshotRow => ({
 const validateRows = (rows: ParsedScreenshotRow[]) =>
   rows.filter((row) => row.nickname.length > 0);
 
+const parseRowsFromModelText = (text: string): ParsedScreenshotRow[] => {
+  if (!text) throw new Error('OCR model returned empty response');
+  let parsed: any;
+  try {
+    parsed = JSON.parse(cleanJsonText(text));
+  } catch {
+    throw new Error('OCR model response is not valid JSON');
+  }
+  if (!Array.isArray(parsed)) {
+    throw new Error('OCR model response must be JSON array');
+  }
+  const normalized = validateRows(parsed.map(normalizeParsedRow));
+  if (!normalized.length) {
+    throw new Error('No valid players detected in screenshot');
+  }
+  return normalized;
+};
+
+const buildOcrPrompt = () =>
+  [
+    'You are an OCR parser for esports scoreboard screenshots.',
+    'Return ONLY a JSON array. No markdown. No commentary.',
+    'Each item format:',
+    '{ "nickname": string, "kills": number, "deaths": number, "assists": number, "mvp_status": boolean, "damage": number }',
+    'If a field is missing on screenshot, use 0 for numbers and false for mvp_status.'
+  ].join('\n');
+
+const parseMatchScreenshotWithOpenAi = async (
+  imageBuffer: Buffer,
+  mimeType: string
+): Promise<ParsedScreenshotRow[]> => {
+  const apiKey = getOpenAiKey();
+  if (!apiKey) throw new Error('OPENAI_API_KEY is not configured');
+  const baseUrl = getOpenAiBaseUrl();
+  const imageDataUrl = `data:${mimeType || 'image/jpeg'};base64,${imageBuffer.toString('base64')}`;
+
+  const response = await fetch(`${baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: OPENAI_OCR_MODEL,
+      temperature: 0,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: `${buildOcrPrompt()}\nOutput strict JSON only.` },
+            { type: 'image_url', image_url: { url: imageDataUrl } }
+          ]
+        }
+      ]
+    })
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`OpenAI OCR failed (${response.status}): ${body.slice(0, 240)}`);
+  }
+
+  const payload: any = await response.json();
+  const text = String(payload?.choices?.[0]?.message?.content || '').trim();
+  const rows = parseRowsFromModelText(text);
+  console.info(`[ocr-ai] provider=openai model=${OPENAI_OCR_MODEL} rows=${rows.length}`);
+  return rows;
+};
+
 export const parseMatchScreenshotWithGemini = async (
   imageBuffer: Buffer,
   mimeType: string
@@ -65,13 +140,11 @@ export const parseMatchScreenshotWithGemini = async (
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { GoogleGenerativeAI } = require('@google/generative-ai');
   const client = new GoogleGenerativeAI(apiKey);
-  const prompt = [
-    'You are an OCR parser for esports scoreboard screenshots.',
-    'Return ONLY a JSON array. No markdown. No commentary.',
-    'Each item format:',
-    '{ "nickname": string, "kills": number, "deaths": number, "assists": number, "mvp_status": boolean, "damage": number }',
-    'If a field is missing on screenshot, use 0 for numbers and false for mvp_status.'
-  ].join('\n');
+  if (OCR_PROVIDER === 'openai') {
+    return parseMatchScreenshotWithOpenAi(imageBuffer, mimeType);
+  }
+
+  const prompt = buildOcrPrompt();
 
   let lastError: any = null;
   for (const modelName of OCR_MODELS) {
@@ -92,21 +165,7 @@ export const parseMatchScreenshotWithGemini = async (
         throw new Error('Gemini returned empty OCR response');
       }
 
-      let parsed: any;
-      try {
-        parsed = JSON.parse(cleanJsonText(responseText));
-      } catch (error) {
-        throw new Error('Gemini OCR response is not valid JSON');
-      }
-
-      if (!Array.isArray(parsed)) {
-        throw new Error('Gemini OCR response must be a JSON array');
-      }
-
-      const normalized = validateRows(parsed.map(normalizeParsedRow));
-      if (!normalized.length) {
-        throw new Error('No valid players detected in screenshot');
-      }
+      const normalized = parseRowsFromModelText(responseText);
       console.info(`[ocr-ai] provider=gemini model=${modelName} rows=${normalized.length}`);
       return normalized;
     } catch (error: any) {
