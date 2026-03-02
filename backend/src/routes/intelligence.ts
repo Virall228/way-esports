@@ -129,7 +129,9 @@ router.get('/readiness', async (_req: Request, res: Response) => {
       openAiBaseUrl: String(process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').trim(),
       openAiModels: String(process.env.OPENAI_OCR_MODELS || process.env.OPENAI_OCR_MODEL || '').trim()
     };
-    const telegramConfigured = Boolean(String(process.env.TELEGRAM_BOT_USERNAME || '').trim());
+    const telegramConfigured = Boolean(
+      String(process.env.TELEGRAM_BOT_USERNAME || process.env.BOT_USERNAME || '').trim()
+    );
     const telegramTokenConfigured = Boolean(String(process.env.TELEGRAM_BOT_TOKEN || '').trim());
     const botWebhookEnabled = ['1', 'true', 'yes'].includes(String(process.env.BOT_USE_WEBHOOK || '').toLowerCase().trim());
     const botWebhookPublicUrlConfigured = Boolean(String(process.env.BOT_WEBHOOK_PUBLIC_URL || '').trim());
