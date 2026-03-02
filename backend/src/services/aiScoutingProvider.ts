@@ -28,7 +28,8 @@ type ScoutOutput = {
 const getScoutConfig = () => ({
   provider: (process.env.AI_SCOUT_PROVIDER || 'gemini').trim().toLowerCase(),
   geminiKey: (process.env.GEMINI_API_KEY || '').trim(),
-  openAiKey: (process.env.OPENAI_API_KEY || '').trim()
+  openAiKey: (process.env.OPENAI_API_KEY || '').trim(),
+  openAiBaseUrl: (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').trim().replace(/\/+$/, '')
 });
 
 const basePrompt = (input: ScoutInput) => `
@@ -98,11 +99,11 @@ const callGemini = async (input: ScoutInput): Promise<ScoutOutput | null> => {
 };
 
 const callOpenAI = async (input: ScoutInput): Promise<ScoutOutput | null> => {
-  const { openAiKey } = getScoutConfig();
+  const { openAiKey, openAiBaseUrl } = getScoutConfig();
   if (!canCallProvider('openai')) return null;
   if (!openAiKey) return null;
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch(`${openAiBaseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

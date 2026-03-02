@@ -30,7 +30,8 @@ const getSupportConfig = () => {
     ''
   ).trim();
   const openAiKey = (process.env.OPENAI_API_KEY || '').trim();
-  return { provider, geminiKey, openAiKey };
+  const openAiBaseUrl = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').trim().replace(/\/+$/, '');
+  return { provider, geminiKey, openAiKey, openAiBaseUrl };
 };
 
 const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash'];
@@ -155,11 +156,11 @@ const callGemini = async (input: SupportReplyInput): Promise<SupportReplyResult 
 };
 
 const callOpenAI = async (input: SupportReplyInput): Promise<SupportReplyResult | null> => {
-  const { openAiKey } = getSupportConfig();
+  const { openAiKey, openAiBaseUrl } = getSupportConfig();
   if (!canCallProvider('openai')) return null;
   if (!openAiKey) return null;
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+  const response = await fetch(`${openAiBaseUrl}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
