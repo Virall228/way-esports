@@ -62,7 +62,9 @@ const HeroSection = styled(Card).attrs({ variant: 'elevated' })`
 const Logo = styled.div`
   width: 120px;
   height: 120px;
-  background: url('/images/way-esports-logo.png.jpg') center/cover no-repeat;
+  background:
+    url('/images/way-v-logo.jpg') center/cover no-repeat,
+    url('/images/way-esports-logo.png.jpg') center/cover no-repeat;
   border-radius: 50%;
   display: flex;
   align-items: center;
