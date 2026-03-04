@@ -312,9 +312,13 @@ const StatLabel = styled.div`
 
 const InfoGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 20px;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -323,11 +327,22 @@ const InfoGrid = styled.div`
   }
 `;
 
-const InfoCard = styled(Card).attrs({ variant: 'outlined' })`
+const InfoCard = styled(Card).attrs({ variant: 'outlined' })<{ $span?: number }>`
   padding: 16px;
   background: ${({ theme }) => theme.colors.bg.secondary};
   border: 1px solid ${({ theme }) => theme.colors.border.medium};
   border-radius: 12px;
+  min-height: 180px;
+  grid-column: span ${({ $span = 4 }) => $span};
+
+  @media (max-width: 1200px) {
+    grid-column: span 3;
+  }
+
+  @media (max-width: 768px) {
+    min-height: unset;
+    grid-column: auto;
+  }
 `;
 
 const InfoTitle = styled.h3`
@@ -638,7 +653,7 @@ const HomePage: React.FC = () => {
       </HeroSection>
 
       <InfoGrid>
-        <InfoCard>
+        <InfoCard $span={4}>
           <InfoTitle>Live Snapshot</InfoTitle>
           <TinyGrid>
             <TinyStat>
@@ -660,7 +675,7 @@ const HomePage: React.FC = () => {
           </TinyGrid>
         </InfoCard>
 
-        <InfoCard>
+        <InfoCard $span={4}>
           <InfoTitle>My Action Center</InfoTitle>
           <div style={{ color: '#cfcfcf', fontSize: '0.85rem', marginBottom: 10 }}>
             Sub: <strong style={{ color: user?.isSubscribed ? '#a5d6a7' : '#ffd180' }}>{user?.isSubscribed ? 'ACTIVE' : 'INACTIVE'}</strong>{' '}
@@ -676,7 +691,7 @@ const HomePage: React.FC = () => {
           </QuickActions>
         </InfoCard>
 
-        <InfoCard>
+        <InfoCard $span={4}>
           <InfoTitle>Recommended For You</InfoTitle>
           <RecommendationList>
             {recommendations.map((item) => (
@@ -694,7 +709,7 @@ const HomePage: React.FC = () => {
           </RecommendationList>
         </InfoCard>
 
-        <InfoCard>
+        <InfoCard $span={6}>
           <InfoTitle>Top Tournaments Now</InfoTitle>
           <List>
             {liveTournaments.length === 0 ? (
@@ -715,7 +730,7 @@ const HomePage: React.FC = () => {
           </List>
         </InfoCard>
 
-        <InfoCard>
+        <InfoCard $span={6}>
           <InfoTitle>My Upcoming Matches</InfoTitle>
           <List>
             {upcomingMatches.length === 0 ? (
