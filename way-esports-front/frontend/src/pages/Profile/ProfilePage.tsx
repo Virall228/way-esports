@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import styled from 'styled-components';
 import SubscriptionModal from '../../components/Subscription/SubscriptionModal';
 import PhotoUploadModal from '../../components/Profile/PhotoUploadModal';
@@ -104,9 +104,10 @@ const ProfileHeader = styled(Card).attrs({ variant: 'elevated' })<{
   }
 `;
 
-const Avatar = styled.div<{ $hasImage?: boolean; $imageUrl?: string | null }>`
-  width: 120px;
-  height: 120px;
+const Avatar = styled.div<{ $hasImage?: boolean; $imageUrl?: string | null; $size?: number }>`
+  width: ${({ $size = 120 }) => `${$size}px`};
+  height: ${({ $size = 120 }) => `${$size}px`};
+  aspect-ratio: 1 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -133,8 +134,8 @@ const Avatar = styled.div<{ $hasImage?: boolean; $imageUrl?: string | null }>`
   }
 
   @media (max-width: 768px) {
-    width: 96px;
-    height: 96px;
+    width: ${({ $size = 96 }) => `${$size}px`};
+    height: ${({ $size = 96 }) => `${$size}px`};
     margin: 0 auto;
   }
 `;
@@ -363,6 +364,11 @@ const ProfilePage: React.FC = () => {
   const [aiGhostBadge, setAiGhostBadge] = useState<string>('');
   const [statusCardData, setStatusCardData] = useState<TelegramStatusCardData | null>(null);
   const [isUploadingWallpaper, setIsUploadingWallpaper] = useState(false);
+  const isMobile = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(max-width: 768px)').matches;
+  }, []);
+  const avatarSize = isMobile ? 96 : 120;
 
   useEffect(() => {
     if (profile?.bio) {
@@ -589,6 +595,7 @@ const ProfilePage: React.FC = () => {
     <Container>
       <ProfileHeader $wallpaperUrl={wallpaperUrl} $streakGlowColor={streakGlowColor}>
         <Avatar
+          $size={avatarSize}
           $hasImage={!!(profile?.profileLogo || profile?.photoUrl)}
           $imageUrl={profile?.profileLogo || profile?.photoUrl}
           onClick={() => setIsPhotoUploadOpen(true)}
@@ -596,7 +603,7 @@ const ProfilePage: React.FC = () => {
           <FlameAuraAvatar
             imageUrl={getFullAvatarUrl(profile?.profileLogo || profile?.photoUrl) || undefined}
             fallbackText={profile?.username || 'U'}
-            size={120}
+            size={avatarSize}
             tier={profileTier}
             intensity={profileIntensity}
           />
