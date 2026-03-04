@@ -5,6 +5,7 @@ import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import { api } from '../../services/api';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Container = styled.div`
   padding: 40px;
@@ -309,9 +310,143 @@ const StatLabel = styled.div`
   }
 `;
 
+const InfoGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+`;
+
+const InfoCard = styled(Card).attrs({ variant: 'outlined' })`
+  padding: 16px;
+  background: ${({ theme }) => theme.colors.bg.secondary};
+  border: 1px solid ${({ theme }) => theme.colors.border.medium};
+  border-radius: 12px;
+`;
+
+const InfoTitle = styled.h3`
+  margin: 0 0 10px;
+  font-size: 1rem;
+  color: #fff;
+`;
+
+const TinyGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+`;
+
+const TinyStat = styled.div`
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  padding: 10px;
+`;
+
+const TinyValue = styled.div`
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #fff;
+`;
+
+const TinyLabel = styled.div`
+  font-size: 0.78rem;
+  color: #b8b8b8;
+  margin-top: 2px;
+`;
+
+const QuickActions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+`;
+
+const ActionButton = styled(Button).attrs({ variant: 'outline', size: 'small' })`
+  min-height: 34px;
+  border-radius: 999px;
+  padding: 0 12px;
+`;
+
+const List = styled.div`
+  display: grid;
+  gap: 8px;
+`;
+
+const ListRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  padding: 10px;
+`;
+
+const StatusPill = styled.span<{ $tone?: 'ok' | 'warn' }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  border: 1px solid ${({ $tone }) => ($tone === 'warn' ? 'rgba(255,171,64,0.5)' : 'rgba(129,199,132,0.5)')};
+  color: ${({ $tone }) => ($tone === 'warn' ? '#ffd180' : '#a5d6a7')};
+  background: ${({ $tone }) => ($tone === 'warn' ? 'rgba(255,171,64,0.12)' : 'rgba(129,199,132,0.12)')};
+  white-space: nowrap;
+`;
+
+const TimeMeta = styled.div`
+  color: #9c9c9c;
+  font-size: 0.74rem;
+  margin-top: 2px;
+`;
+
+const RecommendationList = styled.div`
+  display: grid;
+  gap: 8px;
+`;
+
+const RecommendationRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  padding: 10px;
+`;
+
+const RecommendationText = styled.div`
+  min-width: 0;
+`;
+
+const RecommendationTitle = styled.div`
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.86rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const RecommendationDesc = styled.div`
+  color: #b7b7b7;
+  font-size: 0.76rem;
+  margin-top: 2px;
+`;
+
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { user } = useAuth();
   const isMobile = useMemo(() => {
     if (typeof window === 'undefined') return false;
     return window.matchMedia('(max-width: 768px)').matches;
@@ -322,6 +457,108 @@ const HomePage: React.FC = () => {
     activeTeams: 0,
     totalPrizePool: 0
   });
+  const [recentNewsCount, setRecentNewsCount] = useState(0);
+  const [liveTournaments, setLiveTournaments] = useState<Array<{ id: string; name: string; teams: number; status: string }>>([]);
+  const [upcomingMatches, setUpcomingMatches] = useState<Array<{
+    id: string;
+    tournamentName: string;
+    status: string;
+    startTime: string | null;
+    hasRoomCredentials?: boolean;
+    roomVisibleAt?: string | null;
+    myTeam?: { name?: string; tag?: string } | null;
+    enemyTeam?: { name?: string; tag?: string } | null;
+  }>>([]);
+
+  const recommendations = useMemo(() => {
+    const list: Array<{
+      key: string;
+      title: string;
+      description: string;
+      actionLabel: string;
+      actionPath: string;
+      tone: 'ok' | 'warn';
+      priority: number;
+    }> = [];
+
+    if (!user?.isSubscribed) {
+      list.push({
+        key: 'sub',
+        title: 'Activate subscription',
+        description: 'Unlock all tournament entries and premium features.',
+        actionLabel: 'Manage',
+        actionPath: '/profile',
+        tone: 'warn',
+        priority: 1
+      });
+    }
+
+    const bonusEntries = Number((user as any)?.bonusEntries || 0);
+    if (bonusEntries > 0) {
+      list.push({
+        key: 'bonus',
+        title: `Use bonus entries (${bonusEntries})`,
+        description: 'You can join tournaments now using bonus entries.',
+        actionLabel: 'Join',
+        actionPath: '/tournaments',
+        tone: 'ok',
+        priority: 2
+      });
+    }
+
+    if (upcomingMatches.length > 0) {
+      const first = upcomingMatches[0];
+      const firstTime = first.startTime ? new Date(first.startTime).getTime() : NaN;
+      const now = Date.now();
+      const minutesLeft = Number.isFinite(firstTime) ? Math.floor((firstTime - now) / 60000) : null;
+      const isSoon = minutesLeft !== null && minutesLeft >= 0 && minutesLeft <= 120;
+      const isUrgent = minutesLeft !== null && minutesLeft >= 0 && minutesLeft <= 15;
+      const roomVisibleAtTime = first.roomVisibleAt ? new Date(first.roomVisibleAt).getTime() : NaN;
+      const canOpenRoomNow = first.hasRoomCredentials && Number.isFinite(roomVisibleAtTime) && roomVisibleAtTime <= now;
+
+      list.push({
+        key: 'match',
+        title: isUrgent
+          ? 'Match starts in under 15 min'
+          : isSoon
+            ? 'Match starts soon'
+            : 'Upcoming match ready',
+        description: isUrgent
+          ? 'Open your match and verify room access.'
+          : isSoon
+          ? `${first.myTeam?.tag || first.myTeam?.name || 'My Team'} vs ${first.enemyTeam?.tag || first.enemyTeam?.name || 'Opponent'} in ${minutesLeft} min.`
+          : `${first.myTeam?.tag || first.myTeam?.name || 'My Team'} vs ${first.enemyTeam?.tag || first.enemyTeam?.name || 'Opponent'}`,
+        actionLabel: canOpenRoomNow ? 'Open Room' : 'Open',
+        actionPath: '/matches',
+        tone: isSoon ? 'warn' : 'ok',
+        priority: isUrgent ? 0 : isSoon ? 1 : 3
+      });
+    } else {
+      list.push({
+        key: 'queue',
+        title: 'No upcoming matches',
+        description: 'Join a live tournament and get scheduled for a match.',
+        actionLabel: 'Explore',
+        actionPath: '/tournaments',
+        tone: 'warn',
+        priority: 4
+      });
+    }
+
+    if (recentNewsCount > 0) {
+      list.push({
+        key: 'news',
+        title: `New updates available (${recentNewsCount})`,
+        description: 'Check latest news and platform announcements.',
+        actionLabel: 'Read',
+        actionPath: '/news',
+        tone: 'ok',
+        priority: 5
+      });
+    }
+
+    return list.sort((a, b) => a.priority - b.priority).slice(0, 4);
+  }, [user?.isSubscribed, (user as any)?.bonusEntries, upcomingMatches, recentNewsCount]);
 
   useEffect(() => {
     const run = async () => {
@@ -331,8 +568,13 @@ const HomePage: React.FC = () => {
           (window as any).Telegram.WebApp.expand();
         }
 
-        // Fetch real stats
-        const res: any = await api.get('/api/stats');
+        const [res, newsRes, tournamentsRes, myMatchesRes]: any[] = await Promise.all([
+          api.get('/api/stats'),
+          api.get('/api/news?limit=3').catch(() => ({ data: [] })),
+          api.get('/api/tournaments?limit=6').catch(() => ({ data: [] })),
+          api.get('/api/matches/my/upcoming').catch(() => ({ data: [] }))
+        ]);
+
         if (res?.success && res.data) {
           setStats({
             totalUsers: res.data.totalUsers || 0,
@@ -341,6 +583,39 @@ const HomePage: React.FC = () => {
             totalPrizePool: res.data.totalPrizePool || 0
           });
         }
+
+        const newsItems = Array.isArray(newsRes?.data) ? newsRes.data : [];
+        setRecentNewsCount(newsItems.length);
+
+        const tournamentItems = Array.isArray(tournamentsRes?.data) ? tournamentsRes.data : [];
+        setLiveTournaments(
+          tournamentItems
+            .slice(0, 3)
+            .map((row: any) => ({
+              id: String(row?._id || row?.id || ''),
+              name: String(row?.name || row?.title || 'Tournament'),
+              teams: Array.isArray(row?.teams) ? row.teams.length : Number(row?.registeredTeams || row?.participantsCount || 0),
+              status: String(row?.status || 'upcoming')
+            }))
+            .filter((row: any) => row.id)
+        );
+
+        const myMatches = Array.isArray(myMatchesRes?.data) ? myMatchesRes.data : [];
+        setUpcomingMatches(
+          myMatches
+            .slice(0, 4)
+            .map((row: any) => ({
+              id: String(row?.id || row?._id || ''),
+              tournamentName: String(row?.tournamentName || 'Tournament'),
+              status: String(row?.status || 'scheduled'),
+              startTime: row?.startTime ? String(row.startTime) : null,
+              hasRoomCredentials: Boolean(row?.hasRoomCredentials),
+              roomVisibleAt: row?.roomVisibleAt ? String(row.roomVisibleAt) : null,
+              myTeam: row?.myTeam || null,
+              enemyTeam: row?.enemyTeam || null
+            }))
+            .filter((row: any) => row.id)
+        );
       } catch (e) {
         console.error('Failed to fetch stats:', e);
       }
@@ -361,6 +636,119 @@ const HomePage: React.FC = () => {
           {t('joinTournament')}
         </CTAButton>
       </HeroSection>
+
+      <InfoGrid>
+        <InfoCard>
+          <InfoTitle>Live Snapshot</InfoTitle>
+          <TinyGrid>
+            <TinyStat>
+              <TinyValue>{stats.activeTournaments}</TinyValue>
+              <TinyLabel>Active Tournaments</TinyLabel>
+            </TinyStat>
+            <TinyStat>
+              <TinyValue>{stats.activeTeams}</TinyValue>
+              <TinyLabel>Active Teams</TinyLabel>
+            </TinyStat>
+            <TinyStat>
+              <TinyValue>{stats.totalUsers.toLocaleString()}</TinyValue>
+              <TinyLabel>Players</TinyLabel>
+            </TinyStat>
+            <TinyStat>
+              <TinyValue>{recentNewsCount}</TinyValue>
+              <TinyLabel>News (latest)</TinyLabel>
+            </TinyStat>
+          </TinyGrid>
+        </InfoCard>
+
+        <InfoCard>
+          <InfoTitle>My Action Center</InfoTitle>
+          <div style={{ color: '#cfcfcf', fontSize: '0.85rem', marginBottom: 10 }}>
+            Sub: <strong style={{ color: user?.isSubscribed ? '#a5d6a7' : '#ffd180' }}>{user?.isSubscribed ? 'ACTIVE' : 'INACTIVE'}</strong>{' '}
+            • Bonus entries: <strong>{Number((user as any)?.bonusEntries || 0)}</strong>
+          </div>
+          <QuickActions>
+            <ActionButton onClick={() => navigate('/tournaments')}>Join Tournament</ActionButton>
+            <ActionButton onClick={() => navigate('/teams')}>Teams</ActionButton>
+            <ActionButton onClick={() => navigate('/wallet')}>Wallet</ActionButton>
+            <ActionButton onClick={() => navigate('/analytics')}>Analytics</ActionButton>
+            <ActionButton onClick={() => navigate('/profile')}>Profile</ActionButton>
+            <ActionButton onClick={() => navigate('/settings')}>Support</ActionButton>
+          </QuickActions>
+        </InfoCard>
+
+        <InfoCard>
+          <InfoTitle>Recommended For You</InfoTitle>
+          <RecommendationList>
+            {recommendations.map((item) => (
+              <RecommendationRow key={item.key}>
+                <RecommendationText>
+                  <RecommendationTitle>{item.title}</RecommendationTitle>
+                  <RecommendationDesc>{item.description}</RecommendationDesc>
+                </RecommendationText>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <StatusPill $tone={item.tone}>{item.tone === 'ok' ? 'READY' : 'ACTION'}</StatusPill>
+                  <ActionButton onClick={() => navigate(item.actionPath)}>{item.actionLabel}</ActionButton>
+                </div>
+              </RecommendationRow>
+            ))}
+          </RecommendationList>
+        </InfoCard>
+
+        <InfoCard>
+          <InfoTitle>Top Tournaments Now</InfoTitle>
+          <List>
+            {liveTournaments.length === 0 ? (
+              <div style={{ color: '#a7a7a7', fontSize: '0.85rem' }}>No active tournaments yet.</div>
+            ) : (
+              liveTournaments.map((item) => (
+                <ListRow key={item.id}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {item.name}
+                    </div>
+                    <div style={{ color: '#b7b7b7', fontSize: '0.78rem' }}>{item.teams} teams</div>
+                  </div>
+                  <StatusPill $tone={item.status === 'live' ? 'ok' : 'warn'}>{item.status.toUpperCase()}</StatusPill>
+                </ListRow>
+              ))
+            )}
+          </List>
+        </InfoCard>
+
+        <InfoCard>
+          <InfoTitle>My Upcoming Matches</InfoTitle>
+          <List>
+            {upcomingMatches.length === 0 ? (
+              <div style={{ color: '#a7a7a7', fontSize: '0.85rem' }}>No upcoming matches yet.</div>
+            ) : (
+              upcomingMatches.map((item) => (
+                <ListRow key={item.id}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {(item.myTeam?.tag || item.myTeam?.name || 'My Team')} vs {(item.enemyTeam?.tag || item.enemyTeam?.name || 'Opponent')}
+                    </div>
+                    <div style={{ color: '#b7b7b7', fontSize: '0.76rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {item.tournamentName}
+                    </div>
+                    {item.startTime ? <TimeMeta>{new Date(item.startTime).toLocaleString()}</TimeMeta> : null}
+                    {(() => {
+                      const roomVisibleAt = item.roomVisibleAt ? new Date(item.roomVisibleAt).getTime() : NaN;
+                      const roomOpen = Boolean(item.hasRoomCredentials) && Number.isFinite(roomVisibleAt) && roomVisibleAt <= Date.now();
+                      return roomOpen ? <TimeMeta style={{ color: '#a5d6a7' }}>Room is open now</TimeMeta> : null;
+                    })()}
+                  </div>
+                  <StatusPill $tone={item.status === 'live' ? 'ok' : 'warn'}>
+                    {item.status === 'live' ? 'LIVE' : 'UPCOMING'}
+                  </StatusPill>
+                </ListRow>
+              ))
+            )}
+          </List>
+          <div style={{ marginTop: 10 }}>
+            <ActionButton onClick={() => navigate('/matches')}>Open Matches</ActionButton>
+          </div>
+        </InfoCard>
+      </InfoGrid>
 
       <SectionTitle>{t('whyChoose')}</SectionTitle>
 

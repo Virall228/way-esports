@@ -13,6 +13,11 @@ export interface INews extends Document<mongoose.Types.ObjectId> {
   relatedTeam?: mongoose.Types.ObjectId;
   views: number;
   likes: number;
+  reactions: {
+    user: mongoose.Types.ObjectId;
+    value: 'like' | 'dislike';
+    updatedAt: Date;
+  }[];
   comments: {
     user: mongoose.Types.ObjectId;
     content: string;
@@ -74,6 +79,22 @@ const newsSchema = new Schema<INews>({
     type: Number,
     default: 0
   },
+  reactions: [{
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    value: {
+      type: String,
+      enum: ['like', 'dislike'],
+      required: true
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   comments: [{
     user: {
       type: Schema.Types.ObjectId,
@@ -105,6 +126,7 @@ newsSchema.index({ status: 1, publishDate: -1 });
 newsSchema.index({ category: 1 });
 newsSchema.index({ game: 1 });
 newsSchema.index({ tags: 1 });
+newsSchema.index({ 'reactions.user': 1 });
 
 newsSchema.virtual('commentCount').get(function() {
   return this.comments.length;

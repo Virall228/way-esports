@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import News, { INews } from '../models/News';
 import { authenticateJWT, isAdmin } from '../middleware/auth';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination';
@@ -7,6 +8,41 @@ import cacheService from '../services/cacheService';
 const router = express.Router();
 
 type NewsDocument = INews & { [key: string]: any };
+type ReactionValue = 'like' | 'dislike';
+
+const extractViewerId = (req: any): string | null => {
+  const raw = req.user?._id || req.user?.id;
+  return raw ? String(raw) : null;
+};
+
+const summarizeReactions = (item: any, viewerId?: string | null) => {
+  const reactions = Array.isArray(item?.reactions) ? item.reactions : [];
+  let likeCount = 0;
+  let dislikeCount = 0;
+  let myReaction: ReactionValue | null = null;
+
+  for (const reaction of reactions) {
+    const value = String(reaction?.value || '');
+    if (value === 'like') likeCount += 1;
+    if (value === 'dislike') dislikeCount += 1;
+    if (viewerId && String(reaction?.user || '') === viewerId && (value === 'like' || value === 'dislike')) {
+      myReaction = value as ReactionValue;
+    }
+  }
+
+  return { likeCount, dislikeCount, myReaction };
+};
+
+const mapNewsDto = (item: any, viewerId?: string | null) => {
+  const { likeCount, dislikeCount, myReaction } = summarizeReactions(item, viewerId);
+  return {
+    ...item,
+    likeCount,
+    dislikeCount,
+    myReaction,
+    likes: likeCount
+  };
+};
 
 router.get('/', async (req, res) => {
   try {
@@ -24,8 +60,8 @@ router.get('/', async (req, res) => {
       },
       { key: cacheKey, ttl: 30 }
     )) || [];
-
-    res.json({ success: true, data: items });
+    const viewerId = extractViewerId(req as any);
+    res.json({ success: true, data: items.map((item: any) => mapNewsDto(item, viewerId)) });
   } catch (error) {
     console.error('Error fetching news:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch news' });
@@ -84,10 +120,66 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ success: false, error: 'News not found' });
     }
 
-    res.json({ success: true, data: item });
+    const viewerId = extractViewerId(req as any);
+    res.json({ success: true, data: mapNewsDto(item, viewerId) });
   } catch (error) {
     console.error('Error fetching news by id:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch news' });
+  }
+});
+
+router.post('/:id/reaction', authenticateJWT, async (req: any, res) => {
+  try {
+    const newsId = String(req.params.id || '').trim();
+    if (!mongoose.Types.ObjectId.isValid(newsId)) {
+      return res.status(400).json({ success: false, error: 'Invalid news id' });
+    }
+    const userId = String(req.user?._id || req.user?.id || '').trim();
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+
+    const rawValue = String(req.body?.value || '').trim().toLowerCase();
+    const value = rawValue as ReactionValue;
+    if (!['like', 'dislike'].includes(value)) {
+      return res.status(400).json({ success: false, error: 'value must be like or dislike' });
+    }
+
+    const item: any = await News.findById(newsId);
+    if (!item || item.status !== 'published') {
+      return res.status(404).json({ success: false, error: 'News not found' });
+    }
+
+    const reactions = Array.isArray(item.reactions) ? item.reactions : [];
+    const existing = reactions.find((reaction: any) => String(reaction?.user || '') === userId);
+    if (existing && existing.value === value) {
+      item.reactions = reactions.filter((reaction: any) => String(reaction?.user || '') !== userId);
+    } else if (existing) {
+      existing.value = value;
+      existing.updatedAt = new Date();
+    } else {
+      reactions.push({
+        user: new mongoose.Types.ObjectId(userId),
+        value,
+        updatedAt: new Date()
+      });
+      item.reactions = reactions;
+    }
+
+    const stats = summarizeReactions(item, userId);
+    item.likes = stats.likeCount;
+    await item.save();
+    await cacheService.invalidatePattern('news:published:list:*');
+
+    return res.json({
+      success: true,
+      data: {
+        id: String(item._id),
+        ...stats
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to set reaction' });
   }
 });
 

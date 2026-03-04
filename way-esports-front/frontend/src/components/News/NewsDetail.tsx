@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { api } from '../../services/api';
+import { ThumbsDown, ThumbsUp } from 'react-feather';
 
 const Container = styled.div`
     padding-bottom: 80px;
@@ -121,6 +122,31 @@ const ShareSection = styled.div`
     border-top: 1px solid rgba(255, 107, 0, 0.2);
 `;
 
+const ReactionsRow = styled.div`
+    display: flex;
+    gap: 10px;
+    margin: 8px 0 22px;
+`;
+
+const ReactionButton = styled.button<{ $active?: boolean; $tone: 'like' | 'dislike' }>`
+    border-radius: 999px;
+    min-height: 36px;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid ${({ $active, $tone }) =>
+        $active
+            ? ($tone === 'like' ? 'rgba(76,175,80,0.8)' : 'rgba(244,67,54,0.8)')
+            : 'rgba(255,255,255,0.2)'};
+    background: ${({ $active, $tone }) =>
+        $active
+            ? ($tone === 'like' ? 'rgba(76,175,80,0.2)' : 'rgba(244,67,54,0.2)')
+            : 'rgba(255,255,255,0.06)'};
+    color: #fff;
+    cursor: pointer;
+`;
+
 const ShareTitle = styled.h3`
     color: #FF6B00;
     margin: 0 0 15px 0;
@@ -152,6 +178,7 @@ const NewsDetail: React.FC = () => {
     const { t } = useLanguage();
 
     const [loading, setLoading] = useState(false);
+    const [reactionBusy, setReactionBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [newsItem, setNewsItem] = useState<any>(null);
 
@@ -186,6 +213,47 @@ const NewsDetail: React.FC = () => {
         console.log(`Sharing on ${platform}`);
     };
 
+    const handleReaction = async (value: 'like' | 'dislike') => {
+        if (!id || !newsItem || reactionBusy) return;
+        const current = newsItem?.myReaction === 'like' || newsItem?.myReaction === 'dislike'
+            ? newsItem.myReaction
+            : null;
+        const next = current === value ? null : value;
+
+        const nextLike = Math.max(
+            0,
+            Number(newsItem?.likeCount ?? newsItem?.likes ?? 0) + (next === 'like' ? 1 : 0) - (current === 'like' ? 1 : 0)
+        );
+        const nextDislike = Math.max(
+            0,
+            Number(newsItem?.dislikeCount ?? 0) + (next === 'dislike' ? 1 : 0) - (current === 'dislike' ? 1 : 0)
+        );
+
+        setNewsItem((prev: any) => ({
+            ...prev,
+            myReaction: next,
+            likeCount: nextLike,
+            dislikeCount: nextDislike,
+            likes: nextLike
+        }));
+
+        try {
+            setReactionBusy(true);
+            await api.post(`/api/news/${id}/reaction`, { value });
+        } catch (e: any) {
+            setNewsItem((prev: any) => ({
+                ...prev,
+                myReaction: current,
+                likeCount: Number(newsItem?.likeCount ?? newsItem?.likes ?? 0),
+                dislikeCount: Number(newsItem?.dislikeCount ?? 0),
+                likes: Number(newsItem?.likeCount ?? newsItem?.likes ?? 0)
+            }));
+            setError(e?.message || 'Failed to set reaction');
+        } finally {
+            setReactionBusy(false);
+        }
+    };
+
     return (
         <Container>
             <BackButton onClick={() => navigate('/news')}>{t('back')}</BackButton>
@@ -207,6 +275,24 @@ const NewsDetail: React.FC = () => {
                             <span>{new Date(newsItem.publishDate || newsItem.createdAt || Date.now()).toLocaleDateString()}</span>
                             <Tag>{newsItem.category || 'other'}</Tag>
                         </Meta>
+                        <ReactionsRow>
+                            <ReactionButton
+                                $tone="like"
+                                $active={newsItem?.myReaction === 'like'}
+                                onClick={() => handleReaction('like')}
+                                disabled={reactionBusy}
+                            >
+                                <ThumbsUp size={14} /> {Number(newsItem?.likeCount ?? newsItem?.likes ?? 0)}
+                            </ReactionButton>
+                            <ReactionButton
+                                $tone="dislike"
+                                $active={newsItem?.myReaction === 'dislike'}
+                                onClick={() => handleReaction('dislike')}
+                                disabled={reactionBusy}
+                            >
+                                <ThumbsDown size={14} /> {Number(newsItem?.dislikeCount ?? 0)}
+                            </ReactionButton>
+                        </ReactionsRow>
                     </Header>
 
                     <Content dangerouslySetInnerHTML={{ __html: newsItem.content || '' }} />

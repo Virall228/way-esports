@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
 import styled from 'styled-components';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../services/api';
 import Card from '../../components/UI/Card';
+import { ThumbsUp, ThumbsDown } from 'react-feather';
 
 const NewsContainer = styled.div`
   width: min(100% - 2rem, 800px);
@@ -120,7 +121,39 @@ const NewsItemContent = styled.p`
   line-height: 1.6;
 `;
 
+const ReactionsRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+`;
+
+const ReactionButton = styled.button<{ $active?: boolean; $tone: 'like' | 'dislike' }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  border: 1px solid
+    ${({ $active, $tone }) =>
+      $active
+        ? $tone === 'like'
+          ? 'rgba(76, 175, 80, 0.8)'
+          : 'rgba(244, 67, 54, 0.8)'
+        : 'rgba(255, 255, 255, 0.2)'};
+  background: ${({ $active, $tone }) =>
+    $active
+      ? $tone === 'like'
+        ? 'rgba(76, 175, 80, 0.2)'
+        : 'rgba(244, 67, 54, 0.2)'
+      : 'rgba(255, 255, 255, 0.06)'};
+  color: #fff;
+  min-height: 34px;
+  padding: 0 12px;
+  cursor: pointer;
+`;
+
 const NewsPage: React.FC = () => {
+  const queryClient = useQueryClient();
   const { data: newsRaw = [], isLoading, error } = useQuery({
     queryKey: ['news'],
     queryFn: async () => {
@@ -138,9 +171,39 @@ const NewsPage: React.FC = () => {
       title: n.title || '',
       content: n.summary || n.content || '',
       coverImage: n.coverImage,
-      createdAt: n.publishDate || n.createdAt
+      createdAt: n.publishDate || n.createdAt,
+      likeCount: Number(n.likeCount ?? n.likes ?? 0),
+      dislikeCount: Number(n.dislikeCount ?? 0),
+      myReaction: n.myReaction === 'like' || n.myReaction === 'dislike' ? n.myReaction : null
     }));
   }, [newsRaw]);
+
+  const reactionMutation = useMutation({
+    mutationFn: async ({ newsId, value }: { newsId: string; value: 'like' | 'dislike' }) => {
+      return api.post(`/api/news/${newsId}/reaction`, { value });
+    },
+    onSuccess: (_result, vars) => {
+      queryClient.setQueryData(['news'], (prev: any) => {
+        const src: any[] = Array.isArray(prev) ? prev : Array.isArray(prev?.data) ? prev.data : [];
+        return src.map((row: any) => {
+          const rowId = String(row?._id || row?.id || '');
+          if (rowId !== vars.newsId) return row;
+          const current = row?.myReaction === 'like' || row?.myReaction === 'dislike' ? row.myReaction : null;
+          let nextReaction: 'like' | 'dislike' | null = vars.value;
+          if (current === vars.value) nextReaction = null;
+          const likeCount = Math.max(
+            0,
+            Number(row?.likeCount ?? row?.likes ?? 0) + (nextReaction === 'like' ? 1 : 0) - (current === 'like' ? 1 : 0)
+          );
+          const dislikeCount = Math.max(
+            0,
+            Number(row?.dislikeCount ?? 0) + (nextReaction === 'dislike' ? 1 : 0) - (current === 'dislike' ? 1 : 0)
+          );
+          return { ...row, myReaction: nextReaction, likeCount, dislikeCount, likes: likeCount };
+        });
+      });
+    }
+  });
 
   return (
     <NewsContainer>
@@ -175,6 +238,22 @@ const NewsPage: React.FC = () => {
           <NewsContentWrapper>
             <NewsItemTitle>{item.title}</NewsItemTitle>
             <NewsItemContent>{item.content}</NewsItemContent>
+            <ReactionsRow>
+              <ReactionButton
+                $tone="like"
+                $active={item.myReaction === 'like'}
+                onClick={() => reactionMutation.mutate({ newsId: item.id, value: 'like' })}
+              >
+                <ThumbsUp size={14} /> {item.likeCount}
+              </ReactionButton>
+              <ReactionButton
+                $tone="dislike"
+                $active={item.myReaction === 'dislike'}
+                onClick={() => reactionMutation.mutate({ newsId: item.id, value: 'dislike' })}
+              >
+                <ThumbsDown size={14} /> {item.dislikeCount}
+              </ReactionButton>
+            </ReactionsRow>
           </NewsContentWrapper>
         </NewsItem>
       ))}

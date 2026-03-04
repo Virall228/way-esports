@@ -369,6 +369,97 @@ router.get('/', async (req, res) => {
   }
 });
 
+// User: upcoming/live matches for current player teams
+router.get('/my/upcoming', authenticateJWT, async (req: any, res: any) => {
+  try {
+    const userId = resolveUserId(req);
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized'
+      });
+    }
+
+    const teams = await Team.find({
+      $or: [
+        { members: userId },
+        { players: userId },
+        { captain: userId }
+      ]
+    }).select('_id').lean();
+
+    const teamIds = teams.map((team: any) => team._id);
+    if (!teamIds.length) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const now = new Date();
+    const matches: any[] = await Match.find({
+      $and: [
+        {
+          $or: [
+            { team1: { $in: teamIds } },
+            { team2: { $in: teamIds } }
+          ]
+        },
+        {
+          $or: [
+            { status: 'live' },
+            { status: 'scheduled', startTime: { $gte: now } }
+          ]
+        }
+      ]
+    })
+      .populate('team1', 'name tag logo')
+      .populate('team2', 'name tag logo')
+      .populate('tournament', 'name game')
+      .sort({ startTime: 1 })
+      .limit(8)
+      .lean();
+
+    const data = matches.map((match: any) => {
+      const team1Id = match.team1?._id?.toString?.() || match.team1?.toString?.() || '';
+      const team2Id = match.team2?._id?.toString?.() || match.team2?.toString?.() || '';
+      const isMyTeam1 = teamIds.some((id: any) => id.toString() === team1Id);
+      const myTeam = isMyTeam1 ? match.team1 : match.team2;
+      const enemyTeam = isMyTeam1 ? match.team2 : match.team1;
+
+      return {
+        id: String(match._id),
+        tournamentId: match.tournament?._id?.toString() || '',
+        tournamentName: match.tournament?.name || '',
+        game: match.game || match.tournament?.game || '',
+        status: match.status,
+        round: match.round || '',
+        map: match.map || '',
+        startTime: match.startTime?.toISOString?.() || null,
+        hasRoomCredentials: hasRoomCredentials(match),
+        roomVisibleAt: match?.roomCredentials?.visibleAt ? new Date(match.roomCredentials.visibleAt).toISOString() : null,
+        myTeam: myTeam ? {
+          id: myTeam._id?.toString?.() || '',
+          name: myTeam.name || '',
+          tag: myTeam.tag || '',
+          logo: myTeam.logo || ''
+        } : null,
+        enemyTeam: enemyTeam ? {
+          id: enemyTeam._id?.toString?.() || '',
+          name: enemyTeam.name || '',
+          tag: enemyTeam.tag || '',
+          logo: enemyTeam.logo || ''
+        } : null
+      };
+    });
+
+    return res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching my upcoming matches:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch upcoming matches'
+    });
+  }
+});
+
 // Admin: operations summary for match control actions (from audit logs)
 router.get('/ops/summary', authenticateJWT, isAdmin, async (req: any, res: any) => {
   try {
