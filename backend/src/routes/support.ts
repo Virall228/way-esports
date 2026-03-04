@@ -29,6 +29,8 @@ const getUserId = (req: any): mongoose.Types.ObjectId | null => {
 };
 
 const sanitizePreview = (message: string) => message.trim().replace(/\s+/g, ' ').slice(0, 300);
+const detectPreferredLanguage = (message: string): 'en' | 'ru' =>
+  /[\u0400-\u04FF]/.test(String(message || '')) ? 'ru' : 'en';
 
 const ensureTeamAccess = async (teamId: mongoose.Types.ObjectId, userId: mongoose.Types.ObjectId): Promise<boolean> => {
   const team: any = await Team.findById(teamId).select('_id captain members').lean();
@@ -301,10 +303,12 @@ router.post(
         .lean();
 
       const settings = await getSupportSettings();
+      const preferredLanguage = detectPreferredLanguage(content);
       const ai = settings.aiEnabled
         ? await generateSupportReply({
             username: req.user?.username || 'user',
             subject,
+            preferredLanguage,
             messages: contextMessages.map((row: any) => ({
               role: row.senderType,
               content: row.content,

@@ -12,6 +12,7 @@ type SupportReplyInput = {
   username: string;
   subject?: string;
   messages: SupportContextMessage[];
+  preferredLanguage?: 'en' | 'ru';
 };
 
 type SupportReplyResult = {
@@ -42,10 +43,14 @@ const buildPrompt = (input: SupportReplyInput): string => {
     .map((m) => `[${m.role}] ${m.content}`)
     .join('\n');
 
+  const languageInstruction = input.preferredLanguage === 'ru'
+    ? 'Reply language: Russian only.'
+    : 'Reply language: English only.';
+
   return `
 You are WAY ESPORTS emergency support assistant.
 Rules:
-- If user text is Russian, answer in Russian. Else answer in English.
+- ${languageInstruction}
 - Be concise and practical.
 - Give clear next actions.
 - Never ask for private keys or passwords.
@@ -61,7 +66,9 @@ ${history}
 const heuristicReply = (input: SupportReplyInput): SupportReplyResult => {
   const lastRaw = String(input.messages[input.messages.length - 1]?.content || '');
   const last = lastRaw.toLowerCase();
-  const hasCyrillic = /[\u0400-\u04FF]/.test(lastRaw);
+  const hasCyrillic = input.preferredLanguage
+    ? input.preferredLanguage === 'ru'
+    : /[\u0400-\u04FF]/.test(lastRaw);
 
   const msg = (en: string, ru: string) => (hasCyrillic ? ru : en);
 
