@@ -90,13 +90,16 @@ const ProfileHeader = styled(Card).attrs({ variant: 'elevated' })<{
   }
 
   @media (max-width: 768px) {
-    padding: 18px;
-    gap: 16px;
+    padding: 16px;
+    gap: 12px;
+    flex-direction: column;
+    align-items: stretch;
 
     &::before {
-      background-position: center 28%;
-      opacity: ${({ $wallpaperUrl }) => ($wallpaperUrl ? 0.22 : 0)};
-      filter: blur(3px) saturate(0.86) contrast(0.86);
+      background-position: center 20%;
+      opacity: ${({ $wallpaperUrl }) => ($wallpaperUrl ? 0.16 : 0)};
+      filter: blur(9px) saturate(0.78) contrast(0.8) brightness(0.62);
+      transform: scale(1.02);
     }
   }
 `;
@@ -128,6 +131,12 @@ const Avatar = styled.div<{ $hasImage?: boolean; $imageUrl?: string | null }>`
     border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
+
+  @media (max-width: 768px) {
+    width: 96px;
+    height: 96px;
+    margin: 0 auto;
+  }
 `;
 
 const WallpaperActionRow = styled.div`
@@ -135,11 +144,21 @@ const WallpaperActionRow = styled.div`
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
 `;
 
 const ProfileInfo = styled.div`
   flex: 1;
   min-width: 0;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
 `;
 
 const ProfileTop = styled.div`
@@ -149,7 +168,17 @@ const ProfileTop = styled.div`
   margin-bottom: 20px;
 
   @media (max-width: 768px) {
+    display: block;
     margin-bottom: 12px;
+  }
+`;
+
+const IdentityBlock = styled.div`
+  @media (max-width: 768px) {
+    text-align: center;
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
   }
 `;
 
@@ -187,12 +216,14 @@ const GhostBadge = styled.div`
 `;
 
 const UserStats = styled.div`
-  display: flex;
-  gap: 30px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
 
   @media (max-width: 768px) {
-    gap: 18px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 8px;
   }
 `;
 
@@ -204,6 +235,8 @@ const HeaderActionRow = styled.div`
   flex-wrap: wrap;
 
   @media (max-width: 768px) {
+    justify-content: center;
+    width: 100%;
     gap: 8px;
   }
 `;
@@ -256,6 +289,40 @@ const CardTitle = styled.h3`
 const InlineAction = styled(Button).attrs({ variant: 'text', size: 'small' })`
   min-height: auto;
   padding: 0;
+`;
+
+const HeaderPrimaryButton = styled(Button).attrs({ size: 'small', variant: 'outline' })`
+  @media (max-width: 768px) {
+    width: 100%;
+  }
+`;
+
+const ShareLinkButton = styled.a`
+  color: #ff6b00;
+  font-size: 0.85rem;
+  text-decoration: none;
+  border: 1px solid rgba(255,107,0,0.5);
+  border-radius: 10px;
+  padding: 6px 10px;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    text-align: center;
+  }
+`;
+
+const WallpaperPrimaryButton = styled(Button).attrs({ size: 'small', variant: 'outline' })`
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: center;
+  }
+`;
+
+const WallpaperSecondaryButton = styled(Button).attrs({ size: 'small', variant: 'text' })`
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: center;
+  }
 `;
 
 const InlineConfirm = styled(Button).attrs({ variant: 'text', size: 'small' })`
@@ -536,9 +603,9 @@ const ProfilePage: React.FC = () => {
         </Avatar>
         <ProfileInfo>
           <ProfileTop>
-            <div>
+            <IdentityBlock>
               <Username>{profile?.username || t('defaultUsername')}</Username>
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '6px' }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
                 {isEditingUsername ? (
                   <>
                     <InlineInput
@@ -566,29 +633,17 @@ const ProfilePage: React.FC = () => {
                 {'\u{1F517}'} {t('viewPublicProfile')}
               </Link>
               <HeaderActionRow>
-                <Button
-                  size="small"
-                  variant="outline"
-                  onClick={copyStatusCard}
-                >
+                <HeaderPrimaryButton onClick={copyStatusCard}>
                   Copy Player Card
-                </Button>
+                </HeaderPrimaryButton>
                 {statusCardData?.shareLink ? (
-                  <a
+                  <ShareLinkButton
                     href={statusCardData.shareLink}
                     target="_blank"
                     rel="noreferrer"
-                    style={{
-                      color: '#ff6b00',
-                      fontSize: '0.85rem',
-                      textDecoration: 'none',
-                      border: '1px solid rgba(255,107,0,0.5)',
-                      borderRadius: 10,
-                      padding: '6px 10px'
-                    }}
                   >
                     Open Telegram Share
-                  </a>
+                  </ShareLinkButton>
                 ) : null}
                 {statusCardData?.points ? (
                   <span style={{ color: statusCardData.rankColor || '#ffd7b8', fontSize: '0.82rem' }}>
@@ -597,7 +652,7 @@ const ProfilePage: React.FC = () => {
                 ) : null}
               </HeaderActionRow>
               <WallpaperActionRow>
-                <label style={{ display: 'inline-flex' }}>
+                <label style={{ display: 'inline-flex', width: '100%' }}>
                   <input
                     type="file"
                     accept="image/*"
@@ -605,17 +660,17 @@ const ProfilePage: React.FC = () => {
                     onChange={handleWallpaperUpload}
                     disabled={isUploadingWallpaper}
                   />
-                  <Button size="small" variant="outline" as="span">
+                  <WallpaperPrimaryButton as="span">
                     {isUploadingWallpaper ? 'Uploading wallpaper...' : 'Set Public Wallpaper'}
-                  </Button>
+                  </WallpaperPrimaryButton>
                 </label>
                 {wallpaperUrl ? (
-                  <Button size="small" variant="text" onClick={removeWallpaper}>
+                  <WallpaperSecondaryButton onClick={removeWallpaper}>
                     Remove wallpaper
-                  </Button>
+                  </WallpaperSecondaryButton>
                 ) : null}
               </WallpaperActionRow>
-            </div>
+            </IdentityBlock>
           </ProfileTop>
           <UserStats>
             <StatItem>

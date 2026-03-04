@@ -310,15 +310,28 @@ const StatLabel = styled.div`
   }
 `;
 
-const InfoGrid = styled.div`
+const TopInfoGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+
+  @media (max-width: 1280px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+`;
+
+const BottomInfoGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 20px;
-
-  @media (max-width: 1200px) {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -327,21 +340,15 @@ const InfoGrid = styled.div`
   }
 `;
 
-const InfoCard = styled(Card).attrs({ variant: 'outlined' })<{ $span?: number }>`
+const InfoCard = styled(Card).attrs({ variant: 'outlined' })`
   padding: 16px;
   background: ${({ theme }) => theme.colors.bg.secondary};
   border: 1px solid ${({ theme }) => theme.colors.border.medium};
   border-radius: 12px;
-  min-height: 180px;
-  grid-column: span ${({ $span = 4 }) => $span};
-
-  @media (max-width: 1200px) {
-    grid-column: span 3;
-  }
+  min-height: 175px;
 
   @media (max-width: 768px) {
     min-height: unset;
-    grid-column: auto;
   }
 `;
 
@@ -431,16 +438,22 @@ const RecommendationList = styled.div`
 const RecommendationRow = styled.div`
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 10px;
   padding: 10px;
+
+  @media (max-width: 1280px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
 `;
 
 const RecommendationText = styled.div`
   min-width: 0;
+  flex: 1;
 `;
 
 const RecommendationTitle = styled.div`
@@ -456,6 +469,18 @@ const RecommendationDesc = styled.div`
   color: #b7b7b7;
   font-size: 0.76rem;
   margin-top: 2px;
+`;
+
+const RecommendationActions = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+
+  @media (max-width: 1280px) {
+    justify-content: flex-end;
+    width: 100%;
+  }
 `;
 
 const HomePage: React.FC = () => {
@@ -652,8 +677,8 @@ const HomePage: React.FC = () => {
         </CTAButton>
       </HeroSection>
 
-      <InfoGrid>
-        <InfoCard $span={4}>
+      <TopInfoGrid>
+        <InfoCard>
           <InfoTitle>Live Snapshot</InfoTitle>
           <TinyGrid>
             <TinyStat>
@@ -675,7 +700,7 @@ const HomePage: React.FC = () => {
           </TinyGrid>
         </InfoCard>
 
-        <InfoCard $span={4}>
+        <InfoCard>
           <InfoTitle>My Action Center</InfoTitle>
           <div style={{ color: '#cfcfcf', fontSize: '0.85rem', marginBottom: 10 }}>
             Sub: <strong style={{ color: user?.isSubscribed ? '#a5d6a7' : '#ffd180' }}>{user?.isSubscribed ? 'ACTIVE' : 'INACTIVE'}</strong>{' '}
@@ -691,7 +716,7 @@ const HomePage: React.FC = () => {
           </QuickActions>
         </InfoCard>
 
-        <InfoCard $span={4}>
+        <InfoCard>
           <InfoTitle>Recommended For You</InfoTitle>
           <RecommendationList>
             {recommendations.map((item) => (
@@ -700,16 +725,18 @@ const HomePage: React.FC = () => {
                   <RecommendationTitle>{item.title}</RecommendationTitle>
                   <RecommendationDesc>{item.description}</RecommendationDesc>
                 </RecommendationText>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <RecommendationActions>
                   <StatusPill $tone={item.tone}>{item.tone === 'ok' ? 'READY' : 'ACTION'}</StatusPill>
                   <ActionButton onClick={() => navigate(item.actionPath)}>{item.actionLabel}</ActionButton>
-                </div>
+                </RecommendationActions>
               </RecommendationRow>
             ))}
           </RecommendationList>
         </InfoCard>
+      </TopInfoGrid>
 
-        <InfoCard $span={6}>
+      <BottomInfoGrid>
+        <InfoCard>
           <InfoTitle>Top Tournaments Now</InfoTitle>
           <List>
             {liveTournaments.length === 0 ? (
@@ -730,7 +757,7 @@ const HomePage: React.FC = () => {
           </List>
         </InfoCard>
 
-        <InfoCard $span={6}>
+        <InfoCard>
           <InfoTitle>My Upcoming Matches</InfoTitle>
           <List>
             {upcomingMatches.length === 0 ? (
@@ -763,7 +790,7 @@ const HomePage: React.FC = () => {
             <ActionButton onClick={() => navigate('/matches')}>Open Matches</ActionButton>
           </div>
         </InfoCard>
-      </InfoGrid>
+      </BottomInfoGrid>
 
       <SectionTitle>{t('whyChoose')}</SectionTitle>
 
