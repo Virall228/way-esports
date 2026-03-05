@@ -35,11 +35,13 @@ const Bio = styled.p`
 `;
 
 const Container = styled.div`
+  box-sizing: border-box;
   padding: 20px;
   width: 100%;
   max-width: 100%;
   margin: 0;
   color: ${({ theme }) => theme.colors.text.primary};
+  overflow-x: clip;
 `;
 
 const ProfileHeader = styled(Card).attrs({ variant: 'elevated' })<{
@@ -220,6 +222,7 @@ const UserStats = styled.div`
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 18px;
+  min-width: 0;
 
   @media (max-width: 768px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -234,6 +237,7 @@ const HeaderActionRow = styled.div`
   gap: 10px;
   align-items: center;
   flex-wrap: wrap;
+  min-width: 0;
 
   @media (max-width: 768px) {
     justify-content: center;

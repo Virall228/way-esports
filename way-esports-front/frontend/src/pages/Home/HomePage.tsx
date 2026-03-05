@@ -8,11 +8,13 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Container = styled.div`
+  box-sizing: border-box;
   padding: 40px;
   width: 100%;
   max-width: 100%;
   margin: 0;
   color: #ffffff;
+  overflow-x: clip;
 
   @media (max-width: 768px) {
     padding: 16px;
@@ -184,6 +186,10 @@ const FeatureCard = styled(Card).attrs({ variant: 'outlined' })`
 `;
 
 const PageRoot = styled.div`
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+
   @media (prefers-reduced-motion: reduce), (max-width: 768px) {
     * {
       animation: none !important;
@@ -346,6 +352,8 @@ const InfoCard = styled(Card).attrs({ variant: 'outlined' })`
   border: 1px solid ${({ theme }) => theme.colors.border.medium};
   border-radius: 12px;
   min-height: 175px;
+  min-width: 0;
+  overflow: hidden;
 
   @media (max-width: 768px) {
     min-height: unset;
@@ -393,6 +401,8 @@ const ActionButton = styled(Button).attrs({ variant: 'outline', size: 'small' })
   min-height: 34px;
   border-radius: 999px;
   padding: 0 12px;
+  max-width: 100%;
+  white-space: nowrap;
 `;
 
 const List = styled.div`
@@ -460,15 +470,18 @@ const RecommendationTitle = styled.div`
   color: #fff;
   font-weight: 700;
   font-size: 0.86rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.25;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 `;
 
 const RecommendationDesc = styled.div`
   color: #b7b7b7;
   font-size: 0.76rem;
   margin-top: 2px;
+  line-height: 1.3;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 `;
 
 const RecommendationActions = styled.div`
