@@ -17,6 +17,7 @@ import { getQueueStats } from '../services/queue';
 import { listJsonBackups, runJsonBackup } from '../services/backupService';
 import cacheService from '../services/cacheService';
 import botPushService from '../services/botPushService';
+import BotNotification from '../models/BotNotification';
 
 const router = express.Router();
 
@@ -321,6 +322,118 @@ router.use((req, res, next) => {
   });
 
   return next();
+});
+
+router.get('/bot/outbox', async (req, res) => {
+  try {
+    const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>, {
+      defaultLimit: 25,
+      maxLimit: 200
+    });
+    const status = String(req.query?.status || 'all').trim().toLowerCase();
+    const search = String(req.query?.search || '').trim();
+    const eventType = String(req.query?.eventType || '').trim();
+
+    const query: any = {};
+    if (status === 'pending' || status === 'sent' || status === 'failed') query.status = status;
+    if (eventType) query.eventType = eventType;
+    if (search) {
+      const regex = new RegExp(escapeRegExp(search), 'i');
+      query.$or = [{ title: regex }, { message: regex }, { eventType: regex }];
+      const asNum = Number(search);
+      if (Number.isFinite(asNum) && asNum > 0) query.$or.push({ telegramId: asNum }, { chatId: asNum });
+    }
+
+    const [total, rows] = await Promise.all([
+      BotNotification.countDocuments(query),
+      BotNotification.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean()
+    ]);
+
+    return res.json({
+      success: true,
+      data: (rows || []).map((row: any) => ({
+        id: String(row._id),
+        userId: row.userId ? String(row.userId) : null,
+        telegramId: Number(row.telegramId || 0),
+        chatId: Number(row.chatId || 0),
+        eventType: String(row.eventType || ''),
+        title: String(row.title || ''),
+        message: String(row.message || ''),
+        status: String(row.status || 'pending'),
+        attempts: Number(row.attempts || 0),
+        sendAt: row.sendAt ? new Date(row.sendAt).toISOString() : null,
+        sentAt: row.sentAt ? new Date(row.sentAt).toISOString() : null,
+        lastError: row.lastError || '',
+        createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : null
+      })),
+      pagination: buildPaginationMeta(page, limit, total)
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to fetch bot outbox' });
+  }
+});
+
+router.post('/bot/outbox/retry-failed', idempotency({ required: true }), async (req, res) => {
+  try {
+    const limitRaw = Number(req.body?.limit || 100);
+    const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(500, limitRaw)) : 100;
+    const idsRaw = Array.isArray(req.body?.ids) ? req.body.ids.map((v: any) => String(v)).filter(Boolean) : [];
+
+    let ids: string[] = idsRaw;
+    if (!ids.length) {
+      const failedRows = await BotNotification.find({ status: 'failed' })
+        .sort({ updatedAt: -1 })
+        .limit(limit)
+        .select('_id')
+        .lean();
+      ids = failedRows.map((row: any) => String(row._id));
+    }
+
+    if (!ids.length) return res.json({ success: true, data: { modified: 0 } });
+
+    const result = await BotNotification.updateMany(
+      { _id: { $in: ids } },
+      { $set: { status: 'pending', sendAt: new Date() }, $unset: { lastError: 1 } }
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        matched: Number((result as any)?.matchedCount || 0),
+        modified: Number((result as any)?.modifiedCount || 0)
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to retry failed outbox items' });
+  }
+});
+
+router.post('/bot/outbox/:id/retry', idempotency({ required: true }), async (req, res) => {
+  try {
+    const id = String(req.params?.id || '').trim();
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'Invalid outbox id' });
+    }
+
+    const updated: any = await BotNotification.findByIdAndUpdate(
+      id,
+      { $set: { status: 'pending', sendAt: new Date() }, $unset: { lastError: 1 } },
+      { new: true }
+    ).lean();
+
+    if (!updated) return res.status(404).json({ success: false, error: 'Outbox item not found' });
+
+    return res.json({
+      success: true,
+      data: {
+        id: String(updated._id),
+        status: String(updated.status || 'pending'),
+        sendAt: updated.sendAt ? new Date(updated.sendAt).toISOString() : null
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to retry outbox item' });
+  }
 });
 
 router.get('/stats', getDashboardStats);

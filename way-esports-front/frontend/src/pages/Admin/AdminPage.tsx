@@ -475,6 +475,22 @@ interface SystemSmokeAuditEvent {
   tournamentsCount: number;
 }
 
+interface BotOutboxRow {
+  id: string;
+  userId?: string | null;
+  telegramId: number;
+  chatId: number;
+  eventType: string;
+  title: string;
+  message: string;
+  status: 'pending' | 'sent' | 'failed' | string;
+  attempts: number;
+  sendAt?: string | null;
+  sentAt?: string | null;
+  lastError?: string;
+  createdAt?: string | null;
+}
+
 interface AdminWalletTransaction {
   id: string;
   userId: string;
@@ -987,6 +1003,10 @@ const AdminPage: React.FC = () => {
   const [opsTimelineBucketMinutes, setOpsTimelineBucketMinutes] = useState<15 | 60>(60);
   const [selectedTopError, setSelectedTopError] = useState<OpsTopErrorRow | null>(null);
   const [readinessSmoke, setReadinessSmoke] = useState<ReadinessSmoke | null>(null);
+  const [botOutboxPage, setBotOutboxPage] = useState(1);
+  const [botOutboxStatusFilter, setBotOutboxStatusFilter] = useState<'all' | 'pending' | 'sent' | 'failed'>('pending');
+  const [botOutboxSearchInput, setBotOutboxSearchInput] = useState('');
+  const [botOutboxSearch, setBotOutboxSearch] = useState('');
   const knownTournamentRequestIdsRef = useRef<Record<string, string[]>>({});
   const supportUnreadForAdminRef = useRef(0);
   const [newTournamentRequestCounts, setNewTournamentRequestCounts] = useState<Record<string, number>>({});
@@ -2078,6 +2098,35 @@ const AdminPage: React.FC = () => {
     };
   };
 
+  const fetchBotOutbox = async (): Promise<PagedResult<BotOutboxRow>> => {
+    const params = new URLSearchParams({
+      page: String(botOutboxPage),
+      limit: '20'
+    });
+    if (botOutboxStatusFilter !== 'all') params.set('status', botOutboxStatusFilter);
+    if (botOutboxSearch.trim()) params.set('search', botOutboxSearch.trim());
+    const result: any = await api.get(`/api/admin/bot/outbox?${params.toString()}`);
+    const items: any[] = Array.isArray(result?.data) ? result.data : [];
+    return {
+      data: items.map((row: any) => ({
+        id: String(row?.id || ''),
+        userId: row?.userId ? String(row.userId) : null,
+        telegramId: Number(row?.telegramId || 0),
+        chatId: Number(row?.chatId || 0),
+        eventType: String(row?.eventType || ''),
+        title: String(row?.title || ''),
+        message: String(row?.message || ''),
+        status: String(row?.status || 'pending'),
+        attempts: Number(row?.attempts || 0),
+        sendAt: row?.sendAt ? String(row.sendAt) : null,
+        sentAt: row?.sentAt ? String(row.sentAt) : null,
+        lastError: String(row?.lastError || ''),
+        createdAt: row?.createdAt ? String(row.createdAt) : null
+      })),
+      pagination: result?.pagination || null
+    };
+  };
+
   const fetchTournamentRequests = async (): Promise<PagedResult<AdminTournamentRequestRow>> => {
     if (!selectedTournamentId) {
       return { data: [], pagination: null };
@@ -2696,6 +2745,14 @@ const AdminPage: React.FC = () => {
     refetchOnWindowFocus: false
   });
 
+  const botOutboxQuery = useQuery({
+    queryKey: ['admin', 'bot-outbox', botOutboxPage, botOutboxStatusFilter, botOutboxSearch],
+    queryFn: fetchBotOutbox,
+    enabled: hasAdminAccess,
+    staleTime: 5000,
+    refetchOnWindowFocus: false
+  });
+
   const statsQuery = useQuery({
     queryKey: ['admin', 'stats'],
     queryFn: fetchDashboardStats,
@@ -2879,6 +2936,8 @@ const AdminPage: React.FC = () => {
   const contacts = contactsQuery.data?.items || [];
   const contactsPagination = contactsQuery.data?.pagination || null;
   const contactsSummary = contactsQuery.data?.summary || null;
+  const botOutboxRows = botOutboxQuery.data?.data || [];
+  const botOutboxPagination = botOutboxQuery.data?.pagination || null;
   const supportConversations = supportConversationsQuery.data || [];
   const supportMessages = supportMessagesQuery.data || [];
   const supportSettings = supportSettingsQuery.data || null;
@@ -2999,6 +3058,14 @@ const AdminPage: React.FC = () => {
   }, [participantSearchInput]);
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setBotOutboxPage(1);
+      setBotOutboxSearch(botOutboxSearchInput.trim());
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [botOutboxSearchInput]);
+
+  useEffect(() => {
     if (activeTab !== 'support') return;
     if (!supportConversations.length) {
       setSelectedSupportConversationId(null);
@@ -3046,6 +3113,7 @@ const AdminPage: React.FC = () => {
     intelligenceReadinessQuery.error ||
     supportAuditEventsQuery.error ||
     systemSmokeAuditEventsQuery.error ||
+    botOutboxQuery.error ||
     supportConversationsQuery.error ||
     supportMessagesQuery.error ||
     contactsQuery.error ||
@@ -3080,6 +3148,7 @@ const AdminPage: React.FC = () => {
     intelligenceReadinessQuery.isFetching ||
     supportAuditEventsQuery.isFetching ||
     systemSmokeAuditEventsQuery.isFetching ||
+    botOutboxQuery.isFetching ||
     supportConversationsQuery.isFetching ||
     supportMessagesQuery.isFetching ||
     contactsQuery.isFetching ||
@@ -8002,6 +8071,7 @@ const AdminPage: React.FC = () => {
     const readinessScore = Number(intelligenceReadiness?.readinessScore ?? 0);
     const smokeChecks = Array.isArray(readinessSmoke?.checks) ? readinessSmoke.checks : [];
     const systemSmokeRows = Array.isArray(systemSmokeAuditEvents) ? systemSmokeAuditEvents : [];
+    const outboxRows = Array.isArray(botOutboxRows) ? botOutboxRows : [];
 
     const runSmokeTest = async () => {
       try {
@@ -8011,6 +8081,26 @@ const AdminPage: React.FC = () => {
         notify('success', 'Smoke test', 'System smoke test completed');
       } catch (e: any) {
         notify('error', 'Smoke test failed', formatApiError(e, 'Failed to run smoke test'));
+      }
+    };
+
+    const retryOutboxItem = async (id: string) => {
+      try {
+        await api.post(`/api/admin/bot/outbox/${id}/retry`, {});
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'bot-outbox'] });
+        notify('success', 'Outbox', 'Message queued for resend');
+      } catch (e: any) {
+        notify('error', 'Outbox retry failed', formatApiError(e, 'Failed to retry outbox item'));
+      }
+    };
+
+    const retryFailedOutbox = async () => {
+      try {
+        await api.post('/api/admin/bot/outbox/retry-failed', {});
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'bot-outbox'] });
+        notify('success', 'Outbox', 'Failed messages re-queued');
+      } catch (e: any) {
+        notify('error', 'Outbox retry failed', formatApiError(e, 'Failed to re-queue failed outbox messages'));
       }
     };
 
@@ -8246,6 +8336,77 @@ const AdminPage: React.FC = () => {
               </tbody>
             </Table>
           </TableWrap>
+        )}
+
+        <h4 style={{ marginTop: '24px' }}>Bot Outbox</h4>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
+          <Input
+            value={botOutboxSearchInput}
+            onChange={(e) => setBotOutboxSearchInput(e.target.value)}
+            placeholder="Search title/event/telegram id"
+          />
+          <Select value={botOutboxStatusFilter} onChange={(e) => setBotOutboxStatusFilter(e.target.value as any)}>
+            <option value="all">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="sent">Sent</option>
+            <option value="failed">Failed</option>
+          </Select>
+          <ActionButton onClick={retryFailedOutbox}>Retry Failed</ActionButton>
+          <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'bot-outbox'] })}>Refresh</ActionButton>
+        </div>
+        {!outboxRows.length && (
+          <div style={{ color: '#cccccc', padding: '12px 0' }}>No bot outbox messages.</div>
+        )}
+        {outboxRows.length > 0 && (
+          <>
+            <TableWrap>
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>Time</Th>
+                    <Th>Event</Th>
+                    <Th>Status</Th>
+                    <Th>Telegram</Th>
+                    <Th>Attempts</Th>
+                    <Th>Title</Th>
+                    <Th>Error</Th>
+                    <Th>Actions</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {outboxRows.map((row: BotOutboxRow) => (
+                    <tr key={row.id}>
+                      <Td>{formatDate(row.createdAt || row.sendAt || '')}</Td>
+                      <Td>{row.eventType}</Td>
+                      <Td style={{ color: row.status === 'sent' ? '#81c784' : row.status === 'failed' ? '#ffab91' : '#ffb74d' }}>{row.status}</Td>
+                      <Td>{row.telegramId || '-'}</Td>
+                      <Td>{row.attempts}</Td>
+                      <Td>{row.title}</Td>
+                      <Td>{row.lastError || '-'}</Td>
+                      <Td>
+                        <ActionsCell>
+                          <ActionButton onClick={() => retryOutboxItem(row.id)}>Retry</ActionButton>
+                        </ActionsCell>
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </TableWrap>
+            {botOutboxPagination && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+                <ActionButton onClick={() => setBotOutboxPage((p) => Math.max(1, p - 1))} disabled={!botOutboxPagination.hasPrev}>
+                  Prev
+                </ActionButton>
+                <span style={{ color: '#cccccc' }}>
+                  Page {botOutboxPagination.page} / {botOutboxPagination.totalPages}
+                </span>
+                <ActionButton onClick={() => setBotOutboxPage((p) => Math.min(botOutboxPagination.totalPages, p + 1))} disabled={!botOutboxPagination.hasNext}>
+                  Next
+                </ActionButton>
+              </div>
+            )}
+          </>
         )}
       </div>
     );
