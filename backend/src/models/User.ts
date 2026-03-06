@@ -80,7 +80,7 @@ export interface IUser extends Document<mongoose.Types.ObjectId> {
     }[];
   };
   gameProfiles: {
-    game: 'Critical Ops' | 'CS2' | 'PUBG Mobile' | 'Valorant Mobile' | 'Standoff 2';
+    game: 'Critical Ops' | 'CS2' | 'PUBG Mobile' | 'Valorant Mobile' | 'Standoff 2' | 'Dota 2';
     username: string;
     ingameId?: string;
     rank?: string;
@@ -305,7 +305,7 @@ const userSchema = new Schema<IUser>({
   gameProfiles: [{
     game: {
       type: String,
-      enum: ['Critical Ops', 'CS2', 'PUBG Mobile', 'Valorant Mobile', 'Standoff 2']
+      enum: ['Critical Ops', 'CS2', 'PUBG Mobile', 'Valorant Mobile', 'Standoff 2', 'Dota 2']
     },
     username: String,
     ingameId: {

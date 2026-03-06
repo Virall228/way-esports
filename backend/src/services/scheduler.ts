@@ -4,11 +4,12 @@ import PrizeDistributionService from './prizeDistribution';
 import { prepareMatchRoom } from './matchRoomService';
 import { refreshWeeklyTopProspects, scoutingUtils } from './scoutingEngine';
 import { updateHallOfFameSnapshot } from './hallOfFameService';
+import botPushService from './botPushService';
 
 const FIVE_MIN = 5 * 60 * 1000;
 const MATCH_INTERVAL_MIN = 30;
 const ROOM_VISIBILITY_WINDOW_MIN = 5;
-const SUPPORTED_MATCH_GAMES = new Set(['Critical Ops', 'CS2', 'PUBG Mobile']);
+const SUPPORTED_MATCH_GAMES = new Set(['Critical Ops', 'CS2', 'PUBG Mobile', 'Dota 2', 'Standoff 2', 'Valorant Mobile']);
 
 interface ScheduledJob {
   id: string;
@@ -20,10 +21,17 @@ const scheduledJobs = new Map<string, ScheduledJob>();
 let lastScoutingWeekKey = '';
 let lastHallOfFameDayKey = '';
 
-const normalizeMatchGame = (game: string | undefined): 'Critical Ops' | 'CS2' | 'PUBG Mobile' => {
+const normalizeMatchGame = (game: string | undefined): 'Critical Ops' | 'CS2' | 'PUBG Mobile' | 'Dota 2' | 'Standoff 2' | 'Valorant Mobile' => {
   if (game && SUPPORTED_MATCH_GAMES.has(game)) {
-    return game as 'Critical Ops' | 'CS2' | 'PUBG Mobile';
+    return game as 'Critical Ops' | 'CS2' | 'PUBG Mobile' | 'Dota 2' | 'Standoff 2' | 'Valorant Mobile';
   }
+  const normalized = String(game || '').trim().toLowerCase().replace(/\s+/g, '');
+  if (normalized === 'criticalops') return 'Critical Ops';
+  if (normalized === 'cs2') return 'CS2';
+  if (normalized === 'pubgmobile') return 'PUBG Mobile';
+  if (normalized === 'dota2') return 'Dota 2';
+  if (normalized === 'standoff2') return 'Standoff 2';
+  if (normalized === 'valorantmobile' || normalized === 'valorant') return 'Valorant Mobile';
   return 'CS2';
 };
 
@@ -141,6 +149,68 @@ async function ensureUpcomingRoomCredentials() {
   }
 }
 
+async function notifyUpcomingMatchReminders() {
+  const now = new Date();
+
+  const ranges = [
+    {
+      type: 'match_start_60m',
+      minutes: 60,
+      from: new Date(now.getTime() + 55 * 60 * 1000),
+      to: new Date(now.getTime() + 65 * 60 * 1000),
+      field: 'reminder60SentAt' as const
+    },
+    {
+      type: 'match_start_30m',
+      minutes: 30,
+      from: new Date(now.getTime() + 25 * 60 * 1000),
+      to: new Date(now.getTime() + 35 * 60 * 1000),
+      field: 'reminder30SentAt' as const
+    }
+  ];
+
+  for (const range of ranges) {
+    const matches: any[] = await Match.find({
+      status: { $in: ['scheduled', 'live'] },
+      startTime: { $gte: range.from, $lte: range.to },
+      [range.field]: { $exists: false }
+    })
+      .populate('tournament', 'name')
+      .select('_id tournament team1 team2 startTime')
+      .lean();
+
+    for (const match of matches) {
+      try {
+        const team1Members = await botPushService.getTeamMemberIds(match.team1);
+        const team2Members = await botPushService.getTeamMemberIds(match.team2);
+        const userIds = [...team1Members, ...team2Members];
+
+        if (userIds.length) {
+          await botPushService.notifyUsers({
+            userIds,
+            eventType: range.type,
+            title: `Match starts in ${range.minutes} minutes`,
+            message: `Your match starts soon (${range.minutes} min). Please prepare and check room access.`,
+            payload: {
+              matchId: String(match._id),
+              tournamentId: match.tournament?._id?.toString?.() || '',
+              tournamentName: match.tournament?.name || '',
+              startTime: match.startTime
+            }
+          });
+        }
+
+        await Match.updateOne(
+          { _id: match._id, [range.field]: { $exists: false } },
+          { $set: { [range.field]: new Date() } }
+        );
+      } catch (error) {
+        console.error('[scheduler] failed to send match reminder:', error);
+      }
+    }
+  }
+}
+
 async function executeScheduledJobs() {
   const now = new Date();
   const jobsToExecute: ScheduledJob[] = [];
@@ -188,6 +258,7 @@ export function startSchedulers() {
         completeFinishedTournaments(),
         closeStaleMatches(),
         ensureUpcomingRoomCredentials(),
+        notifyUpcomingMatchReminders(),
         executeScheduledJobs(),
         runWeeklyScoutingRefresh(),
         runDailyHallOfFameRefresh()

@@ -1,8 +1,19 @@
 import { api } from './api';
 import { Tournament } from '../types';
 
-const list = async (): Promise<Tournament[]> => {
-  return api.get('/api/tournaments');
+type TournamentListFilters = {
+  game?: string;
+  cadence?: 'daily' | 'weekly' | 'all';
+  teamMode?: '2v2' | '5v5' | 'all';
+};
+
+const list = async (filters: TournamentListFilters = {}): Promise<Tournament[]> => {
+  const params = new URLSearchParams();
+  if (filters.game && filters.game !== 'all') params.set('game', filters.game);
+  if (filters.cadence && filters.cadence !== 'all') params.set('cadence', filters.cadence);
+  if (filters.teamMode && filters.teamMode !== 'all') params.set('teamMode', filters.teamMode);
+  const query = params.toString();
+  return api.get(query ? `/api/tournaments?${query}` : '/api/tournaments');
 };
 
 const getById = async (id: string): Promise<Tournament> => {

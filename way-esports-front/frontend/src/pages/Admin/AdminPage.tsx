@@ -927,7 +927,7 @@ const AdminPage: React.FC = () => {
   const [tournamentsSearchInput, setTournamentsSearchInput] = useState('');
   const [tournamentsSearch, setTournamentsSearch] = useState('');
   const [tournamentsStatusFilter, setTournamentsStatusFilter] = useState<'all' | 'upcoming' | 'live' | 'completed' | 'cancelled' | 'open'>('all');
-  const [tournamentsGameFilter, setTournamentsGameFilter] = useState<'all' | 'CS2' | 'Critical Ops' | 'PUBG Mobile' | 'Valorant'>('all');
+  const [tournamentsGameFilter, setTournamentsGameFilter] = useState<'all' | 'CS2' | 'Critical Ops' | 'PUBG Mobile' | 'Valorant Mobile' | 'Dota 2' | 'Standoff 2'>('all');
   const [opsStreamData, setOpsStreamData] = useState<OpsStreamPayload | null>(null);
   const [opsStreamConnected, setOpsStreamConnected] = useState(false);
   const [tournamentStreamConnected, setTournamentStreamConnected] = useState(false);
@@ -4308,6 +4308,7 @@ const AdminPage: React.FC = () => {
           image: modalData.image || '',
           prizePool: Number(modalData.prizePool || 0),
           maxTeams: Number(modalData.maxTeams || 0),
+          teamSize: modalData.teamSize ? Number(modalData.teamSize) : undefined,
           status: statusMap[modalData.status] || modalData.status || 'upcoming',
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
@@ -5592,7 +5593,9 @@ const AdminPage: React.FC = () => {
             <option value="CS2">CS2</option>
             <option value="Critical Ops">Critical Ops</option>
             <option value="PUBG Mobile">PUBG Mobile</option>
-            <option value="Valorant">Valorant</option>
+            <option value="Valorant Mobile">Valorant Mobile</option>
+            <option value="Dota 2">Dota 2</option>
+            <option value="Standoff 2">Standoff 2</option>
           </Select>
         </div>
 
@@ -8405,7 +8408,9 @@ const AdminPage: React.FC = () => {
                 onChange={(e) => setField('game', e.target.value)}
               >
                 <option value="CS2">CS2</option>
-                <option value="Valorant">Valorant</option>
+                <option value="Valorant Mobile">Valorant Mobile</option>
+                <option value="Dota 2">Dota 2</option>
+                <option value="Standoff 2">Standoff 2</option>
                 <option value="Critical Ops">Critical Ops</option>
                 <option value="PUBG Mobile">PUBG Mobile</option>
               </Select>
@@ -8421,6 +8426,14 @@ const AdminPage: React.FC = () => {
                 value={modalData.maxTeams ?? 16}
                 onChange={(e) => setField('maxTeams', Number(e.target.value))}
               />
+              <Select
+                value={String(modalData.teamSize || '')}
+                onChange={(e) => setField('teamSize', e.target.value ? Number(e.target.value) : undefined)}
+              >
+                <option value="">Team Mode (optional)</option>
+                <option value="2">2v2</option>
+                <option value="5">5v5</option>
+              </Select>
               <Select
                 value={modalData.status || 'upcoming'}
                 onChange={(e) => setField('status', e.target.value)}
@@ -8611,7 +8624,8 @@ const AdminPage: React.FC = () => {
               >
                 <option value="CS2">CS2</option>
                 <option value="Dota 2">Dota 2</option>
-                <option value="Valorant">Valorant</option>
+                <option value="Standoff 2">Standoff 2</option>
+                <option value="Valorant Mobile">Valorant Mobile</option>
                 <option value="Critical Ops">Critical Ops</option>
                 <option value="PUBG Mobile">PUBG Mobile</option>
               </Select>

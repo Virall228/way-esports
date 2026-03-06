@@ -2,6 +2,7 @@ import express from 'express';
 import Wallet from '../models/Wallet';
 import User from '../models/User';
 import ReferralService from '../services/referralService';
+import botPushService from '../services/botPushService';
 import { idempotency } from '../middleware/idempotency';
 import { getPlanPricing, BillingCycle, PlanId } from '../config/pricing';
 
@@ -460,6 +461,18 @@ router.post('/withdraw', async (req, res) => {
     } as any);
     user.wallet.balance = wallet.balance;
     await user.save();
+
+    await botPushService.notifyUser({
+      userId: user._id,
+      eventType: 'wallet_withdraw_requested',
+      title: 'Withdrawal requested',
+      message: `Your withdrawal request for $${normalizedAmount.toFixed(2)} (${network}) is now pending review.`,
+      payload: {
+        amount: normalizedAmount,
+        network,
+        reference
+      }
+    });
 
     res.json({
       success: true,

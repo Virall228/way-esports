@@ -45,14 +45,51 @@ const validateReferralCompletion = async (req: any, res: any, next: any) => {
 };
 
 const router = express.Router();
-const SUPPORTED_MATCH_GAMES = new Set(['Critical Ops', 'CS2', 'PUBG Mobile']);
+const SUPPORTED_MATCH_GAMES = new Set(['Critical Ops', 'CS2', 'PUBG Mobile', 'Dota 2', 'Standoff 2', 'Valorant Mobile']);
 const MATCH_INTERVAL_MIN = 30;
 
-const normalizeMatchGame = (game: string | undefined): 'Critical Ops' | 'CS2' | 'PUBG Mobile' => {
+const normalizeMatchGame = (game: string | undefined): 'Critical Ops' | 'CS2' | 'PUBG Mobile' | 'Dota 2' | 'Standoff 2' | 'Valorant Mobile' => {
   if (game && SUPPORTED_MATCH_GAMES.has(game)) {
-    return game as 'Critical Ops' | 'CS2' | 'PUBG Mobile';
+    return game as 'Critical Ops' | 'CS2' | 'PUBG Mobile' | 'Dota 2' | 'Standoff 2' | 'Valorant Mobile';
   }
+  const normalized = String(game || '').trim().toLowerCase().replace(/\s+/g, '');
+  if (normalized === 'criticalops') return 'Critical Ops';
+  if (normalized === 'cs2') return 'CS2';
+  if (normalized === 'pubgmobile') return 'PUBG Mobile';
+  if (normalized === 'dota2') return 'Dota 2';
+  if (normalized === 'standoff2') return 'Standoff 2';
+  if (normalized === 'valorantmobile' || normalized === 'valorant') return 'Valorant Mobile';
   return 'CS2';
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const inferTournamentCadence = (tournament: any): 'daily' | 'weekly' | 'custom' => {
+  const explicit = String(tournament?.cadence || '').toLowerCase();
+  if (explicit === 'daily' || explicit === 'weekly' || explicit === 'custom') {
+    return explicit as 'daily' | 'weekly' | 'custom';
+  }
+
+  const start = tournament?.startDate ? new Date(tournament.startDate) : null;
+  const end = tournament?.endDate ? new Date(tournament.endDate) : null;
+  if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return 'custom';
+  }
+
+  const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / DAY_MS));
+  if (days <= 1) return 'daily';
+  if (days <= 7) return 'weekly';
+  return 'custom';
+};
+
+const inferTournamentTeamMode = (tournament: any): '2v2' | '5v5' | 'custom' => {
+  const explicitSize = Number(tournament?.teamSize || 0);
+  if (explicitSize === 2) return '2v2';
+  if (explicitSize === 5) return '5v5';
+  const maxPlayers = Number(tournament?.maxPlayers || 0);
+  if (maxPlayers === 2) return '2v2';
+  if (maxPlayers === 5) return '5v5';
+  return 'custom';
 };
 
 const normalizeTournamentImageUrl = (input: unknown): string => {
@@ -557,40 +594,71 @@ const handleTournamentRegistration = async (req: any, res: any) => {
 // Get all tournaments
 router.get('/', async (req, res) => {
   try {
-    const { game, status, search } = req.query as { game?: string; status?: string; search?: string };
+    const { game, status, search, cadence, teamMode } = req.query as { game?: string; status?: string; search?: string; cadence?: string; teamMode?: string };
     const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>, {
       defaultLimit: 20,
       maxLimit: 100
     });
     const query: any = {};
+    const cadenceFilter = ['daily', 'weekly'].includes(String(cadence || '').toLowerCase())
+      ? String(cadence).toLowerCase() as 'daily' | 'weekly'
+      : 'all';
+    const teamModeFilter = ['2v2', '5v5'].includes(String(teamMode || '').toLowerCase())
+      ? String(teamMode).toLowerCase() as '2v2' | '5v5'
+      : 'all';
 
-    if (game) query.game = game;
+    if (game) {
+      const normalizedGame = String(game).trim().toLowerCase();
+      if (normalizedGame === 'valorant mobile' || normalizedGame === 'valorantmobile' || normalizedGame === 'valorant') {
+        query.game = { $in: ['Valorant Mobile', 'Valorant'] };
+      } else {
+        query.game = game;
+      }
+    }
     if (status) query.status = status;
     if (search) {
       query.name = { $regex: search.trim(), $options: 'i' };
     }
 
-    const total = await Tournament.countDocuments(query);
-    const canUseCache = !search;
-    const listKey = `tournaments:list:${game || 'all'}:${status || 'all'}:${page}:${limit}`;
-    const tournaments = canUseCache
-      ? ((await cacheService.getOrSet(
-          listKey,
-          async () =>
-            Tournament.find(query)
-              .select('name game image coverImage status type startDate prizePool participants currentParticipants maxParticipants maxTeams registrationRequests')
-              .sort({ startDate: 1 })
-              .skip(skip)
-              .limit(limit)
-              .lean(),
-          { key: listKey, ttl: 20 }
-        )) || [])
-      : await Tournament.find(query)
-          .select('name game image coverImage status type startDate prizePool participants currentParticipants maxParticipants maxTeams registrationRequests')
-          .sort({ startDate: 1 })
-          .skip(skip)
-          .limit(limit)
-          .lean();
+    const selectFields = 'name game cadence teamSize image coverImage status type startDate endDate prizePool participants currentParticipants maxParticipants maxTeams maxPlayers registrationRequests';
+    const canUseCache = !search && cadenceFilter === 'all' && teamModeFilter === 'all';
+    const listKey = `tournaments:list:${game || 'all'}:${status || 'all'}:${cadenceFilter}:${teamModeFilter}:${page}:${limit}`;
+    let tournaments: any[] = [];
+    let total = 0;
+
+    if (cadenceFilter === 'all' && teamModeFilter === 'all') {
+      total = await Tournament.countDocuments(query);
+      tournaments = canUseCache
+        ? ((await cacheService.getOrSet(
+            listKey,
+            async () =>
+              Tournament.find(query)
+                .select(selectFields)
+                .sort({ startDate: 1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            { key: listKey, ttl: 20 }
+          )) || [])
+        : await Tournament.find(query)
+            .select(selectFields)
+            .sort({ startDate: 1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+    } else {
+      const allRows: any[] = await Tournament.find(query)
+        .select(selectFields)
+        .sort({ startDate: 1 })
+        .lean();
+      const filteredRows = allRows.filter((row) => {
+        const cadenceMatches = cadenceFilter === 'all' || inferTournamentCadence(row) === cadenceFilter;
+        const teamModeMatches = teamModeFilter === 'all' || inferTournamentTeamMode(row) === teamModeFilter;
+        return cadenceMatches && teamModeMatches;
+      });
+      total = filteredRows.length;
+      tournaments = filteredRows.slice(skip, skip + limit);
+    }
 
     // Transform for frontend compatibility
     const transformed = tournaments.map((t: any) => ({
@@ -598,11 +666,15 @@ router.get('/', async (req, res) => {
       name: t.name,
       title: t.name,
       game: t.game,
+      cadence: inferTournamentCadence(t),
+      teamMode: inferTournamentTeamMode(t),
+      teamSize: Number(t.teamSize || t.maxPlayers || 0) || undefined,
       image: t.image || t.coverImage || '',
       coverImage: t.coverImage || t.image || '',
       status: t.status,
       type: t.type || 'team',
       startDate: t.startDate,
+      endDate: t.endDate,
       date: t.startDate ? new Date(t.startDate).toLocaleDateString() : 'TBD',
       prizePool: Number(t.prizePool || 0),
       participants: Number(t.participants ?? t.currentParticipants ?? 0),
@@ -632,22 +704,38 @@ router.get('/admin/export.csv', authenticateJWT, isAdmin, async (req: any, res: 
     const game = typeof req.query?.game === 'string' ? req.query.game.trim() : '';
     const status = typeof req.query?.status === 'string' ? req.query.status.trim() : '';
     const search = typeof req.query?.search === 'string' ? req.query.search.trim() : '';
+    const cadence = typeof req.query?.cadence === 'string' ? req.query.cadence.trim().toLowerCase() : '';
+    const teamMode = typeof req.query?.teamMode === 'string' ? req.query.teamMode.trim().toLowerCase() : '';
 
     const query: any = {};
-    if (game && game !== 'all') query.game = game;
+    if (game && game !== 'all') {
+      const normalizedGame = game.toLowerCase();
+      if (normalizedGame === 'valorant mobile' || normalizedGame === 'valorantmobile' || normalizedGame === 'valorant') {
+        query.game = { $in: ['Valorant Mobile', 'Valorant'] };
+      } else {
+        query.game = game;
+      }
+    }
     if (status && status !== 'all') query.status = status;
     if (search) query.name = { $regex: search, $options: 'i' };
 
-    const rows: any[] = await Tournament.find(query)
-      .select('name game status startDate endDate prizePool maxTeams maxParticipants participants currentParticipants registeredPlayers registrationRequests')
+    const rowsRaw: any[] = await Tournament.find(query)
+      .select('name game cadence teamSize maxPlayers status startDate endDate prizePool maxTeams maxParticipants participants currentParticipants registeredPlayers registrationRequests')
       .sort({ startDate: 1 })
       .lean();
+    const rows = rowsRaw.filter((row: any) => {
+      const cadenceMatches = !cadence || cadence === 'all' || inferTournamentCadence(row) === cadence;
+      const teamModeMatches = !teamMode || teamMode === 'all' || inferTournamentTeamMode(row) === teamMode;
+      return cadenceMatches && teamModeMatches;
+    });
 
     const csvCell = (value: any) => `"${String(value ?? '').replace(/"/g, '""')}"`;
     const header = [
       'id',
       'name',
       'game',
+      'cadence',
+      'teamMode',
       'status',
       'startDate',
       'endDate',
@@ -667,6 +755,8 @@ router.get('/admin/export.csv', authenticateJWT, isAdmin, async (req: any, res: 
         String(t?._id || ''),
         String(t?.name || ''),
         String(t?.game || ''),
+        inferTournamentCadence(t),
+        inferTournamentTeamMode(t),
         String(t?.status || ''),
         t?.startDate ? new Date(t.startDate).toISOString() : '',
         t?.endDate ? new Date(t.endDate).toISOString() : '',
@@ -805,6 +895,9 @@ router.get('/:id', async (req, res) => {
           name: tournament.name,
           title: tournament.name,
           game: tournament.game,
+          cadence: inferTournamentCadence(tournament),
+          teamMode: inferTournamentTeamMode(tournament),
+          teamSize: Number(tournament.teamSize || tournament.maxPlayers || 0) || undefined,
           image: tournament.image || tournament.coverImage || '',
           coverImage: tournament.coverImage || tournament.image || '',
           status: tournament.status === 'ongoing' ? 'in_progress' : tournament.status,
@@ -910,6 +1003,8 @@ router.post('/',
       const tournamentData: Partial<ITournament> = {
         name: req.body.name,
         game: req.body.game,
+        ...(typeof req.body.cadence === 'string' ? { cadence: req.body.cadence } : {}),
+        ...(req.body.teamSize !== undefined ? { teamSize: Number(req.body.teamSize) as 2 | 5 } : {}),
         startDate: startDate,
         endDate: endDate,
         prizePool: Number(req.body.prizePool) || 0,
@@ -949,6 +1044,9 @@ router.post('/',
         name: tournament.name,
         title: tournament.name,
         game: tournament.game,
+        cadence: inferTournamentCadence(tournament),
+        teamMode: inferTournamentTeamMode(tournament),
+        teamSize: Number((tournament as any).teamSize || tournament.maxPlayers || 0) || undefined,
         image: tournament.image || tournament.coverImage || '',
         coverImage: tournament.coverImage || tournament.image || '',
         status: tournament.status === 'ongoing' ? 'in_progress' : tournament.status,
@@ -3372,6 +3470,7 @@ router.put('/:id',
         prizePool,
         maxTeams,
         maxParticipants,
+        teamSize,
         skillLevel,
         format,
         type,
@@ -3383,12 +3482,14 @@ router.put('/:id',
       // Update tournament fields
       if (name) tournament.name = name;
       if (game) tournament.game = game;
+      if (typeof req.body.cadence === 'string') (tournament as any).cadence = req.body.cadence;
       if (status) tournament.status = status;
       if (startDate) tournament.startDate = new Date(startDate);
       if (endDate) tournament.endDate = new Date(endDate);
       if (prizePool !== undefined) tournament.prizePool = prizePool;
       if (maxTeams !== undefined) tournament.maxTeams = Number(maxTeams);
       if (maxParticipants !== undefined) tournament.maxParticipants = Number(maxParticipants);
+      if (teamSize !== undefined) (tournament as any).teamSize = Number(teamSize) as 2 | 5;
       if (skillLevel) tournament.skillLevel = skillLevel;
       if (format) tournament.format = format;
       if (type) tournament.type = type;
@@ -3411,6 +3512,9 @@ router.put('/:id',
         name: populatedTournament.name,
         title: populatedTournament.name,
         game: populatedTournament.game,
+        cadence: inferTournamentCadence(populatedTournament),
+        teamMode: inferTournamentTeamMode(populatedTournament),
+        teamSize: Number(populatedTournament.teamSize || populatedTournament.maxPlayers || 0) || undefined,
         image: populatedTournament.image || populatedTournament.coverImage || '',
         coverImage: populatedTournament.coverImage || populatedTournament.image || '',
         status: populatedTournament.status === 'ongoing' ? 'in_progress' : populatedTournament.status,

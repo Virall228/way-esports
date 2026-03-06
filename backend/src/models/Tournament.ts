@@ -3,6 +3,8 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface ITournament extends Document<mongoose.Types.ObjectId> {
   name: string;
   game: string;
+  cadence?: 'daily' | 'weekly' | 'custom';
+  teamSize?: 2 | 5;
   image?: string;
   coverImage?: string;
   registrationRequests?: {
@@ -57,6 +59,16 @@ const tournamentSchema = new Schema<ITournament>({
     type: String,
     required: true,
     trim: true
+  },
+  cadence: {
+    type: String,
+    enum: ['daily', 'weekly', 'custom'],
+    required: false
+  },
+  teamSize: {
+    type: Number,
+    enum: [2, 5],
+    required: false
   },
   image: {
     type: String,

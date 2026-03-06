@@ -1,6 +1,7 @@
 import express from 'express';
 import BotSubscriber from '../models/BotSubscriber';
 import BotInviteEvent from '../models/BotInviteEvent';
+import BotNotification from '../models/BotNotification';
 import News from '../models/News';
 import User from '../models/User';
 
@@ -233,6 +234,80 @@ router.get('/subscribers/viral-progress/:telegramId', requireBotToken, async (re
     });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message || 'Failed to load viral progress' });
+  }
+});
+
+router.get('/outbox/due', requireBotToken, async (req, res) => {
+  try {
+    const limit = Math.max(1, Math.min(300, Number(req.query?.limit || 100)));
+    const now = new Date();
+    const rows = await BotNotification.find({
+      status: 'pending',
+      sendAt: { $lte: now }
+    })
+      .sort({ sendAt: 1, createdAt: 1 })
+      .limit(limit)
+      .lean();
+
+    return res.json({
+      success: true,
+      data: rows.map((row: any) => ({
+        id: String(row._id),
+        telegramId: Number(row.telegramId),
+        chatId: Number(row.chatId),
+        eventType: String(row.eventType || 'system'),
+        title: String(row.title || ''),
+        message: String(row.message || ''),
+        payload: row.payload || {}
+      }))
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to load due outbox messages' });
+  }
+});
+
+router.post('/outbox/mark-sent', requireBotToken, async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map((v: any) => String(v)) : [];
+    if (!ids.length) {
+      return res.status(400).json({ success: false, error: 'ids[] is required' });
+    }
+    const result = await BotNotification.updateMany(
+      { _id: { $in: ids } },
+      { $set: { status: 'sent', sentAt: new Date() }, $inc: { attempts: 1 }, $unset: { lastError: 1 } }
+    );
+    return res.json({
+      success: true,
+      data: {
+        matched: Number((result as any)?.matchedCount || 0),
+        modified: Number((result as any)?.modifiedCount || 0)
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to mark outbox messages as sent' });
+  }
+});
+
+router.post('/outbox/mark-failed', requireBotToken, async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map((v: any) => String(v)) : [];
+    const reason = String(req.body?.reason || '').trim().slice(0, 500);
+    if (!ids.length) {
+      return res.status(400).json({ success: false, error: 'ids[] is required' });
+    }
+    const result = await BotNotification.updateMany(
+      { _id: { $in: ids } },
+      { $set: { status: 'failed', lastError: reason || 'delivery_failed' }, $inc: { attempts: 1 } }
+    );
+    return res.json({
+      success: true,
+      data: {
+        matched: Number((result as any)?.matchedCount || 0),
+        modified: Number((result as any)?.modifiedCount || 0)
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to mark outbox messages as failed' });
   }
 });
 

@@ -174,6 +174,25 @@ const StatusBadge = styled.div<{ $status: string }>`
         '#ff6b00'};
 `;
 
+const BadgeRow = styled.div`
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 15px;
+`;
+
+const TeamModeBadge = styled.div`
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: rgba(255, 107, 0, 0.15);
+  border: 1px solid rgba(255, 107, 0, 0.35);
+  color: #ff9a4f;
+`;
+
 const InfoRow = styled.div`
   display: flex;
   justify-content: space-between;
@@ -218,6 +237,9 @@ interface Tournament {
   title: string;
   image?: string;
   game: string;
+  cadence?: 'daily' | 'weekly' | 'custom';
+  teamMode?: '2v2' | '5v5' | 'custom';
+  teamSize?: number;
   type?: 'team' | 'solo';
   status: 'live' | 'upcoming' | 'completed' | 'comingSoon';
   prizePool: string;
@@ -231,7 +253,9 @@ const TournamentsPage: React.FC = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
   const [activeFilter, setActiveFilter] = useState('all');
-  const [activeGame] = useState('all');
+  const [activeGame, setActiveGame] = useState('all');
+  const [activeCadence, setActiveCadence] = useState<'all' | 'daily' | 'weekly'>('all');
+  const [activeTeamMode, setActiveTeamMode] = useState<'all' | '2v2' | '5v5'>('all');
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [showGuard, setShowGuard] = useState(false);
   const [pendingTournamentId, setPendingTournamentId] = useState<string | null>(null);
@@ -243,9 +267,13 @@ const TournamentsPage: React.FC = () => {
   const queryClient = useQueryClient();
 
   const { data: tournamentsRaw = [], isLoading: loading, error } = useQuery({
-    queryKey: ['tournaments'],
+    queryKey: ['tournaments', activeGame, activeCadence, activeTeamMode],
     queryFn: async () => {
-      const res: any = await tournamentService.list();
+      const res: any = await tournamentService.list({
+        game: activeGame,
+        cadence: activeCadence,
+        teamMode: activeTeamMode
+      });
       return (res && (res.data || res.tournaments)) || [];
     },
     staleTime: 30000,
@@ -272,6 +300,9 @@ const TournamentsPage: React.FC = () => {
         title: t.title || t.name || '',
         image: resolveMediaUrl(t.image || t.coverImage || ''),
         game: t.game || 'Unknown',
+        cadence: t.cadence || 'custom',
+        teamMode: t.teamMode || 'custom',
+        teamSize: Number(t.teamSize || 0) || undefined,
         type: (t.type || 'team') as 'team' | 'solo',
         status,
         prizePool: prize ? `$${prize.toLocaleString()}` : 'TBD',
@@ -284,12 +315,15 @@ const TournamentsPage: React.FC = () => {
   }, [tournamentsRaw]);
 
   const filteredTournaments = useMemo(() => {
+    const normalizeGame = (value: string) => value.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
     return tournaments.filter(t => {
       const matchStatus = activeFilter === 'all' || t.status === activeFilter;
-      const matchGame = activeGame === 'all' || t.game.toLowerCase().includes(activeGame.toLowerCase());
-      return matchStatus && matchGame;
+      const matchGame = activeGame === 'all' || normalizeGame(t.game) === normalizeGame(activeGame);
+      const matchCadence = activeCadence === 'all' || (t.cadence || 'custom') === activeCadence;
+      const matchTeamMode = activeTeamMode === 'all' || (t.teamMode || 'custom') === activeTeamMode;
+      return matchStatus && matchGame && matchCadence && matchTeamMode;
     });
-  }, [tournaments, activeFilter, activeGame]);
+  }, [tournaments, activeFilter, activeGame, activeCadence, activeTeamMode]);
 
   const getGameIcon = (game: string) => {
     const normalized = (game || '').toLowerCase().replace(/\s+/g, '').replace(/-/g, '');
@@ -297,7 +331,9 @@ const TournamentsPage: React.FC = () => {
       criticalops: '/images/main.png',
       pubgmobile: '/images/main.png',
       cs2: '/images/main.png',
-      valorantmobile: '/images/main.png'
+      valorantmobile: '/images/main.png',
+      dota2: '/images/main.png',
+      standoff2: '/images/main.png'
     };
     return map[normalized] || '/images/main.png';
   };
@@ -412,6 +448,43 @@ const TournamentsPage: React.FC = () => {
             </FilterTab>
           ))}
         </FilterTabs>
+        <FilterTabs>
+          {[
+            { key: 'all', label: 'All Games' },
+            { key: 'Critical Ops', label: 'Critical Ops' },
+            { key: 'CS2', label: 'CS2' },
+            { key: 'PUBG Mobile', label: 'PUBG Mobile' },
+            { key: 'Valorant Mobile', label: 'Valorant Mobile' },
+            { key: 'Dota 2', label: 'Dota 2' },
+            { key: 'Standoff 2', label: 'Standoff 2' }
+          ].map((g) => (
+            <FilterTab key={g.key} $active={activeGame === g.key} onClick={() => setActiveGame(g.key)}>
+              {g.label}
+            </FilterTab>
+          ))}
+        </FilterTabs>
+        <FilterTabs>
+          {([
+            { key: 'all', label: 'All Cycles' },
+            { key: 'daily', label: 'Daily' },
+            { key: 'weekly', label: 'Weekly' }
+          ] as Array<{ key: 'all' | 'daily' | 'weekly'; label: string }>).map((c) => (
+            <FilterTab key={c.key} $active={activeCadence === c.key} onClick={() => setActiveCadence(c.key)}>
+              {c.label}
+            </FilterTab>
+          ))}
+        </FilterTabs>
+        <FilterTabs>
+          {([
+            { key: 'all', label: 'All Modes' },
+            { key: '2v2', label: '2v2' },
+            { key: '5v5', label: '5v5' }
+          ] as Array<{ key: 'all' | '2v2' | '5v5'; label: string }>).map((m) => (
+            <FilterTab key={m.key} $active={activeTeamMode === m.key} onClick={() => setActiveTeamMode(m.key)}>
+              {m.label}
+            </FilterTab>
+          ))}
+        </FilterTabs>
       </FilterSection>
 
       {joinFeedback && (
@@ -436,7 +509,12 @@ const TournamentsPage: React.FC = () => {
           {filteredTournaments.map((tournament) => (
             <TournamentCard key={tournament.id} $status={tournament.status} onClick={() => handleTournamentClick(tournament)}>
               <GameIcon src={getTournamentCardImage(tournament)} alt={tournament.title || tournament.game} />
-              <StatusBadge $status={tournament.status}>{getStatusLabel(tournament.status)}</StatusBadge>
+              <BadgeRow>
+                <StatusBadge $status={tournament.status}>{getStatusLabel(tournament.status)}</StatusBadge>
+                {tournament.teamMode && tournament.teamMode !== 'custom' && (
+                  <TeamModeBadge>{tournament.teamMode.toUpperCase()}</TeamModeBadge>
+                )}
+              </BadgeRow>
               <TournamentTitle>{tournament.title}</TournamentTitle>
 
               <PrizePool>{tournament.prizePool}</PrizePool>

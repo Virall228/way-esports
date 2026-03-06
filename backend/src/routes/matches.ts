@@ -11,6 +11,7 @@ import AuditLog from '../models/AuditLog';
 import { authenticateJWT, isAdmin } from '../middleware/auth';
 import { evaluateUserAchievements } from '../services/achievements/engine';
 import { hasRoomCredentials, prepareMatchRoom } from '../services/matchRoomService';
+import botPushService from '../services/botPushService';
 
 const router = express.Router();
 
@@ -272,6 +273,13 @@ async function handleMatchCompleted(matchId: string, winnerTeamId?: string | nul
     await updateUsers(team1Members, { ...baseInc, 'stats.wins': 1 });
     await updateUsers(team2Members, { ...baseInc, 'stats.losses': 1 });
     await distributeMatchWinnerPayout(matchId, winnerId);
+    await botPushService.notifyUsers({
+      userIds: team1Members,
+      eventType: 'rating_increase',
+      title: 'Rating updated',
+      message: 'Victory recorded. Your player/team rating has increased.',
+      payload: { matchId, result: 'win' }
+    });
     return;
   }
 
@@ -283,6 +291,13 @@ async function handleMatchCompleted(matchId: string, winnerTeamId?: string | nul
     await updateUsers(team2Members, { ...baseInc, 'stats.wins': 1 });
     await updateUsers(team1Members, { ...baseInc, 'stats.losses': 1 });
     await distributeMatchWinnerPayout(matchId, winnerId);
+    await botPushService.notifyUsers({
+      userIds: team2Members,
+      eventType: 'rating_increase',
+      title: 'Rating updated',
+      message: 'Victory recorded. Your player/team rating has increased.',
+      payload: { matchId, result: 'win' }
+    });
     return;
   }
 

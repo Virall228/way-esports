@@ -12,7 +12,7 @@ export interface IMatch extends Document<mongoose.Types.ObjectId> {
     team1: number;
     team2: number;
   };
-  game: 'Critical Ops' | 'CS2' | 'PUBG Mobile';
+  game: 'Critical Ops' | 'CS2' | 'PUBG Mobile' | 'Dota 2' | 'Standoff 2' | 'Valorant Mobile';
   round: string;
   map?: string;
   stats?: {
@@ -42,6 +42,8 @@ export interface IMatch extends Document<mongoose.Types.ObjectId> {
   };
   payoutProcessed?: boolean;
   payoutProcessedAt?: Date;
+  reminder60SentAt?: Date;
+  reminder30SentAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -90,7 +92,7 @@ const matchSchema = new Schema<IMatch>({
   },
   game: {
     type: String,
-    enum: ['Critical Ops', 'CS2', 'PUBG Mobile'],
+    enum: ['Critical Ops', 'CS2', 'PUBG Mobile', 'Dota 2', 'Standoff 2', 'Valorant Mobile'],
     required: true
   },
   round: {
@@ -130,6 +132,12 @@ const matchSchema = new Schema<IMatch>({
     default: false
   },
   payoutProcessedAt: {
+    type: Date
+  },
+  reminder60SentAt: {
+    type: Date
+  },
+  reminder30SentAt: {
     type: Date
   }
 }, {

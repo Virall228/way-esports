@@ -10,6 +10,7 @@ import { authenticateJWT, isAdmin } from '../middleware/auth';
 import { checkTournamentAccess } from '../middleware/tournamentAccess';
 import { idempotency } from '../middleware/idempotency';
 import { buildPaginationMeta, parsePagination } from '../utils/pagination';
+import botPushService from '../services/botPushService';
 
 const router = express.Router();
 
@@ -435,6 +436,19 @@ router.post('/join',
         } as any);
         await team.save();
 
+        if (team.captain) {
+          await botPushService.notifyUser({
+            userId: team.captain,
+            eventType: 'team_join_request',
+            title: 'New team join request',
+            message: `A player requested to join ${team.name}. Review it in Team Control.`,
+            payload: {
+              teamId: String(team._id),
+              requesterUserId: userId
+            }
+          });
+        }
+
         return res.json({
           success: true,
           pendingApproval: true,
@@ -668,6 +682,17 @@ router.post('/:id/join-requests/:userId/approve', authenticateJWT, async (req: a
       }
     }
 
+    await botPushService.notifyUser({
+      userId: targetUserId,
+      eventType: 'team_join_approved',
+      title: 'Team request approved',
+      message: `You are now a member of ${team.name}.`,
+      payload: {
+        teamId: String(team._id),
+        tournamentId: team.tournamentId ? String(team.tournamentId) : null
+      }
+    });
+
     return res.json({
       success: true,
       message: 'Join request approved',
@@ -713,6 +738,16 @@ router.post('/:id/join-requests/:userId/reject', authenticateJWT, async (req: an
     }
 
     await team.save();
+
+    await botPushService.notifyUser({
+      userId: targetUserId,
+      eventType: 'team_join_rejected',
+      title: 'Team request rejected',
+      message: `Your request to join ${team.name} was rejected.`,
+      payload: {
+        teamId: String(team._id)
+      }
+    });
 
     return res.json({
       success: true,

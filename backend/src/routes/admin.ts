@@ -16,6 +16,7 @@ import { getMetricsSnapshot } from '../services/monitoringService';
 import { getQueueStats } from '../services/queue';
 import { listJsonBackups, runJsonBackup } from '../services/backupService';
 import cacheService from '../services/cacheService';
+import botPushService from '../services/botPushService';
 
 const router = express.Router();
 
@@ -1402,6 +1403,20 @@ router.post('/users/:id/wallet/adjust', idempotency({ required: true }), async (
     });
     await wallet.save();
 
+    await botPushService.notifyUser({
+      userId: user._id,
+      eventType: amount > 0 ? 'wallet_topup' : 'wallet_debit',
+      title: amount > 0 ? 'Wallet credited' : 'Wallet adjusted',
+      message: amount > 0
+        ? `$${absoluteAmount.toFixed(2)} has been added to your wallet.`
+        : `$${absoluteAmount.toFixed(2)} has been deducted from your wallet.`,
+      payload: {
+        amount: absoluteAmount,
+        type: userTxType,
+        reference
+      }
+    });
+
     res.json({
       success: true,
       data: {
@@ -1667,6 +1682,23 @@ router.patch('/wallet/transactions/:userId/:transactionId', idempotency({ requir
           });
         }
         await userSync.save();
+
+        if (tx.type === 'withdrawal' && (nextWalletStatus === 'completed' || nextWalletStatus === 'failed')) {
+          await botPushService.notifyUser({
+            userId: userSync._id,
+            eventType: nextWalletStatus === 'completed' ? 'withdrawal_completed' : 'withdrawal_rejected',
+            title: nextWalletStatus === 'completed' ? 'Withdrawal completed' : 'Withdrawal update',
+            message: nextWalletStatus === 'completed'
+              ? `Your withdrawal of $${amount.toFixed(2)} has been completed.`
+              : `Your withdrawal of $${amount.toFixed(2)} was rejected${adminNote ? `: ${adminNote}` : '.'}`,
+            payload: {
+              amount,
+              status: nextWalletStatus,
+              txHash: payoutTxHash || '',
+              reference: tx.reference || ''
+            }
+          });
+        }
       }
 
       return res.json({
@@ -1785,6 +1817,23 @@ router.patch('/wallet/transactions/:userId/:transactionId', idempotency({ requir
     }
 
     await wallet.save();
+
+    if (tx.type === 'withdrawal' && (nextStatus === 'completed' || nextStatus === 'failed')) {
+      await botPushService.notifyUser({
+        userId: user._id,
+        eventType: nextStatus === 'completed' ? 'withdrawal_completed' : 'withdrawal_rejected',
+        title: nextStatus === 'completed' ? 'Withdrawal completed' : 'Withdrawal update',
+        message: nextStatus === 'completed'
+          ? `Your withdrawal of $${amount.toFixed(2)} has been completed.`
+          : `Your withdrawal of $${amount.toFixed(2)} was rejected${adminNote ? `: ${adminNote}` : '.'}`,
+        payload: {
+          amount,
+          status: nextStatus,
+          txHash: payoutTxHash || '',
+          reference: tx.reference || ''
+        }
+      });
+    }
 
     res.json({
       success: true,
