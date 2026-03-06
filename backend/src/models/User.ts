@@ -207,7 +207,7 @@ const userSchema = new Schema<IUser>({
   },
   freeEntriesCount: {
     type: Number,
-    default: 0
+    default: 1
   },
   bonusEntries: {
     type: Number,

@@ -546,6 +546,19 @@ const HomePage: React.FC = () => {
       });
     }
 
+    const freeEntries = Number((user as any)?.freeEntriesCount || 0);
+    if (freeEntries > 0) {
+      list.push({
+        key: 'free',
+        title: `Free tournament entry (${freeEntries})`,
+        description: 'Welcome entry is active. Join your first tournament now.',
+        actionLabel: 'Start',
+        actionPath: '/tournaments',
+        tone: 'ok',
+        priority: 0
+      });
+    }
+
     const bonusEntries = Number((user as any)?.bonusEntries || 0);
     if (bonusEntries > 0) {
       list.push({
@@ -611,7 +624,7 @@ const HomePage: React.FC = () => {
     }
 
     return list.sort((a, b) => a.priority - b.priority).slice(0, 4);
-  }, [user?.isSubscribed, (user as any)?.bonusEntries, upcomingMatches, recentNewsCount]);
+  }, [user?.isSubscribed, (user as any)?.bonusEntries, (user as any)?.freeEntriesCount, upcomingMatches, recentNewsCount]);
 
   useEffect(() => {
     const run = async () => {
@@ -717,7 +730,7 @@ const HomePage: React.FC = () => {
           <InfoTitle>My Action Center</InfoTitle>
           <div style={{ color: '#cfcfcf', fontSize: '0.85rem', marginBottom: 10 }}>
             Sub: <strong style={{ color: user?.isSubscribed ? '#a5d6a7' : '#ffd180' }}>{user?.isSubscribed ? 'ACTIVE' : 'INACTIVE'}</strong>{' '}
-            • Bonus entries: <strong>{Number((user as any)?.bonusEntries || 0)}</strong>
+            • Entries: <strong>{Number((user as any)?.freeEntriesCount || 0) + Number((user as any)?.bonusEntries || 0)}</strong>
           </div>
           <QuickActions>
             <ActionButton onClick={() => navigate('/tournaments')}>Join Tournament</ActionButton>
