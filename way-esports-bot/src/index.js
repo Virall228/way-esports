@@ -17,6 +17,7 @@ const BOT_INTERNAL_TOKEN = String(process.env.BOT_INTERNAL_TOKEN || '').trim();
 const REMINDER_CHECK_MINUTES = Math.max(5, Number(process.env.BOT_REMINDER_CHECK_MINUTES || 60));
 const VIRAL_TARGET = Math.max(1, Number(process.env.BOT_VIRAL_TARGET || 10));
 const BOT_REMINDER_INTERVAL_DAYS = Math.max(1, Number(process.env.BOT_REMINDER_INTERVAL_DAYS || 5));
+const OUTBOX_CHECK_SECONDS = Math.max(5, Number(process.env.BOT_OUTBOX_CHECK_SECONDS || 20));
 
 if (!BOT_TOKEN) {
   console.error('TELEGRAM_BOT_TOKEN is required');
@@ -363,6 +364,49 @@ async function processDueReminders() {
   }
 }
 
+async function processOutboxNotifications() {
+  if (!BOT_INTERNAL_TOKEN) return;
+  try {
+    const response = await backend('GET', '/api/bot/outbox/due?limit=100');
+    const items = Array.isArray(response?.data) ? response.data : [];
+    if (!items.length) return;
+
+    const sentIds = [];
+    const failedIds = [];
+
+    for (const item of items) {
+      const id = String(item?.id || '');
+      const chatId = Number(item?.chatId || 0);
+      if (!id || !chatId) continue;
+
+      try {
+        const title = String(item?.title || '').trim();
+        const message = String(item?.message || '').trim();
+        const text = title ? `<b>${title}</b>\n${message}` : message;
+        await answerMessage(chatId, text);
+        sentIds.push(id);
+      } catch (error) {
+        console.error(`Outbox send failed for ${id}:`, error.message);
+        failedIds.push(id);
+      }
+
+      await sleep(50);
+    }
+
+    if (sentIds.length) {
+      await backend('POST', '/api/bot/outbox/mark-sent', { ids: sentIds });
+    }
+    if (failedIds.length) {
+      await backend('POST', '/api/bot/outbox/mark-failed', {
+        ids: failedIds,
+        reason: 'telegram_send_failed'
+      });
+    }
+  } catch (error) {
+    console.error('Outbox worker failed:', error.message);
+  }
+}
+
 async function handleCard(chatId, from) {
   const lang = pickLang(from);
   const telegramId = from?.id;
@@ -616,10 +660,15 @@ healthServer.listen(PORT, '0.0.0.0', () => {
 
   if (BOT_INTERNAL_TOKEN) {
     void processDueReminders();
+    void processOutboxNotifications();
     setInterval(() => {
       void processDueReminders();
     }, REMINDER_CHECK_MINUTES * 60 * 1000);
+    setInterval(() => {
+      void processOutboxNotifications();
+    }, OUTBOX_CHECK_SECONDS * 1000);
     console.log(`Reminder job enabled: every ${REMINDER_CHECK_MINUTES} min (audience interval ${BOT_REMINDER_INTERVAL_DAYS} days)`);
+    console.log(`Outbox worker enabled: every ${OUTBOX_CHECK_SECONDS} sec`);
   } else {
     console.log('Reminder job disabled: BOT_INTERNAL_TOKEN is not set');
   }
