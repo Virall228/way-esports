@@ -71,4 +71,12 @@ export const createAccountLimiter = createInMemoryLimiter({
   identity: 'ip'
 });
 
+// Writes limiter: protects POST/PUT/PATCH/DELETE abuse.
+export const writeLimiter = createInMemoryLimiter({
+  keyPrefix: 'write',
+  max: Number(process.env.RATE_LIMIT_WRITE_MAX || 240),
+  windowMs: Number(process.env.RATE_LIMIT_WRITE_WINDOW_MS || 60_000),
+  identity: 'ip'
+});
+
  

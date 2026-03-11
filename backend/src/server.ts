@@ -8,7 +8,7 @@ import swaggerUi from 'swagger-ui-express';
 import { config } from './config';
 import { errorHandler } from './middleware/errorHandler';
 import { authenticateJWT, isAdmin } from './middleware/auth';
-import { apiLimiter } from './middleware/rateLimiter';
+import { apiLimiter, authLimiter, writeLimiter } from './middleware/rateLimiter';
 import { connectDB, disconnectDB } from './config/db';
 import { startSchedulers } from './services/scheduler';
 import { startWorkers } from './services/queue';
@@ -52,6 +52,10 @@ import { seedDefaultAchievements } from './services/achievements/seedAchievement
 const app = express();
 const PORT = typeof config.port === 'string' ? parseInt(config.port, 10) : config.port;
 const PORT_NUMBER = Number.isFinite(PORT) ? PORT : 3000;
+const TRUST_PROXY = String(process.env.TRUST_PROXY || '1').toLowerCase();
+if (TRUST_PROXY === '1' || TRUST_PROXY === 'true' || TRUST_PROXY === 'yes') {
+  app.set('trust proxy', 1);
+}
 
 const ensureUserOptionalUniqueIndexes = async () => {
   const optionalUniqueFields = [
@@ -132,6 +136,33 @@ app.use(cors(corsOptions));
 
 // Rate limiting
 app.use(apiLimiter);
+app.use((req, res, next) => {
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    return writeLimiter(req, res, next);
+  }
+  return next();
+});
+
+// Basic anti-scan/anti-spam guard (before heavy handlers)
+app.use((req, res, next) => {
+  const rawPath = String(req.originalUrl || req.url || '');
+  const userAgent = String(req.headers['user-agent'] || '').toLowerCase();
+  if (rawPath.length > Number(process.env.MAX_URL_LENGTH || 2048)) {
+    return res.status(414).json({ success: false, error: 'Request URL too long' });
+  }
+
+  const blockedPathPatterns = ['/.env', '/wp-admin', '/phpmyadmin', '/.git', '/vendor/phpunit'];
+  if (blockedPathPatterns.some((part) => rawPath.toLowerCase().includes(part))) {
+    return res.status(404).json({ success: false, error: 'Not found' });
+  }
+
+  const blockedUaPatterns = ['sqlmap', 'nikto', 'acunetix', 'nmap', 'masscan', 'zgrab', 'dirbuster'];
+  if (blockedUaPatterns.some((part) => userAgent.includes(part))) {
+    return res.status(403).json({ success: false, error: 'Forbidden' });
+  }
+
+  return next();
+});
 
 // Body parser
 app.use(express.json({ limit: '10mb' }));
@@ -161,7 +192,7 @@ app.use('/api/rankings', rankingsRouter);
 app.use('/api', rankingsRouter);
 app.use('/api/rewards', rewardsRouter);
 app.use('/api/search', searchRouter);
-app.use('/api/auth', authRouter);
+app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/news', newsRouter);
 app.use('/api/achievements', achievementsRouter);
 app.use('/api/prizes', prizesRouter);
