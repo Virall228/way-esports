@@ -4,6 +4,7 @@ import User from '../models/User';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export async function updateHallOfFameSnapshot() {
+  const HallOfFameModel: any = HallOfFame;
   const topPlayer: any = await User.findOne({})
     .sort({ 'stats.wins': -1, 'stats.tournamentsWon': -1, createdAt: 1 })
     .select('username')
@@ -14,10 +15,10 @@ export async function updateHallOfFameSnapshot() {
   }
 
   const now = new Date();
-  const existing = await HallOfFame.findOne({ userId: topPlayer._id });
+  const existing = await HallOfFameModel.findOne({ userId: topPlayer._id });
 
   if (!existing) {
-    await HallOfFame.create({
+    await HallOfFameModel.create({
       userId: topPlayer._id,
       username: topPlayer.username || 'Player',
       consecutiveDaysRank1: 1,

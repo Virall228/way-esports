@@ -4,6 +4,7 @@ import ReferralService from '../services/referralService';
 import BotSubscriber from '../models/BotSubscriber';
 
 const router = express.Router();
+const BotSubscriberModel: any = BotSubscriber;
 const DEFAULT_SUBSCRIPTION_PAYMENT_ADDRESS =
   process.env.SUBSCRIPTION_USDT_TRC20_ADDRESS ||
   process.env.USDT_TRC20_ADDRESS ||
@@ -29,7 +30,7 @@ router.get('/stats', authenticateJWT, async (req, res) => {
       rewardIssuedAt: null as string | null
     };
     if (Number.isFinite(telegramId) && telegramId > 0) {
-      const row: any = await BotSubscriber.findOne({ telegramId })
+      const row: any = await BotSubscriberModel.findOne({ telegramId })
         .select('viralInvitesCount viralRewardIssuedAt')
         .lean();
       const target = Math.max(1, Number(process.env.BOT_VIRAL_TARGET || 10));

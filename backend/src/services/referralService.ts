@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import User from '../models/User';
 
 // Временно используем заглушки для моделей
-const Referral = mongoose.models.Referral || mongoose.model('Referral', new mongoose.Schema({
+const Referral: any = mongoose.models.Referral || mongoose.model('Referral', new mongoose.Schema({
   referrer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   referee: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   status: { type: String, enum: ['pending', 'completed', 'rewarded'], default: 'pending' },
@@ -11,7 +11,7 @@ const Referral = mongoose.models.Referral || mongoose.model('Referral', new mong
   completedAt: { type: Date }
 }));
 
-const ReferralSettings = mongoose.models.ReferralSettings || mongoose.model('ReferralSettings', new mongoose.Schema({
+const ReferralSettings: any = mongoose.models.ReferralSettings || mongoose.model('ReferralSettings', new mongoose.Schema({
   referralBonusThreshold: { type: Number, default: 3 },
   refereeBonus: { type: Number, default: 1 },
   referrerBonus: { type: Number, default: 1 },

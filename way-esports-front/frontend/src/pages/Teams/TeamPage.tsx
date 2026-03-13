@@ -7,9 +7,16 @@ import Button from '../../components/UI/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 import { teamsService } from '../../services/teamsService';
+import { historyService } from '../../services/historyService';
 import { resolveMediaUrl, resolveTeamLogoUrl } from '../../utils/media';
 import SupportChat from '../../components/Support/SupportChat';
 import FlameAuraAvatar from '../../components/UI/FlameAuraAvatar';
+import {
+  TournamentHistoryFilters,
+  HistoryPagination,
+  TournamentHistoryRow,
+  TournamentHistorySection
+} from '../../components/History';
 import { getTeamPoints, getTierByPoints, getIntensityByPointsAndRank } from '../../utils/flameRank';
 
 const Container = styled.div`
@@ -268,6 +275,12 @@ const RequestAvatarFallback = styled.div`
   font-weight: 700;
 `;
 
+const HistoryList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
 const TeamPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -277,6 +290,16 @@ const TeamPage: React.FC = () => {
   const [logoError, setLogoError] = useState<string | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [inviteLink, setInviteLink] = useState<string>('');
+  const [historyGameFilter, setHistoryGameFilter] = useState<string>('all');
+  const [historyFromFilter, setHistoryFromFilter] = useState<string>('');
+  const [historyToFilter, setHistoryToFilter] = useState<string>('');
+  const [historyBaseStatusFilter, setHistoryBaseStatusFilter] = useState<string>('all');
+  const [historyBaseSort, setHistoryBaseSort] = useState<'recent' | 'oldest'>('recent');
+  const [historyBaseGameFilter, setHistoryBaseGameFilter] = useState<string>('all');
+  const [historyBasePage, setHistoryBasePage] = useState<number>(1);
+  const [historySort, setHistorySort] = useState<'recent' | 'oldest'>('recent');
+  const [historyPage, setHistoryPage] = useState<number>(1);
+  const [isExportingHistory, setIsExportingHistory] = useState(false);
   const { data: team, isLoading, error, refetch } = useQuery({
     queryKey: ['team', id],
     queryFn: async () => {
@@ -310,6 +333,48 @@ const TeamPage: React.FC = () => {
     },
     enabled: Boolean(id && canManageLogo),
     staleTime: 10000,
+    refetchOnWindowFocus: false
+  });
+
+  const { data: teamHistory, isLoading: isTeamHistoryLoading } = useQuery({
+    queryKey: ['history', 'team', id, 'base', historyBasePage, historyBaseStatusFilter, historyBaseSort, historyBaseGameFilter],
+    queryFn: async () => {
+      if (!id) return null;
+      return historyService.getTeamHistory(id, historyBasePage, 6, {
+        status: historyBaseStatusFilter === 'all' ? '' : historyBaseStatusFilter,
+        sort: historyBaseSort,
+        game: historyBaseGameFilter === 'all' ? '' : historyBaseGameFilter
+      });
+    },
+    enabled: Boolean(id),
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
+
+  const hasActiveSubscription = (() => {
+    const subscribed = Boolean((user as any)?.isSubscribed);
+    if (!subscribed) return false;
+    const expiresRaw = (user as any)?.subscriptionExpiresAt;
+    if (!expiresRaw) return true;
+    const expiresTs = new Date(expiresRaw).getTime();
+    return Number.isFinite(expiresTs) && expiresTs > Date.now();
+  })();
+
+  const { data: teamDetailedHistory, isLoading: isTeamDetailedHistoryLoading, refetch: refetchTeamDetailedHistory } = useQuery({
+    queryKey: ['history', 'team', id, 'matches', historyGameFilter, historyFromFilter, historyToFilter, historySort, historyPage],
+    queryFn: async () => {
+      if (!id) return null;
+      return historyService.getTeamMatches(id, {
+        page: historyPage,
+        limit: 20,
+        game: historyGameFilter === 'all' ? '' : historyGameFilter,
+        from: historyFromFilter || '',
+        to: historyToFilter || '',
+        sort: historySort
+      });
+    },
+    enabled: Boolean(id && hasActiveSubscription && canManageLogo),
+    staleTime: 20000,
     refetchOnWindowFocus: false
   });
 
@@ -392,6 +457,14 @@ const TeamPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [historyGameFilter, historyFromFilter, historyToFilter, historySort]);
+
+  useEffect(() => {
+    setHistoryBasePage(1);
+  }, [historyBaseStatusFilter, historyBaseSort, historyBaseGameFilter]);
+
   const copyInviteLink = async () => {
     if (!inviteLink) return;
     try {
@@ -424,6 +497,31 @@ const TeamPage: React.FC = () => {
   const losses = team.stats?.losses || 0;
   const winRate = team.stats?.winRate || 0;
   const teamLogo = resolveTeamLogoUrl(team.logo);
+  const historySummary = teamHistory?.summary || { tournaments: 0, matches: 0, wins: 0, losses: 0, winRate: 0 };
+  const historyItems = Array.isArray(teamHistory?.items) ? teamHistory.items : [];
+  const historyBasePagination = teamHistory?.pagination || { page: 1, limit: 6, total: 0, totalPages: 0 };
+  const teamDetailedItems = Array.isArray(teamDetailedHistory?.items) ? teamDetailedHistory.items : [];
+  const teamDetailedPagination = teamDetailedHistory?.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 };
+
+  const exportTeamHistoryCsv = async () => {
+    if (!id) return;
+    try {
+      setIsExportingHistory(true);
+      const blob = await historyService.exportTeamHistoryCsv(id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `team-${id}-tournament-history.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch {
+      // noop
+    } finally {
+      setIsExportingHistory(false);
+    }
+  };
 
   return (
     <Container>
@@ -503,6 +601,118 @@ const TeamPage: React.FC = () => {
             <StatLabel>Total Prize Money</StatLabel>
           </StatCard>
         </StatsGrid>
+      </Section>
+
+      <Section>
+        <SectionTitle>Tournament History</SectionTitle>
+        <TournamentHistorySection
+          loading={isTeamHistoryLoading}
+          emptyText="No tournament history yet."
+          controls={
+            <TournamentHistoryFilters
+              game={historyBaseGameFilter}
+              status={historyBaseStatusFilter}
+              sort={historyBaseSort}
+              onGameChange={setHistoryBaseGameFilter}
+              onStatusChange={setHistoryBaseStatusFilter}
+              onSortChange={setHistoryBaseSort}
+            />
+          }
+          items={historyItems.map((item: any) => ({
+            key: item.tournamentId,
+            to: `/tournament/${item.tournamentId}`,
+            title: item.tournamentName,
+            subtitle: `${item.game} • ${item.matches} matches • ${item.wins}W/${item.losses}L`,
+            rightText: `${Number(item.winRate || 0).toFixed(1)}%`
+          }))}
+          summaryText={`Summary: ${historySummary.tournaments} tournaments • ${historySummary.matches} matches • ${historySummary.wins}W/${historySummary.losses}L`}
+          pagination={{
+            page: historyBasePagination.page,
+            totalPages: historyBasePagination.totalPages,
+            loading: isTeamHistoryLoading,
+            onPrev: () => setHistoryBasePage((p) => Math.max(1, p - 1)),
+            onNext: () => setHistoryBasePage((p) => Math.min(historyBasePagination.totalPages, p + 1))
+          }}
+        />
+      </Section>
+
+      <Section>
+        <SectionTitle>Premium Match History <span style={{ fontSize: '0.75rem', color: '#ffb074' }}>PRO</span></SectionTitle>
+        {!canManageLogo ? (
+          <div style={{ opacity: 0.75 }}>Only team owner can access this section.</div>
+        ) : !hasActiveSubscription ? (
+          <div style={{ opacity: 0.75 }}>Active subscription required for detailed history, filters and CSV export.</div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+              <select
+                value={historyGameFilter}
+                onChange={(e) => setHistoryGameFilter(e.target.value)}
+                style={{ minHeight: 36, background: '#121418', color: '#fff', border: '1px solid #2b2f38', borderRadius: 8, padding: '0 10px' }}
+              >
+                <option value="all">All games</option>
+                <option value="Critical Ops">Critical Ops</option>
+                <option value="CS2">CS2</option>
+                <option value="PUBG Mobile">PUBG Mobile</option>
+                <option value="Standoff 2">Standoff 2</option>
+                <option value="Dota 2">Dota 2</option>
+                <option value="Valorant Mobile">Valorant Mobile</option>
+              </select>
+              <select
+                value={historySort}
+                onChange={(e) => setHistorySort(e.target.value as 'recent' | 'oldest')}
+                style={{ minHeight: 36, background: '#121418', color: '#fff', border: '1px solid #2b2f38', borderRadius: 8, padding: '0 10px' }}
+              >
+                <option value="recent">Recent first</option>
+                <option value="oldest">Oldest first</option>
+              </select>
+              <input
+                type="date"
+                value={historyFromFilter}
+                onChange={(e) => setHistoryFromFilter(e.target.value)}
+                style={{ minHeight: 36, background: '#121418', color: '#fff', border: '1px solid #2b2f38', borderRadius: 8, padding: '0 10px' }}
+              />
+              <input
+                type="date"
+                value={historyToFilter}
+                onChange={(e) => setHistoryToFilter(e.target.value)}
+                style={{ minHeight: 36, background: '#121418', color: '#fff', border: '1px solid #2b2f38', borderRadius: 8, padding: '0 10px' }}
+              />
+              <Button variant="outline" size="small" onClick={() => refetchTeamDetailedHistory()} disabled={isTeamDetailedHistoryLoading}>
+                {isTeamDetailedHistoryLoading ? 'Refreshing...' : 'Refresh'}
+              </Button>
+              <Button variant="outline" size="small" onClick={exportTeamHistoryCsv} disabled={isExportingHistory}>
+                {isExportingHistory ? 'Exporting...' : 'Export CSV'}
+              </Button>
+            </div>
+
+            {isTeamDetailedHistoryLoading ? (
+              <div style={{ opacity: 0.8 }}>Loading detailed matches...</div>
+            ) : !teamDetailedItems.length ? (
+              <div style={{ opacity: 0.75 }}>No matches for selected filters.</div>
+            ) : (
+              <HistoryList>
+                {teamDetailedItems.map((row: any) => (
+                  <TournamentHistoryRow
+                    key={row.matchId}
+                    to={`/tournament/${row.tournamentId}`}
+                    title={row.tournamentName}
+                    subtitle={`${row.game} • vs ${row.opponentTeam?.name || 'Team'} • ${row.score}`}
+                    rightText={row.result === 'win' ? 'W' : 'L'}
+                    rightColor={row.result === 'win' ? '#79d888' : '#ff8a80'}
+                  />
+                ))}
+              </HistoryList>
+            )}
+            <HistoryPagination
+              page={teamDetailedPagination.page}
+              totalPages={teamDetailedPagination.totalPages}
+              loading={isTeamDetailedHistoryLoading}
+              onPrev={() => setHistoryPage((p) => Math.max(1, p - 1))}
+              onNext={() => setHistoryPage((p) => Math.min(teamDetailedPagination.totalPages, p + 1))}
+            />
+          </>
+        )}
       </Section>
 
       {canManageLogo && (

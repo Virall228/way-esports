@@ -3,6 +3,9 @@ import Team from '../models/Team';
 import BotSubscriber from '../models/BotSubscriber';
 import BotNotification from '../models/BotNotification';
 
+const BotSubscriberModel: any = BotSubscriber;
+const BotNotificationModel: any = BotNotification;
+
 const toStringId = (value: any): string => {
   if (!value) return '';
   return value.toString ? value.toString() : String(value);
@@ -37,11 +40,11 @@ const enqueueTelegram = async (params: {
   const telegramId = Number(params.user?.telegramId || 0);
   if (!Number.isFinite(telegramId) || telegramId <= 0) return null;
 
-  const subscriber: any = await BotSubscriber.findOne({ telegramId }).lean();
+  const subscriber: any = await BotSubscriberModel.findOne({ telegramId }).lean();
   const chatId = Number(subscriber?.chatId || telegramId);
   if (!Number.isFinite(chatId) || chatId <= 0) return null;
 
-  return BotNotification.create({
+  return BotNotificationModel.create({
     userId: params.user?._id,
     telegramId,
     chatId,
@@ -118,4 +121,3 @@ export const botPushService = {
 };
 
 export default botPushService;
-

@@ -23,6 +23,9 @@ export interface ITeam extends Document {
   achievements: string[];
   createdAt: Date;
   updatedAt: Date;
+  addPlayer(userId: mongoose.Types.ObjectId, role: string): Promise<void>;
+  removePlayer(userId: mongoose.Types.ObjectId): Promise<void>;
+  updateStats(won: boolean, tournamentCompleted?: boolean): Promise<void>;
 }
 
 const PlayerSchema = new Schema({

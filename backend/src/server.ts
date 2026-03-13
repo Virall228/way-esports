@@ -45,6 +45,7 @@ import tasksRouter from './routes/tasks';
 import tournamentRoomsRouter from './routes/tournamentRooms';
 import intelligenceRouter from './routes/intelligence';
 import botRouter from './routes/bot';
+import historyRouter from './routes/history';
 import User from './models/User';
 
 import { seedDefaultAchievements } from './services/achievements/seedAchievements';
@@ -210,6 +211,7 @@ app.use('/api/scouting', scoutingRouter);
 app.use('/api/matchmaking', matchmakingRouter);
 app.use('/api/billing', authenticateJWT, billingRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/history', historyRouter);
 app.use('/api/tasks', tasksRouter);
 app.use('/api/tournament-rooms', tournamentRoomsRouter);
 app.use('/api/intelligence', intelligenceRouter);

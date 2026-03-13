@@ -42,6 +42,8 @@ export interface ITournament extends Document {
   matches: mongoose.Types.ObjectId[];
   bracket: IBracket;
   winner?: mongoose.Types.ObjectId;
+  isActive: boolean;
+  participantCount: number;
   createdAt: Date;
   updatedAt: Date;
   
@@ -158,26 +160,6 @@ TournamentSchema.pre('save', function (next) {
   next();
 });
 
-// Method to check if registration is open
-TournamentSchema.methods.isRegistrationOpen = function (): boolean {
-  if (this.status !== 'registration' || new Date() >= this.startDate) {
-    return false;
-  }
-  
-  const totalParticipants = (this.registeredTeams?.length || 0) + (this.registeredPlayers?.length || 0);
-  
-  if (this.type === 'team') {
-    return this.registeredTeams.length < this.maxTeams;
-  } else if (this.type === 'solo') {
-    return this.registeredPlayers.length < this.maxPlayers;
-  } else if (this.type === 'mixed') {
-    const maxTotal = (this.maxTeams || 0) + (this.maxPlayers || 0);
-    return totalParticipants < maxTotal;
-  }
-  
-  return false;
-};
-
 // Method to check if tournament can be started
 TournamentSchema.methods.canStart = function (): boolean {
   if (this.status !== 'registration' || new Date() < this.startDate) {
@@ -206,7 +188,7 @@ TournamentSchema.methods.generateBracket = function (): void {
   const participantCount = participants.length;
   
   if (participantCount < 2) {
-    throw new Error('At least 2 participants required for tournament');
+    throw new Error('At least 2 teams required for tournament');
   }
 
   // Fisher-Yates shuffle algorithm for better randomization
@@ -280,4 +262,5 @@ TournamentSchema.methods.generateBracket = function (): void {
   };
 };
 
-export default mongoose.model<ITournament>('Tournament', TournamentSchema); 
+export const Tournament = mongoose.model<ITournament>('Tournament', TournamentSchema);
+export default Tournament; 

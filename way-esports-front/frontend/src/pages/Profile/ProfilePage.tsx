@@ -1,11 +1,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import styled from 'styled-components';
+import { useQuery } from '@tanstack/react-query';
 import SubscriptionModal from '../../components/Subscription/SubscriptionModal';
 import PhotoUploadModal from '../../components/Profile/PhotoUploadModal';
 import AchievementsSection from '../../components/Profile/AchievementsSection';
 import ReferralCard from '../../components/Referral/ReferralCard';
 import SubscriptionCard from '../../components/Subscription/SubscriptionCard';
 import SupportChat from '../../components/Support/SupportChat';
+import {
+  TournamentHistoryFilters,
+  HistoryPagination,
+  TournamentHistoryRow,
+  TournamentHistorySection
+} from '../../components/History';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -13,6 +20,7 @@ import { api, ApiError } from '../../services/api';
 import { getFullUrl } from '../../config/api';
 import { Link } from 'react-router-dom';
 import { useProfileQuery } from '../../hooks/useProfileQuery';
+import { historyService } from '../../services/historyService';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import FlameAuraAvatar from '../../components/UI/FlameAuraAvatar';
@@ -351,12 +359,19 @@ const InlineInput = styled.input`
   padding: 0.4rem 0.65rem;
 `;
 
+const HistoryList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
 const ProfilePage: React.FC = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const { addNotification } = useNotifications();
   const { data: profileData, refetch: refetchProfile } = useProfileQuery();
   const profile = profileData || user;
+  const profileId = String(profile?.id || user?.id || '').trim();
   const [isSubscriptionOpen, setIsSubscriptionOpen] = useState(false);
   const [isPhotoUploadOpen, setIsPhotoUploadOpen] = useState(false);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
@@ -368,11 +383,57 @@ const ProfilePage: React.FC = () => {
   const [aiGhostBadge, setAiGhostBadge] = useState<string>('');
   const [statusCardData, setStatusCardData] = useState<TelegramStatusCardData | null>(null);
   const [isUploadingWallpaper, setIsUploadingWallpaper] = useState(false);
+  const [historyGameFilter, setHistoryGameFilter] = useState<string>('all');
+  const [historyFromFilter, setHistoryFromFilter] = useState<string>('');
+  const [historyToFilter, setHistoryToFilter] = useState<string>('');
+  const [historyBaseStatusFilter, setHistoryBaseStatusFilter] = useState<string>('all');
+  const [historyBaseSort, setHistoryBaseSort] = useState<'recent' | 'oldest'>('recent');
+  const [historyBaseGameFilter, setHistoryBaseGameFilter] = useState<string>('all');
+  const [historyBasePage, setHistoryBasePage] = useState<number>(1);
+  const [historySort, setHistorySort] = useState<'recent' | 'oldest'>('recent');
+  const [historyPage, setHistoryPage] = useState<number>(1);
+  const [isExportingHistory, setIsExportingHistory] = useState(false);
   const isMobile = useMemo(() => {
     if (typeof window === 'undefined') return false;
     return window.matchMedia('(max-width: 768px)').matches;
   }, []);
   const avatarSize = isMobile ? 96 : 120;
+
+  const { data: historyData, isLoading: isHistoryLoading } = useQuery({
+    queryKey: ['history', 'player', profileId, 'base', historyBasePage, historyBaseStatusFilter, historyBaseSort, historyBaseGameFilter],
+    queryFn: () => historyService.getPlayerHistory(profileId, historyBasePage, 6, {
+      status: historyBaseStatusFilter === 'all' ? '' : historyBaseStatusFilter,
+      sort: historyBaseSort,
+      game: historyBaseGameFilter === 'all' ? '' : historyBaseGameFilter
+    }),
+    enabled: Boolean(profileId),
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
+
+  const hasActiveSubscription = useMemo(() => {
+    const expiresAtRaw = (profile as any)?.subscriptionExpiresAt || (user as any)?.subscriptionExpiresAt;
+    const subscribedFlag = Boolean((profile as any)?.isSubscribed ?? (user as any)?.isSubscribed);
+    if (!subscribedFlag) return false;
+    if (!expiresAtRaw) return true;
+    const expiresTs = new Date(expiresAtRaw).getTime();
+    return Number.isFinite(expiresTs) && expiresTs > Date.now();
+  }, [profile, user]);
+
+  const { data: detailedHistoryData, isLoading: isDetailedHistoryLoading, refetch: refetchDetailedHistory } = useQuery({
+    queryKey: ['history', 'player', profileId, 'matches', historyGameFilter, historyFromFilter, historyToFilter, historySort, historyPage],
+    queryFn: () => historyService.getPlayerMatches(profileId, {
+      page: historyPage,
+      limit: 20,
+      game: historyGameFilter === 'all' ? '' : historyGameFilter,
+      from: historyFromFilter || '',
+      to: historyToFilter || '',
+      sort: historySort
+    }),
+    enabled: Boolean(profileId && hasActiveSubscription),
+    staleTime: 20000,
+    refetchOnWindowFocus: false
+  });
 
   useEffect(() => {
     if (profile?.bio) {
@@ -420,6 +481,14 @@ const ProfilePage: React.FC = () => {
     };
     void loadStatusCard();
   }, [profile?.id, user?.id]);
+
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [historyGameFilter, historyFromFilter, historyToFilter, historySort]);
+
+  useEffect(() => {
+    setHistoryBasePage(1);
+  }, [historyBaseStatusFilter, historyBaseSort, historyBaseGameFilter]);
 
   const hasEmoji = (value: string) => /\p{Extended_Pictographic}/u.test(value);
 
@@ -516,6 +585,11 @@ const ProfilePage: React.FC = () => {
   const wins = Number(profile?.stats?.wins || 0);
   const losses = Number(profile?.stats?.losses || 0);
   const points = getPlayerPoints(wins, losses);
+  const historySummary = historyData?.summary || { tournaments: 0, matches: 0, wins: 0, losses: 0, winRate: 0 };
+  const historyItems = Array.isArray(historyData?.items) ? historyData.items : [];
+  const historyBasePagination = historyData?.pagination || { page: 1, limit: 6, total: 0, totalPages: 0 };
+  const detailedItems = Array.isArray(detailedHistoryData?.items) ? detailedHistoryData.items : [];
+  const detailedPagination = detailedHistoryData?.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 };
   const profileTier = getTierByPoints(points);
   const profileIntensity = getIntensityByPointsAndRank(points);
   const wallpaperMeta = (profile as any)?.profileWallpaper;
@@ -592,6 +666,30 @@ const ProfilePage: React.FC = () => {
         title: 'Failed',
         message: error?.message || 'Failed to remove wallpaper'
       });
+    }
+  };
+
+  const exportHistoryCsv = async () => {
+    if (!profileId) return;
+    try {
+      setIsExportingHistory(true);
+      const blob = await historyService.exportPlayerHistoryCsv(profileId);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `player-${profileId}-tournament-history.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      addNotification({
+        type: 'error',
+        title: 'Export failed',
+        message: error?.message || 'Failed to export tournament history'
+      });
+    } finally {
+      setIsExportingHistory(false);
     }
   };
 
@@ -746,10 +844,35 @@ const ProfilePage: React.FC = () => {
 
       <StatsGrid>
         <StatsCard>
-          <CardTitle>{t('recentMatches')}</CardTitle>
-          <div style={{ color: '#999', fontStyle: 'italic', textAlign: 'center', padding: '40px 0' }}>
-            {t('noRecentMatches')}
-          </div>
+          <CardTitle>Tournament History</CardTitle>
+          <TournamentHistorySection
+            loading={isHistoryLoading}
+            emptyText="No tournament history yet."
+            controls={
+              <TournamentHistoryFilters
+                game={historyBaseGameFilter}
+                status={historyBaseStatusFilter}
+                sort={historyBaseSort}
+                onGameChange={setHistoryBaseGameFilter}
+                onStatusChange={setHistoryBaseStatusFilter}
+                onSortChange={setHistoryBaseSort}
+              />
+            }
+            items={historyItems.map((item) => ({
+              key: item.tournamentId,
+              to: `/tournament/${item.tournamentId}`,
+              title: item.tournamentName,
+              subtitle: `${item.game} • ${item.matches} matches • ${item.wins}W/${item.losses}L`,
+              rightText: `${item.winRate.toFixed(1)}%`
+            }))}
+            pagination={{
+              page: historyBasePagination.page,
+              totalPages: historyBasePagination.totalPages,
+              loading: isHistoryLoading,
+              onPrev: () => setHistoryBasePage((p) => Math.max(1, p - 1)),
+              onNext: () => setHistoryBasePage((p) => Math.min(historyBasePagination.totalPages, p + 1))
+            }}
+          />
         </StatsCard>
 
         <StatsCard>
@@ -763,18 +886,92 @@ const ProfilePage: React.FC = () => {
       <StatsCard>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
           <span style={{ fontSize: '1.5rem' }}>{'\u{1F4CA}'}</span>
-          <CardTitle style={{ margin: 0 }}>{t('matchStatistics')}</CardTitle>
+          <CardTitle style={{ margin: 0 }}>
+            Premium Match History <span style={{ fontSize: '0.75rem', color: '#ffb074' }}>PRO</span>
+          </CardTitle>
         </div>
 
-        <StatFilters>
-          <StatFilterButton variant="brand">{t('allMatches')} (0)</StatFilterButton>
-          <StatFilterButton variant="outline">{t('wins')} (0)</StatFilterButton>
-          <StatFilterButton variant="outline">{t('losses')} (0)</StatFilterButton>
-        </StatFilters>
+        {!hasActiveSubscription ? (
+          <div style={{ color: '#c7c7c7' }}>
+            Detailed match history, filters and CSV export are available with active subscription.
+          </div>
+        ) : (
+          <>
+            <StatFilters>
+              <StatFilterButton variant="brand">Tournaments ({historySummary.tournaments})</StatFilterButton>
+              <StatFilterButton variant="outline">Matches ({historySummary.matches})</StatFilterButton>
+              <StatFilterButton variant="outline">Winrate ({historySummary.winRate.toFixed(1)}%)</StatFilterButton>
+            </StatFilters>
 
-        <div style={{ color: '#999', fontStyle: 'italic', textAlign: 'center', padding: '40px 0' }}>
-          {t('noMatchStats')}
-        </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+              <select
+                value={historyGameFilter}
+                onChange={(e) => setHistoryGameFilter(e.target.value)}
+                style={{ minHeight: 36, background: '#121418', color: '#fff', border: '1px solid #2b2f38', borderRadius: 8, padding: '0 10px' }}
+              >
+                <option value="all">All games</option>
+                <option value="Critical Ops">Critical Ops</option>
+                <option value="CS2">CS2</option>
+                <option value="PUBG Mobile">PUBG Mobile</option>
+                <option value="Standoff 2">Standoff 2</option>
+                <option value="Dota 2">Dota 2</option>
+                <option value="Valorant Mobile">Valorant Mobile</option>
+              </select>
+              <select
+                value={historySort}
+                onChange={(e) => setHistorySort(e.target.value as 'recent' | 'oldest')}
+                style={{ minHeight: 36, background: '#121418', color: '#fff', border: '1px solid #2b2f38', borderRadius: 8, padding: '0 10px' }}
+              >
+                <option value="recent">Recent first</option>
+                <option value="oldest">Oldest first</option>
+              </select>
+              <input
+                type="date"
+                value={historyFromFilter}
+                onChange={(e) => setHistoryFromFilter(e.target.value)}
+                style={{ minHeight: 36, background: '#121418', color: '#fff', border: '1px solid #2b2f38', borderRadius: 8, padding: '0 10px' }}
+              />
+              <input
+                type="date"
+                value={historyToFilter}
+                onChange={(e) => setHistoryToFilter(e.target.value)}
+                style={{ minHeight: 36, background: '#121418', color: '#fff', border: '1px solid #2b2f38', borderRadius: 8, padding: '0 10px' }}
+              />
+              <Button size="small" variant="outline" onClick={() => refetchDetailedHistory()} disabled={isDetailedHistoryLoading}>
+                {isDetailedHistoryLoading ? 'Refreshing...' : 'Refresh'}
+              </Button>
+              <Button size="small" variant="outline" onClick={exportHistoryCsv} disabled={isExportingHistory}>
+                {isExportingHistory ? 'Exporting...' : 'Export CSV'}
+              </Button>
+            </div>
+
+            {isDetailedHistoryLoading ? (
+              <div style={{ color: '#999' }}>Loading detailed history...</div>
+            ) : !detailedItems.length ? (
+              <div style={{ color: '#999' }}>No matches for selected filters.</div>
+            ) : (
+              <HistoryList>
+                {detailedItems.map((row: any) => (
+                  <TournamentHistoryRow
+                    key={row.matchId}
+                    to={`/tournament/${row.tournamentId}`}
+                    title={row.tournamentName}
+                    subtitle={`${row.game} • vs ${row.opponentTeam?.name || 'Team'} • ${row.score} • ${row.result.toUpperCase()}`}
+                    rightText={row.result === 'win' ? 'W' : 'L'}
+                    rightColor={row.result === 'win' ? '#79d888' : '#ff8a80'}
+                  />
+                ))}
+              </HistoryList>
+            )}
+            <HistoryPagination
+              page={detailedPagination.page}
+              totalPages={detailedPagination.totalPages}
+              loading={isDetailedHistoryLoading}
+              onPrev={() => setHistoryPage((p) => Math.max(1, p - 1))}
+              onNext={() => setHistoryPage((p) => Math.min(detailedPagination.totalPages, p + 1))}
+            />
+          </>
+        )}
       </StatsCard>
 
       <AchievementsSection />

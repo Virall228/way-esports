@@ -3,11 +3,13 @@ import { useParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../services/api';
+import { historyService } from '../../services/historyService';
 import { getFullUrl } from '../../config/api';
 import Card from '../../components/UI/Card';
 import FlameAuraAvatar from '../../components/UI/FlameAuraAvatar';
 import { getTierByPoints, getIntensityByPointsAndRank, getPlayerPoints } from '../../utils/flameRank';
 import Button from '../../components/UI/Button';
+import { TournamentHistoryFilters, TournamentHistorySection } from '../../components/History';
 
 const Container = styled.div`
   padding: 2rem 1rem;
@@ -156,8 +158,13 @@ const StatLabel = styled.div`
   text-transform: uppercase;
 `;
 
+
 const PublicProfilePage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    const [historyGameFilter, setHistoryGameFilter] = React.useState<string>('all');
+    const [historyStatusFilter, setHistoryStatusFilter] = React.useState<string>('all');
+    const [historySort, setHistorySort] = React.useState<'recent' | 'oldest'>('recent');
+    const [historyPage, setHistoryPage] = React.useState<number>(1);
     const toAvatarUrl = (value?: string | null) => {
         if (!value) return '/images/default-avatar.png';
         if (value.startsWith('http')) return value;
@@ -191,6 +198,25 @@ const PublicProfilePage: React.FC = () => {
         staleTime: 30000,
         refetchOnWindowFocus: false
     });
+
+    const { data: historyData, isLoading: isHistoryLoading } = useQuery({
+        queryKey: ['history', 'player', id, 'public', historyGameFilter, historyStatusFilter, historySort, historyPage],
+        queryFn: async () => {
+            if (!id) return null;
+            return historyService.getPlayerHistory(id, historyPage, 8, {
+                game: historyGameFilter === 'all' ? '' : historyGameFilter,
+                status: historyStatusFilter === 'all' ? '' : historyStatusFilter,
+                sort: historySort
+            });
+        },
+        enabled: Boolean(id),
+        staleTime: 30000,
+        refetchOnWindowFocus: false
+    });
+
+    React.useEffect(() => {
+        setHistoryPage(1);
+    }, [historyGameFilter, historyStatusFilter, historySort]);
 
     if (isLoading) return <Container>Loading profile...</Container>;
     if (error || !profile) {
@@ -279,6 +305,35 @@ const PublicProfilePage: React.FC = () => {
                     </StatItem>
                 ))}
             </StatsGrid>
+
+            <h3>Tournament History</h3>
+            <TournamentHistorySection
+                loading={isHistoryLoading}
+                emptyText="No tournament history yet."
+                controls={
+                    <TournamentHistoryFilters
+                        game={historyGameFilter}
+                        status={historyStatusFilter}
+                        sort={historySort}
+                        onGameChange={setHistoryGameFilter}
+                        onStatusChange={setHistoryStatusFilter}
+                        onSortChange={setHistorySort}
+                    />
+                }
+                items={(historyData?.items || []).map((item: any) => ({
+                    key: item.tournamentId,
+                    title: item.tournamentName,
+                    subtitle: `${item.game} • ${item.matches} matches • ${item.wins}W/${item.losses}L`,
+                    rightText: `${Number(item.winRate || 0).toFixed(1)}%`
+                }))}
+                pagination={{
+                    page: historyData?.pagination?.page || 1,
+                    totalPages: historyData?.pagination?.totalPages || 0,
+                    loading: isHistoryLoading,
+                    onPrev: () => setHistoryPage((p) => Math.max(1, p - 1)),
+                    onNext: () => setHistoryPage((p) => Math.min(historyData?.pagination?.totalPages || 1, p + 1))
+                }}
+            />
         </Container>
     );
 };
