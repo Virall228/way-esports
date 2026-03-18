@@ -24,6 +24,23 @@ export const GlobalStyles = createGlobalStyle`
     --sal: env(safe-area-inset-left);
     --sar: env(safe-area-inset-right);
     --app-height: 100vh;
+    --bg-pattern-opacity: 0.32;
+    --bg-glow-opacity: 0.9;
+  }
+
+  body[data-bg-preset='subtle'] {
+    --bg-pattern-opacity: 0.2;
+    --bg-glow-opacity: 0.65;
+  }
+
+  body[data-bg-preset='default'] {
+    --bg-pattern-opacity: 0.32;
+    --bg-glow-opacity: 0.9;
+  }
+
+  body[data-bg-preset='strong'] {
+    --bg-pattern-opacity: 0.42;
+    --bg-glow-opacity: 1;
   }
 
   body {
@@ -65,7 +82,7 @@ export const GlobalStyles = createGlobalStyle`
       linear-gradient(145deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0) 60%);
     pointer-events: none;
     z-index: -2;
-    opacity: 0.9;
+    opacity: var(--bg-glow-opacity);
   }
 
   body::after {
@@ -81,7 +98,7 @@ export const GlobalStyles = createGlobalStyle`
       linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
     background-size: 56px 32px, 56px 32px, 56px 32px;
     background-position: 0 0, 0 0, 28px 16px;
-    opacity: 0.32;
+    opacity: var(--bg-pattern-opacity);
     pointer-events: none;
     z-index: -1;
   }
@@ -287,11 +304,11 @@ export const GlobalStyles = createGlobalStyle`
   /* Responsive typography */
   @media (max-width: 768px) {
     body::before {
-      opacity: 0.75;
+      opacity: calc(var(--bg-glow-opacity) * 0.84);
     }
 
     body::after {
-      opacity: 0.22;
+      opacity: calc(var(--bg-pattern-opacity) * 0.7);
       background-size: 44px 26px, 44px 26px, 44px 26px;
       background-position: 0 0, 0 0, 22px 13px;
     }

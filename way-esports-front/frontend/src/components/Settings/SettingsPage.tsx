@@ -103,6 +103,26 @@ const LanguageButton = styled.button<{ active: boolean }>`
     }
 `;
 
+const BackgroundPresetGroup = styled.div`
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+`;
+
+const BackgroundPresetButton = styled.button<{ active: boolean }>`
+    background: ${props => props.active ? 'linear-gradient(135deg, #FF6B00 0%, #FFD700 100%)' : 'transparent'};
+    color: ${props => props.active ? '#000' : '#e9e9e9'};
+    border: 1px solid ${props => props.active ? 'transparent' : 'rgba(255,255,255,0.25)'};
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+`;
+
 const ContactForm = styled.form`
     display: flex;
     flex-direction: column;
@@ -185,7 +205,7 @@ const ContactItem = styled.div`
 `;
 
 const SettingsPage: React.FC = () => {
-    const { isDarkMode, toggleDarkMode } = useApp();
+    const { isDarkMode, toggleDarkMode, backgroundPreset, setBackgroundPreset } = useApp();
     const { language, setLanguage, t } = useLanguage();
     const { user } = useAuth();
     const [contactForm, setContactForm] = useState({
@@ -260,6 +280,38 @@ const SettingsPage: React.FC = () => {
                         isLight={!isDarkMode}
                         onClick={handleThemeToggle}
                     />
+                </SettingRow>
+                <SettingRow>
+                    <div>
+                        <SettingLabel>Background intensity</SettingLabel>
+                        <SettingDescription>Auto: subtle on mobile, default on desktop</SettingDescription>
+                    </div>
+                    <BackgroundPresetGroup>
+                        <BackgroundPresetButton
+                            active={backgroundPreset === 'auto'}
+                            onClick={() => setBackgroundPreset('auto')}
+                        >
+                            Auto
+                        </BackgroundPresetButton>
+                        <BackgroundPresetButton
+                            active={backgroundPreset === 'subtle'}
+                            onClick={() => setBackgroundPreset('subtle')}
+                        >
+                            Subtle
+                        </BackgroundPresetButton>
+                        <BackgroundPresetButton
+                            active={backgroundPreset === 'default'}
+                            onClick={() => setBackgroundPreset('default')}
+                        >
+                            Default
+                        </BackgroundPresetButton>
+                        <BackgroundPresetButton
+                            active={backgroundPreset === 'strong'}
+                            onClick={() => setBackgroundPreset('strong')}
+                        >
+                            Strong
+                        </BackgroundPresetButton>
+                    </BackgroundPresetGroup>
                 </SettingRow>
                 <SettingRow>
                     <div>

@@ -20,6 +20,8 @@ interface AppContextType {
   setLanguage: (lang: 'en' | 'ru') => void;
   isDarkMode: boolean;
   toggleDarkMode: () => void;
+  backgroundPreset: 'auto' | 'subtle' | 'default' | 'strong';
+  setBackgroundPreset: (preset: 'auto' | 'subtle' | 'default' | 'strong') => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -41,6 +43,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [language, setLanguage] = useState<'en' | 'ru'>('en');
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [backgroundPreset, setBackgroundPresetState] = useState<'auto' | 'subtle' | 'default' | 'strong'>('auto');
 
   useEffect(() => {
     try {
@@ -53,6 +56,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       const savedLanguage = localStorage.getItem('language');
       if (savedLanguage === 'en' || savedLanguage === 'ru') {
         setLanguage(savedLanguage);
+      }
+      const savedBackgroundPreset = localStorage.getItem('backgroundPreset');
+      if (savedBackgroundPreset === 'auto' || savedBackgroundPreset === 'subtle' || savedBackgroundPreset === 'default' || savedBackgroundPreset === 'strong') {
+        setBackgroundPresetState(savedBackgroundPreset);
       }
     } catch {
       // ignore
@@ -92,6 +99,19 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     initTelegramWebApp();
   }, []);
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
+    const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const cores = typeof navigator !== 'undefined' ? Number((navigator as any).hardwareConcurrency || 0) : 0;
+    const memory = typeof navigator !== 'undefined' ? Number((navigator as any).deviceMemory || 0) : 0;
+    const powerfulDevice = (cores >= 8 || memory >= 8) && !prefersReducedMotion;
+    const resolvedAutoPreset = isMobile ? 'subtle' : (powerfulDevice ? 'strong' : 'default');
+    const resolvedPreset = backgroundPreset === 'auto' ? resolvedAutoPreset : backgroundPreset;
+    document.body.setAttribute('data-bg-preset', resolvedPreset);
+    document.body.setAttribute('data-bg-mode', backgroundPreset);
+  }, [backgroundPreset]);
+
   const toggleDarkMode = () => {
     setIsDarkMode((prev) => {
       const next = !prev;
@@ -104,6 +124,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     });
   };
 
+  const setBackgroundPreset = (preset: 'auto' | 'subtle' | 'default' | 'strong') => {
+    setBackgroundPresetState(preset);
+    try {
+      localStorage.setItem('backgroundPreset', preset);
+    } catch {
+      // ignore
+    }
+  };
+
   const value = {
     user,
     setUser,
@@ -112,6 +141,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setLanguage,
     isDarkMode,
     toggleDarkMode,
+    backgroundPreset,
+    setBackgroundPreset,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

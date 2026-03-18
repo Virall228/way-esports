@@ -287,6 +287,13 @@ const HeaderActionRow = styled.div`
 const StatItem = styled.div`
   text-align: center;
   min-width: 0;
+
+  @media (max-width: 768px) {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 10px 8px;
+  }
 `;
 
 const StatValue = styled.div`
