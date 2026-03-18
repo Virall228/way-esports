@@ -47,10 +47,10 @@ export const GlobalStyles = createGlobalStyle`
     height: 100%;
     width: 100%;
     max-width: 100%;
+    position: relative;
+    z-index: 1;
   }
 
-  /* Remove global gradients and overlays to allow custom background image */
-  /*
   body::before {
     content: '';
     position: fixed;
@@ -58,12 +58,14 @@ export const GlobalStyles = createGlobalStyle`
     left: 0;
     right: 0;
     bottom: 0;
-    background: 
-      radial-gradient(circle at 20% 30%, rgba(255, 107, 0, 0.03) 0%, transparent 50%),
-      radial-gradient(circle at 80% 70%, rgba(255, 71, 87, 0.02) 0%, transparent 50%),
-      radial-gradient(circle at 40% 80%, rgba(255, 215, 0, 0.02) 0%, transparent 50%);
+    background:
+      radial-gradient(circle at 16% 18%, rgba(255, 255, 255, 0.07) 0%, transparent 36%),
+      radial-gradient(circle at 80% 72%, rgba(255, 255, 255, 0.05) 0%, transparent 34%),
+      radial-gradient(circle at 50% 50%, rgba(255, 107, 0, 0.05) 0%, transparent 48%),
+      linear-gradient(145deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0) 60%);
     pointer-events: none;
-    z-index: -1;
+    z-index: -2;
+    opacity: 0.9;
   }
 
   body::after {
@@ -73,14 +75,16 @@ export const GlobalStyles = createGlobalStyle`
     left: 0;
     right: 0;
     bottom: 0;
-    background-image: 
-      linear-gradient(rgba(255, 107, 0, 0.01) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 107, 0, 0.01) 1px, transparent 1px);
-    background-size: 50px 50px;
+    background-image:
+      linear-gradient(30deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+      linear-gradient(150deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 56px 32px, 56px 32px, 56px 32px;
+    background-position: 0 0, 0 0, 28px 16px;
+    opacity: 0.32;
     pointer-events: none;
     z-index: -1;
   }
-  */
 
   /* CS:GO Tournament Elements */
   .csgo-bg-elements {
@@ -282,6 +286,16 @@ export const GlobalStyles = createGlobalStyle`
 
   /* Responsive typography */
   @media (max-width: 768px) {
+    body::before {
+      opacity: 0.75;
+    }
+
+    body::after {
+      opacity: 0.22;
+      background-size: 44px 26px, 44px 26px, 44px 26px;
+      background-position: 0 0, 0 0, 22px 13px;
+    }
+
     html {
       font-size: 14px;
     }
