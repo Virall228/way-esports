@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
+import SurfacePanel from '../../components/UI/SurfacePanel';
+import SectionHeading from '../../components/UI/SectionHeading';
 import { api } from '../../services/api';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { designTokens } from '../../styles/designTokens';
 
 const Container = styled.div`
   box-sizing: border-box;
@@ -131,21 +134,6 @@ const CTAButton = styled(Button).attrs({ variant: 'brand', size: 'large' })`
     &:hover {
       transform: none;
     }
-  }
-`;
-
-const SectionTitle = styled.h2`
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #ffffff;
-  text-align: center;
-  margin-bottom: 60px;
-  letter-spacing: 2px;
-
-  @media (max-width: 768px) {
-    font-size: 1.45rem;
-    margin-bottom: 18px;
-    letter-spacing: 0.6px;
   }
 `;
 
@@ -318,9 +306,13 @@ const StatLabel = styled.div`
 
 const TopInfoGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(280px, 1fr));
   gap: 14px;
   margin-bottom: 14px;
+
+  @media (max-width: 1600px) {
+    grid-template-columns: repeat(2, minmax(280px, 1fr));
+  }
 
   @media (max-width: 1280px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -335,9 +327,13 @@ const TopInfoGrid = styled.div`
 
 const BottomInfoGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(300px, 1fr));
   gap: 14px;
   margin-bottom: 20px;
+
+  @media (max-width: 1600px) {
+    grid-template-columns: 1fr;
+  }
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -346,11 +342,8 @@ const BottomInfoGrid = styled.div`
   }
 `;
 
-const InfoCard = styled(Card).attrs({ variant: 'outlined' })`
+const InfoCard = styled(SurfacePanel)`
   padding: 16px;
-  background: ${({ theme }) => theme.colors.bg.secondary};
-  border: 1px solid ${({ theme }) => theme.colors.border.medium};
-  border-radius: 12px;
   min-height: 175px;
   min-width: 0;
   overflow: hidden;
@@ -399,10 +392,12 @@ const QuickActions = styled.div`
 
 const ActionButton = styled(Button).attrs({ variant: 'outline', size: 'small' })`
   min-height: 34px;
-  border-radius: 999px;
+  border-radius: ${designTokens.radius.pill};
   padding: 0 12px;
   max-width: 100%;
-  white-space: nowrap;
+  white-space: normal;
+  min-width: 0;
+  text-align: center;
 `;
 
 const List = styled.div`
@@ -419,6 +414,10 @@ const ListRow = styled.div`
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 10px;
   padding: 10px;
+
+  @media (max-width: 1024px) {
+    align-items: flex-start;
+  }
 `;
 
 const StatusPill = styled.span<{ $tone?: 'ok' | 'warn' }>`
@@ -489,9 +488,11 @@ const RecommendationActions = styled.div`
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 
   @media (max-width: 1280px) {
-    justify-content: flex-end;
+    justify-content: flex-start;
     width: 100%;
   }
 `;
@@ -818,7 +819,7 @@ const HomePage: React.FC = () => {
         </InfoCard>
       </BottomInfoGrid>
 
-      <SectionTitle>{t('whyChoose')}</SectionTitle>
+      <SectionHeading title={t('whyChoose')} center />
 
       <FeaturesGrid>
         <FeatureCard>

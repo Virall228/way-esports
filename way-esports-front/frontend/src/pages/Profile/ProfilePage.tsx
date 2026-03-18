@@ -83,9 +83,9 @@ const ProfileHeader = styled(Card).attrs({ variant: 'elevated' })<{
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    opacity: ${({ $wallpaperUrl }) => ($wallpaperUrl ? 0.28 : 0)};
-    filter: blur(2px) saturate(0.9) contrast(0.9);
-    transform: scale(1.04);
+    opacity: ${({ $wallpaperUrl }) => ($wallpaperUrl ? 0.22 : 0)};
+    filter: blur(1px) saturate(0.9) contrast(0.9);
+    transform: scale(1.02);
     z-index: 0;
   }
 
@@ -104,12 +104,19 @@ const ProfileHeader = styled(Card).attrs({ variant: 'elevated' })<{
     gap: 12px;
     flex-direction: column;
     align-items: stretch;
+    text-align: left;
 
     &::before {
-      background-position: center 20%;
-      opacity: ${({ $wallpaperUrl }) => ($wallpaperUrl ? 0.16 : 0)};
-      filter: blur(9px) saturate(0.78) contrast(0.8) brightness(0.62);
+      background-position: center 30%;
+      opacity: ${({ $wallpaperUrl }) => ($wallpaperUrl ? 0.1 : 0)};
+      filter: blur(8px) saturate(0.75) contrast(0.82) brightness(0.58);
       transform: scale(1.02);
+    }
+
+    &::after {
+      background:
+        linear-gradient(180deg, rgba(4, 5, 8, 0.25) 0%, rgba(4, 5, 8, 0.75) 65%, rgba(4, 5, 8, 0.9) 100%),
+        radial-gradient(120% 85% at 15% 10%, rgba(255, 107, 0, 0.08) 0%, rgba(255, 107, 0, 0) 55%);
     }
   }
 `;
@@ -117,6 +124,8 @@ const ProfileHeader = styled(Card).attrs({ variant: 'elevated' })<{
 const Avatar = styled.div<{ $hasImage?: boolean; $imageUrl?: string | null; $size?: number }>`
   width: ${({ $size = 120 }) => `${$size}px`};
   height: ${({ $size = 120 }) => `${$size}px`};
+  min-width: ${({ $size = 120 }) => `${$size}px`};
+  min-height: ${({ $size = 120 }) => `${$size}px`};
   aspect-ratio: 1 / 1;
   display: flex;
   align-items: center;
@@ -146,7 +155,18 @@ const Avatar = styled.div<{ $hasImage?: boolean; $imageUrl?: string | null; $siz
   @media (max-width: 768px) {
     width: ${({ $size = 96 }) => `${$size}px`};
     height: ${({ $size = 96 }) => `${$size}px`};
+    min-width: ${({ $size = 96 }) => `${$size}px`};
+    min-height: ${({ $size = 96 }) => `${$size}px`};
     margin: 0 auto;
+
+    &:hover {
+      transform: none;
+      box-shadow: none;
+    }
+
+    &:hover::after {
+      content: none;
+    }
   }
 `;
 
@@ -166,6 +186,7 @@ const WallpaperActionRow = styled.div`
 const ProfileInfo = styled.div`
   flex: 1;
   min-width: 0;
+  width: 100%;
 
   @media (max-width: 768px) {
     width: 100%;
@@ -179,7 +200,9 @@ const ProfileTop = styled.div`
   margin-bottom: 20px;
 
   @media (max-width: 768px) {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     margin-bottom: 12px;
   }
 `;
@@ -194,7 +217,7 @@ const IdentityBlock = styled.div`
 `;
 
 const Username = styled.h1`
-  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  font-size: clamp(1.7rem, 4.6vw, 2.5rem);
   margin-bottom: 5px;
   color: ${({ theme }) => theme.colors.text.primary};
   line-height: 1.08;
@@ -224,6 +247,11 @@ const GhostBadge = styled.div`
   max-width: 100%;
   word-break: break-word;
   overflow-wrap: anywhere;
+
+  @media (max-width: 768px) {
+    margin-left: auto;
+    margin-right: auto;
+  }
 `;
 
 const UserStats = styled.div`
@@ -251,11 +279,14 @@ const HeaderActionRow = styled.div`
     justify-content: center;
     width: 100%;
     gap: 8px;
+    display: grid;
+    grid-template-columns: 1fr;
   }
 `;
 
 const StatItem = styled.div`
   text-align: center;
+  min-width: 0;
 `;
 
 const StatValue = styled.div`
@@ -307,6 +338,8 @@ const InlineAction = styled(Button).attrs({ variant: 'text', size: 'small' })`
 const HeaderPrimaryButton = styled(Button).attrs({ size: 'small', variant: 'outline' })`
   @media (max-width: 768px) {
     width: 100%;
+    justify-content: center;
+    min-height: 42px;
   }
 `;
 
@@ -320,6 +353,7 @@ const ShareLinkButton = styled.a`
 
   @media (max-width: 768px) {
     width: 100%;
+    display: block;
     text-align: center;
   }
 `;
@@ -328,6 +362,7 @@ const WallpaperPrimaryButton = styled(Button).attrs({ size: 'small', variant: 'o
   @media (max-width: 768px) {
     width: 100%;
     justify-content: center;
+    min-height: 42px;
   }
 `;
 
@@ -335,6 +370,7 @@ const WallpaperSecondaryButton = styled(Button).attrs({ size: 'small', variant: 
   @media (max-width: 768px) {
     width: 100%;
     justify-content: center;
+    min-height: 42px;
   }
 `;
 
