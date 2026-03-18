@@ -6,6 +6,7 @@ import { api, ApiError } from '../../services/api';
 import { getFullUrl } from '../../config/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
+import { useApp } from '../../contexts/AppContext';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 
@@ -475,6 +476,12 @@ interface SystemSmokeAuditEvent {
   tournamentsCount: number;
 }
 
+interface UiSettingsPayload {
+  backgroundPreset: 'auto' | 'subtle' | 'default' | 'strong';
+  updatedAt?: string | null;
+  updatedBy?: string | null;
+}
+
 interface BotOutboxRow {
   id: string;
   userId?: string | null;
@@ -909,9 +916,11 @@ const ModalActions = styled.div`
 
 const AdminPage: React.FC = () => {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { setBackgroundPreset } = useApp();
   const { addNotification } = useNotifications();
   const hasAdminAccess = isAuthenticated && (user?.role === 'admin' || user?.role === 'developer');
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+  const [adminBackgroundPresetDraft, setAdminBackgroundPresetDraft] = useState<'auto' | 'subtle' | 'default' | 'strong'>('auto');
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'user' | 'tournament' | 'news' | 'reward' | 'achievement' | 'team'>('user');
@@ -2015,6 +2024,16 @@ const AdminPage: React.FC = () => {
     return (result?.data || result || {}) as IntelligenceReadiness;
   };
 
+  const fetchUiSettings = async (): Promise<UiSettingsPayload> => {
+    const result: any = await api.get('/api/ui-settings/admin');
+    const data = (result?.data || result || {}) as UiSettingsPayload;
+    return {
+      backgroundPreset: (data?.backgroundPreset || 'auto') as UiSettingsPayload['backgroundPreset'],
+      updatedAt: data?.updatedAt || null,
+      updatedBy: data?.updatedBy || null
+    };
+  };
+
   const fetchSupportAuditEvents = async (): Promise<SupportAuditResponse> => {
     const params = new URLSearchParams();
     params.set('entity', 'support_settings');
@@ -2720,6 +2739,14 @@ const AdminPage: React.FC = () => {
     refetchOnWindowFocus: false
   });
 
+  const uiSettingsQuery = useQuery({
+    queryKey: ['admin', 'ui-settings'],
+    queryFn: fetchUiSettings,
+    enabled: hasAdminAccess,
+    staleTime: 30000,
+    refetchOnWindowFocus: false
+  });
+
   const supportAuditEventsQuery = useQuery({
     queryKey: [
       'admin',
@@ -2943,6 +2970,7 @@ const AdminPage: React.FC = () => {
   const supportSettings = supportSettingsQuery.data || null;
   const supportAiRuntime = supportAiRuntimeQuery.data || null;
   const intelligenceReadiness = intelligenceReadinessQuery.data || null;
+  const uiSettings = uiSettingsQuery.data || { backgroundPreset: 'auto' as const, updatedAt: null, updatedBy: null };
   const supportAuditEvents = supportAuditEventsQuery.data?.items || [];
   const supportAuditPagination = supportAuditEventsQuery.data?.pagination || null;
   const systemSmokeAuditEvents = systemSmokeAuditEventsQuery.data || [];
@@ -3168,6 +3196,11 @@ const AdminPage: React.FC = () => {
   const derivedError = queryError ? formatApiError(queryError, 'Failed to load admin data') : null;
   const effectiveError = error || derivedError;
   const isBusy = loading || isQueryLoading;
+
+  useEffect(() => {
+    if (!uiSettings?.backgroundPreset) return;
+    setAdminBackgroundPresetDraft(uiSettings.backgroundPreset);
+  }, [uiSettings?.backgroundPreset]);
 
   const buildInitialModalData = (type: string, item: any | null) => {
     if (type === 'tournament') {
@@ -8104,6 +8137,19 @@ const AdminPage: React.FC = () => {
       }
     };
 
+    const applyBackgroundPreset = async () => {
+      try {
+        const result: any = await api.patch('/api/ui-settings/admin', { backgroundPreset: adminBackgroundPresetDraft });
+        const updated = (result?.data || result || {}) as UiSettingsPayload;
+        const preset = (updated?.backgroundPreset || adminBackgroundPresetDraft) as UiSettingsPayload['backgroundPreset'];
+        setBackgroundPreset(preset);
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'ui-settings'] });
+        notify('success', 'UI settings', 'Global background preset updated');
+      } catch (e: any) {
+        notify('error', 'UI settings failed', formatApiError(e, 'Failed to update background preset'));
+      }
+    };
+
     return (
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
@@ -8120,6 +8166,30 @@ const AdminPage: React.FC = () => {
             <ActionButton onClick={runSmokeTest}>Run Smoke Test</ActionButton>
           </ActionsCell>
         </div>
+
+        <Card style={{ marginBottom: '16px', padding: '16px', border: '1px solid rgba(255,107,0,0.35)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ color: '#fff', fontWeight: 700, marginBottom: 4 }}>Global Background Preset</div>
+              <div style={{ color: '#bdbdbd', fontSize: 12 }}>
+                Applies to all users. Current: <strong style={{ color: '#ffb980' }}>{uiSettings.backgroundPreset}</strong>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <Select
+                value={adminBackgroundPresetDraft}
+                onChange={(e) => setAdminBackgroundPresetDraft(e.target.value as any)}
+                style={{ minWidth: 160 }}
+              >
+                <option value="auto">Auto</option>
+                <option value="subtle">Subtle</option>
+                <option value="default">Default</option>
+                <option value="strong">Strong</option>
+              </Select>
+              <ActionButton onClick={applyBackgroundPreset}>Apply</ActionButton>
+            </div>
+          </div>
+        </Card>
 
         <StatsGrid>
           <StatCard>

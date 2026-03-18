@@ -46,6 +46,7 @@ import tournamentRoomsRouter from './routes/tournamentRooms';
 import intelligenceRouter from './routes/intelligence';
 import botRouter from './routes/bot';
 import historyRouter from './routes/history';
+import uiSettingsRouter from './routes/uiSettings';
 import User from './models/User';
 
 import { seedDefaultAchievements } from './services/achievements/seedAchievements';
@@ -216,6 +217,7 @@ app.use('/api/tasks', tasksRouter);
 app.use('/api/tournament-rooms', tournamentRoomsRouter);
 app.use('/api/intelligence', intelligenceRouter);
 app.use('/api/bot', botRouter);
+app.use('/api/ui-settings', uiSettingsRouter);
 
 // Serve static files from uploads directory
 app.use('/api/uploads', express.static(path.join(process.cwd(), 'uploads')));

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getFullUrl } from '../config/api';
 
 interface User {
   id: string;
@@ -57,10 +58,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       if (savedLanguage === 'en' || savedLanguage === 'ru') {
         setLanguage(savedLanguage);
       }
-      const savedBackgroundPreset = localStorage.getItem('backgroundPreset');
-      if (savedBackgroundPreset === 'auto' || savedBackgroundPreset === 'subtle' || savedBackgroundPreset === 'default' || savedBackgroundPreset === 'strong') {
-        setBackgroundPresetState(savedBackgroundPreset);
-      }
     } catch {
       // ignore
     }
@@ -100,6 +97,23 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   }, []);
 
   useEffect(() => {
+    const loadBackgroundPreset = async () => {
+      try {
+        const response = await fetch(getFullUrl('/api/ui-settings/public'));
+        if (!response.ok) return;
+        const payload = await response.json();
+        const preset = String(payload?.data?.backgroundPreset || payload?.backgroundPreset || '').toLowerCase();
+        if (preset === 'auto' || preset === 'subtle' || preset === 'default' || preset === 'strong') {
+          setBackgroundPresetState(preset as 'auto' | 'subtle' | 'default' | 'strong');
+        }
+      } catch {
+        // ignore network issues and keep defaults
+      }
+    };
+    void loadBackgroundPreset();
+  }, []);
+
+  useEffect(() => {
     if (typeof document === 'undefined') return;
     const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
     const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -126,11 +140,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   const setBackgroundPreset = (preset: 'auto' | 'subtle' | 'default' | 'strong') => {
     setBackgroundPresetState(preset);
-    try {
-      localStorage.setItem('backgroundPreset', preset);
-    } catch {
-      // ignore
-    }
   };
 
   const value = {
