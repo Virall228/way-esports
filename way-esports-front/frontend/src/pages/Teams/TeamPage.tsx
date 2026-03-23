@@ -316,11 +316,18 @@ const TeamPage: React.FC = () => {
   });
   const currentUserId = user?.id || '';
   const currentUserRole = user?.role || 'user';
+  const isPrivilegedViewer = currentUserRole === 'admin' || currentUserRole === 'developer';
+  const isTeamCaptain = Boolean(team?.captain?.id && currentUserId && currentUserId === team.captain.id);
+  const isTeamMember = Boolean(
+    currentUserId &&
+    Array.isArray(team?.members) &&
+    team.members.some((member: any) => String(member?.id || '') === String(currentUserId))
+  );
+  const canAccessTeamSupport = isPrivilegedViewer || isTeamCaptain || isTeamMember;
   const canManageLogo = Boolean(
     team && currentUserId && (
       currentUserId === team.captain?.id ||
-      currentUserRole === 'admin' ||
-      currentUserRole === 'developer'
+      isPrivilegedViewer
     )
   );
 
@@ -828,7 +835,11 @@ const TeamPage: React.FC = () => {
       <Section>
         <SectionTitle>Team Support</SectionTitle>
         <Card>
-          <SupportChat teamId={team.id || team._id} source="team" subject={`Team Support: ${team.name || 'Team'}`} />
+          {canAccessTeamSupport ? (
+            <SupportChat teamId={team.id || team._id} source="team" subject={`Team Support: ${team.name || 'Team'}`} />
+          ) : (
+            <SupportChat source="profile" subject={`General Support: ${team.name || 'Team'}`} />
+          )}
         </Card>
       </Section>
     </Container>
