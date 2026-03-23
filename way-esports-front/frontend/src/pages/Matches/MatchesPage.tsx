@@ -166,6 +166,9 @@ const MatchesPage: React.FC = () => {
   const [roomByMatch, setRoomByMatch] = useState<Record<string, RoomData>>({});
   const [loadingRoomId, setLoadingRoomId] = useState<string | null>(null);
 
+  const normalizeGame = (value: string) =>
+    (value || '').toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
+
   const { data: matchesRaw = [], isLoading, error } = useQuery({
     queryKey: ['matches'],
     queryFn: async () => {
@@ -182,8 +185,8 @@ const MatchesPage: React.FC = () => {
       const status = (m.status || 'upcoming').toString();
       if (statusFilter !== 'all' && status !== statusFilter) return false;
       if (gameFilter !== 'all') {
-        const game = (m.game || '').toString().toLowerCase();
-        if (!game.includes(gameFilter.replace('-', ' '))) return false;
+        const game = normalizeGame((m.game || '').toString());
+        if (game !== normalizeGame(gameFilter)) return false;
       }
       return true;
     });
@@ -236,10 +239,12 @@ const MatchesPage: React.FC = () => {
         </FilterSelect>
         <FilterSelect value={gameFilter} onChange={(e) => setGameFilter(e.target.value)}>
           <option value="all">All Games</option>
-          <option value="valorant">Valorant</option>
+          <option value="valorant-mobile">Valorant Mobile</option>
           <option value="critical-ops">Critical Ops</option>
           <option value="pubg-mobile">PUBG Mobile</option>
           <option value="cs2">CS2</option>
+          <option value="dota2">Dota 2</option>
+          <option value="standoff2">Standoff 2</option>
         </FilterSelect>
         <Button variant="outline" size="small" onClick={() => { setStatusFilter('all'); setGameFilter('all'); }}>
           Reset Filters

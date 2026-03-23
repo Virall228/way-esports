@@ -433,6 +433,9 @@ const TeamsPage: React.FC = () => {
   const [actionInfo, setActionInfo] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
+  const normalizeGame = (value: string) =>
+    (value || '').toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
+
   const { data: teamsRaw = [], isLoading: loading, error: queryError } = useQuery({
     queryKey: ['teams'],
     queryFn: async () => {
@@ -777,9 +780,12 @@ const TeamsPage: React.FC = () => {
               onChange={(e) => setSelectedGame(e.target.value)}
             >
               <option value="all">{t('allTeams')}</option>
-              <option value="valorant">Valorant</option>
+              <option value="valorant-mobile">Valorant Mobile</option>
               <option value="critical-ops">Critical Ops</option>
+              <option value="pubg-mobile">PUBG Mobile</option>
               <option value="cs2">CS2</option>
+              <option value="dota2">Dota 2</option>
+              <option value="standoff2">Standoff 2</option>
             </FilterDropdown>
             <CreateTeamButton onClick={() => setIsCreateModalOpen(true)}>
               {t('createTeam')}
@@ -813,8 +819,8 @@ const TeamsPage: React.FC = () => {
               {teams
                 .filter((team) => {
                   if (selectedGame === 'all') return true;
-                  const safeGame = (team.game || '').toLowerCase();
-                  return safeGame.includes(selectedGame.replace('-', ' '));
+                  const safeGame = normalizeGame(team.game || '');
+                  return safeGame === normalizeGame(selectedGame);
                 })
                 .map(team => (
                   <TeamCard key={team.id}>
