@@ -367,6 +367,9 @@ const RankingsPage: React.FC = () => {
                     <option value="critical-ops">Critical Ops</option>
                     <option value="pubg-mobile">PUBG Mobile</option>
                     <option value="cs2">CS2</option>
+                    <option value="valorant-mobile">Valorant Mobile</option>
+                    <option value="dota2">Dota 2</option>
+                    <option value="standoff2">Standoff 2</option>
                 </Select>
 
                 <Select value={timeFrame} onChange={(e) => setTimeFrame(e.target.value)}>
