@@ -483,7 +483,7 @@ router.post('/player-promotion/profiles/bulk-update', async (req, res) => {
     }
 
     const result = await PlayerPromotionProfile.updateMany(
-      { _id: { $in: ids.filter((id) => mongoose.Types.ObjectId.isValid(id)) } },
+      { _id: { $in: ids.filter((id: string) => mongoose.Types.ObjectId.isValid(id)) } },
       { $set: patch }
     );
 
@@ -509,7 +509,7 @@ router.post('/player-promotion/profiles/bulk-refresh', async (req, res) => {
     }
 
     const profiles = await PlayerPromotionProfile.find({
-      _id: { $in: ids.filter((id) => mongoose.Types.ObjectId.isValid(id)) }
+      _id: { $in: ids.filter((id: string) => mongoose.Types.ObjectId.isValid(id)) }
     })
       .select('user')
       .lean();
