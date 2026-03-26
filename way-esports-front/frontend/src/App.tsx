@@ -40,6 +40,8 @@ import BillingPage from './pages/Billing/BillingPage';
 import PublicProfilePage from './pages/Profile/PublicProfilePage';
 import TeamPage from './pages/Teams/TeamPage';
 import GameHubPage from './pages/Games/GameHubPage';
+import ScoutHubPage from './pages/ScoutHub/ScoutHubPage';
+import PublicScoutProfilePage from './pages/ScoutHub/PublicScoutProfilePage';
 
 // Import components
 import TermsGuard from './components/Legal/TermsGuard';
@@ -491,6 +493,7 @@ const AppContent: React.FC = () => {
       items.push(
         { label: t('wallet'), to: '/wallet', icon: <CreditCard {...iconProps} /> },
         { label: t('profile'), to: '/profile', icon: <User {...iconProps} /> },
+        { label: 'Scout Hub', to: '/scout-hub', icon: <Crosshair {...iconProps} /> },
         { label: 'Analytics', to: '/analytics', icon: <BarChart2 {...iconProps} /> },
         { label: t('settings'), to: '/settings', icon: <SettingsIcon {...iconProps} /> }
       );
@@ -607,13 +610,15 @@ const AppContent: React.FC = () => {
               <Route path="/prizes" element={<Prizes />} />
               <Route path="/rewards" element={<Prizes />} />
               <Route path="/news" element={<News />} />
-              <Route path="/wallet" element={<RequireAuth><Wallet /></RequireAuth>} />
-              <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
-              <Route path="/analytics" element={<RequireAuth><AnalyticsPage /></RequireAuth>} />
-              <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
-              <Route path="/profile/:id" element={<PublicProfilePage />} />
-              <Route path="/user/:id" element={<PublicProfilePage />} />
-              <Route path="/team/:id" element={<TeamPage />} />
+                <Route path="/wallet" element={<RequireAuth><Wallet /></RequireAuth>} />
+                <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
+                <Route path="/scout-hub" element={<RequireAuth><ScoutHubPage /></RequireAuth>} />
+                <Route path="/analytics" element={<RequireAuth><AnalyticsPage /></RequireAuth>} />
+                <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
+                <Route path="/profile/:id" element={<PublicProfilePage />} />
+                <Route path="/user/:id" element={<PublicProfilePage />} />
+                <Route path="/scouts/:identifier" element={<PublicScoutProfilePage />} />
+                <Route path="/team/:id" element={<TeamPage />} />
               <Route path="/teams/:id" element={<TeamPage />} />
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/admin" element={<AdminRoute />} />

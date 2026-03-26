@@ -319,6 +319,7 @@ const Select = styled.select`
 type TabType =
   | 'dashboard'
   | 'users'
+  | 'promotion'
   | 'tournaments'
   | 'news'
   | 'achievements'
@@ -553,6 +554,38 @@ interface UsersSummary {
   filteredTotal: number;
   filteredSubscribed: number;
   filteredBanned: number;
+}
+
+interface PromotionProfileRow {
+  id: string;
+  userId: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  primaryRole: string;
+  avatarUrl: string;
+  enabled: boolean;
+  visibility: 'private' | 'scouts' | 'public';
+  adminUnlocked: boolean;
+  adminOverrideNote: string;
+  slug: string;
+  headline: string;
+  scoutPitch: string;
+  focus: string;
+  targetGames: string[];
+  targetRoles: string[];
+  leaderboardScore: number;
+  bestGame: string;
+  bestRole: string;
+  lastSnapshotGeneratedAt?: string | null;
+  updatedAt?: string | null;
+}
+
+interface PromotionSummary {
+  total: number;
+  enabledCount: number;
+  publicCount: number;
+  filteredTotal: number;
 }
 
 interface TeamsSummary {
@@ -938,6 +971,11 @@ const AdminPage: React.FC = () => {
   const [usersRoleFilter, setUsersRoleFilter] = useState<'all' | 'user' | 'admin' | 'developer'>('all');
   const [usersSubscribedFilter, setUsersSubscribedFilter] = useState<'all' | 'yes' | 'no'>('all');
   const [usersBannedFilter, setUsersBannedFilter] = useState<'all' | 'yes' | 'no'>('all');
+  const [promotionPage, setPromotionPage] = useState(1);
+  const [promotionSearchInput, setPromotionSearchInput] = useState('');
+  const [promotionSearch, setPromotionSearch] = useState('');
+  const [promotionVisibilityFilter, setPromotionVisibilityFilter] = useState<'all' | 'private' | 'scouts' | 'public'>('all');
+  const [promotionStatusFilter, setPromotionStatusFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
   const [teamsPage, setTeamsPage] = useState(1);
   const [teamsSearchInput, setTeamsSearchInput] = useState('');
   const [teamsSearch, setTeamsSearch] = useState('');
@@ -1175,6 +1213,19 @@ const AdminPage: React.FC = () => {
 
     return () => clearTimeout(timer);
   }, [usersSearchInput]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setPromotionPage(1);
+      setPromotionSearch(promotionSearchInput.trim());
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [promotionSearchInput]);
+
+  useEffect(() => {
+    setPromotionPage(1);
+  }, [promotionVisibilityFilter, promotionStatusFilter]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -1814,6 +1865,56 @@ const AdminPage: React.FC = () => {
         bonusEntries: Number(u.bonusEntries || 0),
         balance: Number(u.wallet?.balance || 0),
         createdAt: formatDate(u.createdAt)
+      })),
+      pagination,
+      summary
+    };
+  };
+
+  const fetchPromotionProfiles = async (): Promise<{ items: PromotionProfileRow[]; pagination: PaginationMeta | null; summary: PromotionSummary | null }> => {
+    const params = new URLSearchParams();
+    params.set('page', String(promotionPage));
+    params.set('limit', '20');
+    if (promotionSearch) params.set('search', promotionSearch);
+    if (promotionVisibilityFilter !== 'all') params.set('visibility', promotionVisibilityFilter);
+    if (promotionStatusFilter !== 'all') params.set('status', promotionStatusFilter);
+
+    const result: any = await api.get(`/api/admin/player-promotion/profiles?${params.toString()}`);
+    const items: any[] = Array.isArray(result?.data) ? result.data : [];
+    const pagination: PaginationMeta | null = result?.pagination || null;
+    const summary: PromotionSummary | null = result?.summary
+      ? {
+        total: Number(result.summary.total || 0),
+        enabledCount: Number(result.summary.enabledCount || 0),
+        publicCount: Number(result.summary.publicCount || 0),
+        filteredTotal: Number(result.summary.filteredTotal || 0)
+      }
+      : null;
+
+    return {
+      items: items.map((row: any) => ({
+        id: String(row?.id || ''),
+        userId: String(row?.userId || ''),
+        username: String(row?.username || ''),
+        firstName: String(row?.firstName || ''),
+        lastName: String(row?.lastName || ''),
+        primaryRole: String(row?.primaryRole || 'Flex'),
+        avatarUrl: resolveMediaUrl(row?.avatarUrl || ''),
+        enabled: Boolean(row?.enabled),
+        visibility: row?.visibility || 'scouts',
+        adminUnlocked: Boolean(row?.adminUnlocked),
+        adminOverrideNote: String(row?.adminOverrideNote || ''),
+        slug: String(row?.slug || ''),
+        headline: String(row?.headline || ''),
+        scoutPitch: String(row?.scoutPitch || ''),
+        focus: String(row?.focus || 'balanced'),
+        targetGames: Array.isArray(row?.targetGames) ? row.targetGames : [],
+        targetRoles: Array.isArray(row?.targetRoles) ? row.targetRoles : [],
+        leaderboardScore: Number(row?.leaderboardScore || 0),
+        bestGame: String(row?.bestGame || ''),
+        bestRole: String(row?.bestRole || ''),
+        lastSnapshotGeneratedAt: row?.lastSnapshotGeneratedAt ? String(row.lastSnapshotGeneratedAt) : null,
+        updatedAt: row?.updatedAt ? String(row.updatedAt) : null
       })),
       pagination,
       summary
@@ -2578,6 +2679,14 @@ const AdminPage: React.FC = () => {
     refetchOnWindowFocus: false
   });
 
+  const promotionProfilesQuery = useQuery({
+    queryKey: ['admin', 'promotion-profiles', promotionPage, promotionSearch, promotionVisibilityFilter, promotionStatusFilter],
+    queryFn: fetchPromotionProfiles,
+    enabled: hasAdminAccess && activeTab === 'promotion',
+    staleTime: 15000,
+    refetchOnWindowFocus: false
+  });
+
   const tournamentsQuery = useQuery({
     queryKey: ['admin', 'tournaments', tournamentsPage, tournamentsSearch, tournamentsStatusFilter, tournamentsGameFilter],
     queryFn: fetchTournaments,
@@ -2935,6 +3044,9 @@ const AdminPage: React.FC = () => {
   const users = usersQuery.data?.items || [];
   const usersPagination = usersQuery.data?.pagination || null;
   const usersSummary = usersQuery.data?.summary || null;
+  const promotionProfiles = promotionProfilesQuery.data?.items || [];
+  const promotionPagination = promotionProfilesQuery.data?.pagination || null;
+  const promotionSummary = promotionProfilesQuery.data?.summary || null;
   const tournaments = tournamentsQuery.data?.data || [];
   const tournamentsPagination = tournamentsQuery.data?.pagination || null;
   const pendingTournamentQueue = pendingTournamentQueueQuery.data?.data || [];
@@ -3125,6 +3237,7 @@ const AdminPage: React.FC = () => {
 
   const queryError =
     usersQuery.error ||
+    promotionProfilesQuery.error ||
     tournamentsQuery.error ||
     tournamentRequestsQuery.error ||
     tournamentOverviewQuery.error ||
@@ -3160,6 +3273,7 @@ const AdminPage: React.FC = () => {
 
   const isQueryLoading =
     usersQuery.isFetching ||
+    promotionProfilesQuery.isFetching ||
     tournamentsQuery.isFetching ||
     tournamentRequestsQuery.isFetching ||
     tournamentOverviewQuery.isFetching ||
@@ -5063,6 +5177,310 @@ const AdminPage: React.FC = () => {
             </ActionButton>
             <ActionButton
               onClick={() => setUsersPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage >= totalPages}
+            >
+              Next
+            </ActionButton>
+          </ActionsCell>
+        </div>
+      </div>
+    );
+  }
+
+  function renderPromotion() {
+    const totalPages = promotionPagination?.totalPages || 1;
+    const currentPage = promotionPagination?.page || promotionPage;
+    const currentIds = promotionProfiles.map((profile) => profile.id).filter(Boolean);
+
+    const updatePromotionProfile = async (profile: PromotionProfileRow, payload: Record<string, unknown>, successMessage: string) => {
+      try {
+        await api.patch(`/api/admin/player-promotion/profiles/${profile.id}`, payload);
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'promotion-profiles'] });
+        notify('success', 'Promotion updated', successMessage);
+      } catch (e: any) {
+        notify('error', 'Promotion update failed', formatApiError(e, 'Failed to update promotion profile'));
+      }
+    };
+
+    const refreshPromotionProfile = async (profile: PromotionProfileRow) => {
+      try {
+        await api.post(`/api/admin/player-promotion/profiles/${profile.id}/refresh`, {});
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'promotion-profiles'] });
+        notify('success', 'Snapshot refreshed', `Promotion snapshot refreshed for ${profile.username}`);
+      } catch (e: any) {
+        notify('error', 'Snapshot refresh failed', formatApiError(e, 'Failed to refresh promotion snapshot'));
+      }
+    };
+
+    const bulkUpdatePromotionProfiles = async (payload: Record<string, unknown>, successMessage: string) => {
+      if (!currentIds.length) {
+        notify('info', 'No rows', 'No promotion profiles on this page');
+        return;
+      }
+
+      try {
+        await api.post('/api/admin/player-promotion/profiles/bulk-update', {
+          ids: currentIds,
+          ...payload
+        });
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'promotion-profiles'] });
+        notify('success', 'Bulk update complete', successMessage);
+      } catch (e: any) {
+        notify('error', 'Bulk update failed', formatApiError(e, 'Failed to bulk update promotion profiles'));
+      }
+    };
+
+    const bulkRefreshPromotionProfiles = async () => {
+      if (!currentIds.length) {
+        notify('info', 'No rows', 'No promotion profiles on this page');
+        return;
+      }
+
+      try {
+        await api.post('/api/admin/player-promotion/profiles/bulk-refresh', {
+          ids: currentIds
+        });
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'promotion-profiles'] });
+        notify('success', 'Bulk refresh complete', `Refreshed ${currentIds.length} promotion snapshots`);
+      } catch (e: any) {
+        notify('error', 'Bulk refresh failed', formatApiError(e, 'Failed to bulk refresh promotion snapshots'));
+      }
+    };
+
+    const exportPromotionProfilesCsv = () => {
+      if (!promotionProfiles.length) {
+        notify('info', 'No rows', 'No promotion profiles to export');
+        return;
+      }
+
+      const escapeCsv = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+      const rows = promotionProfiles.map((profile) => [
+        profile.username,
+        profile.slug,
+        profile.enabled ? 'enabled' : 'disabled',
+        profile.visibility,
+        profile.adminUnlocked ? 'yes' : 'no',
+        Math.round(profile.leaderboardScore || 0),
+        profile.bestGame || '',
+        profile.bestRole || profile.primaryRole || '',
+        profile.focus || '',
+        (profile.targetGames || []).join(' | '),
+        (profile.targetRoles || []).join(' | '),
+        profile.updatedAt || '',
+        profile.adminOverrideNote || ''
+      ].map(escapeCsv).join(','));
+
+      const csv = [
+        [
+          'username',
+          'slug',
+          'status',
+          'visibility',
+          'admin_override',
+          'scout_score',
+          'best_game',
+          'best_role',
+          'focus',
+          'target_games',
+          'target_roles',
+          'updated_at',
+          'override_note'
+        ].join(','),
+        ...rows
+      ].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `player_promotion_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      notify('success', 'Export complete', 'Promotion CSV downloaded');
+    };
+
+    return (
+      <div>
+        <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <h3>Player Promotion</h3>
+            <ActionsCell>
+              <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'promotion-profiles'] })}>
+                Refresh
+              </ActionButton>
+              <ActionButton onClick={() => bulkUpdatePromotionProfiles({ enabled: true }, 'Enabled promotion on current page')}>
+                Enable Page
+              </ActionButton>
+              <ActionButton onClick={() => bulkUpdatePromotionProfiles({ visibility: 'public' }, 'Set current page to public visibility')}>
+                Make Public
+              </ActionButton>
+              <ActionButton onClick={() => bulkUpdatePromotionProfiles({ adminUnlocked: true }, 'Granted admin override on current page')}>
+                Grant Override
+              </ActionButton>
+              <ActionButton onClick={bulkRefreshPromotionProfiles}>
+                Refresh Page
+              </ActionButton>
+              <ActionButton onClick={exportPromotionProfilesCsv}>
+                Export CSV
+              </ActionButton>
+              <ActionButton
+                onClick={() => {
+                  setPromotionPage(1);
+                  setPromotionSearchInput('');
+                  setPromotionSearch('');
+                  setPromotionVisibilityFilter('all');
+                  setPromotionStatusFilter('all');
+                }}
+              >
+                Reset Filters
+              </ActionButton>
+            </ActionsCell>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 420px)', gap: '8px' }}>
+            <Input
+              placeholder="Search by username, slug or headline"
+              value={promotionSearchInput}
+              onChange={(e) => setPromotionSearchInput(e.target.value)}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 220px))', gap: '8px' }}>
+            <Select value={promotionVisibilityFilter} onChange={(e) => setPromotionVisibilityFilter(e.target.value as any)}>
+              <option value="all">All visibility</option>
+              <option value="private">Private</option>
+              <option value="scouts">Scouts</option>
+              <option value="public">Public</option>
+            </Select>
+            <Select value={promotionStatusFilter} onChange={(e) => setPromotionStatusFilter(e.target.value as any)}>
+              <option value="all">All status</option>
+              <option value="enabled">Enabled</option>
+              <option value="disabled">Disabled</option>
+            </Select>
+          </div>
+        </div>
+
+        <StatsGrid style={{ marginBottom: '16px' }}>
+          <StatCard>
+            <StatValue>{Number(promotionSummary?.filteredTotal || promotionPagination?.total || promotionProfiles.length)}</StatValue>
+            <StatLabel>Profiles</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>{Number(promotionSummary?.enabledCount || promotionProfiles.filter((row) => row.enabled).length)}</StatValue>
+            <StatLabel>Enabled</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>{Number(promotionSummary?.publicCount || promotionProfiles.filter((row) => row.visibility === 'public').length)}</StatValue>
+            <StatLabel>Public SEO</StatLabel>
+          </StatCard>
+        </StatsGrid>
+
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Player</Th>
+                <Th>Scout Score</Th>
+                <Th>Visibility</Th>
+                <Th>Focus</Th>
+                <Th>Target</Th>
+                <Th>Updated</Th>
+                <Th>Actions</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {promotionProfiles.map((profile) => (
+                <tr key={profile.id}>
+                  <Td>
+                    <UserCell>
+                      {profile.avatarUrl ? (
+                        <UserAvatar src={profile.avatarUrl} alt={profile.username} />
+                      ) : (
+                        <UserAvatarFallback>{(profile.username || '?').charAt(0).toUpperCase()}</UserAvatarFallback>
+                      )}
+                      <div>
+                        <div style={{ fontWeight: 700 }}>{profile.username}</div>
+                        <div style={{ color: '#cccccc', fontSize: 12 }}>{profile.slug}</div>
+                        <div style={{ color: '#999', fontSize: 12 }}>{profile.bestGame || '-'} | {profile.bestRole || profile.primaryRole}</div>
+                      </div>
+                    </UserCell>
+                  </Td>
+                  <Td>{Math.round(profile.leaderboardScore || 0)}</Td>
+                  <Td>
+                    <div>{profile.enabled ? `${profile.visibility} / live` : `${profile.visibility} / off`}</div>
+                    {profile.adminUnlocked ? (
+                      <div style={{ color: '#81c784', fontSize: 12 }}>override enabled</div>
+                    ) : null}
+                  </Td>
+                  <Td>{profile.focus}</Td>
+                  <Td>
+                    <div>{(profile.targetGames || []).join(', ') || '-'}</div>
+                    <div style={{ color: '#999', fontSize: 12 }}>{(profile.targetRoles || []).join(', ') || '-'}</div>
+                  </Td>
+                  <Td>{profile.updatedAt ? formatDate(profile.updatedAt) : '-'}</Td>
+                  <Td>
+                    <ActionsCell>
+                      <ActionButton
+                        $variant={profile.enabled ? 'danger' : 'success'}
+                        onClick={() => updatePromotionProfile(profile, { enabled: !profile.enabled }, profile.enabled ? `Promotion disabled for ${profile.username}` : `Promotion enabled for ${profile.username}`)}
+                      >
+                        {profile.enabled ? 'Disable' : 'Enable'}
+                      </ActionButton>
+                      <ActionButton
+                        $variant={profile.adminUnlocked ? 'danger' : 'success'}
+                        onClick={() => updatePromotionProfile(
+                          profile,
+                          {
+                            adminUnlocked: !profile.adminUnlocked,
+                            adminOverrideNote: profile.adminUnlocked ? '' : `Granted from admin center on ${new Date().toISOString()}`
+                          },
+                          profile.adminUnlocked ? `Admin override removed for ${profile.username}` : `Admin override granted for ${profile.username}`
+                        )}
+                      >
+                        {profile.adminUnlocked ? 'Remove override' : 'Grant override'}
+                      </ActionButton>
+                      <ActionButton
+                        onClick={() => {
+                          const nextVisibility = profile.visibility === 'private'
+                            ? 'scouts'
+                            : profile.visibility === 'scouts'
+                              ? 'public'
+                              : 'private';
+                          void updatePromotionProfile(profile, { visibility: nextVisibility }, `Visibility changed to ${nextVisibility}`);
+                        }}
+                      >
+                        Cycle visibility
+                      </ActionButton>
+                      <ActionButton onClick={() => refreshPromotionProfile(profile)}>
+                        Refresh snapshot
+                      </ActionButton>
+                    </ActionsCell>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </TableWrap>
+
+        {!promotionProfiles.length ? (
+          <div style={{ color: '#cccccc', padding: '16px 0' }}>No promotion profiles found.</div>
+        ) : null}
+
+        <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ color: '#cccccc', fontSize: '13px' }}>
+            Page {currentPage} of {totalPages} {promotionPagination ? `• total ${promotionPagination.total}` : ''}
+          </div>
+          <ActionsCell>
+            <ActionButton
+              onClick={() => setPromotionPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage <= 1}
+            >
+              Prev
+            </ActionButton>
+            <ActionButton
+              onClick={() => setPromotionPage((prev) => Math.min(totalPages, prev + 1))}
               disabled={currentPage >= totalPages}
             >
               Next
@@ -9001,6 +9419,8 @@ const AdminPage: React.FC = () => {
         return renderDashboard();
       case 'users':
         return renderUsers();
+      case 'promotion':
+        return renderPromotion();
       case 'tournaments':
         return renderTournaments();
       case 'news':
@@ -9041,7 +9461,7 @@ const AdminPage: React.FC = () => {
           <div>
             <Title>Control Center</Title>
             <p style={{ color: '#cccccc', margin: '8px 0 0 0' }}>
-              Manage users, tournaments, news, payments and operations
+              Manage users, player promotion, tournaments, news, payments and operations
             </p>
           </div>
           <ActionButton onClick={() => load()}>
@@ -9069,6 +9489,9 @@ const AdminPage: React.FC = () => {
         </Tab>
         <Tab $active={activeTab === 'users'} onClick={() => setActiveTab('users')}>
           Users
+        </Tab>
+        <Tab $active={activeTab === 'promotion'} onClick={() => setActiveTab('promotion')}>
+          Promotion
         </Tab>
         <Tab $active={activeTab === 'tournaments'} onClick={() => setActiveTab('tournaments')}>
           Tournaments

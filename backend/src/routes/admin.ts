@@ -18,6 +18,8 @@ import { listJsonBackups, runJsonBackup } from '../services/backupService';
 import cacheService from '../services/cacheService';
 import botPushService from '../services/botPushService';
 import BotNotification from '../models/BotNotification';
+import PlayerPromotionProfile from '../models/PlayerPromotionProfile';
+import { buildPromotionSnapshot } from '../services/playerPromotionService';
 
 const router = express.Router();
 
@@ -322,6 +324,209 @@ router.use((req, res, next) => {
   });
 
   return next();
+});
+
+router.get('/player-promotion/profiles', async (req, res) => {
+  try {
+    const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>, {
+      defaultLimit: 20,
+      maxLimit: 100
+    });
+    const search = String(req.query?.search || '').trim();
+    const visibility = String(req.query?.visibility || 'all').trim().toLowerCase();
+    const status = String(req.query?.status || 'all').trim().toLowerCase();
+
+    const query: any = {};
+    if (visibility === 'private' || visibility === 'scouts' || visibility === 'public') {
+      query.visibility = visibility;
+    }
+    if (status === 'enabled') query.enabled = true;
+    if (status === 'disabled') query.enabled = false;
+
+    if (search) {
+      const regex = new RegExp(escapeRegExp(search), 'i');
+      const matchedUserIds = await User.find({
+        $or: [
+          { username: { $regex: regex } },
+          { firstName: { $regex: regex } },
+          { lastName: { $regex: regex } }
+        ]
+      }).distinct('_id');
+
+      query.$or = [
+        { slug: { $regex: regex } },
+        { headline: { $regex: regex } },
+        { scoutPitch: { $regex: regex } },
+        ...(matchedUserIds.length ? [{ user: { $in: matchedUserIds } }] : [])
+      ];
+    }
+
+    const [total, rows, enabledCount, publicCount] = await Promise.all([
+      PlayerPromotionProfile.countDocuments(query),
+      PlayerPromotionProfile.find(query)
+        .populate('user', 'username firstName lastName primaryRole isSubscribed subscriptionExpiresAt profileLogo photoUrl')
+        .sort({ updatedAt: -1, lastLeaderboardScore: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      PlayerPromotionProfile.countDocuments({ enabled: true }),
+      PlayerPromotionProfile.countDocuments({ visibility: 'public', enabled: true })
+    ]);
+
+    return res.json({
+      success: true,
+      data: (rows || []).map((row: any) => ({
+        id: String(row?._id || ''),
+        userId: String(row?.user?._id || row?.user || ''),
+        username: String(row?.user?.username || 'unknown'),
+        firstName: String(row?.user?.firstName || ''),
+        lastName: String(row?.user?.lastName || ''),
+        primaryRole: String(row?.user?.primaryRole || 'Flex'),
+        avatarUrl: String(row?.user?.profileLogo || row?.user?.photoUrl || ''),
+        enabled: Boolean(row?.enabled),
+        visibility: String(row?.visibility || 'scouts'),
+        adminUnlocked: Boolean(row?.adminUnlocked),
+        adminOverrideNote: String(row?.adminOverrideNote || ''),
+        slug: String(row?.slug || ''),
+        headline: String(row?.headline || ''),
+        scoutPitch: String(row?.scoutPitch || ''),
+        focus: String(row?.focus || 'balanced'),
+        targetGames: Array.isArray(row?.targetGames) ? row.targetGames : [],
+        targetRoles: Array.isArray(row?.targetRoles) ? row.targetRoles : [],
+        leaderboardScore: Number(row?.lastLeaderboardScore || 0),
+        bestGame: String(row?.lastBestGame || ''),
+        bestRole: String(row?.lastBestRole || ''),
+        lastSnapshotGeneratedAt: row?.lastSnapshotGeneratedAt || null,
+        updatedAt: row?.updatedAt || null
+      })),
+      pagination: buildPaginationMeta(page, limit, total),
+      summary: {
+        total,
+        enabledCount,
+        publicCount,
+        filteredTotal: total
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to load promotion profiles' });
+  }
+});
+
+router.patch('/player-promotion/profiles/:id', async (req, res) => {
+  try {
+    const profile = await PlayerPromotionProfile.findById(req.params.id);
+    if (!profile) {
+      return res.status(404).json({ success: false, error: 'Promotion profile not found' });
+    }
+
+    if (typeof req.body?.enabled === 'boolean') profile.enabled = req.body.enabled;
+    if (typeof req.body?.visibility === 'string' && ['private', 'scouts', 'public'].includes(req.body.visibility)) {
+      profile.visibility = req.body.visibility as any;
+    }
+    if (typeof req.body?.headline === 'string') profile.headline = req.body.headline.trim().slice(0, 120);
+    if (typeof req.body?.scoutPitch === 'string') profile.scoutPitch = req.body.scoutPitch.trim().slice(0, 600);
+    if (typeof req.body?.focus === 'string' && ['balanced', 'ranked', 'tournament', 'trial'].includes(req.body.focus)) {
+      profile.focus = req.body.focus as any;
+    }
+    if (typeof req.body?.adminUnlocked === 'boolean') {
+      profile.adminUnlocked = req.body.adminUnlocked;
+      profile.adminUnlockedAt = req.body.adminUnlocked ? new Date() : undefined;
+      profile.adminUnlockedBy = req.body.adminUnlocked ? (req.user as any)?._id : undefined;
+    }
+    if (typeof req.body?.adminOverrideNote === 'string') {
+      profile.adminOverrideNote = req.body.adminOverrideNote.trim().slice(0, 240);
+    }
+
+    await profile.save();
+    return res.json({ success: true, data: { id: String(profile._id) } });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to update promotion profile' });
+  }
+});
+
+router.post('/player-promotion/profiles/:id/refresh', async (req, res) => {
+  try {
+    const profile = await PlayerPromotionProfile.findById(req.params.id).select('user').lean();
+    if (!profile?.user) {
+      return res.status(404).json({ success: false, error: 'Promotion profile not found' });
+    }
+
+    const data = await buildPromotionSnapshot(String(profile.user));
+    return res.json({ success: true, data });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to refresh promotion snapshot' });
+  }
+});
+
+router.post('/player-promotion/profiles/bulk-update', async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body?.ids)
+      ? req.body.ids.map((item: unknown) => String(item || '').trim()).filter(Boolean)
+      : [];
+    if (!ids.length) {
+      return res.status(400).json({ success: false, error: 'ids array is required' });
+    }
+
+    const patch: any = {};
+    if (typeof req.body?.enabled === 'boolean') patch.enabled = req.body.enabled;
+    if (typeof req.body?.adminUnlocked === 'boolean') {
+      patch.adminUnlocked = req.body.adminUnlocked;
+      patch.adminUnlockedAt = req.body.adminUnlocked ? new Date() : null;
+      patch.adminUnlockedBy = req.body.adminUnlocked ? (req.user as any)?._id : null;
+    }
+    if (typeof req.body?.visibility === 'string' && ['private', 'scouts', 'public'].includes(req.body.visibility)) {
+      patch.visibility = req.body.visibility;
+    }
+
+    if (!Object.keys(patch).length) {
+      return res.status(400).json({ success: false, error: 'No valid bulk patch fields supplied' });
+    }
+
+    const result = await PlayerPromotionProfile.updateMany(
+      { _id: { $in: ids.filter((id) => mongoose.Types.ObjectId.isValid(id)) } },
+      { $set: patch }
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        matchedCount: Number((result as any)?.matchedCount || 0),
+        modifiedCount: Number((result as any)?.modifiedCount || 0)
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to bulk update promotion profiles' });
+  }
+});
+
+router.post('/player-promotion/profiles/bulk-refresh', async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body?.ids)
+      ? req.body.ids.map((item: unknown) => String(item || '').trim()).filter(Boolean)
+      : [];
+    if (!ids.length) {
+      return res.status(400).json({ success: false, error: 'ids array is required' });
+    }
+
+    const profiles = await PlayerPromotionProfile.find({
+      _id: { $in: ids.filter((id) => mongoose.Types.ObjectId.isValid(id)) }
+    })
+      .select('user')
+      .lean();
+
+    await Promise.all(
+      profiles.map((profile: any) => buildPromotionSnapshot(String(profile.user)))
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        refreshedCount: profiles.length
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to bulk refresh promotion profiles' });
+  }
 });
 
 router.get('/bot/outbox', async (req, res) => {

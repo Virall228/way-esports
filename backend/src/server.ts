@@ -47,7 +47,9 @@ import intelligenceRouter from './routes/intelligence';
 import botRouter from './routes/bot';
 import historyRouter from './routes/history';
 import uiSettingsRouter from './routes/uiSettings';
+import playerPromotionRouter from './routes/playerPromotion';
 import User from './models/User';
+import { listPublicPromotionSitemapEntries } from './services/playerPromotionService';
 
 import { seedDefaultAchievements } from './services/achievements/seedAchievements';
 
@@ -55,6 +57,28 @@ const app = express();
 const PORT = typeof config.port === 'string' ? parseInt(config.port, 10) : config.port;
 const PORT_NUMBER = Number.isFinite(PORT) ? PORT : 3000;
 const TRUST_PROXY = String(process.env.TRUST_PROXY || '1').toLowerCase();
+
+const escapeXml = (value: string): string => (
+  String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+);
+
+const getPublicBaseUrl = (req: express.Request): string => {
+  const configured =
+    String(process.env.PUBLIC_WEB_URL || process.env.APP_URL || process.env.CORS_ORIGIN || '').trim();
+  if (configured) {
+    return configured.replace(/\/+$/, '');
+  }
+
+  const protocol = String(req.protocol || 'https');
+  const host = String(req.get('host') || req.headers.host || '').trim();
+  return `${protocol}://${host}`.replace(/\/+$/, '');
+};
+
 if (TRUST_PROXY === '1' || TRUST_PROXY === 'true' || TRUST_PROXY === 'yes') {
   app.set('trust proxy', 1);
 }
@@ -218,6 +242,23 @@ app.use('/api/tournament-rooms', tournamentRoomsRouter);
 app.use('/api/intelligence', intelligenceRouter);
 app.use('/api/bot', botRouter);
 app.use('/api/ui-settings', uiSettingsRouter);
+app.use('/api/player-promotion', playerPromotionRouter);
+
+app.get('/sitemap-player-promotion.xml', async (req, res) => {
+  try {
+    const entries = await listPublicPromotionSitemapEntries();
+    const baseUrl = getPublicBaseUrl(req);
+    const body = entries.map((entry) => (
+      `<url><loc>${escapeXml(`${baseUrl}/scouts/${entry.slug}`)}</loc><lastmod>${escapeXml(entry.updatedAt)}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>`
+    )).join('');
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${body}</urlset>`;
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    return res.send(xml);
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to build player promotion sitemap' });
+  }
+});
 
 // Serve static files from uploads directory
 app.use('/api/uploads', express.static(path.join(process.cwd(), 'uploads')));

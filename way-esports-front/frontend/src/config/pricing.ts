@@ -31,7 +31,7 @@ export const PRICING_PLANS: PlanUi[] = [
     features: [
       'Priority tournament registration',
       'Full match history & advanced personal stats',
-      'AI performance insights (weekly)',
+      'Weekly performance insights',
       'Custom profile theme + pro badge',
       'Extended highlight storage',
       'Priority support (24h response)'
