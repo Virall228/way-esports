@@ -58,6 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? source.participatingTournaments.map((item: any) => String(item?.id || item?._id || item))
         : [],
       isSubscribed: Boolean(source?.isSubscribed),
+      subscriptionExpiresAt: source?.subscriptionExpiresAt || undefined,
       freeEntriesCount: Number(source?.freeEntriesCount || 0),
       bonusEntries: Number(source?.bonusEntries || 0),
       balance: Number(source?.balance ?? wallet?.balance ?? 0),

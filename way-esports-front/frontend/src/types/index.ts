@@ -14,6 +14,7 @@ export interface User {
   teams?: string[];
   participatingTournaments?: string[];
   isSubscribed?: boolean;
+  subscriptionExpiresAt?: string;
   freeEntriesCount?: number;
   bonusEntries?: number;
   balance?: number;

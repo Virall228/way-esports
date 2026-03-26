@@ -231,7 +231,6 @@ const ScoutHubPage: React.FC = () => {
 
   const dashboard = data as PlayerPromotionDashboard;
   const snapshot = dashboard?.snapshot || {};
-  const access = dashboard?.access;
   const trainingPlan = snapshot?.trainingPlan;
 
   const mutationError = updateMutation.error as ApiError | undefined;
@@ -265,25 +264,6 @@ const ScoutHubPage: React.FC = () => {
           <Value style={{ fontSize: '1rem', wordBreak: 'break-word' }}>{snapshot?.publicUrl || '/scouts/...'}</Value>
         </Panel>
       </Grid>
-
-      {!access?.hasAccess ? (
-        <Panel>
-          <Label>Subscription Gate</Label>
-          <EmptyState>
-            Publish mode is locked until the account has an active `PLAYER PRO` or `ELITE TEAM` subscription.
-            You can still draft your pitch now and enable it later.
-          </EmptyState>
-        </Panel>
-      ) : null}
-
-      {access?.adminUnlocked ? (
-        <Panel>
-          <Label>Admin Access Override</Label>
-          <EmptyState>
-            Publication access is currently granted by admin override. You can keep using Scout Hub even without an active paid plan while this override stays enabled.
-          </EmptyState>
-        </Panel>
-      ) : null}
 
       <Panel>
         <Form

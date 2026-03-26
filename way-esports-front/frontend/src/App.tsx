@@ -454,6 +454,14 @@ const AppContent: React.FC = () => {
   const closeMobileMenu = () => setMobileMenuOpen(false);
   const iconProps = React.useMemo(() => ({ size: 18, strokeWidth: 2 }), []);
   const hasAdminAccess = user?.role === 'admin' || user?.role === 'developer';
+  const hasScoutHubAccess = React.useMemo(() => {
+    if (!user) return false;
+    if (user.role === 'admin' || user.role === 'developer') return true;
+    if (!user.isSubscribed) return false;
+    if (!user.subscriptionExpiresAt) return true;
+    const expiresAt = new Date(user.subscriptionExpiresAt).getTime();
+    return Number.isNaN(expiresAt) || expiresAt > Date.now();
+  }, [user]);
 
   const handleLogout = React.useCallback(() => {
     logout();
@@ -493,10 +501,13 @@ const AppContent: React.FC = () => {
       items.push(
         { label: t('wallet'), to: '/wallet', icon: <CreditCard {...iconProps} /> },
         { label: t('profile'), to: '/profile', icon: <User {...iconProps} /> },
-        { label: 'Scout Hub', to: '/scout-hub', icon: <Crosshair {...iconProps} /> },
         { label: 'Analytics', to: '/analytics', icon: <BarChart2 {...iconProps} /> },
         { label: t('settings'), to: '/settings', icon: <SettingsIcon {...iconProps} /> }
       );
+
+      if (hasScoutHubAccess) {
+        items.splice(items.length - 2, 0, { label: 'Scout Hub', to: '/scout-hub', icon: <Crosshair {...iconProps} /> });
+      }
     }
 
     if (hasAdminAccess) {
@@ -505,7 +516,7 @@ const AppContent: React.FC = () => {
     }
 
     return items;
-  }, [hasAdminAccess, iconProps, isAuthenticated, t]);
+  }, [hasAdminAccess, hasScoutHubAccess, iconProps, isAuthenticated, t]);
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -612,7 +623,7 @@ const AppContent: React.FC = () => {
               <Route path="/news" element={<News />} />
                 <Route path="/wallet" element={<RequireAuth><Wallet /></RequireAuth>} />
                 <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
-                <Route path="/scout-hub" element={<RequireAuth><ScoutHubPage /></RequireAuth>} />
+                <Route path="/scout-hub" element={<RequireScoutHubAccess><ScoutHubPage /></RequireScoutHubAccess>} />
                 <Route path="/analytics" element={<RequireAuth><AnalyticsPage /></RequireAuth>} />
                 <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
                 <Route path="/profile/:id" element={<PublicProfilePage />} />
@@ -717,6 +728,33 @@ const RequireAuth: React.FC<{ children: React.ReactElement }> = ({ children }) =
 
   if (!isAuthenticated) {
     return <Navigate to="/auth" replace />;
+  }
+
+  return children;
+};
+
+const RequireScoutHubAccess: React.FC<{ children: React.ReactElement }> = ({ children }) => {
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  if (isLoading) {
+    return null;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  const isPrivileged = user?.role === 'admin' || user?.role === 'developer';
+  const hasActiveSubscription = Boolean(
+    user?.isSubscribed && (
+      !user?.subscriptionExpiresAt ||
+      Number.isNaN(new Date(user.subscriptionExpiresAt).getTime()) ||
+      new Date(user.subscriptionExpiresAt).getTime() > Date.now()
+    )
+  );
+
+  if (!isPrivileged && !hasActiveSubscription) {
+    return <Navigate to="/billing" replace />;
   }
 
   return children;

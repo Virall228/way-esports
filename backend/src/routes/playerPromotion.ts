@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticateJWT } from '../middleware/auth';
 import {
+  assertPlayerPromotionAccess,
   buildPromotionSnapshot,
   getPublicPromotionLeaderboard,
   getPublicPromotionProfile,
@@ -10,6 +11,15 @@ import {
 } from '../services/playerPromotionService';
 
 const router = express.Router();
+
+const sendPromotionError = (res: express.Response, error: any, fallbackMessage: string) => {
+  const statusCode = Number(error?.statusCode || 500);
+  return res.status(statusCode).json({
+    success: false,
+    error: error.message || fallbackMessage,
+    ...(error?.redirectTo ? { redirectTo: error.redirectTo } : {})
+  });
+};
 
 const escapeXml = (value: string): string => (
   String(value || '')
@@ -39,10 +49,11 @@ router.get('/me', authenticateJWT, async (req, res) => {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
     }
 
+    await assertPlayerPromotionAccess(userId);
     const data = await buildPromotionSnapshot(userId);
     return res.json({ success: true, data });
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message || 'Failed to load promotion dashboard' });
+    return sendPromotionError(res, error, 'Failed to load promotion dashboard');
   }
 });
 
@@ -53,14 +64,11 @@ router.patch('/me', authenticateJWT, async (req, res) => {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
     }
 
+    await assertPlayerPromotionAccess(userId);
     const data = await updatePlayerPromotionSettings(userId, req.body || {});
     return res.json({ success: true, data });
   } catch (error: any) {
-    const statusCode = Number(error?.statusCode || 500);
-    return res.status(statusCode).json({
-      success: false,
-      error: error.message || 'Failed to update promotion settings'
-    });
+    return sendPromotionError(res, error, 'Failed to update promotion settings');
   }
 });
 
@@ -71,10 +79,11 @@ router.post('/me/refresh', authenticateJWT, async (req, res) => {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
     }
 
+    await assertPlayerPromotionAccess(userId);
     const data = await buildPromotionSnapshot(userId);
     return res.json({ success: true, data });
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message || 'Failed to refresh promotion data' });
+    return sendPromotionError(res, error, 'Failed to refresh promotion data');
   }
 });
 

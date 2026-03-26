@@ -7,7 +7,6 @@ export type PlayerPromotionDashboard = {
   access: {
     hasAccess: boolean;
     canPublish: boolean;
-    adminUnlocked?: boolean;
     reason: string;
   };
   settings: {
@@ -20,7 +19,6 @@ export type PlayerPromotionDashboard = {
     targetRoles: string[];
     targetTeams: string[];
     focus: PromotionFocus;
-    adminUnlocked?: boolean;
   };
   snapshot: any;
 };

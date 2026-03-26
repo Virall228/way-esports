@@ -7,8 +7,6 @@ import UserStats from '../models/UserStats';
 import { ensureUserStats } from './analyticsEngine';
 
 const FALLBACK_GAMES = ['Critical Ops', 'CS2', 'PUBG Mobile', 'Valorant Mobile', 'Standoff 2', 'Dota 2'];
-const ACTIVE_PLAN_IDS = new Set(['player_pro', 'elite_team']);
-
 const TRAINING_LIBRARY = {
   aiming: {
     label: 'Aim & mechanics',
@@ -80,9 +78,8 @@ const formatMonth = (value: Date | string | number | undefined): string => {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
 };
 
-export const hasPlayerPromotionAccess = (user: any, profile?: any): boolean => {
+export const hasPlayerPromotionAccess = (user: any): boolean => {
   if (!user) return false;
-  if (profile?.adminUnlocked) return true;
   if (user.role === 'admin' || user.role === 'developer') return true;
 
   const now = Date.now();
@@ -90,27 +87,39 @@ export const hasPlayerPromotionAccess = (user: any, profile?: any): boolean => {
   if (user.isSubscribed && (!subscriptionExpiresAt || subscriptionExpiresAt > now)) {
     return true;
   }
-
-  const transactions = Array.isArray(user.wallet?.transactions) ? user.wallet.transactions : [];
-  return transactions.some((tx: any) => (
-    tx?.type === 'subscription' &&
-    tx?.status === 'completed' &&
-    ACTIVE_PLAN_IDS.has(String(tx?.planId || ''))
-  ));
+  return false;
 };
 
-export const buildPromotionAccessState = (user: any, profile?: any) => {
-  const hasAccess = hasPlayerPromotionAccess(user, profile);
+export const buildPromotionAccessState = (user: any) => {
+  const hasAccess = hasPlayerPromotionAccess(user);
   return {
     hasAccess,
     canPublish: hasAccess,
-    adminUnlocked: Boolean(profile?.adminUnlocked),
-    reason: profile?.adminUnlocked
-      ? 'admin_override'
-      : hasAccess
-        ? 'player_pro_or_elite_team'
-        : 'active_player_pro_or_elite_team_required'
+    reason: hasAccess
+      ? 'active_subscription'
+      : 'active_subscription_required'
   };
+};
+
+export const assertPlayerPromotionAccess = async (userId: string) => {
+  const user = await User.findById(userId)
+    .select('role isSubscribed subscriptionExpiresAt')
+    .lean();
+
+  if (!user) {
+    const error = new Error('User not found');
+    (error as any).statusCode = 404;
+    throw error;
+  }
+
+  if (!hasPlayerPromotionAccess(user)) {
+    const error = new Error('Scout Hub requires an active subscription');
+    (error as any).statusCode = 402;
+    (error as any).redirectTo = '/billing';
+    throw error;
+  }
+
+  return user;
 };
 
 export const generateUniquePromotionSlug = async (seed: string, userId?: string): Promise<string> => {
@@ -483,7 +492,7 @@ const buildRecommendedTournaments = async (games: string[]) => {
 
 export const buildPromotionSnapshot = async (userId: string) => {
   const user = await User.findById(userId)
-    .select('username firstName lastName bio profileLogo photoUrl primaryRole stats gameProfiles role isSubscribed subscriptionExpiresAt wallet createdAt')
+    .select('username firstName lastName bio profileLogo photoUrl primaryRole stats gameProfiles role isSubscribed subscriptionExpiresAt createdAt')
     .lean();
 
   if (!user) {
@@ -559,7 +568,7 @@ export const buildPromotionSnapshot = async (userId: string) => {
   await profile.save();
 
   return {
-    access: buildPromotionAccessState(user, profile),
+    access: buildPromotionAccessState(user),
     settings: {
       slug: profile.slug,
       enabled: Boolean(profile.enabled),
@@ -569,8 +578,7 @@ export const buildPromotionSnapshot = async (userId: string) => {
       targetGames: trimArray(profile.targetGames, 5, 40),
       targetRoles: trimArray(profile.targetRoles, 5, 40),
       targetTeams: trimArray(profile.targetTeams, 6, 80),
-      focus: profile.focus || 'balanced',
-      adminUnlocked: Boolean(profile.adminUnlocked)
+      focus: profile.focus || 'balanced'
     },
     snapshot: buildUserFacingSnapshot({
       userId: String(user._id),
@@ -628,7 +636,7 @@ export const buildPromotionSnapshot = async (userId: string) => {
 
 export const updatePlayerPromotionSettings = async (userId: string, payload: Record<string, unknown>) => {
   const user = await User.findById(userId)
-    .select('username firstName role isSubscribed subscriptionExpiresAt wallet')
+    .select('username firstName role isSubscribed subscriptionExpiresAt')
     .lean();
 
   if (!user) {
@@ -636,7 +644,7 @@ export const updatePlayerPromotionSettings = async (userId: string, payload: Rec
   }
 
   const profile = await ensurePlayerPromotionProfile(user);
-  const access = buildPromotionAccessState(user, profile);
+  const access = buildPromotionAccessState(user);
 
   if (typeof payload.slug === 'string' && payload.slug.trim()) {
     profile.slug = await generateUniquePromotionSlug(payload.slug, userId);
@@ -644,7 +652,7 @@ export const updatePlayerPromotionSettings = async (userId: string, payload: Rec
 
   if (typeof payload.enabled === 'boolean') {
     if (payload.enabled && !access.hasAccess) {
-      const error = new Error('Active PLAYER PRO or ELITE TEAM subscription required');
+      const error = new Error('Scout Hub requires an active subscription');
       (error as any).statusCode = 402;
       throw error;
     }
@@ -680,6 +688,9 @@ export const getPublicPromotionProfile = async (identifier: string) => {
   }
 
   const data = await buildPromotionSnapshot(String(profile.user));
+  if (!data?.access?.hasAccess) {
+    return null;
+  }
   return buildPublicPromotionPayload(data.snapshot, profile);
 };
 
@@ -756,11 +767,14 @@ export const listPublicPromotionSitemapEntries = async () => {
     visibility: 'public'
   })
     .sort({ updatedAt: -1 })
-    .select('slug updatedAt')
+    .populate('user', 'role isSubscribed subscriptionExpiresAt')
+    .select('slug updatedAt user')
     .lean();
 
-  return rows.map((row: any) => ({
-    slug: String(row?.slug || ''),
-    updatedAt: row?.updatedAt ? new Date(row.updatedAt).toISOString() : new Date().toISOString()
-  }));
+  return rows
+    .filter((row: any) => hasPlayerPromotionAccess(row?.user))
+    .map((row: any) => ({
+      slug: String(row?.slug || ''),
+      updatedAt: row?.updatedAt ? new Date(row.updatedAt).toISOString() : new Date().toISOString()
+    }));
 };
