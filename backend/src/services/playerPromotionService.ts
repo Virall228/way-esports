@@ -321,6 +321,105 @@ const buildTeamContext = (stats: any, teams: any[]) => {
   };
 };
 
+const sanitizeTrainingPlan = (trainingPlan: any) => ({
+  focusAreas: Array.isArray(trainingPlan?.focusAreas)
+    ? trainingPlan.focusAreas.map((item: any) => ({
+        key: String(item?.key || ''),
+        label: String(item?.label || ''),
+        currentScore: toNumber(item?.currentScore, 0),
+        targetScore: toNumber(item?.targetScore, 0),
+        recommendation: String(item?.recommendation || '')
+      }))
+    : [],
+  dailyHours: toNumber(trainingPlan?.dailyHours, 0),
+  weeklyHours: toNumber(trainingPlan?.weeklyHours, 0),
+  sessionsPerWeek: toNumber(trainingPlan?.sessionsPerWeek, 0)
+});
+
+const sanitizePublicTeams = (teams: any[]) => (
+  Array.isArray(teams)
+    ? teams.map((item: any) => ({
+        id: String(item?.id || ''),
+        name: String(item?.name || ''),
+        game: String(item?.game || ''),
+        winRate: toNumber(item?.winRate, 0),
+        reason: String(item?.reason || '')
+      }))
+    : []
+);
+
+const sanitizePublicTournaments = (tournaments: any[]) => (
+  Array.isArray(tournaments)
+    ? tournaments.map((item: any) => ({
+        id: String(item?.id || ''),
+        name: String(item?.name || ''),
+        game: String(item?.game || ''),
+        prizePool: toNumber(item?.prizePool, 0),
+        reason: String(item?.reason || '')
+      }))
+    : []
+);
+
+const sanitizeTimeline = (timeline: any[]) => (
+  Array.isArray(timeline)
+    ? timeline.map((item: any) => ({
+        teamName: String(item?.teamName || ''),
+        period: String(item?.period || ''),
+        position: toNumber(item?.position, 0),
+        prize: toNumber(item?.prize, 0)
+      }))
+    : []
+);
+
+const buildUserFacingSnapshot = (snapshot: any) => ({
+  publicUrl: String(snapshot?.publicUrl || ''),
+  headline: String(snapshot?.headline || ''),
+  scoutPitch: String(snapshot?.scoutPitch || ''),
+  leaderboardScore: toNumber(snapshot?.leaderboardScore, 0),
+  bestGame: String(snapshot?.bestGame || ''),
+  bestRole: String(snapshot?.bestRole || ''),
+  momentum: snapshot?.momentum || null,
+  trainingPlan: sanitizeTrainingPlan(snapshot?.trainingPlan),
+  recommendations: {
+    bestFits: Array.isArray(snapshot?.recommendations?.bestFits)
+      ? snapshot.recommendations.bestFits.map((item: any) => String(item || ''))
+      : [],
+    tournaments: sanitizePublicTournaments(snapshot?.recommendations?.tournaments)
+  }
+});
+
+const buildPublicPromotionPayload = (snapshot: any, profile: any) => ({
+  userId: String(snapshot?.userId || ''),
+  username: String(snapshot?.username || ''),
+  avatarUrl: String(snapshot?.avatarUrl || ''),
+  publicUrl: String(snapshot?.publicUrl || ''),
+  headline: String(snapshot?.headline || ''),
+  scoutPitch: String(snapshot?.scoutPitch || ''),
+  leaderboardScore: toNumber(snapshot?.leaderboardScore, 0),
+  bestGame: String(snapshot?.bestGame || ''),
+  bestRole: String(snapshot?.bestRole || ''),
+  momentum: snapshot?.momentum || null,
+  metrics: {
+    impactRating: toNumber(snapshot?.metrics?.impactRating, 0),
+    winRate: toNumber(snapshot?.metrics?.winRate, 0),
+    consistencyScore: toNumber(snapshot?.metrics?.consistencyScore, 0),
+    leadership: toNumber(snapshot?.metrics?.leadership, 0)
+  },
+  trainingPlan: sanitizeTrainingPlan(snapshot?.trainingPlan),
+  recommendations: {
+    bestFits: Array.isArray(snapshot?.recommendations?.bestFits)
+      ? snapshot.recommendations.bestFits.map((item: any) => String(item || ''))
+      : [],
+    teams: sanitizePublicTeams(snapshot?.recommendations?.teams),
+    tournaments: sanitizePublicTournaments(snapshot?.recommendations?.tournaments)
+  },
+  timeline: sanitizeTimeline(snapshot?.timeline),
+  seo: snapshot?.seo || null,
+  structuredData: snapshot?.structuredData || null,
+  visibility: String(profile?.visibility || 'scouts'),
+  slug: String(profile?.slug || '')
+});
+
 const buildLeaderboardScore = (params: {
   impactRating: number;
   winRate: number;
@@ -471,10 +570,9 @@ export const buildPromotionSnapshot = async (userId: string) => {
       targetRoles: trimArray(profile.targetRoles, 5, 40),
       targetTeams: trimArray(profile.targetTeams, 6, 80),
       focus: profile.focus || 'balanced',
-      adminUnlocked: Boolean(profile.adminUnlocked),
-      adminOverrideNote: profile.adminOverrideNote || ''
+      adminUnlocked: Boolean(profile.adminUnlocked)
     },
-    snapshot: {
+    snapshot: buildUserFacingSnapshot({
       userId: String(user._id),
       username: user.username,
       firstName: user.firstName || '',
@@ -524,7 +622,7 @@ export const buildPromotionSnapshot = async (userId: string) => {
         url: `/scouts/${profile.slug}`,
         knowsAbout: dedupeStrings([bestGame, bestRole, ...seo.keywords]).slice(0, 12)
       }
-    }
+    })
   };
 };
 
@@ -582,11 +680,7 @@ export const getPublicPromotionProfile = async (identifier: string) => {
   }
 
   const data = await buildPromotionSnapshot(String(profile.user));
-  return {
-    ...data.snapshot,
-    visibility: profile.visibility,
-    slug: profile.slug
-  };
+  return buildPublicPromotionPayload(data.snapshot, profile);
 };
 
 export const getPublicPromotionLeaderboard = async (params: {

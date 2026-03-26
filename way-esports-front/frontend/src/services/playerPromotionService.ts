@@ -21,7 +21,6 @@ export type PlayerPromotionDashboard = {
     targetTeams: string[];
     focus: PromotionFocus;
     adminUnlocked?: boolean;
-    adminOverrideNote?: string;
   };
   snapshot: any;
 };
