@@ -48,6 +48,7 @@ import botRouter from './routes/bot';
 import historyRouter from './routes/history';
 import uiSettingsRouter from './routes/uiSettings';
 import playerPromotionRouter from './routes/playerPromotion';
+import seoRouter from './routes/seo';
 import User from './models/User';
 import { listPublicPromotionSitemapEntries } from './services/playerPromotionService';
 
@@ -243,6 +244,11 @@ app.use('/api/intelligence', intelligenceRouter);
 app.use('/api/bot', botRouter);
 app.use('/api/ui-settings', uiSettingsRouter);
 app.use('/api/player-promotion', playerPromotionRouter);
+app.use('/api/seo', seoRouter);
+
+app.get('/sitemap.xml', (_req, res) => {
+  return res.redirect(301, '/api/seo/sitemap-index.xml');
+});
 
 app.get('/sitemap-player-promotion.xml', async (req, res) => {
   try {

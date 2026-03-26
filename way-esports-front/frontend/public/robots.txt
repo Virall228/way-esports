@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/ocr
+Disallow: /wallet
+Disallow: /settings
+Disallow: /analytics
+Disallow: /billing
+Disallow: /scout-hub
+Disallow: /profile$
+Allow: /profile/
+Disallow: /api/admin
+
+Sitemap: https://www.wayesports.org/api/seo/sitemap-index.xml

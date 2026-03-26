@@ -10,6 +10,7 @@ import FlameAuraAvatar from '../../components/UI/FlameAuraAvatar';
 import { getTierByPoints, getIntensityByPointsAndRank, getPlayerPoints } from '../../utils/flameRank';
 import Button from '../../components/UI/Button';
 import { TournamentHistoryFilters, TournamentHistorySection } from '../../components/History';
+import { Seo } from '../../components/SEO';
 
 const Container = styled.div`
   padding: 2rem 1rem;
@@ -254,6 +255,21 @@ const PublicProfilePage: React.FC = () => {
 
     return (
         <Container>
+            <Seo
+                title={`${profile.username || 'Player'} | WAY Esports Profile`}
+                description={String(profile.bio || `${profile.username || 'Player'} public esports profile, stats and tournament history on WAY Esports.`).slice(0, 160)}
+                canonicalPath={`/profile/${encodeURIComponent(String(id || ''))}`}
+                image={toAvatarUrl(profile?.profileLogo || profile?.photoUrl || '')}
+                type="profile"
+                keywords={[profile.username || 'player', profile?.primaryRole || 'esports player', 'WAY Esports profile']}
+                jsonLd={{
+                    '@context': 'https://schema.org',
+                    '@type': 'Person',
+                    name: profile.username || 'Player',
+                    description: profile.bio || '',
+                    image: toAvatarUrl(profile?.profileLogo || profile?.photoUrl || '') || undefined
+                }}
+            />
             <ProfileHeader $wallpaper={wallpaper} $streakGlowColor={streakGlowColor}>
                 <AvatarWrap>
                     <FlameAuraAvatar

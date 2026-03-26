@@ -18,6 +18,7 @@ import {
   TournamentHistorySection
 } from '../../components/History';
 import { getTeamPoints, getTierByPoints, getIntensityByPointsAndRank } from '../../utils/flameRank';
+import { Seo } from '../../components/SEO';
 
 const Container = styled.div`
   padding: 2rem 1rem;
@@ -532,6 +533,22 @@ const TeamPage: React.FC = () => {
 
   return (
     <Container>
+      <Seo
+        title={`${team.name || 'Team'}${team.tag ? ` (${team.tag})` : ''} | WAY Esports`}
+        description={String(team.description || `${team.name || 'Team'} competes in ${team.game || 'esports'} on WAY Esports.`).slice(0, 160)}
+        canonicalPath={`/teams/${id || ''}`}
+        image={teamLogo}
+        type="profile"
+        keywords={[team.name || 'team', team.tag || 'esports team', team.game || 'WAY Esports']}
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'SportsTeam',
+          name: team.name || 'Team',
+          sport: team.game || 'Esports',
+          description: team.description || '',
+          logo: teamLogo || undefined
+        }}
+      />
       <TeamHeader>
         <div>
           <FlameAuraAvatar

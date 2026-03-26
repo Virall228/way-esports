@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../services/api';
 import Card from '../../components/UI/Card';
 import { ThumbsUp, ThumbsDown } from 'react-feather';
+import { Seo } from '../../components/SEO';
 
 const NewsContainer = styled.div`
   width: min(100% - 2rem, 800px);
@@ -121,6 +123,19 @@ const NewsItemContent = styled.p`
   line-height: 1.6;
 `;
 
+const ReadMoreLink = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  margin-top: 0.85rem;
+  color: #ff6b00;
+  font-weight: 700;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
 const ReactionsRow = styled.div`
   display: flex;
   align-items: center;
@@ -207,6 +222,19 @@ const NewsPage: React.FC = () => {
 
   return (
     <NewsContainer>
+      <Seo
+        title="Esports News and Tournament Updates | WAY Esports"
+        description="Latest WAY Esports news, tournament announcements, team updates and platform releases."
+        canonicalPath="/news"
+        type="website"
+        keywords={['esports news', 'tournament news', 'WAY Esports', 'team updates']}
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: 'WAY Esports News',
+          description: 'Latest esports news, tournament updates and team announcements from WAY Esports.'
+        }}
+      />
       <NewsHeader>
         <h2 style={{ color: '#fff', textAlign: 'center', marginBottom: '0.5rem' }}>Join the Community</h2>
         <p style={{ color: '#ccc', textAlign: 'center', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Follow us for latest updates and tournament news</p>
@@ -254,6 +282,7 @@ const NewsPage: React.FC = () => {
                 <ThumbsDown size={14} /> {item.dislikeCount}
               </ReactionButton>
             </ReactionsRow>
+            <ReadMoreLink to={`/news/${item.id}`}>Read full article</ReadMoreLink>
           </NewsContentWrapper>
         </NewsItem>
       ))}

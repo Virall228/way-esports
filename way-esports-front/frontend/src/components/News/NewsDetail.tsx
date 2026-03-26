@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { api } from '../../services/api';
 import { ThumbsDown, ThumbsUp } from 'react-feather';
+import { Seo } from '../SEO';
 
 const Container = styled.div`
     padding-bottom: 80px;
@@ -256,6 +257,30 @@ const NewsDetail: React.FC = () => {
 
     return (
         <Container>
+            {newsItem ? (
+                <Seo
+                    title={`${newsItem.title || 'News'} | WAY Esports`}
+                    description={String(newsItem.summary || newsItem.content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160)}
+                    canonicalPath={`/news/${id || ''}`}
+                    image={newsItem.coverImage || newsItem.imageUrl || ''}
+                    type="article"
+                    keywords={[newsItem.category || 'esports', newsItem.game || 'WAY Esports', newsItem.title || 'news']}
+                    jsonLd={{
+                        '@context': 'https://schema.org',
+                        '@type': 'NewsArticle',
+                        headline: newsItem.title || 'WAY Esports News',
+                        description: String(newsItem.summary || newsItem.content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160),
+                        image: newsItem.coverImage || newsItem.imageUrl || undefined,
+                        datePublished: newsItem.publishDate || newsItem.createdAt || undefined,
+                        dateModified: newsItem.updatedAt || newsItem.publishDate || newsItem.createdAt || undefined,
+                        author: newsItem.author?.username || 'WAY Esports',
+                        publisher: {
+                            '@type': 'Organization',
+                            name: 'WAY Esports'
+                        }
+                    }}
+                />
+            ) : null}
             <BackButton onClick={() => navigate('/news')}>{t('back')}</BackButton>
 
             {error && (

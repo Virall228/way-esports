@@ -11,6 +11,7 @@ import Button from '../../components/UI/Button';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { resolveMediaUrl } from '../../utils/media';
+import { Seo } from '../../components/SEO';
 
 const Container = styled.div`
   padding: 1rem;
@@ -430,6 +431,19 @@ const TournamentsPage: React.FC = () => {
 
   return (
     <Container>
+      <Seo
+        title="Esports Tournaments | WAY Esports"
+        description="Browse active, upcoming and completed esports tournaments on WAY Esports across mobile and PC titles."
+        canonicalPath="/tournaments"
+        type="website"
+        keywords={['esports tournaments', 'mobile esports', 'WAY Esports tournaments', 'competitive gaming']}
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: 'WAY Esports Tournaments',
+          description: 'Browse upcoming, live and completed esports tournaments on WAY Esports.'
+        }}
+      />
       <Header>
         <HeaderContent>
           <Title>{t('tournamentsTitle')}</Title>

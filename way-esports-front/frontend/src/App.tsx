@@ -42,6 +42,7 @@ import TeamPage from './pages/Teams/TeamPage';
 import GameHubPage from './pages/Games/GameHubPage';
 import ScoutHubPage from './pages/ScoutHub/ScoutHubPage';
 import PublicScoutProfilePage from './pages/ScoutHub/PublicScoutProfilePage';
+import NewsDetail from './components/News/NewsDetail';
 
 // Import components
 import TermsGuard from './components/Legal/TermsGuard';
@@ -621,6 +622,7 @@ const AppContent: React.FC = () => {
               <Route path="/prizes" element={<Prizes />} />
               <Route path="/rewards" element={<Prizes />} />
               <Route path="/news" element={<News />} />
+              <Route path="/news/:id" element={<NewsDetail />} />
                 <Route path="/wallet" element={<RequireAuth><Wallet /></RequireAuth>} />
                 <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
                 <Route path="/scout-hub" element={<RequireScoutHubAccess><ScoutHubPage /></RequireScoutHubAccess>} />

@@ -13,6 +13,7 @@ import { api } from '../../services/api';
 import { resolveTeamLogoUrl } from '../../utils/media';
 import FlameAuraAvatar from '../../components/UI/FlameAuraAvatar';
 import { getTeamPoints, getTierByPoints, getIntensityByPointsAndRank } from '../../utils/flameRank';
+import { Seo } from '../../components/SEO';
 
 const Container = styled.div`
   padding: 1rem;
@@ -747,6 +748,19 @@ const TeamsPage: React.FC = () => {
 
   return (
     <Container>
+      <Seo
+        title="Esports Teams Directory | WAY Esports"
+        description="Discover esports teams, rosters, performance stats and recruitment opportunities on WAY Esports."
+        canonicalPath="/teams"
+        type="website"
+        keywords={['esports teams', 'team directory', 'WAY Esports teams', 'competitive rosters']}
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: 'WAY Esports Teams',
+          description: 'Public team directory with rosters, stats and competitive results.'
+        }}
+      />
       <Header>
         <HeaderContent>
           <Title>{t('teamsTitle')}</Title>

@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
+import { Seo } from '../../components/SEO';
 
 type MatchItem = {
   id?: string;
@@ -222,6 +223,19 @@ const MatchesPage: React.FC = () => {
 
   return (
     <Container>
+      <Seo
+        title="Live and Upcoming Esports Matches | WAY Esports"
+        description="Track live, upcoming and recent esports matches across tournaments on WAY Esports."
+        canonicalPath="/matches"
+        type="website"
+        keywords={['esports matches', 'live matches', 'WAY Esports matches', 'match schedule']}
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: 'WAY Esports Matches',
+          description: 'Live, upcoming and recent esports matches across the WAY Esports platform.'
+        }}
+      />
       <Header>
         <Title>Matches</Title>
         <Subtitle>

@@ -13,6 +13,7 @@ import FlameAuraAvatar from '../../components/UI/FlameAuraAvatar';
 import TournamentBracket from '../../components/Tournaments/TournamentBracket';
 import { resolveMediaUrl, resolveTeamLogoUrl } from '../../utils/media';
 import { getIntensityByPointsAndRank, getTeamPoints, getTierByPoints } from '../../utils/flameRank';
+import { Seo } from '../../components/SEO';
 
 type MatchItem = {
   id?: string;
@@ -385,6 +386,28 @@ const TournamentDetailsPage: React.FC = () => {
 
   return (
     <Container>
+      <Seo
+        title={`${title} | WAY Esports Tournament`}
+        description={String(tournament?.description || `${title} tournament on ${tournament?.game || 'WAY Esports'} with prize pool ${Number(tournament?.prizePool || 0).toLocaleString()}.`).slice(0, 160)}
+        canonicalPath={`/tournaments/${id || ''}`}
+        image={tournamentBanner || '/images/main.png'}
+        type="article"
+        keywords={[title, tournament?.game || 'esports tournament', 'WAY Esports', tournament?.status || 'tournament']}
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'Event',
+          name: title,
+          description: tournament?.description || '',
+          startDate: tournament?.startDate || undefined,
+          endDate: tournament?.endDate || undefined,
+          eventStatus: tournament?.status || undefined,
+          image: tournamentBanner || undefined,
+          organizer: {
+            '@type': 'Organization',
+            name: 'WAY Esports'
+          }
+        }}
+      />
       <Banner $src={tournamentBanner || '/images/main.png'}>
         <div style={{ minWidth: 0, width: '100%' }}>
           <Title style={{ color: '#fff', marginBottom: '0.25rem' }}>{title}</Title>
