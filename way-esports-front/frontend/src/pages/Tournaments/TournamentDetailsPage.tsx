@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { tournamentService } from '../../services/tournamentService';
 import { api } from '../../services/api';
@@ -14,6 +14,7 @@ import TournamentBracket from '../../components/Tournaments/TournamentBracket';
 import { resolveMediaUrl, resolveTeamLogoUrl } from '../../utils/media';
 import { getIntensityByPointsAndRank, getTeamPoints, getTierByPoints } from '../../utils/flameRank';
 import { Seo } from '../../components/SEO';
+import { getGameHubPath } from '../../utils/discovery';
 
 type MatchItem = {
   id?: string;
@@ -182,6 +183,24 @@ const RegisteredTeamsCard = styled(SurfaceCard)`
   margin-bottom: 1rem;
 `;
 
+const DiscoveryGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 1.25rem;
+`;
+
+const DiscoveryLink = styled(Link)`
+  display: grid;
+  gap: 0.45rem;
+  padding: 1rem;
+  border-radius: 16px;
+  text-decoration: none;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+`;
+
 const Banner = styled.div<{ $src?: string }>`
   height: 250px;
   width: 100%;
@@ -266,6 +285,7 @@ const TournamentDetailsPage: React.FC = () => {
 
   const title = tournament?.title || tournament?.name || 'Tournament';
   const tournamentBanner = resolveMediaUrl(tournament?.image || tournament?.coverImage || '');
+  const gameHubPath = getGameHubPath(tournament?.game);
 
   const filteredMatches = useMemo(() => {
     const list = Array.isArray(matches) ? matches : [];
@@ -547,6 +567,29 @@ const TournamentDetailsPage: React.FC = () => {
           tournamentId={String(id || '')}
           tournamentName={title}
         />
+      )}
+
+      {!loading && !error && (
+        <DiscoveryGrid>
+          {gameHubPath ? (
+            <DiscoveryLink to={gameHubPath}>
+              <strong>{tournament?.game || 'Game'} hub</strong>
+              <span style={{ color: '#b7b7b7' }}>Open the wider game page with related events, teams and news.</span>
+            </DiscoveryLink>
+          ) : null}
+          <DiscoveryLink to="/tournaments">
+            <strong>All tournaments</strong>
+            <span style={{ color: '#b7b7b7' }}>Keep navigating through the public event index.</span>
+          </DiscoveryLink>
+          <DiscoveryLink to="/teams">
+            <strong>Teams</strong>
+            <span style={{ color: '#b7b7b7' }}>Move from tournament pages into public team profiles.</span>
+          </DiscoveryLink>
+          <DiscoveryLink to="/matches">
+            <strong>Matches</strong>
+            <span style={{ color: '#b7b7b7' }}>Track live and recent match activity across the platform.</span>
+          </DiscoveryLink>
+        </DiscoveryGrid>
       )}
     </Container>
   );

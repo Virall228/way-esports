@@ -48,12 +48,28 @@ router.get('/', async (req, res) => {
   try {
     const limitRaw = Number(req.query.limit || 50);
     const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(100, limitRaw)) : 50;
-    const cacheKey = `news:published:list:${limit}`;
+    const category = String(req.query.category || '').trim().toLowerCase();
+    const game = String(req.query.game || '').trim();
+    const search = String(req.query.search || '').trim();
+    const query: any = { status: 'published' };
+    if (category) query.category = category;
+    if (game) query.game = game;
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { summary: { $regex: search, $options: 'i' } },
+        { content: { $regex: search, $options: 'i' } },
+        { tags: { $regex: search, $options: 'i' } }
+      ];
+    }
+    const cacheKey = `news:published:list:${limit}:${category || 'all'}:${game || 'all'}:${search || 'all'}`;
     const items = (await cacheService.getOrSet(
       cacheKey,
       async () => {
-        return News.find({ status: 'published' })
+        return News.find(query)
           .populate('author', 'username firstName lastName')
+          .populate('relatedTournament', 'name game')
+          .populate('relatedTeam', 'name tag game')
           .sort({ publishDate: -1, createdAt: -1 })
           .limit(limit)
           .lean();
@@ -114,6 +130,8 @@ router.get('/:id', async (req, res) => {
   try {
     const item: any = await News.findById(req.params.id)
       .populate('author', 'username firstName lastName')
+      .populate('relatedTournament', 'name game')
+      .populate('relatedTeam', 'name tag game')
       .lean();
 
     if (!item || item.status !== 'published') {

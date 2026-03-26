@@ -19,6 +19,7 @@ import {
 } from '../../components/History';
 import { getTeamPoints, getTierByPoints, getIntensityByPointsAndRank } from '../../utils/flameRank';
 import { Seo } from '../../components/SEO';
+import { getGameHubPath } from '../../utils/discovery';
 
 const Container = styled.div`
   padding: 2rem 1rem;
@@ -135,6 +136,23 @@ const SectionTitle = styled.h2`
   border-bottom: 2px solid #ff6b00;
   padding-bottom: 0.5rem;
   margin-bottom: 1.5rem;
+`;
+
+const DiscoveryGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+`;
+
+const DiscoveryLink = styled(Link)`
+  display: grid;
+  gap: 0.45rem;
+  padding: 1rem;
+  border-radius: 16px;
+  text-decoration: none;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 `;
 
 const StatsGrid = styled.div`
@@ -505,6 +523,7 @@ const TeamPage: React.FC = () => {
   const losses = team.stats?.losses || 0;
   const winRate = team.stats?.winRate || 0;
   const teamLogo = resolveTeamLogoUrl(team.logo);
+  const gameHubPath = getGameHubPath(team.game);
   const historySummary = teamHistory?.summary || { tournaments: 0, matches: 0, wins: 0, losses: 0, winRate: 0 };
   const historyItems = Array.isArray(teamHistory?.items) ? teamHistory.items : [];
   const historyBasePagination = teamHistory?.pagination || { page: 1, limit: 6, total: 0, totalPages: 0 };
@@ -848,6 +867,30 @@ const TeamPage: React.FC = () => {
           </div>
         </Section>
       )}
+
+      <Section>
+        <SectionTitle>Explore More</SectionTitle>
+        <DiscoveryGrid>
+          {gameHubPath ? (
+            <DiscoveryLink to={gameHubPath}>
+              <strong>{team.game || 'Game'} hub</strong>
+              <span style={{ color: '#b7b7b7' }}>See more tournaments, teams and news tied to this title.</span>
+            </DiscoveryLink>
+          ) : null}
+          <DiscoveryLink to="/teams">
+            <strong>Team directory</strong>
+            <span style={{ color: '#b7b7b7' }}>Continue through public team pages and related rosters.</span>
+          </DiscoveryLink>
+          <DiscoveryLink to="/rankings">
+            <strong>Rankings</strong>
+            <span style={{ color: '#b7b7b7' }}>Compare active teams across competitive ladders.</span>
+          </DiscoveryLink>
+          <DiscoveryLink to="/matches">
+            <strong>Matches</strong>
+            <span style={{ color: '#b7b7b7' }}>Follow live and recent matches connected to the platform.</span>
+          </DiscoveryLink>
+        </DiscoveryGrid>
+      </Section>
 
       <Section>
         <SectionTitle>Team Support</SectionTitle>

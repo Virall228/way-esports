@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { api } from '../../services/api';
 import { ThumbsDown, ThumbsUp } from 'react-feather';
 import { Seo } from '../SEO';
+import { formatCategoryLabel, getGameHubPath, slugifyCategory } from '../../utils/discovery';
 
 const Container = styled.div`
     padding-bottom: 80px;
@@ -86,6 +87,17 @@ const Tag = styled.span`
     padding: 6px 12px;
     border-radius: 20px;
     font-size: 0.9rem;
+`;
+
+const TagLink = styled(Link)`
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255, 107, 0, 0.1);
+    color: #FF6B00;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    text-decoration: none;
 `;
 
 const Content = styled.div`
@@ -173,6 +185,62 @@ const ShareButton = styled.button`
     }
 `;
 
+const LinkCluster = styled.div`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 1rem 0 2rem;
+`;
+
+const ClusterLink = styled(Link)`
+    display: inline-flex;
+    align-items: center;
+    min-height: 38px;
+    padding: 0 0.95rem;
+    border-radius: 999px;
+    text-decoration: none;
+    color: #ffb27a;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+`;
+
+const RelatedSection = styled.div`
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 107, 0, 0.14);
+`;
+
+const RelatedGrid = styled.div`
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+`;
+
+const RelatedCard = styled(Link)`
+    display: grid;
+    gap: 0.6rem;
+    padding: 1rem;
+    border-radius: 16px;
+    text-decoration: none;
+    color: inherit;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+`;
+
+const RelatedTitle = styled.h3`
+    margin: 0;
+    color: #ffffff;
+    font-size: 1rem;
+`;
+
+const RelatedCopy = styled.p`
+    margin: 0;
+    color: #b7b7b7;
+    font-size: 0.88rem;
+    line-height: 1.5;
+`;
+
 const NewsDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -182,6 +250,7 @@ const NewsDetail: React.FC = () => {
     const [reactionBusy, setReactionBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [newsItem, setNewsItem] = useState<any>(null);
+    const [relatedNews, setRelatedNews] = useState<any[]>([]);
 
     useEffect(() => {
         let mounted = true;
@@ -209,9 +278,51 @@ const NewsDetail: React.FC = () => {
         };
     }, [id]);
 
+    useEffect(() => {
+        let mounted = true;
+
+        const loadRelated = async () => {
+            if (!newsItem?.category) {
+                setRelatedNews([]);
+                return;
+            }
+
+            try {
+                const result: any = await api.get(`/api/news?category=${encodeURIComponent(String(newsItem.category).trim().toLowerCase())}&limit=4`);
+                const items = ((result && result.data) || [])
+                    .filter((item: any) => String(item?._id || item?.id || '') !== String(id || ''))
+                    .slice(0, 3);
+                if (mounted) {
+                    setRelatedNews(items);
+                }
+            } catch {
+                if (mounted) {
+                    setRelatedNews([]);
+                }
+            }
+        };
+
+        loadRelated();
+        return () => {
+            mounted = false;
+        };
+    }, [id, newsItem?.category]);
+
     const handleShare = (platform: string) => {
-        // Implement sharing functionality
-        console.log(`Sharing on ${platform}`);
+        const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
+        const shareTitle = encodeURIComponent(newsItem?.title || 'WAY Esports News');
+        const encodedUrl = encodeURIComponent(shareUrl);
+
+        const urls: Record<string, string> = {
+            telegram: `https://t.me/share/url?url=${encodedUrl}&text=${shareTitle}`,
+            twitter: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${shareTitle}`,
+            facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`
+        };
+
+        const target = urls[platform];
+        if (target && typeof window !== 'undefined') {
+            window.open(target, '_blank', 'noopener,noreferrer');
+        }
     };
 
     const handleReaction = async (value: 'like' | 'dislike') => {
@@ -254,6 +365,8 @@ const NewsDetail: React.FC = () => {
             setReactionBusy(false);
         }
     };
+
+    const gameHubPath = getGameHubPath(newsItem?.game);
 
     return (
         <Container>
@@ -298,7 +411,13 @@ const NewsDetail: React.FC = () => {
                         <Title>{newsItem.title || ''}</Title>
                         <Meta>
                             <span>{new Date(newsItem.publishDate || newsItem.createdAt || Date.now()).toLocaleDateString()}</span>
-                            <Tag>{newsItem.category || 'other'}</Tag>
+                            {newsItem.category ? (
+                                <TagLink to={`/news/category/${slugifyCategory(newsItem.category)}`}>
+                                    {formatCategoryLabel(newsItem.category)}
+                                </TagLink>
+                            ) : (
+                                <Tag>{newsItem.category || 'other'}</Tag>
+                            )}
                         </Meta>
                         <ReactionsRow>
                             <ReactionButton
@@ -320,6 +439,25 @@ const NewsDetail: React.FC = () => {
                         </ReactionsRow>
                     </Header>
 
+                    <LinkCluster>
+                        {newsItem.relatedTournament?._id ? (
+                            <ClusterLink to={`/tournaments/${newsItem.relatedTournament._id}`}>
+                                Tournament: {newsItem.relatedTournament.name || 'Open event'}
+                            </ClusterLink>
+                        ) : null}
+                        {newsItem.relatedTeam?._id ? (
+                            <ClusterLink to={`/teams/${newsItem.relatedTeam._id}`}>
+                                Team: {newsItem.relatedTeam.name || newsItem.relatedTeam.tag || 'Open team'}
+                            </ClusterLink>
+                        ) : null}
+                        {gameHubPath ? (
+                            <ClusterLink to={gameHubPath}>
+                                {newsItem.game || 'Game'} hub
+                            </ClusterLink>
+                        ) : null}
+                        <ClusterLink to="/news">More news</ClusterLink>
+                    </LinkCluster>
+
                     <Content dangerouslySetInnerHTML={{ __html: newsItem.content || '' }} />
 
                     <ShareSection>
@@ -330,6 +468,22 @@ const NewsDetail: React.FC = () => {
                             <ShareButton onClick={() => handleShare('facebook')}>Facebook</ShareButton>
                         </ShareButtons>
                     </ShareSection>
+
+                    {relatedNews.length > 0 && (
+                        <RelatedSection>
+                            <ShareTitle>Related coverage</ShareTitle>
+                            <RelatedGrid>
+                                {relatedNews.map((item: any) => (
+                                    <RelatedCard key={item._id || item.id} to={`/news/${item._id || item.id}`}>
+                                        <RelatedTitle>{item.title}</RelatedTitle>
+                                        <RelatedCopy>
+                                            {String(item.summary || item.content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 130)}
+                                        </RelatedCopy>
+                                    </RelatedCard>
+                                ))}
+                            </RelatedGrid>
+                        </RelatedSection>
+                    )}
                 </>
             )}
         </Container>

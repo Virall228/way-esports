@@ -134,6 +134,64 @@ const absolutize = (value: string, canonicalUrl: string) => {
 };
 
 const firstPathSegment = (path: string) => String(path.split('/').filter(Boolean)[0] || '');
+const toSlug = (value: string): string => (
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+);
+
+const formatLabel = (value: string): string => (
+  String(value || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+);
+
+const parseCategorySlug = (value: string): string => (
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+);
+
+const GAME_HUBS = [
+  {
+    slug: 'critical-ops',
+    label: 'Critical Ops',
+    description: 'Critical Ops tournaments, teams, news and public discovery pages on WAY Esports.'
+  },
+  {
+    slug: 'cs2',
+    label: 'CS2',
+    description: 'CS2 tournament pages, teams, rankings-ready routes and esports news on WAY Esports.'
+  },
+  {
+    slug: 'pubg-mobile',
+    label: 'PUBG Mobile',
+    description: 'PUBG Mobile events, teams and long-tail content hubs for search and social traffic.'
+  },
+  {
+    slug: 'valorant-mobile',
+    label: 'Valorant Mobile',
+    description: 'Valorant Mobile tournaments, team profiles and performance discovery on WAY Esports.'
+  },
+  {
+    slug: 'standoff-2',
+    label: 'Standoff 2',
+    description: 'Standoff 2 tournament pages, teams and searchable public coverage on WAY Esports.'
+  },
+  {
+    slug: 'dota-2',
+    label: 'Dota 2',
+    description: 'Dota 2 event pages, teams, player discovery and related news on WAY Esports.'
+  }
+];
 
 router.get('/sitemap-index.xml', async (req, res) => {
   try {
@@ -141,7 +199,9 @@ router.get('/sitemap-index.xml', async (req, res) => {
     const now = new Date().toISOString();
     const xml = buildSitemapIndex([
       { loc: `${baseUrl}/api/seo/sitemaps/core.xml`, lastmod: now },
+      { loc: `${baseUrl}/api/seo/sitemaps/games.xml`, lastmod: now },
       { loc: `${baseUrl}/api/seo/sitemaps/news.xml`, lastmod: now },
+      { loc: `${baseUrl}/api/seo/sitemaps/news-categories.xml`, lastmod: now },
       { loc: `${baseUrl}/api/seo/sitemaps/tournaments.xml`, lastmod: now },
       { loc: `${baseUrl}/api/seo/sitemaps/teams.xml`, lastmod: now },
       { loc: `${baseUrl}/api/seo/sitemaps/profiles.xml`, lastmod: now },
@@ -158,12 +218,27 @@ router.get('/sitemap-index.xml', async (req, res) => {
 router.get('/sitemaps/core.xml', async (req, res) => {
   const baseUrl = getBaseUrl(req);
   const xml = buildUrlset([
+    { loc: `${baseUrl}/`, changefreq: 'daily', priority: '1.0' },
     { loc: `${baseUrl}/tournaments`, changefreq: 'hourly', priority: '0.9' },
     { loc: `${baseUrl}/teams`, changefreq: 'daily', priority: '0.9' },
     { loc: `${baseUrl}/rankings`, changefreq: 'hourly', priority: '0.8' },
     { loc: `${baseUrl}/matches`, changefreq: 'hourly', priority: '0.8' },
     { loc: `${baseUrl}/news`, changefreq: 'daily', priority: '0.8' }
   ]);
+
+  res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+  return res.send(xml);
+});
+
+router.get('/sitemaps/games.xml', async (req, res) => {
+  const baseUrl = getBaseUrl(req);
+  const xml = buildUrlset(
+    GAME_HUBS.map((item) => ({
+      loc: `${baseUrl}/games/${item.slug}`,
+      changefreq: 'daily',
+      priority: '0.8'
+    }))
+  );
 
   res.setHeader('Content-Type', 'application/xml; charset=utf-8');
   return res.send(xml);
@@ -190,6 +265,32 @@ router.get('/sitemaps/news.xml', async (req, res) => {
     return res.send(xml);
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message || 'Failed to build news sitemap' });
+  }
+});
+
+router.get('/sitemaps/news-categories.xml', async (req, res) => {
+  try {
+    const baseUrl = getBaseUrl(req);
+    const categories = await News.distinct('category', {
+      status: 'published',
+      category: { $exists: true, $nin: ['', null] }
+    });
+
+    const xml = buildUrlset(
+      categories
+        .map((item) => String(item || '').trim().toLowerCase())
+        .filter(Boolean)
+        .map((item) => ({
+          loc: `${baseUrl}/news/category/${toSlug(item)}`,
+          changefreq: 'weekly',
+          priority: '0.6'
+        }))
+    );
+
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    return res.send(xml);
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to build news categories sitemap' });
   }
 });
 
@@ -268,18 +369,21 @@ router.get('/sitemaps/profiles.xml', async (req, res) => {
 router.get('/seo-index', async (req, res) => {
   try {
     const baseUrl = getBaseUrl(req);
-    const [news, tournaments, teams, profiles, scouts] = await Promise.all([
+    const [news, tournaments, teams, profiles, scouts, categories] = await Promise.all([
       News.find({ status: 'published' }).sort({ publishDate: -1 }).limit(100).select('_id title summary updatedAt').lean(),
       Tournament.find({}).sort({ updatedAt: -1 }).limit(100).select('_id name game updatedAt').lean(),
       Team.find({ isPrivate: { $ne: true } }).sort({ updatedAt: -1 }).limit(100).select('_id name game updatedAt').lean(),
       User.find({ isBanned: { $ne: true }, username: { $exists: true, $ne: '' } }).sort({ updatedAt: -1 }).limit(100).select('username updatedAt').lean(),
-      listPublicPromotionSitemapEntries()
+      listPublicPromotionSitemapEntries(),
+      News.distinct('category', { status: 'published', category: { $exists: true, $nin: ['', null] } })
     ]);
 
     return res.json({
       success: true,
       data: {
+        games: GAME_HUBS.map((item) => ({ url: `${baseUrl}/games/${item.slug}`, title: `${item.label} Hub` })),
         news: news.map((item: any) => ({ url: `${baseUrl}/news/${item._id}`, title: item.title, updatedAt: item.updatedAt })),
+        newsCategories: categories.map((item: any) => ({ url: `${baseUrl}/news/category/${toSlug(String(item || ''))}`, title: formatLabel(String(item || '')) })),
         tournaments: tournaments.map((item: any) => ({ url: `${baseUrl}/tournaments/${item._id}`, title: item.name, game: item.game, updatedAt: item.updatedAt })),
         teams: teams.map((item: any) => ({ url: `${baseUrl}/teams/${item._id}`, title: item.name, game: item.game, updatedAt: item.updatedAt })),
         profiles: profiles.map((item: any) => ({ url: `${baseUrl}/profile/${encodeURIComponent(item.username)}`, username: item.username, updatedAt: item.updatedAt })),
@@ -315,6 +419,7 @@ router.get('/render', async (req, res) => {
         bodyTitle: 'WAY Esports',
         bodyDescription: 'Competitive esports platform with tournaments, teams, public profiles, rankings, matches and scouting.',
         links: [
+          ...GAME_HUBS.slice(0, 4).map((item) => ({ href: `${baseUrl}/games/${item.slug}`, label: `${item.label} hub` })),
           ...news.map((item: any) => ({ href: `${baseUrl}/news/${item._id}`, label: item.title })),
           ...tournaments.map((item: any) => ({ href: `${baseUrl}/tournaments/${item._id}`, label: item.name })),
           ...teams.map((item: any) => ({ href: `${baseUrl}/teams/${item._id}`, label: item.name }))
@@ -331,8 +436,45 @@ router.get('/render', async (req, res) => {
       return res.send(html);
     }
 
+    if (segment === 'games' && parts[1]) {
+      const gameHub = GAME_HUBS.find((item) => item.slug === parts[1]);
+      if (gameHub) {
+        const [tournaments, news, teams] = await Promise.all([
+          Tournament.find({ game: gameHub.label }).sort({ startDate: -1, updatedAt: -1 }).limit(6).select('_id name').lean(),
+          News.find({ status: 'published', game: gameHub.label }).sort({ publishDate: -1 }).limit(6).select('_id title').lean(),
+          Team.find({ isPrivate: { $ne: true }, game: gameHub.label }).sort({ updatedAt: -1 }).limit(6).select('_id name tag').lean()
+        ]);
+
+        const html = renderSeoHtml({
+          title: `${gameHub.label} Tournaments, Teams and News | WAY Esports`,
+          description: gameHub.description,
+          canonicalUrl,
+          type: 'website',
+          bodyTitle: `${gameHub.label} Hub`,
+          bodyDescription: gameHub.description,
+          links: [
+            ...tournaments.map((item: any) => ({ href: `${baseUrl}/tournaments/${item._id}`, label: item.name })),
+            ...teams.map((item: any) => ({ href: `${baseUrl}/teams/${item._id}`, label: `${item.name}${item.tag ? ` (${item.tag})` : ''}` })),
+            ...news.map((item: any) => ({ href: `${baseUrl}/news/${item._id}`, label: item.title }))
+          ],
+          jsonLd: {
+            '@context': 'https://schema.org',
+            '@type': 'CollectionPage',
+            name: `${gameHub.label} Hub`,
+            description: gameHub.description
+          }
+        });
+
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        return res.send(html);
+      }
+    }
+
     if (pathWithoutQuery === '/news') {
-      const items = await News.find({ status: 'published' }).sort({ publishDate: -1 }).limit(10).select('_id title').lean();
+      const [items, categories] = await Promise.all([
+        News.find({ status: 'published' }).sort({ publishDate: -1 }).limit(10).select('_id title').lean(),
+        News.distinct('category', { status: 'published', category: { $exists: true, $nin: ['', null] } })
+      ]);
       const html = renderSeoHtml({
         title: 'Esports News and Tournament Updates | WAY Esports',
         description: 'Latest WAY Esports news, tournament announcements, team updates and platform releases.',
@@ -340,11 +482,44 @@ router.get('/render', async (req, res) => {
         type: 'website',
         bodyTitle: 'WAY Esports News',
         bodyDescription: 'Latest esports news, tournament announcements and team updates from WAY Esports.',
-        links: items.map((item: any) => ({ href: `${baseUrl}/news/${item._id}`, label: item.title })),
+        links: [
+          ...categories.slice(0, 6).map((item: any) => ({
+            href: `${baseUrl}/news/category/${toSlug(String(item || ''))}`,
+            label: `${formatLabel(String(item || ''))} news`
+          })),
+          ...items.map((item: any) => ({ href: `${baseUrl}/news/${item._id}`, label: item.title }))
+        ],
         jsonLd: {
           '@context': 'https://schema.org',
           '@type': 'CollectionPage',
           name: 'WAY Esports News'
+        }
+      });
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.send(html);
+    }
+
+    if (segment === 'news' && parts[1] === 'category' && parts[2]) {
+      const category = parseCategorySlug(parts[2]);
+      const label = formatLabel(category);
+      const items = await News.find({ status: 'published', category })
+        .sort({ publishDate: -1, updatedAt: -1 })
+        .limit(10)
+        .select('_id title')
+        .lean();
+
+      const html = renderSeoHtml({
+        title: `${label} Esports News | WAY Esports`,
+        description: `${label} news, tournament updates and platform coverage from WAY Esports.`,
+        canonicalUrl,
+        type: 'website',
+        bodyTitle: `${label} News`,
+        bodyDescription: `${label} stories, announcements and competitive updates published on WAY Esports.`,
+        links: items.map((item: any) => ({ href: `${baseUrl}/news/${item._id}`, label: item.title })),
+        jsonLd: {
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: `${label} News`
         }
       });
       res.setHeader('Content-Type', 'text/html; charset=utf-8');

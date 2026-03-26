@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../services/api';
 import Card from '../../components/UI/Card';
 import { ThumbsUp, ThumbsDown } from 'react-feather';
 import { Seo } from '../../components/SEO';
+import { formatCategoryLabel, getGameHubPath, parseCategorySlug, slugifyCategory } from '../../utils/discovery';
 
 const NewsContainer = styled.div`
   width: min(100% - 2rem, 800px);
@@ -136,6 +137,51 @@ const ReadMoreLink = styled(Link)`
   }
 `;
 
+const CategoryBar = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin: 0 0 1rem;
+`;
+
+const CategoryLink = styled(Link)<{ $active?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 0.95rem;
+  border-radius: 999px;
+  text-decoration: none;
+  color: ${({ $active }) => ($active ? '#ffffff' : '#ffb27a')};
+  background: ${({ $active }) => ($active ? 'rgba(255, 107, 0, 0.82)' : 'rgba(255, 255, 255, 0.04)')};
+  border: 1px solid ${({ $active }) => ($active ? 'rgba(255, 107, 0, 0.9)' : 'rgba(255, 255, 255, 0.12)')};
+  font-size: 0.84rem;
+  font-weight: 700;
+`;
+
+const MetaRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  color: #9e9e9e;
+  font-size: 0.82rem;
+  margin-bottom: 0.5rem;
+`;
+
+const MetaChip = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 0.75rem;
+  border-radius: 999px;
+  text-decoration: none;
+  color: #ffb27a;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.78rem;
+  font-weight: 700;
+`;
+
 const ReactionsRow = styled.div`
   display: flex;
   align-items: center;
@@ -168,11 +214,15 @@ const ReactionButton = styled.button<{ $active?: boolean; $tone: 'like' | 'disli
 `;
 
 const NewsPage: React.FC = () => {
+  const { category: categoryParam } = useParams<{ category?: string }>();
   const queryClient = useQueryClient();
+  const activeCategory = useMemo(() => parseCategorySlug(categoryParam), [categoryParam]);
+
   const { data: newsRaw = [], isLoading, error } = useQuery({
-    queryKey: ['news'],
+    queryKey: ['news', activeCategory || 'all'],
     queryFn: async () => {
-      const result: any = await api.get('/api/news');
+      const query = activeCategory ? `?category=${encodeURIComponent(activeCategory)}` : '';
+      const result: any = await api.get(`/api/news${query}`);
       return (result && result.data) || [];
     },
     staleTime: 30000,
@@ -187,18 +237,37 @@ const NewsPage: React.FC = () => {
       content: n.summary || n.content || '',
       coverImage: n.coverImage,
       createdAt: n.publishDate || n.createdAt,
+      category: String(n.category || '').trim(),
+      game: String(n.game || '').trim(),
       likeCount: Number(n.likeCount ?? n.likes ?? 0),
       dislikeCount: Number(n.dislikeCount ?? 0),
       myReaction: n.myReaction === 'like' || n.myReaction === 'dislike' ? n.myReaction : null
     }));
   }, [newsRaw]);
 
+  const categories = useMemo(() => {
+    const discovered = items
+      .map((item) => item.category)
+      .filter(Boolean)
+      .map((item) => item.toLowerCase());
+    const defaults = ['tournaments', 'teams', 'players', 'platform', 'matches', 'rankings'];
+    return Array.from(new Set([activeCategory, ...defaults, ...discovered].filter(Boolean) as string[]));
+  }, [activeCategory, items]);
+
+  const seoTitle = activeCategory
+    ? `${formatCategoryLabel(activeCategory)} Esports News | WAY Esports`
+    : 'Esports News and Tournament Updates | WAY Esports';
+
+  const seoDescription = activeCategory
+    ? `${formatCategoryLabel(activeCategory)} news, tournament updates and platform coverage from WAY Esports.`
+    : 'Latest WAY Esports news, tournament announcements, team updates and platform releases.';
+
   const reactionMutation = useMutation({
     mutationFn: async ({ newsId, value }: { newsId: string; value: 'like' | 'dislike' }) => {
       return api.post(`/api/news/${newsId}/reaction`, { value });
     },
     onSuccess: (_result, vars) => {
-      queryClient.setQueryData(['news'], (prev: any) => {
+      queryClient.setQueryData(['news', activeCategory || 'all'], (prev: any) => {
         const src: any[] = Array.isArray(prev) ? prev : Array.isArray(prev?.data) ? prev.data : [];
         return src.map((row: any) => {
           const rowId = String(row?._id || row?.id || '');
@@ -223,16 +292,16 @@ const NewsPage: React.FC = () => {
   return (
     <NewsContainer>
       <Seo
-        title="Esports News and Tournament Updates | WAY Esports"
-        description="Latest WAY Esports news, tournament announcements, team updates and platform releases."
-        canonicalPath="/news"
+        title={seoTitle}
+        description={seoDescription}
+        canonicalPath={activeCategory ? `/news/category/${slugifyCategory(activeCategory)}` : '/news'}
         type="website"
-        keywords={['esports news', 'tournament news', 'WAY Esports', 'team updates']}
+        keywords={['esports news', 'tournament news', 'WAY Esports', 'team updates', activeCategory || '']}
         jsonLd={{
           '@context': 'https://schema.org',
           '@type': 'CollectionPage',
-          name: 'WAY Esports News',
-          description: 'Latest esports news, tournament updates and team announcements from WAY Esports.'
+          name: activeCategory ? `${formatCategoryLabel(activeCategory)} News` : 'WAY Esports News',
+          description: seoDescription
         }}
       />
       <NewsHeader>
@@ -254,7 +323,19 @@ const NewsPage: React.FC = () => {
         </SocialLinksHeader>
       </NewsHeader>
 
-      <NewsTitle>Latest News</NewsTitle>
+      <NewsTitle>{activeCategory ? `${formatCategoryLabel(activeCategory)} News` : 'Latest News'}</NewsTitle>
+      <CategoryBar>
+        <CategoryLink to="/news" $active={!activeCategory}>All</CategoryLink>
+        {categories.map((category) => (
+          <CategoryLink
+            key={category}
+            to={`/news/category/${slugifyCategory(category)}`}
+            $active={category === activeCategory}
+          >
+            {formatCategoryLabel(category)}
+          </CategoryLink>
+        ))}
+      </CategoryBar>
       {isLoading && <div style={{ color: '#cccccc', textAlign: 'center', padding: '50px' }}>Loading news...</div>}
       {error && <div style={{ color: '#ff4757', textAlign: 'center', padding: '20px' }}>{(error as Error).message}</div>}
       {!isLoading && !error && items.length === 0 && (
@@ -265,6 +346,19 @@ const NewsPage: React.FC = () => {
           {item.coverImage && <NewsItemImage src={item.coverImage} alt={item.title} />}
           <NewsContentWrapper>
             <NewsItemTitle>{item.title}</NewsItemTitle>
+            <MetaRow>
+              <span>{new Date(item.createdAt || Date.now()).toLocaleDateString()}</span>
+              {item.category ? (
+                <MetaChip to={`/news/category/${slugifyCategory(item.category)}`}>
+                  {formatCategoryLabel(item.category)}
+                </MetaChip>
+              ) : null}
+              {item.game && getGameHubPath(item.game) ? (
+                <MetaChip to={getGameHubPath(item.game) || '/news'}>
+                  {item.game}
+                </MetaChip>
+              ) : null}
+            </MetaRow>
             <NewsItemContent>{item.content}</NewsItemContent>
             <ReactionsRow>
               <ReactionButton
