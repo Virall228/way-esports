@@ -19,11 +19,19 @@ const Hero = styled(Card).attrs({ variant: 'elevated' })`
   overflow: hidden;
   padding: 2rem;
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background:
+  border: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
+  background: ${({ theme }) =>
+    theme.isLight
+      ? `
+    radial-gradient(circle at top left, rgba(255, 153, 51, 0.22), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(255, 214, 153, 0.28), transparent 26%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(248, 240, 229, 0.94))
+  `
+      : `
     radial-gradient(circle at top left, rgba(255, 107, 0, 0.28), transparent 34%),
     radial-gradient(circle at bottom right, rgba(255, 214, 10, 0.12), transparent 24%),
-    linear-gradient(145deg, rgba(19, 21, 24, 0.94), rgba(9, 10, 12, 0.98));
+    linear-gradient(145deg, rgba(19, 21, 24, 0.94), rgba(9, 10, 12, 0.98))
+  `};
 `;
 
 const HeroTitle = styled.h1`
@@ -60,7 +68,7 @@ const StatsGrid = styled.div`
 const StatCard = styled(Card).attrs({ variant: 'outlined' })`
   padding: 1.2rem;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.04);
+  background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.04)')};
 `;
 
 const StatValue = styled.div`
@@ -108,15 +116,20 @@ const ContentCard = styled(Card).attrs({ variant: 'outlined' })`
   gap: 0.85rem;
   padding: 1rem;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.03);
+  background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.82)' : 'rgba(255, 255, 255, 0.03)')};
 `;
 
 const Cover = styled.div<{ $image?: string }>`
   height: 148px;
   border-radius: 14px;
   background:
-    ${({ $image }) => ($image ? `linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.46)), url(${$image}) center/cover` : 'linear-gradient(135deg, rgba(255,107,0,0.26), rgba(255,255,255,0.02))')};
-  border: 1px solid rgba(255, 255, 255, 0.08);
+    ${({ $image, theme }) =>
+      $image
+        ? `linear-gradient(180deg, rgba(0,0,0,${theme.isLight ? '0.02' : '0.08'}), rgba(0,0,0,${theme.isLight ? '0.28' : '0.46'})), url(${$image}) center/cover`
+        : theme.isLight
+          ? 'linear-gradient(135deg, rgba(255, 174, 92, 0.3), rgba(255,255,255,0.72))'
+          : 'linear-gradient(135deg, rgba(255,107,0,0.26), rgba(255,255,255,0.02))'};
+  border: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
 `;
 
 const CardTitle = styled.h3`
@@ -132,7 +145,7 @@ const CardMeta = styled.div`
 `;
 
 const InlineLink = styled(Link)`
-  color: #ff9d4d;
+  color: ${({ theme }) => theme.colors.accent};
   text-decoration: none;
   font-weight: 700;
 
@@ -154,8 +167,8 @@ const GameCard = styled(Link)`
   color: inherit;
   padding: 1rem;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.82)' : 'rgba(255, 255, 255, 0.04)')};
+  border: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
 `;
 
 const TeamRow = styled.div`
@@ -169,15 +182,22 @@ const TeamLogo = styled.img`
   height: 48px;
   border-radius: 12px;
   object-fit: cover;
-  background: rgba(255, 255, 255, 0.08);
+  background: ${({ theme }) => (theme.isLight ? 'rgba(245, 234, 220, 0.9)' : 'rgba(255, 255, 255, 0.08)')};
 `;
 
 const Cta = styled(Card).attrs({ variant: 'elevated' })`
   padding: 1.5rem;
   border-radius: 22px;
-  background:
+  background: ${({ theme }) =>
+    theme.isLight
+      ? `
+    radial-gradient(circle at top right, rgba(255, 153, 51, 0.22), transparent 30%),
+    linear-gradient(145deg, rgba(255,255,255,0.96), rgba(247, 237, 224, 0.92))
+  `
+      : `
     radial-gradient(circle at top right, rgba(255, 107, 0, 0.24), transparent 30%),
-    linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+    linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03))
+  `};
 `;
 
 const gameCards = getDiscoveryGames().slice(0, 4).map((item) => ({

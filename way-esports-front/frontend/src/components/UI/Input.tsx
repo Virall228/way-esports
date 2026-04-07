@@ -47,35 +47,36 @@ const Label = styled.label`
 `;
 
 const StyledInput = styled.input<InputProps>`
-  background: rgba(255, 255, 255, 0.04);
+  background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.88)' : 'rgba(255, 255, 255, 0.04)')};
   color: ${({ theme }) => theme.colors.text.primary};
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.medium : 'rgba(255, 255, 255, 0.16)')};
   border-radius: ${({ theme }) => theme.borderRadius.medium};
   outline: none;
   transition: all ${({ theme }) => theme.transitions.fast};
   width: 100%;
   backdrop-filter: blur(12px);
+  box-shadow: ${({ theme }) => (theme.isLight ? '0 6px 18px rgba(109, 78, 44, 0.05)' : 'none')};
 
   ${({ size }) => getInputSize(size)}
 
   ${({ variant, theme }) =>
     variant === 'filled' &&
     css`
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: ${theme.isLight ? 'rgba(244, 235, 224, 0.72)' : 'rgba(255, 255, 255, 0.08)'};
+      border: 1px solid ${theme.isLight ? theme.colors.border.light : 'rgba(255, 255, 255, 0.12)'};
       border-radius: ${theme.borderRadius.small} ${theme.borderRadius.small} 0 0;
 
       &:focus {
         border-color: ${theme.colors.accent};
-        background: rgba(255, 255, 255, 0.12);
+        background: ${theme.isLight ? 'rgba(255, 245, 233, 0.94)' : 'rgba(255, 255, 255, 0.12)'};
       }
     `}
 
   ${({ variant, theme }) =>
     variant === 'outlined' &&
     css`
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: ${theme.isLight ? 'rgba(255, 255, 255, 0.72)' : 'rgba(255, 255, 255, 0.02)'};
+      border: 1px solid ${theme.isLight ? theme.colors.border.medium : 'rgba(255, 255, 255, 0.2)'};
 
       &:focus {
         border-color: ${theme.colors.accent};
@@ -85,6 +86,7 @@ const StyledInput = styled.input<InputProps>`
 
   &:focus {
     border-color: ${({ theme }) => theme.colors.accent};
+    box-shadow: ${({ theme }) => `${theme.isLight ? '0 0 0 3px rgba(201, 106, 22, 0.14), 0 10px 24px rgba(109, 78, 44, 0.08)' : `0 0 0 2px ${theme.colors.accent}22`}`};
   }
 
   &:disabled {

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import SurfacePanel from '../../components/UI/SurfacePanel';
@@ -16,7 +16,7 @@ const Container = styled.div`
   width: 100%;
   max-width: 100%;
   margin: 0;
-  color: #ffffff;
+  color: ${({ theme }) => theme.colors.text.primary};
   overflow-x: clip;
 
   @media (max-width: 768px) {
@@ -90,10 +90,10 @@ const Logo = styled.div`
 const HeroTitle = styled.h1`
   font-size: 4rem;
   font-weight: 900;
-  color: #ffffff;
+  color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 20px;
   letter-spacing: 4px;
-  text-shadow: 0 0 30px rgba(0, 0, 0, 0.35);
+  text-shadow: ${({ theme }) => (theme.isLight ? '0 6px 18px rgba(132, 95, 58, 0.16)' : '0 0 30px rgba(0, 0, 0, 0.35)')};
 
   @media (max-width: 768px) {
     font-size: 2rem;
@@ -104,7 +104,7 @@ const HeroTitle = styled.h1`
 
 const HeroSubtitle = styled.p`
   font-size: 1.3rem;
-  color: #cccccc;
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: 40px;
   line-height: 1.6;
 
@@ -151,14 +151,17 @@ const FeaturesGrid = styled.div`
 `;
 
 const FeatureCard = styled(Card).attrs({ variant: 'outlined' })`
-  background: #2a2a2a;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: ${({ theme }) =>
+    theme.isLight
+      ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(250, 245, 238, 0.88) 100%)'
+      : '#2a2a2a'};
+  border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.light : 'rgba(255, 255, 255, 0.1)')};
   border-radius: 16px;
   padding: 40px;
   text-align: center;
   transition: all 0.3s ease;
 
-  &:hover { transform: translateY(-10px); border-color: ${({ theme }) => theme.colors.border.strong}; box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+  &:hover { transform: translateY(-10px); border-color: ${({ theme }) => theme.colors.border.strong}; box-shadow: ${({ theme }) => (theme.isLight ? '0 22px 40px rgba(109, 78, 44, 0.12)' : '0 20px 40px rgba(0,0,0,0.3)')}; }
 
   @media (max-width: 768px) {
     padding: 18px 14px;
@@ -168,7 +171,7 @@ const FeatureCard = styled(Card).attrs({ variant: 'outlined' })`
     &:hover {
       transform: none;
       box-shadow: none;
-      border-color: rgba(255, 255, 255, 0.1);
+      border-color: ${({ theme }) => (theme.isLight ? theme.colors.border.light : 'rgba(255, 255, 255, 0.1)')};
     }
   }
 `;
@@ -190,14 +193,18 @@ const PageRoot = styled.div`
 const FeatureIcon = styled.div`
   width: 80px;
   height: 80px;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.gray[700]}, ${({ theme }) => theme.colors.gray[900]});
+  background: ${({ theme }) =>
+    theme.isLight
+      ? 'linear-gradient(135deg, rgba(255, 248, 240, 1), rgba(239, 225, 208, 1))'
+      : `linear-gradient(135deg, ${theme.colors.gray[700]}, ${theme.colors.gray[900]})`};
   border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 2rem;
   margin: 0 auto 25px;
-  color: #ffffff;
+  color: ${({ theme }) => (theme.isLight ? theme.colors.accent : '#ffffff')};
+  border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.light : 'transparent')};
 
   @media (max-width: 768px) {
     width: 52px;
@@ -211,7 +218,7 @@ const FeatureIcon = styled.div`
 const FeatureTitle = styled.h3`
   font-size: 1.5rem;
   font-weight: 700;
-  color: #ffffff;
+  color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 15px;
 
   @media (max-width: 768px) {
@@ -221,7 +228,7 @@ const FeatureTitle = styled.h3`
 `;
 
 const FeatureDescription = styled.p`
-  color: #cccccc;
+  color: ${({ theme }) => theme.colors.text.secondary};
   line-height: 1.6;
   font-size: 1rem;
 
@@ -247,7 +254,7 @@ const StatsSection = styled.section`
 const StatsTitle = styled.h2`
   font-size: 2.5rem;
   font-weight: 700;
-  color: #ffffff;
+  color: ${({ theme }) => theme.colors.text.primary};
   text-align: center;
   margin-bottom: 50px;
   letter-spacing: 2px;
@@ -295,7 +302,7 @@ const StatNumber = styled.div`
 `;
 
 const StatLabel = styled.div`
-  color: #cccccc;
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 1.1rem;
   font-weight: 500;
 
@@ -356,7 +363,7 @@ const InfoCard = styled(SurfacePanel)`
 const InfoTitle = styled.h3`
   margin: 0 0 10px;
   font-size: 1rem;
-  color: #fff;
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const TinyGrid = styled.div`
@@ -366,8 +373,8 @@ const TinyGrid = styled.div`
 `;
 
 const TinyStat = styled.div`
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.74)' : 'rgba(255, 255, 255, 0.04)')};
+  border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.light : 'rgba(255, 255, 255, 0.09)')};
   border-radius: 10px;
   padding: 10px;
 `;
@@ -375,12 +382,12 @@ const TinyStat = styled.div`
 const TinyValue = styled.div`
   font-size: 1.1rem;
   font-weight: 800;
-  color: #fff;
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const TinyLabel = styled.div`
   font-size: 0.78rem;
-  color: #b8b8b8;
+  color: ${({ theme }) => theme.colors.text.tertiary};
   margin-top: 2px;
 `;
 
@@ -410,8 +417,8 @@ const ListRow = styled.div`
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.74)' : 'rgba(255, 255, 255, 0.04)')};
+  border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.light : 'rgba(255, 255, 255, 0.09)')};
   border-radius: 10px;
   padding: 10px;
 
@@ -434,7 +441,7 @@ const StatusPill = styled.span<{ $tone?: 'ok' | 'warn' }>`
 `;
 
 const TimeMeta = styled.div`
-  color: #9c9c9c;
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-size: 0.74rem;
   margin-top: 2px;
 `;
@@ -449,8 +456,8 @@ const RecommendationRow = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   gap: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.74)' : 'rgba(255, 255, 255, 0.04)')};
+  border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.light : 'rgba(255, 255, 255, 0.09)')};
   border-radius: 10px;
   padding: 10px;
 
@@ -466,7 +473,7 @@ const RecommendationText = styled.div`
 `;
 
 const RecommendationTitle = styled.div`
-  color: #fff;
+  color: ${({ theme }) => theme.colors.text.primary};
   font-weight: 700;
   font-size: 0.86rem;
   line-height: 1.25;
@@ -475,7 +482,7 @@ const RecommendationTitle = styled.div`
 `;
 
 const RecommendationDesc = styled.div`
-  color: #b7b7b7;
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.76rem;
   margin-top: 2px;
   line-height: 1.3;
@@ -501,6 +508,7 @@ const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const { user } = useAuth();
+  const theme = useTheme();
   const hasScoutHubAccess = useMemo(() => {
     if (!user) return false;
     if (user.role === 'admin' || user.role === 'developer') return true;
@@ -737,7 +745,7 @@ const HomePage: React.FC = () => {
 
         <InfoCard>
           <InfoTitle>My Action Center</InfoTitle>
-          <div style={{ color: '#cfcfcf', fontSize: '0.85rem', marginBottom: 10 }}>
+          <div style={{ color: theme.colors.text.secondary, fontSize: '0.85rem', marginBottom: 10 }}>
             Sub: <strong style={{ color: user?.isSubscribed ? '#a5d6a7' : '#ffd180' }}>{user?.isSubscribed ? 'ACTIVE' : 'INACTIVE'}</strong>{' '}
             • Entries: <strong>{Number((user as any)?.freeEntriesCount || 0) + Number((user as any)?.bonusEntries || 0)}</strong>
           </div>
@@ -778,15 +786,15 @@ const HomePage: React.FC = () => {
           <InfoTitle>Top Tournaments Now</InfoTitle>
           <List>
             {liveTournaments.length === 0 ? (
-              <div style={{ color: '#a7a7a7', fontSize: '0.85rem' }}>No active tournaments yet.</div>
+              <div style={{ color: theme.colors.text.tertiary, fontSize: '0.85rem' }}>No active tournaments yet.</div>
             ) : (
               liveTournaments.map((item) => (
                 <ListRow key={item.id}>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ color: theme.colors.text.primary, fontWeight: 700, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {item.name}
                     </div>
-                    <div style={{ color: '#b7b7b7', fontSize: '0.78rem' }}>{item.teams} teams</div>
+                    <div style={{ color: theme.colors.text.secondary, fontSize: '0.78rem' }}>{item.teams} teams</div>
                   </div>
                   <StatusPill $tone={item.status === 'live' ? 'ok' : 'warn'}>{item.status.toUpperCase()}</StatusPill>
                 </ListRow>
@@ -799,15 +807,15 @@ const HomePage: React.FC = () => {
           <InfoTitle>My Upcoming Matches</InfoTitle>
           <List>
             {upcomingMatches.length === 0 ? (
-              <div style={{ color: '#a7a7a7', fontSize: '0.85rem' }}>No upcoming matches yet.</div>
+              <div style={{ color: theme.colors.text.tertiary, fontSize: '0.85rem' }}>No upcoming matches yet.</div>
             ) : (
               upcomingMatches.map((item) => (
                 <ListRow key={item.id}>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ color: theme.colors.text.primary, fontWeight: 700, fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {(item.myTeam?.tag || item.myTeam?.name || 'My Team')} vs {(item.enemyTeam?.tag || item.enemyTeam?.name || 'Opponent')}
                     </div>
-                    <div style={{ color: '#b7b7b7', fontSize: '0.76rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ color: theme.colors.text.secondary, fontSize: '0.76rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {item.tournamentName}
                     </div>
                     {item.startTime ? <TimeMeta>{new Date(item.startTime).toLocaleString()}</TimeMeta> : null}

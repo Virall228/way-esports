@@ -16,12 +16,15 @@ const getButtonStyles = (variant: ButtonVariant = 'primary') => {
   switch (variant) {
     case 'primary':
       return css`
-        background: rgba(255, 255, 255, 0.08);
+        background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.92)' : 'rgba(255, 255, 255, 0.08)')};
         color: ${({ theme }) => theme.colors.text.primary};
-        border: 1px solid rgba(255, 255, 255, 0.16);
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.medium : 'rgba(255, 255, 255, 0.16)')};
+        box-shadow: ${({ theme }) =>
+          theme.isLight
+            ? '0 10px 24px rgba(109, 78, 44, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8)'
+            : '0 12px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08)'};
         &:hover:not(:disabled) {
-          background: rgba(255, 255, 255, 0.14);
+          background: ${({ theme }) => (theme.isLight ? 'rgba(255, 248, 241, 1)' : 'rgba(255, 255, 255, 0.14)')};
           border-color: ${({ theme }) => theme.colors.border.strong};
         }
         &:active {
@@ -30,29 +33,30 @@ const getButtonStyles = (variant: ButtonVariant = 'primary') => {
       `;
     case 'secondary':
       return css`
-        background: rgba(255, 255, 255, 0.05);
+        background: ${({ theme }) => (theme.isLight ? 'rgba(239, 228, 212, 0.72)' : 'rgba(255, 255, 255, 0.05)')};
         color: ${({ theme }) => theme.colors.text.secondary};
-        border: 1px solid rgba(255, 255, 255, 0.12);
+        border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.light : 'rgba(255, 255, 255, 0.12)')};
         &:hover:not(:disabled) {
           color: ${({ theme }) => theme.colors.text.primary};
-          background: rgba(255, 255, 255, 0.1);
+          background: ${({ theme }) => (theme.isLight ? 'rgba(232, 214, 194, 0.86)' : 'rgba(255, 255, 255, 0.1)')};
         }
       `;
     case 'outline':
       return css`
-        background: transparent;
+        background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.48)' : 'transparent')};
         color: ${({ theme }) => theme.colors.text.primary};
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.medium : 'rgba(255, 255, 255, 0.2)')};
         &:hover:not(:disabled) {
-          background: rgba(255, 255, 255, 0.06);
+          background: ${({ theme }) => (theme.isLight ? 'rgba(255, 248, 241, 0.82)' : 'rgba(255, 255, 255, 0.06)')};
         }
       `;
     case 'text':
       return css`
         background: transparent;
-        color: ${({ theme }) => theme.colors.text.primary};
+        color: ${({ theme }) => (theme.isLight ? theme.colors.text.secondary : theme.colors.text.primary)};
         &:hover:not(:disabled) {
           color: ${({ theme }) => theme.colors.accent};
+          background: ${({ theme }) => (theme.isLight ? 'rgba(201, 106, 22, 0.08)' : 'transparent')};
         }
       `;
     case 'brand':
@@ -60,7 +64,10 @@ const getButtonStyles = (variant: ButtonVariant = 'primary') => {
         background: #ff6b00;
         color: #ffffff;
         border: 1px solid rgba(255, 107, 0, 0.4);
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        box-shadow: ${({ theme }) =>
+          theme.isLight
+            ? '0 14px 30px rgba(201, 106, 22, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+            : '0 12px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1)'};
         &:hover:not(:disabled) {
           background: #ff8533;
           border-color: rgba(255, 133, 51, 0.6);
@@ -130,8 +137,9 @@ const StyledButton = styled.button<ButtonProps>`
   ${({ size }) => getButtonSize(size)}
 
   &:disabled {
-    opacity: 0.6;
+    opacity: ${({ theme }) => (theme.isLight ? 0.5 : 0.6)};
     cursor: not-allowed;
+    box-shadow: none;
   }
 
   &:focus-visible {

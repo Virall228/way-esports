@@ -75,11 +75,20 @@ export const GlobalStyles = createGlobalStyle`
     left: 0;
     right: 0;
     bottom: 0;
-    background:
+    background: ${({ theme }) =>
+      theme.isLight
+        ? `
+      radial-gradient(circle at 12% 12%, rgba(255, 204, 153, 0.26) 0%, transparent 34%),
+      radial-gradient(circle at 82% 16%, rgba(255, 229, 198, 0.3) 0%, transparent 28%),
+      radial-gradient(circle at 78% 78%, rgba(201, 106, 22, 0.12) 0%, transparent 32%),
+      linear-gradient(145deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 248, 239, 0.12) 62%)
+    `
+        : `
       radial-gradient(circle at 16% 18%, rgba(255, 255, 255, 0.07) 0%, transparent 36%),
       radial-gradient(circle at 80% 72%, rgba(255, 255, 255, 0.05) 0%, transparent 34%),
       radial-gradient(circle at 50% 50%, rgba(255, 107, 0, 0.05) 0%, transparent 48%),
-      linear-gradient(145deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0) 60%);
+      linear-gradient(145deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0) 60%)
+    `};
     pointer-events: none;
     z-index: -2;
     opacity: var(--bg-glow-opacity);
@@ -92,10 +101,18 @@ export const GlobalStyles = createGlobalStyle`
     left: 0;
     right: 0;
     bottom: 0;
-    background-image:
+    background-image: ${({ theme }) =>
+      theme.isLight
+        ? `
+      linear-gradient(30deg, rgba(122, 88, 49, 0.07) 1px, transparent 1px),
+      linear-gradient(150deg, rgba(201, 106, 22, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(122, 88, 49, 0.035) 1px, transparent 1px)
+    `
+        : `
       linear-gradient(30deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px),
       linear-gradient(150deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px)
+    `};
     background-size: 56px 32px, 56px 32px, 56px 32px;
     background-position: 0 0, 0 0, 28px 16px;
     opacity: var(--bg-pattern-opacity);
@@ -274,32 +291,49 @@ export const GlobalStyles = createGlobalStyle`
     transition: color 0.3s ease;
   }
 
-  a:hover { color: ${({ theme }) => theme.colors.text.primary}; }
+  a:hover { color: ${({ theme }) => theme.colors.accent}; }
 
   /* Focus styles */
-  *:focus { outline: 2px solid #444; outline-offset: 2px; }
+  *:focus { outline: 2px solid ${({ theme }) => theme.colors.highlight}; outline-offset: 2px; }
 
   /* Selection styles */
-  ::selection { background: #404040; color: #ffffff; }
+  ::selection {
+    background: ${({ theme }) => (theme.isLight ? 'rgba(251, 146, 60, 0.28)' : '#404040')};
+    color: ${({ theme }) => (theme.isLight ? theme.colors.text.primary : '#ffffff')};
+  }
 
   /* Scrollbar styles */
   ::-webkit-scrollbar {
     width: 12px;
   }
 
-  ::-webkit-scrollbar-track { background: #0f0f0f; border-radius: 6px; }
+  ::-webkit-scrollbar-track {
+    background: ${({ theme }) => (theme.isLight ? 'rgba(237, 226, 211, 0.9)' : '#0f0f0f')};
+    border-radius: 6px;
+  }
 
   ::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #404040, #2a2a2a);
+    background: ${({ theme }) =>
+      theme.isLight
+        ? 'linear-gradient(180deg, #d7c1a8, #bea284)'
+        : 'linear-gradient(180deg, #404040, #2a2a2a)'};
     border-radius: 6px;
-    border: 2px solid #0f0f0f;
+    border: 2px solid ${({ theme }) => (theme.isLight ? 'rgba(237, 226, 211, 0.9)' : '#0f0f0f')};
     box-shadow: none;
   }
 
-  ::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #4a4a4a, #333333); }
+  ::-webkit-scrollbar-thumb:hover {
+    background: ${({ theme }) =>
+      theme.isLight
+        ? 'linear-gradient(180deg, #cfae89, #b98b5f)'
+        : 'linear-gradient(180deg, #4a4a4a, #333333)'};
+  }
 
   /* Firefox scrollbar */
-  * { scrollbar-width: thin; scrollbar-color: #3a3a3a #0f0f0f; }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: ${({ theme }) => (theme.isLight ? '#bea284 #ede2d3' : '#3a3a3a #0f0f0f')};
+  }
 
   /* Responsive typography */
   @media (max-width: 768px) {

@@ -1,4 +1,5 @@
 export const theme = {
+  isLight: false,
   colors: {
     black: '#000000',
     white: '#ffffff',
@@ -147,55 +148,56 @@ export const theme = {
 
 export const lightTheme = {
   ...theme,
+  isLight: true,
   colors: {
     ...theme.colors,
-    primary: '#111111',
-    primaryDark: '#000000',
-    secondary: '#4b4b4b',
+    primary: '#1f1811',
+    primaryDark: '#120d08',
+    secondary: '#655548',
     brand: {
-      primary: '#111111'
+      primary: '#c96a16'
     },
-    background: '#f7f7f7',
-    surface: '#ffffff',
-    accent: '#111111',
-    ring: '#d4d4d4',
-    highlight: '#111111',
+    background: '#f6f1e8',
+    surface: '#fffdf8',
+    accent: '#c96a16',
+    ring: '#e8d7c3',
+    highlight: '#fb923c',
     bg: {
-      primary: '#f7f7f7',
-      secondary: '#ffffff',
-      tertiary: '#f0f0f0',
+      primary: '#f6f1e8',
+      secondary: '#fffdf8',
+      tertiary: '#efe4d4',
       elevated: '#ffffff',
     },
     text: {
-      primary: '#111111',
-      secondary: '#3f3f3f',
-      tertiary: '#5f5f5f',
-      disabled: '#9a9a9a',
+      primary: '#1f1811',
+      secondary: '#625447',
+      tertiary: '#857568',
+      disabled: '#b7aa9d',
     },
-    textSecondary: '#3f3f3f',
+    textSecondary: '#625447',
     border: {
-      light: '#e5e5e5',
-      medium: '#d4d4d4',
-      strong: '#bdbdbd',
+      light: '#eadfce',
+      medium: '#d9c9b6',
+      strong: '#c2aa8f',
     },
     glass: {
-      panel: 'rgba(255, 255, 255, 0.82)',
-      panelBorder: 'rgba(0, 0, 0, 0.08)',
-      panelHover: 'rgba(0, 0, 0, 0.06)',
-      bar: 'rgba(255, 255, 255, 0.92)',
-      barBorder: 'rgba(0, 0, 0, 0.08)',
-      overlay: 'rgba(0, 0, 0, 0.35)'
+      panel: 'rgba(255, 250, 243, 0.8)',
+      panelBorder: 'rgba(130, 96, 59, 0.14)',
+      panelHover: 'rgba(201, 106, 22, 0.08)',
+      bar: 'rgba(250, 244, 235, 0.92)',
+      barBorder: 'rgba(130, 96, 59, 0.12)',
+      overlay: 'rgba(54, 35, 18, 0.18)'
     }
   },
   shadows: {
     ...theme.shadows,
-    sm: '0 1px 2px 0 rgba(0, 0, 0, 0.08)',
-    small: '0 1px 2px 0 rgba(0, 0, 0, 0.08)',
-    md: '0 4px 6px -1px rgba(0,0,0,0.12), 0 2px 4px -1px rgba(0,0,0,0.08)',
-    medium: '0 4px 6px -1px rgba(0,0,0,0.12), 0 2px 4px -1px rgba(0,0,0,0.08)',
-    lg: '0 10px 15px -3px rgba(0,0,0,0.16), 0 4px 6px -2px rgba(0,0,0,0.12)',
-    large: '0 10px 15px -3px rgba(0,0,0,0.16), 0 4px 6px -2px rgba(0,0,0,0.12)',
-    glow: '0 0 0 1px rgba(0,0,0,0.05), 0 0 24px rgba(0,0,0,0.08)',
+    sm: '0 4px 10px rgba(93, 64, 34, 0.05)',
+    small: '0 4px 10px rgba(93, 64, 34, 0.05)',
+    md: '0 10px 24px rgba(93, 64, 34, 0.08)',
+    medium: '0 10px 24px rgba(93, 64, 34, 0.08)',
+    lg: '0 20px 40px rgba(93, 64, 34, 0.12)',
+    large: '0 20px 40px rgba(93, 64, 34, 0.12)',
+    glow: '0 0 0 1px rgba(201, 106, 22, 0.08), 0 18px 36px rgba(145, 93, 43, 0.12)',
   }
 };
 

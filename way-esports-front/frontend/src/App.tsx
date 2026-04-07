@@ -64,8 +64,10 @@ const AppShell = styled.div`
   height: var(--app-height, 100vh);
   min-height: var(--app-height, 100vh);
   background:
-    radial-gradient(900px 600px at 10% -10%, rgba(255, 255, 255, 0.06), transparent 60%),
-    radial-gradient(800px 500px at 90% -20%, rgba(255, 255, 255, 0.04), transparent 60%),
+    ${({ theme }) =>
+      theme.isLight
+        ? 'radial-gradient(900px 600px at 10% -10%, rgba(255, 214, 170, 0.34), transparent 60%), radial-gradient(800px 500px at 90% -20%, rgba(255, 242, 224, 0.9), transparent 58%), radial-gradient(760px 520px at 85% 110%, rgba(201, 106, 22, 0.12), transparent 60%),'
+        : 'radial-gradient(900px 600px at 10% -10%, rgba(255, 255, 255, 0.06), transparent 60%), radial-gradient(800px 500px at 90% -20%, rgba(255, 255, 255, 0.04), transparent 60%),'}
     ${({ theme }) => theme.colors.bg.primary};
   color: ${({ theme }) => theme.colors.text.primary};
   font-family: ${({ theme }) => theme.fonts.primary};
