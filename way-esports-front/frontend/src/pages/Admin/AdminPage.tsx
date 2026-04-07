@@ -9,6 +9,7 @@ import { useNotifications } from '../../contexts/NotificationContext';
 import { useApp } from '../../contexts/AppContext';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
+import SponsorshipApplicationsPanel from '../../components/Admin/SponsorshipApplicationsPanel';
 
 const Container = styled.div`
   padding: 1rem;
@@ -319,6 +320,7 @@ const Select = styled.select`
 type TabType =
   | 'dashboard'
   | 'users'
+  | 'sponsorship'
   | 'promotion'
   | 'tournaments'
   | 'news'
@@ -9419,6 +9421,8 @@ const AdminPage: React.FC = () => {
         return renderDashboard();
       case 'users':
         return renderUsers();
+      case 'sponsorship':
+        return <SponsorshipApplicationsPanel />;
       case 'promotion':
         return renderPromotion();
       case 'tournaments':
@@ -9489,6 +9493,9 @@ const AdminPage: React.FC = () => {
         </Tab>
         <Tab $active={activeTab === 'users'} onClick={() => setActiveTab('users')}>
           Users
+        </Tab>
+        <Tab $active={activeTab === 'sponsorship'} onClick={() => setActiveTab('sponsorship')}>
+          Sponsorship
         </Tab>
         <Tab $active={activeTab === 'promotion'} onClick={() => setActiveTab('promotion')}>
           Promotion

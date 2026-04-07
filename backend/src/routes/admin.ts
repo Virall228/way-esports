@@ -20,6 +20,8 @@ import botPushService from '../services/botPushService';
 import BotNotification from '../models/BotNotification';
 import PlayerPromotionProfile from '../models/PlayerPromotionProfile';
 import { buildPromotionSnapshot } from '../services/playerPromotionService';
+import SponsorshipApplication, { SponsorshipApplicationStatus } from '../models/SponsorshipApplication';
+import { serializeSponsorshipApplication, SPONSORSHIP_OPEN_STATUSES } from '../services/sponsorshipService';
 
 const router = express.Router();
 
@@ -47,6 +49,13 @@ const USER_TRANSACTION_TYPE_SET = new Set([
   'fee',
   'subscription',
   'referral'
+]);
+
+const SPONSORSHIP_STATUS_SET = new Set<SponsorshipApplicationStatus>([
+  'pending',
+  'in_review',
+  'approved',
+  'rejected'
 ]);
 
 const toWalletStatus = (status: UserTransactionStatus): 'pending' | 'completed' | 'failed' => {
@@ -2211,6 +2220,125 @@ router.get('/teams', async (req, res) => {
     return res.json(payload);
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/sponsorship/applications', async (req, res) => {
+  try {
+    const { page, limit, skip } = parsePagination(req.query as Record<string, unknown>, {
+      defaultLimit: 25,
+      maxLimit: 100
+    });
+    const statusFilter = typeof req.query.status === 'string' ? req.query.status.trim().toLowerCase() : 'all';
+    const typeFilter = typeof req.query.type === 'string' ? req.query.type.trim().toLowerCase() : 'all';
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    const query: any = {};
+
+    if (SPONSORSHIP_STATUS_SET.has(statusFilter as SponsorshipApplicationStatus)) {
+      query.status = statusFilter;
+    }
+    if (typeFilter === 'player' || typeFilter === 'team') {
+      query.applicantType = typeFilter;
+    }
+
+    const rows: any[] = await SponsorshipApplication.find(query)
+      .populate('submittedBy', 'username firstName lastName email telegramId role')
+      .populate('team', 'name tag game logo createdAt')
+      .populate('reviewedBy', 'username firstName lastName email telegramId role')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    let filteredRows = rows;
+    if (search) {
+      const regex = new RegExp(escapeRegExp(search), 'i');
+      filteredRows = rows.filter((row: any) => (
+        regex.test(String(row?.contactName || ''))
+        || regex.test(String(row?.contactEmail || ''))
+        || regex.test(String(row?.requestSummary || ''))
+        || regex.test(String(row?.comment || ''))
+        || regex.test(Array.isArray(row?.nicknames) ? row.nicknames.join(' ') : '')
+        || regex.test(String(row?.submittedBy?.username || ''))
+        || regex.test(String(row?.submittedBy?.firstName || ''))
+        || regex.test(String(row?.submittedBy?.lastName || ''))
+        || regex.test(String(row?.team?.name || ''))
+        || regex.test(String(row?.team?.tag || ''))
+      ));
+    }
+
+    const total = filteredRows.length;
+    const pagedRows = filteredRows.slice(skip, skip + limit).map(serializeSponsorshipApplication);
+    const overdueCount = filteredRows.filter((row: any) => (
+      SPONSORSHIP_OPEN_STATUSES.includes(row?.status)
+      && row?.reviewDeadlineAt
+      && new Date(row.reviewDeadlineAt).getTime() < Date.now()
+    )).length;
+
+    return res.json({
+      success: true,
+      data: pagedRows,
+      pagination: buildPaginationMeta(page, limit, total),
+      summary: {
+        filteredTotal: total,
+        pendingCount: filteredRows.filter((row: any) => row?.status === 'pending').length,
+        inReviewCount: filteredRows.filter((row: any) => row?.status === 'in_review').length,
+        approvedCount: filteredRows.filter((row: any) => row?.status === 'approved').length,
+        rejectedCount: filteredRows.filter((row: any) => row?.status === 'rejected').length,
+        overdueCount
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to load sponsorship applications' });
+  }
+});
+
+router.patch('/sponsorship/applications/:id/status', idempotency({ required: true }), async (req: any, res) => {
+  try {
+    const applicationId = String(req.params.id || '').trim();
+    const nextStatus = String(req.body?.status || '').trim() as SponsorshipApplicationStatus;
+    const reviewComment = typeof req.body?.reviewComment === 'string' ? req.body.reviewComment.trim() : '';
+
+    if (!mongoose.Types.ObjectId.isValid(applicationId)) {
+      return res.status(400).json({ success: false, error: 'Invalid application id' });
+    }
+    if (!SPONSORSHIP_STATUS_SET.has(nextStatus)) {
+      return res.status(400).json({ success: false, error: 'Invalid sponsorship status' });
+    }
+    if (reviewComment.length > 1000) {
+      return res.status(400).json({ success: false, error: 'reviewComment cannot exceed 1000 characters' });
+    }
+
+    const application: any = await SponsorshipApplication.findById(applicationId);
+    if (!application) {
+      return res.status(404).json({ success: false, error: 'Sponsorship application not found' });
+    }
+
+    const now = new Date();
+    application.status = nextStatus;
+    application.reviewComment = reviewComment;
+    application.reviewedAt = now;
+    application.reviewedBy = req.user?._id;
+    application.statusTimeline = Array.isArray(application.statusTimeline) ? application.statusTimeline : [];
+    application.statusTimeline.push({
+      status: nextStatus,
+      note: reviewComment,
+      actor: req.user?._id,
+      createdAt: now
+    });
+
+    await application.save();
+
+    const updated: any = await SponsorshipApplication.findById(application._id)
+      .populate('submittedBy', 'username firstName lastName email telegramId role')
+      .populate('team', 'name tag game logo createdAt')
+      .populate('reviewedBy', 'username firstName lastName email telegramId role')
+      .lean();
+
+    return res.json({
+      success: true,
+      data: serializeSponsorshipApplication(updated)
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message || 'Failed to update sponsorship application' });
   }
 });
 

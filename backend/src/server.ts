@@ -18,6 +18,7 @@ import { getMetricsSnapshot, requestMetricsMiddleware, startMonitoring } from '.
 import matchesRouter from './routes/matches';
 import teamsRouter from './routes/teams';
 import profileRouter from './routes/profile';
+import sponsorshipRouter from './routes/sponsorship';
 import walletRouter from './routes/wallet';
 import tournamentsRouter from './routes/tournaments';
 import rankingsRouter from './routes/rankings';
@@ -213,6 +214,7 @@ app.use(requestMetricsMiddleware);
 app.use('/api/matches', matchesRouter);
 app.use('/api/teams', teamsRouter);
 app.use('/api/profile', profileRouter);
+app.use('/api/sponsorship', sponsorshipRouter);
 app.use('/api/wallet', authenticateJWT, walletRouter);
 app.use('/api/tournaments', tournamentsRouter);
 app.use('/api/rankings', rankingsRouter);

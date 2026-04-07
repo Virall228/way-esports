@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import SubscriptionModal from '../../components/Subscription/SubscriptionModal';
 import PhotoUploadModal from '../../components/Profile/PhotoUploadModal';
 import AchievementsSection from '../../components/Profile/AchievementsSection';
+import SponsorshipApplicationCard from '../../components/Profile/SponsorshipApplicationCard';
 import ReferralCard from '../../components/Referral/ReferralCard';
 import SubscriptionCard from '../../components/Subscription/SubscriptionCard';
 import SupportChat from '../../components/Support/SupportChat';
@@ -1018,6 +1019,7 @@ const ProfilePage: React.FC = () => {
       </StatsCard>
 
       <AchievementsSection />
+      <SponsorshipApplicationCard />
 
       <ReferralCard />
       <SubscriptionCard onManageSubscription={() => setIsSubscriptionOpen(true)} />
