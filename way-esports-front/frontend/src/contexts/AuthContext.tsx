@@ -106,6 +106,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const profile = await api.get('/api/profile');
       const normalized = normalizeUser(profile);
+
+      try {
+        const referralStats: any = await api.get('/api/referrals/stats');
+        const stats = referralStats?.data || referralStats || {};
+        normalized.isSubscribed = Boolean(stats?.isSubscribed ?? normalized.isSubscribed);
+        normalized.subscriptionExpiresAt = stats?.subscriptionExpiresAt || normalized.subscriptionExpiresAt;
+        normalized.freeEntriesCount = Number(stats?.freeEntriesCount ?? normalized.freeEntriesCount ?? 0);
+        normalized.bonusEntries = Number(stats?.bonusEntries ?? normalized.bonusEntries ?? 0);
+      } catch {
+        // Keep profile payload as fallback if referral stats are temporarily unavailable.
+      }
+
       setUser(normalized);
       return normalized;
     } catch {

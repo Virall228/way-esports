@@ -501,6 +501,14 @@ const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const { user } = useAuth();
+  const hasScoutHubAccess = useMemo(() => {
+    if (!user) return false;
+    if (user.role === 'admin' || user.role === 'developer') return true;
+    if (!user.isSubscribed) return false;
+    if (!user.subscriptionExpiresAt) return true;
+    const expiresAt = new Date(user.subscriptionExpiresAt).getTime();
+    return Number.isNaN(expiresAt) || expiresAt > Date.now();
+  }, [user]);
   const isMobile = useMemo(() => {
     if (typeof window === 'undefined') return false;
     return window.matchMedia('(max-width: 768px)').matches;
@@ -737,6 +745,9 @@ const HomePage: React.FC = () => {
             <ActionButton onClick={() => navigate('/tournaments')}>Join Tournament</ActionButton>
             <ActionButton onClick={() => navigate('/teams')}>Teams</ActionButton>
             <ActionButton onClick={() => navigate('/wallet')}>Wallet</ActionButton>
+            {hasScoutHubAccess ? (
+              <ActionButton onClick={() => navigate('/scout-hub')}>Scout Hub</ActionButton>
+            ) : null}
             <ActionButton onClick={() => navigate('/analytics')}>Analytics</ActionButton>
             <ActionButton onClick={() => navigate('/profile')}>Profile</ActionButton>
             <ActionButton onClick={() => navigate('/settings')}>Support</ActionButton>
