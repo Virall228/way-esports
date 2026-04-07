@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Response } from 'express';
 import mongoose from 'mongoose';
 import { body } from 'express-validator';
 import SponsorshipApplication from '../models/SponsorshipApplication';
@@ -72,7 +72,7 @@ const normalizeNicknames = (input: unknown): string[] => {
   return Array.from(new Set(normalized));
 };
 
-router.get('/overview', authenticateJWT, async (req: any, res) => {
+router.get('/overview', authenticateJWT, async (req: any, res: Response) => {
   try {
     const userId = getUserId(req);
     if (!userId) {
@@ -95,7 +95,7 @@ router.post(
   idempotency({ required: true }),
   createApplicationValidators,
   validateRequest,
-  async (req: any, res) => {
+  async (req: any, res: Response) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
