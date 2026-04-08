@@ -17,16 +17,6 @@ const OCR_MODELS = (() => {
   if (single) return [single];
   return ['gemini-2.0-flash', 'gemini-1.5-flash'];
 })();
-const OPENAI_OCR_MODELS = (() => {
-  const raw = String(process.env.OPENAI_OCR_MODELS || '').trim();
-  if (raw) {
-    const rows = raw.split(',').map((m) => m.trim()).filter(Boolean);
-    if (rows.length) return rows;
-  }
-  const single = String(process.env.OPENAI_OCR_MODEL || '').trim();
-  if (single) return [single];
-  return ['llama-3.2-90b-vision-preview'];
-})();
 const OCR_PROVIDER = String(process.env.OCR_AI_PROVIDER || 'gemini').trim().toLowerCase();
 
 const getGeminiKey = (): string =>
@@ -40,6 +30,23 @@ const getGeminiKey = (): string =>
 const getOpenAiKey = (): string => String(process.env.OPENAI_API_KEY || '').trim();
 const getOpenAiBaseUrl = (): string =>
   String(process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').trim().replace(/\/+$/, '');
+
+const getOpenAiOcrModels = (): string[] => {
+  const configured = [
+    ...String(process.env.OPENAI_OCR_MODELS || '')
+      .split(',')
+      .map((m) => m.trim())
+      .filter(Boolean),
+    String(process.env.OPENAI_OCR_MODEL || '').trim()
+  ].filter(Boolean);
+
+  const baseUrl = getOpenAiBaseUrl().toLowerCase();
+  const providerDefaults = baseUrl.includes('api.groq.com')
+    ? ['meta-llama/llama-4-scout-17b-16e-instruct']
+    : ['gpt-4o-mini'];
+
+  return Array.from(new Set([...configured, ...providerDefaults]));
+};
 
 const cleanJsonText = (text: string): string => {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
@@ -98,10 +105,11 @@ const parseMatchScreenshotWithOpenAi = async (
   const apiKey = getOpenAiKey();
   if (!apiKey) throw new Error('OPENAI_API_KEY is not configured');
   const baseUrl = getOpenAiBaseUrl();
+  const models = getOpenAiOcrModels();
   const imageDataUrl = `data:${mimeType || 'image/jpeg'};base64,${imageBuffer.toString('base64')}`;
 
   let lastError: any = null;
-  for (const model of OPENAI_OCR_MODELS) {
+  for (const model of models) {
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -128,8 +136,15 @@ const parseMatchScreenshotWithOpenAi = async (
       lastError = new Error(`OpenAI OCR failed (${response.status}): ${body.slice(0, 240)}`);
       const lower = String(body || '').toLowerCase();
       const retryableModelError =
-        response.status === 400 &&
-        (lower.includes('decommissioned') || lower.includes('not found') || lower.includes('model'));
+        (response.status === 400 || response.status === 404) &&
+        (
+          lower.includes('decommissioned')
+          || lower.includes('not found')
+          || lower.includes('model')
+          || lower.includes('does not exist')
+          || lower.includes('model_not_found')
+          || lower.includes('do not have access')
+        );
       if (retryableModelError) continue;
       throw lastError;
     }
