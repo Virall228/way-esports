@@ -24,10 +24,10 @@
 ## Telegram Bot
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_BOT_USERNAME`
-- `API_BASE_URL=https://wayesports.org`
-- `WEBAPP_URL=https://wayesports.org`
+- `API_BASE_URL=https://wayesports.duckdns.org`
+- `WEBAPP_URL=https://wayesports.duckdns.org`
 - `BOT_USE_WEBHOOK=true|false`
-- `BOT_WEBHOOK_PUBLIC_URL=https://wayesports.org` (required when webhook=true)
+- `BOT_WEBHOOK_PUBLIC_URL=https://wayesports.duckdns.org` (required when webhook=true)
 - `BOT_WEBHOOK_PATH=/telegram/webhook`
 - `BOT_WEBHOOK_SECRET` (recommended)
 - `BOT_POLL_TIMEOUT_SEC=30`
@@ -56,7 +56,7 @@
 
 ## Fast Verification
 ```bash
-curl -i https://wayesports.org/api/health
-curl -i https://wayesports.org/api/intelligence/readiness
-curl -i https://wayesports.org/telegram/health
+curl -i https://wayesports.duckdns.org/api/health
+curl -i https://wayesports.duckdns.org/api/intelligence/readiness
+curl -i https://wayesports.duckdns.org/telegram/health
 ```

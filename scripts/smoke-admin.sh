@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE_URL="${1:-https://wayesports.org}"
+BASE_URL="${1:-https://wayesports.duckdns.org}"
 TOKEN="${2:-}"
 
 if [[ -z "${TOKEN}" ]]; then

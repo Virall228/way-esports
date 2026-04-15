@@ -1,11 +1,11 @@
-# 🔒 Настройка Nginx и HTTPS для wayesports.org
+# 🔒 Настройка Nginx и HTTPS для wayesports.duckdns.org
 
 Полная инструкция по настройке Nginx reverse proxy с SSL сертификатом для Telegram Mini App.
 
 ## 📋 Предварительные требования
 
 - Ubuntu/Debian сервер с IP: 5.129.234.223
-- Домен: wayesports.org (уже настроен на DuckDNS)
+- Домен: wayesports.duckdns.org (уже настроен на DuckDNS)
 - Docker и Docker Compose установлены
 - Проект запущен в Docker на порту 80 (внутренний reverse-proxy)
 
@@ -49,7 +49,7 @@ sudo chmod -R 755 /var/www/certbot
 cd /opt/way-esports
 
 # Копирование конфигурации Nginx
-sudo cp nginx/wayesports.org.conf /etc/nginx/sites-available/wayesports.org
+sudo cp nginx/wayesports.duckdns.org.conf /etc/nginx/sites-available/wayesports.duckdns.org
 
 # Проверка синтаксиса конфигурации
 sudo nginx -t
@@ -59,7 +59,7 @@ sudo nginx -t
 
 ```bash
 # Создание символьной ссылки для активации сайта
-sudo ln -s /etc/nginx/sites-available/wayesports.org /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/wayesports.duckdns.org /etc/nginx/sites-enabled/
 
 # Удаление дефолтной конфигурации (опционально)
 sudo rm /etc/nginx/sites-enabled/default
@@ -75,10 +75,10 @@ sudo systemctl reload nginx
 
 ```bash
 # Получение SSL сертификата для DuckDNS домена
-sudo certbot --nginx -d wayesports.org --non-interactive --agree-tos --email your-email@example.com
+sudo certbot --nginx -d wayesports.duckdns.org --non-interactive --agree-tos --email your-email@example.com
 
 # Или интерактивный режим (рекомендуется для первого раза)
-sudo certbot --nginx -d wayesports.org
+sudo certbot --nginx -d wayesports.duckdns.org
 ```
 
 **Примечание:** Замените `your-email@example.com` на ваш реальный email для уведомлений о продлении сертификата.
@@ -103,10 +103,10 @@ sudo certbot renew --dry-run
 sudo systemctl status nginx
 
 # Проверка доступности через HTTPS
-curl -I https://wayesports.org
+curl -I https://wayesports.duckdns.org
 
 # Проверка API health endpoint
-curl https://wayesports.org/api/health
+curl https://wayesports.duckdns.org/api/health
 ```
 
 ## 🔧 Дополнительные команды
@@ -164,7 +164,7 @@ sudo ufw status
 
 ```bash
 # Проверка информации о сертификате
-echo | openssl s_client -servername wayesports.org -connect wayesports.org:443 2>/dev/null | openssl x509 -noout -dates
+echo | openssl s_client -servername wayesports.duckdns.org -connect wayesports.duckdns.org:443 2>/dev/null | openssl x509 -noout -dates
 
 # Проверка через certbot
 sudo certbot certificates
@@ -186,10 +186,10 @@ sudo journalctl -u nginx -n 50
 
 ```bash
 # Проверка, что домен доступен
-ping wayesports.org
+ping wayesports.duckdns.org
 
 # Проверка DNS
-nslookup wayesports.org
+nslookup wayesports.duckdns.org
 
 # Проверка, что порт 80 открыт
 sudo netstat -tlnp | grep :80
@@ -213,17 +213,17 @@ curl http://localhost:80/api/health
 
 После выполнения всех команд проверьте:
 
-1. ✅ HTTP редиректит на HTTPS: `curl -I http://wayesports.org`
-2. ✅ HTTPS работает: `curl -I https://wayesports.org`
-3. ✅ API доступен: `curl https://wayesports.org/api/health`
-4. ✅ SSL сертификат валиден: откройте `https://wayesports.org` в браузере
-5. ✅ Telegram Mini App открывается: настройте в BotFather с URL `https://wayesports.org`
+1. ✅ HTTP редиректит на HTTPS: `curl -I http://wayesports.duckdns.org`
+2. ✅ HTTPS работает: `curl -I https://wayesports.duckdns.org`
+3. ✅ API доступен: `curl https://wayesports.duckdns.org/api/health`
+4. ✅ SSL сертификат валиден: откройте `https://wayesports.duckdns.org` в браузере
+5. ✅ Telegram Mini App открывается: настройте в BotFather с URL `https://wayesports.duckdns.org`
 
 ## 📝 Настройка Telegram Mini App
 
 1. Откройте [@BotFather](https://t.me/botfather) в Telegram
 2. Отправьте `/newapp` и выберите вашего бота
-3. Укажите URL: `https://wayesports.org`
+3. Укажите URL: `https://wayesports.duckdns.org`
 4. Загрузите иконку приложения
 5. Готово! 🎉
 

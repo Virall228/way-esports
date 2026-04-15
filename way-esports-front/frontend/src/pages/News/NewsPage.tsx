@@ -308,7 +308,7 @@ const NewsPage: React.FC = () => {
         <h2 style={{ color: '#fff', textAlign: 'center', marginBottom: '0.5rem' }}>Join the Community</h2>
         <p style={{ color: '#ccc', textAlign: 'center', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Follow us for latest updates and tournament news</p>
         <SocialLinksHeader>
-          <SocialLink href="https://wayesports.org/" target="_blank">
+          <SocialLink href="https://wayesports.duckdns.org/" target="_blank">
             {'\u{1F310}'} Website
           </SocialLink>
           <SocialLink href="https://t.me/wayesports" target="_blank">
