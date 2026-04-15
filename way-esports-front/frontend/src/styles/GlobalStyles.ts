@@ -84,10 +84,11 @@ export const GlobalStyles = createGlobalStyle`
       linear-gradient(145deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 248, 239, 0.12) 62%)
     `
         : `
-      radial-gradient(circle at 16% 18%, rgba(255, 255, 255, 0.07) 0%, transparent 36%),
-      radial-gradient(circle at 80% 72%, rgba(255, 255, 255, 0.05) 0%, transparent 34%),
-      radial-gradient(circle at 50% 50%, rgba(255, 107, 0, 0.05) 0%, transparent 48%),
-      linear-gradient(145deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0) 60%)
+      linear-gradient(180deg, rgba(0, 0, 0, 0.78) 0%, rgba(5, 6, 7, 0.94) 58%, rgba(5, 6, 7, 0.98) 100%),
+      radial-gradient(circle at 12% 40%, rgba(255, 107, 0, 0.24) 0%, transparent 22%),
+      radial-gradient(circle at 86% 42%, rgba(255, 138, 31, 0.2) 0%, transparent 24%),
+      radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.12) 0%, transparent 34%),
+      url('/images/way-twitter-banner-bg.jpg') center/cover no-repeat
     `};
     pointer-events: none;
     z-index: -2;
@@ -109,12 +110,14 @@ export const GlobalStyles = createGlobalStyle`
       linear-gradient(90deg, rgba(122, 88, 49, 0.035) 1px, transparent 1px)
     `
         : `
-      linear-gradient(30deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px),
-      linear-gradient(150deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px)
+      linear-gradient(115deg, transparent 0 45%, rgba(255, 138, 31, 0.16) 45.4%, transparent 46%),
+      linear-gradient(64deg, transparent 0 58%, rgba(255, 255, 255, 0.07) 58.25%, transparent 59%),
+      linear-gradient(30deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(150deg, rgba(255, 138, 31, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px)
     `};
-    background-size: 56px 32px, 56px 32px, 56px 32px;
-    background-position: 0 0, 0 0, 28px 16px;
+    background-size: 420px 240px, 520px 280px, 56px 32px, 56px 32px, 56px 32px;
+    background-position: -80px 8%, 70% 62%, 0 0, 0 0, 28px 16px;
     opacity: var(--bg-pattern-opacity);
     pointer-events: none;
     z-index: -1;
@@ -298,7 +301,7 @@ export const GlobalStyles = createGlobalStyle`
 
   /* Selection styles */
   ::selection {
-    background: ${({ theme }) => (theme.isLight ? 'rgba(251, 146, 60, 0.28)' : '#404040')};
+    background: ${({ theme }) => (theme.isLight ? 'rgba(251, 146, 60, 0.28)' : 'rgba(255, 138, 31, 0.38)')};
     color: ${({ theme }) => (theme.isLight ? theme.colors.text.primary : '#ffffff')};
   }
 
@@ -316,7 +319,7 @@ export const GlobalStyles = createGlobalStyle`
     background: ${({ theme }) =>
       theme.isLight
         ? 'linear-gradient(180deg, #d7c1a8, #bea284)'
-        : 'linear-gradient(180deg, #404040, #2a2a2a)'};
+        : 'linear-gradient(180deg, #ff8a1f, #41200a)'};
     border-radius: 6px;
     border: 2px solid ${({ theme }) => (theme.isLight ? 'rgba(237, 226, 211, 0.9)' : '#0f0f0f')};
     box-shadow: none;
@@ -326,13 +329,13 @@ export const GlobalStyles = createGlobalStyle`
     background: ${({ theme }) =>
       theme.isLight
         ? 'linear-gradient(180deg, #cfae89, #b98b5f)'
-        : 'linear-gradient(180deg, #4a4a4a, #333333)'};
+        : 'linear-gradient(180deg, #ffb15d, #ff6b00)'};
   }
 
   /* Firefox scrollbar */
   * {
     scrollbar-width: thin;
-    scrollbar-color: ${({ theme }) => (theme.isLight ? '#bea284 #ede2d3' : '#3a3a3a #0f0f0f')};
+    scrollbar-color: ${({ theme }) => (theme.isLight ? '#bea284 #ede2d3' : '#ff8a1f #0f0f0f')};
   }
 
   /* Responsive typography */
@@ -343,8 +346,8 @@ export const GlobalStyles = createGlobalStyle`
 
     body::after {
       opacity: calc(var(--bg-pattern-opacity) * 0.7);
-      background-size: 44px 26px, 44px 26px, 44px 26px;
-      background-position: 0 0, 0 0, 22px 13px;
+      background-size: 300px 180px, 360px 210px, 44px 26px, 44px 26px, 44px 26px;
+      background-position: -70px 8%, 62% 62%, 0 0, 0 0, 22px 13px;
     }
 
     html {

@@ -25,25 +25,46 @@ const Container = styled.div`
 `;
 
 const HeroSection = styled(Card).attrs({ variant: 'elevated' })`
-  background: ${({ theme }) => theme.colors.bg.secondary};
-  border: 1px solid ${({ theme }) => theme.colors.border.medium};
+  background: ${({ theme }) =>
+    theme.isLight
+      ? theme.colors.bg.secondary
+      : 'linear-gradient(135deg, rgba(7, 8, 10, 0.92) 0%, rgba(13, 15, 19, 0.86) 54%, rgba(30, 14, 4, 0.7) 100%)'};
+  border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.medium : theme.colors.glass.panelBorder)};
   border-radius: 20px;
   padding: 80px 40px;
   text-align: center;
   margin-bottom: 60px;
   position: relative;
   overflow: hidden;
+  box-shadow: ${({ theme }) => (theme.isLight ? theme.shadows.large : '0 28px 70px rgba(0, 0, 0, 0.55), 0 0 50px rgba(255, 107, 0, 0.12)')};
   
   &::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: url('/images/main2.png') center/cover;
-    opacity: 0.1;
+    inset: 0;
+    background: ${({ theme }) =>
+      theme.isLight
+        ? "url('/images/main2.png') center/cover"
+        : `
+      linear-gradient(180deg, rgba(0, 0, 0, 0.42), rgba(5, 6, 7, 0.82)),
+      radial-gradient(circle at 12% 50%, rgba(255, 107, 0, 0.28), transparent 28%),
+      radial-gradient(circle at 86% 48%, rgba(255, 138, 31, 0.22), transparent 26%),
+      url('/images/way-twitter-banner-bg.jpg') center/cover
+    `};
+    opacity: ${({ theme }) => (theme.isLight ? 0.1 : 0.72)};
     z-index: 0;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(118deg, transparent 0 41%, rgba(255, 138, 31, 0.2) 41.5%, transparent 42%),
+      linear-gradient(64deg, transparent 0 62%, rgba(255, 255, 255, 0.08) 62.25%, transparent 63%);
+    opacity: ${({ theme }) => (theme.isLight ? 0 : 1)};
+    z-index: 0;
+    pointer-events: none;
   }
   
   > * {
@@ -76,8 +97,11 @@ const Logo = styled.div`
   align-items: center;
   justify-content: center;
   margin: 0 auto 30px;
-  border: 1px solid ${({ theme }) => theme.colors.border.medium};
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.medium : 'rgba(255, 177, 93, 0.42)')};
+  box-shadow: ${({ theme }) =>
+    theme.isLight
+      ? '0 12px 28px rgba(0, 0, 0, 0.18)'
+      : '0 16px 36px rgba(0, 0, 0, 0.46), 0 0 34px rgba(255, 107, 0, 0.22)'};
   overflow: hidden;
 
   @media (max-width: 768px) {
@@ -93,7 +117,7 @@ const HeroTitle = styled.h1`
   color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 20px;
   letter-spacing: 4px;
-  text-shadow: ${({ theme }) => (theme.isLight ? '0 6px 18px rgba(132, 95, 58, 0.16)' : '0 0 30px rgba(0, 0, 0, 0.35)')};
+  text-shadow: ${({ theme }) => (theme.isLight ? '0 6px 18px rgba(132, 95, 58, 0.16)' : '0 0 22px rgba(255, 255, 255, 0.18), 0 0 38px rgba(255, 107, 0, 0.18)')};
 
   @media (max-width: 768px) {
     font-size: 2rem;

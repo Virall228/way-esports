@@ -16,15 +16,21 @@ const getButtonStyles = (variant: ButtonVariant = 'primary') => {
   switch (variant) {
     case 'primary':
       return css`
-        background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.92)' : 'rgba(255, 255, 255, 0.08)')};
+        background: ${({ theme }) =>
+          theme.isLight
+            ? 'rgba(255, 255, 255, 0.92)'
+            : 'linear-gradient(135deg, rgba(255, 138, 31, 0.18) 0%, rgba(14, 17, 22, 0.92) 48%, rgba(255, 107, 0, 0.12) 100%)'};
         color: ${({ theme }) => theme.colors.text.primary};
-        border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.medium : 'rgba(255, 255, 255, 0.16)')};
+        border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.medium : theme.colors.glass.panelBorder)};
         box-shadow: ${({ theme }) =>
           theme.isLight
             ? '0 10px 24px rgba(109, 78, 44, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8)'
-            : '0 12px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08)'};
+            : '0 14px 28px rgba(0, 0, 0, 0.4), 0 0 18px rgba(255, 107, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.08)'};
         &:hover:not(:disabled) {
-          background: ${({ theme }) => (theme.isLight ? 'rgba(255, 248, 241, 1)' : 'rgba(255, 255, 255, 0.14)')};
+          background: ${({ theme }) =>
+            theme.isLight
+              ? 'rgba(255, 248, 241, 1)'
+              : 'linear-gradient(135deg, rgba(255, 138, 31, 0.28) 0%, rgba(18, 21, 27, 0.96) 46%, rgba(255, 107, 0, 0.18) 100%)'};
           border-color: ${({ theme }) => theme.colors.border.strong};
         }
         &:active {
@@ -33,21 +39,23 @@ const getButtonStyles = (variant: ButtonVariant = 'primary') => {
       `;
     case 'secondary':
       return css`
-        background: ${({ theme }) => (theme.isLight ? 'rgba(239, 228, 212, 0.72)' : 'rgba(255, 255, 255, 0.05)')};
+        background: ${({ theme }) => (theme.isLight ? 'rgba(239, 228, 212, 0.72)' : 'rgba(255, 138, 31, 0.055)')};
         color: ${({ theme }) => theme.colors.text.secondary};
-        border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.light : 'rgba(255, 255, 255, 0.12)')};
+        border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.light : theme.colors.border.medium)};
         &:hover:not(:disabled) {
           color: ${({ theme }) => theme.colors.text.primary};
-          background: ${({ theme }) => (theme.isLight ? 'rgba(232, 214, 194, 0.86)' : 'rgba(255, 255, 255, 0.1)')};
+          background: ${({ theme }) => (theme.isLight ? 'rgba(232, 214, 194, 0.86)' : 'rgba(255, 138, 31, 0.12)')};
+          border-color: ${({ theme }) => theme.colors.border.strong};
         }
       `;
     case 'outline':
       return css`
         background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.48)' : 'transparent')};
         color: ${({ theme }) => theme.colors.text.primary};
-        border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.medium : 'rgba(255, 255, 255, 0.2)')};
+        border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.medium : theme.colors.border.medium)};
         &:hover:not(:disabled) {
-          background: ${({ theme }) => (theme.isLight ? 'rgba(255, 248, 241, 0.82)' : 'rgba(255, 255, 255, 0.06)')};
+          background: ${({ theme }) => (theme.isLight ? 'rgba(255, 248, 241, 0.82)' : 'rgba(255, 138, 31, 0.08)')};
+          border-color: ${({ theme }) => theme.colors.border.strong};
         }
       `;
     case 'text':
@@ -61,16 +69,20 @@ const getButtonStyles = (variant: ButtonVariant = 'primary') => {
       `;
     case 'brand':
       return css`
-        background: #ff6b00;
-        color: #ffffff;
-        border: 1px solid rgba(255, 107, 0, 0.4);
+        background: linear-gradient(135deg, #ff6b00 0%, #ff9d3d 52%, #ff6b00 100%);
+        color: #100702;
+        border: 1px solid rgba(255, 177, 93, 0.72);
         box-shadow: ${({ theme }) =>
           theme.isLight
             ? '0 14px 30px rgba(201, 106, 22, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
-            : '0 12px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1)'};
+            : '0 16px 32px rgba(255, 107, 0, 0.18), 0 12px 24px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.28)'};
         &:hover:not(:disabled) {
-          background: #ff8533;
-          border-color: rgba(255, 133, 51, 0.6);
+          background: linear-gradient(135deg, #ff7a1a 0%, #ffb15d 52%, #ff7a1a 100%);
+          border-color: rgba(255, 203, 145, 0.84);
+          box-shadow: ${({ theme }) =>
+            theme.isLight
+              ? '0 16px 34px rgba(201, 106, 22, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.28)'
+              : '0 0 28px rgba(255, 107, 0, 0.26), 0 16px 34px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.32)'};
         }
         &:active {
           transform: translateY(1px);

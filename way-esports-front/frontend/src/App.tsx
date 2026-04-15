@@ -67,7 +67,7 @@ const AppShell = styled.div`
     ${({ theme }) =>
       theme.isLight
         ? 'radial-gradient(900px 600px at 10% -10%, rgba(255, 214, 170, 0.34), transparent 60%), radial-gradient(800px 500px at 90% -20%, rgba(255, 242, 224, 0.9), transparent 58%), radial-gradient(760px 520px at 85% 110%, rgba(201, 106, 22, 0.12), transparent 60%),'
-        : 'radial-gradient(900px 600px at 10% -10%, rgba(255, 255, 255, 0.06), transparent 60%), radial-gradient(800px 500px at 90% -20%, rgba(255, 255, 255, 0.04), transparent 60%),'}
+        : 'radial-gradient(900px 600px at 10% -10%, rgba(255, 138, 31, 0.16), transparent 58%), radial-gradient(800px 500px at 90% -20%, rgba(255, 255, 255, 0.06), transparent 60%), radial-gradient(680px 420px at 82% 110%, rgba(255, 107, 0, 0.1), transparent 62%),'}
     ${({ theme }) => theme.colors.bg.primary};
   color: ${({ theme }) => theme.colors.text.primary};
   font-family: ${({ theme }) => theme.fonts.primary};
@@ -86,9 +86,13 @@ const Sidebar = styled.aside`
   width: clamp(220px, 22vw, 280px);
   min-width: clamp(200px, 18vw, 240px);
   padding: 1.5rem 1rem;
-  background: ${({ theme }) => theme.colors.glass.panel};
+  background: ${({ theme }) =>
+    theme.isLight
+      ? theme.colors.glass.panel
+      : 'linear-gradient(180deg, rgba(8, 10, 13, 0.88) 0%, rgba(4, 5, 7, 0.94) 100%)'};
   border-right: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
   backdrop-filter: blur(16px);
+  box-shadow: ${({ theme }) => (theme.isLight ? 'none' : '12px 0 36px rgba(0, 0, 0, 0.24)')};
   position: sticky;
   top: 0;
   height: var(--app-height, 100vh);
@@ -136,6 +140,18 @@ const NavItemLink = styled(Link) <{ $active?: boolean; $compact?: boolean }>`
   border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.border.strong : theme.colors.glass.panelBorder)};
   transition: all ${({ theme }) => theme.transitions.fast};
   backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 9px auto 9px 0;
+    width: 3px;
+    border-radius: 0 999px 999px 0;
+    background: ${({ $active, theme }) => ($active ? theme.colors.accent : 'transparent')};
+    box-shadow: ${({ $active }) => ($active ? '0 0 16px rgba(255, 107, 0, 0.55)' : 'none')};
+  }
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
@@ -143,6 +159,7 @@ const NavItemLink = styled(Link) <{ $active?: boolean; $compact?: boolean }>`
       color: ${({ theme }) => theme.colors.text.primary};
       border-color: ${({ theme }) => theme.colors.border.strong};
       transform: translateY(-1px);
+      box-shadow: ${({ theme }) => (theme.isLight ? theme.shadows.small : '0 10px 24px rgba(0, 0, 0, 0.24), 0 0 18px rgba(255, 107, 0, 0.08)')};
     }
   }
 
@@ -192,7 +209,10 @@ const TopBar = styled.header`
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: ${({ theme }) => theme.colors.glass.bar};
+  background: ${({ theme }) =>
+    theme.isLight
+      ? theme.colors.glass.bar
+      : 'linear-gradient(90deg, rgba(5, 6, 7, 0.92) 0%, rgba(12, 14, 18, 0.86) 54%, rgba(18, 9, 3, 0.78) 100%)'};
   border-bottom: 1px solid ${({ theme }) => theme.colors.glass.barBorder};
   backdrop-filter: blur(14px);
 
@@ -304,7 +324,10 @@ const ContentInner = styled.div`
 `;
 
 const Footer = styled.footer`
-  background: ${({ theme }) => theme.colors.glass.bar};
+  background: ${({ theme }) =>
+    theme.isLight
+      ? theme.colors.glass.bar
+      : 'linear-gradient(90deg, rgba(5, 6, 7, 0.94) 0%, rgba(12, 14, 18, 0.9) 58%, rgba(18, 9, 3, 0.84) 100%)'};
   border-top: 1px solid ${({ theme }) => theme.colors.glass.barBorder};
   padding: 1.5rem 1rem;
   text-align: center;
@@ -353,6 +376,7 @@ const BottomNavItem = styled(Link) <{ $active?: boolean }>`
   text-transform: uppercase;
   letter-spacing: 0.6px;
   text-decoration: none;
+  box-shadow: ${({ $active, theme }) => ($active && !theme.isLight ? '0 0 18px rgba(255, 107, 0, 0.1)' : 'none')};
 `;
 
 const BottomNavIcon = styled.span`
@@ -387,7 +411,10 @@ const MobileMenuPanel = styled.div`
   left: 0;
   height: 100%;
   width: min(86vw, 360px);
-  background: ${({ theme }) => theme.colors.glass.panel};
+  background: ${({ theme }) =>
+    theme.isLight
+      ? theme.colors.glass.panel
+      : 'linear-gradient(180deg, rgba(8, 10, 13, 0.96) 0%, rgba(4, 5, 7, 0.98) 100%)'};
   border-right: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
   padding: 1rem;
   display: flex;
