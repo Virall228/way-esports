@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE_URL="${1:-https://wayesports.duckdns.org}"
+BASE_URL="${1:-https://wayesports.org}"
 ADMIN_TOKEN="${2:-}"
 
 echo "== System smoke =="

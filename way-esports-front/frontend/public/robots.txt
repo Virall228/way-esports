@@ -11,4 +11,4 @@ Disallow: /profile$
 Allow: /profile/
 Disallow: /api/admin
 
-Sitemap: https://www.wayesports.org/sitemap.xml
+Sitemap: https://wayesports.org/sitemap.xml
