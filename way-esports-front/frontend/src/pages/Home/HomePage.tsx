@@ -90,7 +90,7 @@ const Logo = styled.div`
   width: 120px;
   height: 120px;
   background:
-    url('/images/way-esports-logo-2026.jpg?v=1') center/cover no-repeat,
+    url('/images/way-main-logo-metal.jpg?v=2') center/cover no-repeat,
     url('/images/way-esports-logo.png.jpg') center/cover no-repeat;
   border-radius: 50%;
   display: flex;
