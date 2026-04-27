@@ -12,3 +12,4 @@ Allow: /profile/
 Disallow: /api/admin
 
 Sitemap: https://wayesports.space/sitemap.xml
+Host: wayesports.space

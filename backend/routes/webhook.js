@@ -3,6 +3,12 @@ const router = express.Router();
 const TelegramBot = require('node-telegram-bot-api');
 
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
+const WEBAPP_URL = String(
+    process.env.WEBAPP_URL ||
+    process.env.FRONTEND_URL ||
+    process.env.APP_URL ||
+    'https://wayesports.space'
+).replace(/\/+$/, '');
 
 // Webhook endpoint for Telegram updates
 router.post(`/${process.env.TELEGRAM_BOT_TOKEN}`, async (req, res) => {
@@ -29,7 +35,7 @@ router.post(`/${process.env.TELEGRAM_BOT_TOKEN}`, async (req, res) => {
                 reply_markup: {
                     keyboard: [[{
                         text: '🎮 Open Mini App',
-                        web_app: { url: process.env.FRONTEND_URL }
+                        web_app: { url: WEBAPP_URL }
                     }]],
                     resize_keyboard: true
                 }

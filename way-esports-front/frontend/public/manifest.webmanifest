@@ -1,17 +1,27 @@
 {
   "name": "WAY Esports",
   "short_name": "WAY",
+  "description": "Competitive esports platform for tournaments, teams, player profiles, rankings, match tracking and scouting.",
+  "lang": "en",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#0a0a0a",
+  "categories": ["sports", "games", "entertainment", "social"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/knife.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/images/way-main-logo-metal-v2.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
     }
   ]
 }

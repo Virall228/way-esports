@@ -6,6 +6,9 @@ import User from '../models/User';
 import { getPublicPromotionProfile, listPublicPromotionSitemapEntries } from '../services/playerPromotionService';
 
 const router = express.Router();
+const SITE_NAME = 'WAY Esports';
+const DEFAULT_IMAGE = '/images/way-twitter-banner-bg.jpg';
+const DEFAULT_IMAGE_ALT = 'WAY Esports platform banner';
 
 const escapeXml = (value: string): string => (
   String(value || '')
@@ -70,18 +73,53 @@ const renderSeoHtml = (params: {
   image?: string;
   robots?: string;
   type?: string;
-  jsonLd?: Record<string, unknown> | null;
+  jsonLd?: Record<string, unknown> | Array<Record<string, unknown>> | null;
   bodyTitle: string;
   bodyDescription: string;
   links?: Array<{ href: string; label: string }>;
 }) => {
   const robots = params.robots || 'index, follow';
   const type = params.type || 'website';
-  const image = params.image ? absolutize(params.image, params.canonicalUrl) : '';
+  const image = absolutize(params.image || DEFAULT_IMAGE, params.canonicalUrl);
   const bodyLinks = (params.links || [])
     .slice(0, 12)
     .map((item) => `<li><a href="${escapeHtml(item.href)}">${escapeHtml(item.label)}</a></li>`)
     .join('');
+  const siteUrl = (() => {
+    try {
+      const url = new URL(params.canonicalUrl);
+      return `${url.protocol}//${url.host}`;
+    } catch {
+      return params.canonicalUrl;
+    }
+  })();
+  const siteJsonLd = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: SITE_NAME,
+      url: siteUrl,
+      logo: absolutize('/images/way-main-logo-metal-v2.jpg', params.canonicalUrl),
+      image,
+      sameAs: [
+        'https://t.me/wayesports',
+        'https://discord.gg/wayesports',
+        'https://www.twitch.tv/WAY_Esports'
+      ]
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: SITE_NAME,
+      url: siteUrl,
+      inLanguage: ['en', 'ru']
+    }
+  ];
+  const jsonLdPayload = params.jsonLd
+    ? Array.isArray(params.jsonLd)
+      ? [...siteJsonLd, ...params.jsonLd]
+      : [...siteJsonLd, params.jsonLd]
+    : siteJsonLd;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -91,18 +129,26 @@ const renderSeoHtml = (params: {
     <title>${escapeHtml(params.title)}</title>
     <meta name="description" content="${escapeHtml(params.description)}" />
     <meta name="robots" content="${escapeHtml(robots)}" />
+    <meta name="author" content="${SITE_NAME}" />
+    <meta name="application-name" content="${SITE_NAME}" />
+    <meta name="theme-color" content="#050607" />
     <link rel="canonical" href="${escapeHtml(params.canonicalUrl)}" />
-    <meta property="og:site_name" content="WAY Esports" />
+    <meta property="og:site_name" content="${SITE_NAME}" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:title" content="${escapeHtml(params.title)}" />
     <meta property="og:description" content="${escapeHtml(params.description)}" />
     <meta property="og:type" content="${escapeHtml(type)}" />
     <meta property="og:url" content="${escapeHtml(params.canonicalUrl)}" />
-    ${image ? `<meta property="og:image" content="${escapeHtml(image)}" />` : ''}
-    <meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}" />
+    <meta property="og:image" content="${escapeHtml(image)}" />
+    <meta property="og:image:secure_url" content="${escapeHtml(image)}" />
+    <meta property="og:image:type" content="${escapeHtml(image.endsWith('.png') ? 'image/png' : 'image/jpeg')}" />
+    <meta property="og:image:alt" content="${DEFAULT_IMAGE_ALT}" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${escapeHtml(params.title)}" />
     <meta name="twitter:description" content="${escapeHtml(params.description)}" />
-    ${image ? `<meta name="twitter:image" content="${escapeHtml(image)}" />` : ''}
-    ${params.jsonLd ? `<script type="application/ld+json">${escapeHtml(JSON.stringify(params.jsonLd))}</script>` : ''}
+    <meta name="twitter:image" content="${escapeHtml(image)}" />
+    <meta name="twitter:image:alt" content="${DEFAULT_IMAGE_ALT}" />
+    <script type="application/ld+json">${escapeHtml(JSON.stringify(jsonLdPayload))}</script>
     <style>
       body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 40px 20px; background: #0b0b0b; color: #f3f3f3; }
       main { max-width: 860px; margin: 0 auto; }

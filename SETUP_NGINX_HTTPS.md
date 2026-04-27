@@ -5,7 +5,7 @@
 ## 📋 Предварительные требования
 
 - Ubuntu/Debian сервер с IP: 5.129.234.223
-- Домен: wayesports.space (уже настроен на DuckDNS)
+- Домен: wayesports.space
 - Docker и Docker Compose установлены
 - Проект запущен в Docker на порту 80 (внутренний reverse-proxy)
 
