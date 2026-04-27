@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <filter id="way-cutout" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+      <feColorMatrix
+        in="SourceGraphic"
+        type="matrix"
+        values="
+          1 0 0 0 0
+          0 1 0 0 0
+          0 0 1 0 0
+          0.50 0.50 0.50 0 -0.30"
+      />
+    </filter>
+  </defs>
+  <image
+    href="/images/way-main-logo-metal-v2.jpg"
+    x="-92"
+    y="-82"
+    width="696"
+    height="696"
+    preserveAspectRatio="xMidYMid slice"
+    filter="url(#way-cutout)"
+  />
+</svg>
