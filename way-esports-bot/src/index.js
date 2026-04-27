@@ -3,8 +3,8 @@ const http = require('http');
 const { URL } = require('url');
 
 const BOT_TOKEN = String(process.env.TELEGRAM_BOT_TOKEN || '').trim();
-const API_BASE_URL = String(process.env.API_BASE_URL || 'https://wayesports.duckdns.org').replace(/\/+$/, '');
-const WEBAPP_URL = String(process.env.WEBAPP_URL || 'https://wayesports.duckdns.org').replace(/\/+$/, '');
+const API_BASE_URL = String(process.env.API_BASE_URL || 'https://wayesports.space').replace(/\/+$/, '');
+const WEBAPP_URL = String(process.env.WEBAPP_URL || 'https://wayesports.space').replace(/\/+$/, '');
 const POLL_TIMEOUT_SEC = Math.max(10, Number(process.env.POLL_TIMEOUT_SEC || 30));
 const PORT = Number(process.env.PORT || 8080);
 const USE_WEBHOOK = ['1', 'true', 'yes'].includes(String(process.env.USE_WEBHOOK || '').toLowerCase());

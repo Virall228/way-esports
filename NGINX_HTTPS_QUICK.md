@@ -1,8 +1,8 @@
-# ⚡ Быстрая настройка Nginx + HTTPS для wayesports.duckdns.org
+# ⚡ Быстрая настройка Nginx + HTTPS для wayesports.space
 
 ## 📋 Готовые файлы
 
-1. **Конфигурация Nginx**: `nginx/wayesports.duckdns.org.conf`
+1. **Конфигурация Nginx**: `nginx/wayesports.space.conf`
 2. **Полная инструкция**: `SETUP_NGINX_HTTPS.md`
 3. **Автоматический скрипт**: `setup-nginx-https.sh`
 
@@ -29,10 +29,10 @@ sudo chmod -R 755 /var/www/certbot
 cd /opt/way-esports  # или путь к вашему проекту
 
 # Копирование конфигурации
-sudo cp nginx/wayesports.duckdns.org.conf /etc/nginx/sites-available/wayesports.duckdns.org
+sudo cp nginx/wayesports.space.conf /etc/nginx/sites-available/wayesports.space
 
 # Активация
-sudo ln -s /etc/nginx/sites-available/wayesports.duckdns.org /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/wayesports.space /etc/nginx/sites-enabled/
 
 # Удаление дефолтной конфигурации
 sudo rm -f /etc/nginx/sites-enabled/default
@@ -48,7 +48,7 @@ sudo systemctl reload nginx
 
 ```bash
 # Замените your-email@example.com на ваш реальный email!
-sudo certbot --nginx -d wayesports.duckdns.org --non-interactive --agree-tos --email vb917185@gmail.com --redirect
+sudo certbot --nginx -d wayesports.space --non-interactive --agree-tos --email vb917185@gmail.com --redirect
 ```
 
 ### 5. Проверка автообновления
@@ -69,18 +69,18 @@ sudo certbot renew --dry-run
 
 ```bash
 # Проверка HTTP редиректа
-curl -I http://wayesports.duckdns.org
+curl -I http://wayesports.space
 
 # Проверка HTTPS
-curl -I https://wayesports.duckdns.org
+curl -I https://wayesports.space
 
 # Проверка API
-curl https://wayesports.duckdns.org/api/health
+curl https://wayesports.space/api/health
 ```
 
 ## 📁 Путь к конфигурации Nginx
 
-**Файл конфигурации**: `/etc/nginx/sites-available/wayesports.duckdns.org`
+**Файл конфигурации**: `/etc/nginx/sites-available/wayesports.space`
 
 ## 🔧 Полезные команды
 
@@ -112,10 +112,11 @@ sudo certbot renew
 
 1. Откройте [@BotFather](https://t.me/botfather)
 2. `/newapp` → выберите бота
-3. URL: `https://wayesports.duckdns.org`
+3. URL: `https://wayesports.space`
 4. Готово! 🎉
 
 ---
 
 **Подробная инструкция**: см. `SETUP_NGINX_HTTPS.md`
+
 

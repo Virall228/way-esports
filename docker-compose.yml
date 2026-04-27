@@ -113,8 +113,8 @@ services:
       - .env
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - API_BASE_URL=${API_BASE_URL:-https://wayesports.duckdns.org}
-      - WEBAPP_URL=${WEBAPP_URL:-https://wayesports.duckdns.org}
+      - API_BASE_URL=${API_BASE_URL:-https://wayesports.space}
+      - WEBAPP_URL=${WEBAPP_URL:-https://wayesports.space}
       - BOT_USERNAME=${BOT_USERNAME:-WAYEsports_bot}
       - BOT_INTERNAL_TOKEN=${BOT_INTERNAL_TOKEN}
       - BOT_REMINDER_CHECK_MINUTES=${BOT_REMINDER_CHECK_MINUTES:-60}

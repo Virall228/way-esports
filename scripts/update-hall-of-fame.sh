@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-BASE_URL="${BASE_URL:-https://wayesports.duckdns.org}"
+BASE_URL="${BASE_URL:-https://wayesports.space}"
 TOKEN="${HALL_OF_FAME_CRON_TOKEN:-}"
 
 if [ -z "$TOKEN" ]; then

@@ -54,24 +54,24 @@ docker compose up -d --build
 ## 6) Release Smoke (minimum)
 Use:
 ```bash
-powershell -ExecutionPolicy Bypass -File scripts/smoke-system.ps1 -BaseUrl https://wayesports.duckdns.org
+powershell -ExecutionPolicy Bypass -File scripts/smoke-system.ps1 -BaseUrl https://wayesports.space
 ```
 
 Admin smoke (requires JWT admin token):
 ```bash
-powershell -ExecutionPolicy Bypass -File scripts/smoke-admin.ps1 -BaseUrl https://wayesports.duckdns.org -Token "<JWT>"
+powershell -ExecutionPolicy Bypass -File scripts/smoke-admin.ps1 -BaseUrl https://wayesports.space -Token "<JWT>"
 ```
 
 Unified release check (runs system smoke + optional admin smoke):
 ```bash
-powershell -ExecutionPolicy Bypass -File scripts/release-check.ps1 -BaseUrl https://wayesports.duckdns.org -AdminToken "<JWT>"
+powershell -ExecutionPolicy Bypass -File scripts/release-check.ps1 -BaseUrl https://wayesports.space -AdminToken "<JWT>"
 ```
 
 Linux/macOS equivalents:
 ```bash
-bash scripts/smoke-system.sh https://wayesports.duckdns.org
-bash scripts/smoke-admin.sh https://wayesports.duckdns.org "<JWT>"
-bash scripts/release-check.sh https://wayesports.duckdns.org "<JWT>"
+bash scripts/smoke-system.sh https://wayesports.space
+bash scripts/smoke-admin.sh https://wayesports.space "<JWT>"
+bash scripts/release-check.sh https://wayesports.space "<JWT>"
 ```
 
 Pass criteria:

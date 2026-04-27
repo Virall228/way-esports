@@ -1,5 +1,5 @@
 param(
-  [string]$BaseUrl = "https://wayesports.duckdns.org",
+  [string]$BaseUrl = "https://wayesports.space",
   [string]$AdminToken = ""
 )
 

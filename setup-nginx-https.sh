@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Скрипт автоматической настройки Nginx и HTTPS для wayesports.duckdns.org
+# Скрипт автоматической настройки Nginx и HTTPS для wayesports.space
 # Запуск: sudo bash setup-nginx-https.sh
 
 set -e
 
-DOMAIN="wayesports.duckdns.org"
+DOMAIN="wayesports.space"
 EMAIL="your-email@example.com"  # ЗАМЕНИТЕ на ваш email!
 
 echo "🚀 Настройка Nginx и HTTPS для $DOMAIN"
@@ -32,7 +32,7 @@ sudo chmod -R 755 /var/www/certbot
 echo ""
 echo "📋 Шаг 4: Копирование конфигурации Nginx..."
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-sudo cp "$PROJECT_DIR/nginx/wayesports.duckdns.org.conf" "/etc/nginx/sites-available/$DOMAIN"
+sudo cp "$PROJECT_DIR/nginx/wayesports.space.conf" "/etc/nginx/sites-available/$DOMAIN"
 
 # Шаг 5: Активация конфигурации
 echo ""
@@ -102,3 +102,4 @@ echo ""
 echo "Настройте Telegram Mini App в BotFather:"
 echo "  URL: https://$DOMAIN"
 echo ""
+

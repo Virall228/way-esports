@@ -17,7 +17,7 @@ const escapeXml = (value: string): string => (
 );
 
 const getBaseUrl = (req: express.Request): string => {
-  const configured = String(process.env.PUBLIC_WEB_URL || process.env.APP_URL || process.env.CORS_ORIGIN || 'https://wayesports.duckdns.org').trim();
+  const configured = String(process.env.PUBLIC_WEB_URL || process.env.APP_URL || process.env.CORS_ORIGIN || 'https://wayesports.space').trim();
   if (configured) {
     return configured.replace(/\/+$/, '');
   }

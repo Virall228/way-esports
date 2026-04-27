@@ -255,7 +255,7 @@ const PublicLandingPage: React.FC = () => {
           '@context': 'https://schema.org',
           '@type': 'WebSite',
           name: 'WAY Esports',
-          url: typeof window !== 'undefined' ? window.location.origin : 'https://wayesports.duckdns.org'
+          url: typeof window !== 'undefined' ? window.location.origin : 'https://wayesports.space'
         }}
       />
 
