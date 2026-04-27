@@ -12,16 +12,10 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/knife.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
       "src": "/images/way-main-logo-metal-v2.jpg",
       "sizes": "512x512",
       "type": "image/jpeg",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ]
 }
