@@ -12,7 +12,7 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/images/way-main-logo-metal-v2.jpg",
+      "src": "/images/way-main-logo-metal-v2.jpg?v=20260428",
       "sizes": "512x512",
       "type": "image/jpeg",
       "purpose": "any maskable"
