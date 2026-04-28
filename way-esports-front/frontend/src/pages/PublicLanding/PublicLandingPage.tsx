@@ -11,15 +11,15 @@ import { resolveMediaUrl, resolveTeamLogoUrl } from '../../utils/media';
 
 const Page = styled.div`
   display: grid;
-  gap: 1.5rem;
+  gap: 1.35rem;
 `;
 
 const Hero = styled(Card).attrs({ variant: 'elevated' })`
   position: relative;
   overflow: hidden;
   padding: 2rem;
-  border-radius: 24px;
-  border: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
+  border-radius: 28px;
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
   background: ${({ theme }) =>
     theme.isLight
       ? `
@@ -28,9 +28,9 @@ const Hero = styled(Card).attrs({ variant: 'elevated' })`
     linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(248, 240, 229, 0.94))
   `
       : `
-    radial-gradient(circle at top left, rgba(255, 107, 0, 0.28), transparent 34%),
-    radial-gradient(circle at bottom right, rgba(255, 214, 10, 0.12), transparent 24%),
-    linear-gradient(145deg, rgba(19, 21, 24, 0.94), rgba(9, 10, 12, 0.98))
+    radial-gradient(circle at top left, rgba(245, 154, 74, 0.22), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(255, 255, 255, 0.06), transparent 24%),
+    linear-gradient(145deg, rgba(17, 20, 24, 0.96), rgba(8, 10, 13, 0.98))
   `};
 `;
 
@@ -45,7 +45,7 @@ const HeroSubtitle = styled.p`
   max-width: 820px;
   color: ${({ theme }) => theme.colors.text.secondary};
   line-height: 1.7;
-  font-size: 1.03rem;
+  font-size: 1rem;
 `;
 
 const ButtonRow = styled.div`
@@ -69,6 +69,7 @@ const StatCard = styled(Card).attrs({ variant: 'outlined' })`
   padding: 1.2rem;
   border-radius: 18px;
   background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.04)')};
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
 `;
 
 const StatValue = styled.div`
@@ -117,6 +118,7 @@ const ContentCard = styled(Card).attrs({ variant: 'outlined' })`
   padding: 1rem;
   border-radius: 18px;
   background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.82)' : 'rgba(255, 255, 255, 0.03)')};
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
 `;
 
 const Cover = styled.div<{ $image?: string }>`
@@ -130,6 +132,7 @@ const Cover = styled.div<{ $image?: string }>`
           ? 'linear-gradient(135deg, rgba(255, 174, 92, 0.3), rgba(255,255,255,0.72))'
           : 'linear-gradient(135deg, rgba(255,107,0,0.26), rgba(255,255,255,0.02))'};
   border: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 `;
 
 const CardTitle = styled.h3`
@@ -168,7 +171,14 @@ const GameCard = styled(Link)`
   padding: 1rem;
   border-radius: 18px;
   background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.82)' : 'rgba(255, 255, 255, 0.04)')};
-  border: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
+  transition: transform ${({ theme }) => theme.transitions.fast}, border-color ${({ theme }) => theme.transitions.fast}, background ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    transform: translateY(-3px);
+    border-color: ${({ theme }) => theme.colors.border.accent};
+    background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.92)' : 'rgba(255, 255, 255, 0.06)')};
+  }
 `;
 
 const TeamRow = styled.div`
@@ -195,8 +205,8 @@ const Cta = styled(Card).attrs({ variant: 'elevated' })`
     linear-gradient(145deg, rgba(255,255,255,0.96), rgba(247, 237, 224, 0.92))
   `
       : `
-    radial-gradient(circle at top right, rgba(255, 107, 0, 0.24), transparent 30%),
-    linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03))
+    radial-gradient(circle at top right, rgba(245, 154, 74, 0.18), transparent 30%),
+    linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.025))
   `};
 `;
 
@@ -322,7 +332,7 @@ const PublicLandingPage: React.FC = () => {
               <Cover $image={resolveMediaUrl(item.coverImage || item.image || '')} />
               <CardTitle>{item.title || item.name}</CardTitle>
               <CardMeta>
-                {item.game || 'Esports'} · {item.status || 'upcoming'} · ${Number(item.prizePool || 0).toLocaleString()}
+                {item.game || 'Esports'} • {item.status || 'upcoming'} • ${Number(item.prizePool || 0).toLocaleString()}
               </CardMeta>
               <InlineLink to={`/tournaments/${item.id || item._id}`}>Open tournament page</InlineLink>
             </ContentCard>
@@ -365,7 +375,7 @@ const PublicLandingPage: React.FC = () => {
                 <TeamLogo src={resolveTeamLogoUrl(item.logo || '') || '/images/main.png'} alt={item.name} />
                 <div>
                   <CardTitle>{item.name}{item.tag ? ` (${item.tag})` : ''}</CardTitle>
-                  <CardMeta>{item.game || 'Esports'} · {Math.round(Number(item.stats?.winRate || 0))}% win rate</CardMeta>
+                  <CardMeta>{item.game || 'Esports'} • {Math.round(Number(item.stats?.winRate || 0))}% win rate</CardMeta>
                 </div>
               </TeamRow>
               <InlineLink to={`/teams/${item.id || item._id}`}>Open team profile</InlineLink>

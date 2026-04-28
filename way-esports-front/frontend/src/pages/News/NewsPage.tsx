@@ -5,43 +5,41 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../services/api';
 import Card from '../../components/UI/Card';
 import { ThumbsUp, ThumbsDown } from 'react-feather';
+import {
+  PageEmptyState,
+  PageHero,
+  PageHeroContent,
+  PageShell,
+  PageSubtitle,
+  PageTitle
+} from '../../components/UI/PageLayout';
 import { Seo } from '../../components/SEO';
 import { formatCategoryLabel, getGameHubPath, parseCategorySlug, slugifyCategory } from '../../utils/discovery';
 
-const NewsContainer = styled.div`
-  width: min(100% - 2rem, 800px);
+const NewsContainer = styled(PageShell)`
+  width: min(100% - 1.5rem, 980px);
   margin: 0 auto;
-  padding: 1rem 0;
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    width: min(100% - 3rem, 900px);
-    padding: 1.5rem 0;
+    width: min(100% - 2.5rem, 1060px);
   }
 
   @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
-    width: min(100% - 4rem, 960px);
-    padding: 2rem 0;
+    width: min(100% - 3.5rem, 1120px);
   }
 `;
 
-const NewsTitle = styled.h1`
-  color: #ffffff;
-  margin-bottom: 1.25rem;
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    margin-bottom: 1.75rem;
-  }
+const HeaderKicker = styled.div`
+  margin-bottom: 0.75rem;
+  color: ${({ theme }) => theme.colors.text.tertiary};
+  font-family: ${({ theme }) => theme.fonts.accent};
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 `;
 
-const NewsHeader = styled(Card).attrs({ variant: 'elevated' })`
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.bg.secondary}, ${({ theme }) => theme.colors.bg.tertiary});
-  border-radius: 16px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-  border: 1px solid ${({ theme }) => theme.colors.border.medium};
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(10px);
-  text-align: center;
+const NewsTitle = styled(PageTitle)`
+  margin: 0;
 `;
 
 const SocialLinksHeader = styled.div`
@@ -54,40 +52,43 @@ const SocialLinksHeader = styled.div`
 
 const SocialLink = styled.a`
   color: ${({ theme }) => theme.colors.text.primary};
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.05);
   text-decoration: none;
   font-size: 0.85rem;
   font-weight: 600;
   padding: 0.75rem 1.5rem;
   border-radius: 50px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.3s ease;
+  transition: all ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: #ff6b00;
-    border-color: rgba(255, 107, 0, 0.6);
-    color: #ffffff;
+    background: rgba(245, 154, 74, 0.16);
+    border-color: ${({ theme }) => theme.colors.border.accent};
+    color: ${({ theme }) => theme.colors.text.primary};
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.4);
+    box-shadow: ${({ theme }) => theme.shadows.md};
   }
 `;
 
 const NewsItem = styled(Card).attrs({ variant: 'outlined' })`
-  background: linear-gradient(145deg, #1a1a1a, #222222);
-  border-radius: 12px;
-  margin-bottom: 2rem;
-  border: 1px solid #333;
+  background: ${({ theme }) =>
+    theme.isLight
+      ? 'linear-gradient(180deg, rgba(255,255,255,0.92), rgba(247,239,229,0.9))'
+      : 'linear-gradient(180deg, rgba(18, 22, 27, 0.9), rgba(8, 10, 13, 0.96))'};
+  border-radius: 24px;
+  margin-bottom: 1.2rem;
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
   overflow: hidden;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
       transform: translateY(-4px);
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
-      border-color: #444;
+      box-shadow: ${({ theme }) => theme.shadows.lg};
+      border-color: ${({ theme }) => theme.colors.border.accent};
     }
   }
 `;
@@ -128,7 +129,7 @@ const ReadMoreLink = styled(Link)`
   display: inline-flex;
   align-items: center;
   margin-top: 0.85rem;
-  color: #ff6b00;
+  color: ${({ theme }) => theme.colors.accent};
   font-weight: 700;
   text-decoration: none;
 
@@ -151,9 +152,9 @@ const CategoryLink = styled(Link)<{ $active?: boolean }>`
   padding: 0 0.95rem;
   border-radius: 999px;
   text-decoration: none;
-  color: ${({ $active }) => ($active ? '#ffffff' : '#ffb27a')};
-  background: ${({ $active }) => ($active ? 'rgba(255, 107, 0, 0.82)' : 'rgba(255, 255, 255, 0.04)')};
-  border: 1px solid ${({ $active }) => ($active ? 'rgba(255, 107, 0, 0.9)' : 'rgba(255, 255, 255, 0.12)')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.text.primary : theme.colors.text.secondary)};
+  background: ${({ $active }) => ($active ? 'rgba(245, 154, 74, 0.18)' : 'rgba(255, 255, 255, 0.04)')};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.border.accent : theme.colors.border.light)};
   font-size: 0.84rem;
   font-weight: 700;
 `;
@@ -175,9 +176,9 @@ const MetaChip = styled(Link)`
   padding: 0 0.75rem;
   border-radius: 999px;
   text-decoration: none;
-  color: #ffb27a;
+  color: ${({ theme }) => theme.colors.text.secondary};
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
   font-size: 0.78rem;
   font-weight: 700;
 `;
@@ -304,9 +305,14 @@ const NewsPage: React.FC = () => {
           description: seoDescription
         }}
       />
-      <NewsHeader>
-        <h2 style={{ color: '#fff', textAlign: 'center', marginBottom: '0.5rem' }}>Join the Community</h2>
-        <p style={{ color: '#ccc', textAlign: 'center', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Follow us for latest updates and tournament news</p>
+      <PageHero>
+        <PageHeroContent style={{ textAlign: 'center' }}>
+          <HeaderKicker>Editorial stream</HeaderKicker>
+          <NewsTitle>{activeCategory ? `${formatCategoryLabel(activeCategory)} News` : 'Latest News'}</NewsTitle>
+          <PageSubtitle style={{ margin: '0.75rem auto 0' }}>
+            Follow platform updates, tournament stories and team movement with a cleaner, more readable editorial feed.
+          </PageSubtitle>
+        </PageHeroContent>
         <SocialLinksHeader>
           <SocialLink href="https://wayesports.space/" target="_blank">
             {'\u{1F310}'} Website
@@ -321,9 +327,8 @@ const NewsPage: React.FC = () => {
             {'\u{1F4FA}'} Twitch
           </SocialLink>
         </SocialLinksHeader>
-      </NewsHeader>
+      </PageHero>
 
-      <NewsTitle>{activeCategory ? `${formatCategoryLabel(activeCategory)} News` : 'Latest News'}</NewsTitle>
       <CategoryBar>
         <CategoryLink to="/news" $active={!activeCategory}>All</CategoryLink>
         {categories.map((category) => (
@@ -336,10 +341,10 @@ const NewsPage: React.FC = () => {
           </CategoryLink>
         ))}
       </CategoryBar>
-      {isLoading && <div style={{ color: '#cccccc', textAlign: 'center', padding: '50px' }}>Loading news...</div>}
-      {error && <div style={{ color: '#ff4757', textAlign: 'center', padding: '20px' }}>{(error as Error).message}</div>}
+      {isLoading && <PageEmptyState>Loading news...</PageEmptyState>}
+      {error && <PageEmptyState>{(error as Error).message}</PageEmptyState>}
       {!isLoading && !error && items.length === 0 && (
-        <div style={{ color: '#888', textAlign: 'center', padding: '50px' }}>No news published yet.</div>
+        <PageEmptyState>No news published yet.</PageEmptyState>
       )}
       {!isLoading && !error && items.map(item => (
         <NewsItem key={item.id}>

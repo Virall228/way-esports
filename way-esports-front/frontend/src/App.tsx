@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Link, useNavigate } from 'react-router-dom';
-import styled, { ThemeProvider } from 'styled-components';
+import styled, { ThemeProvider, keyframes } from 'styled-components';
 import {
   Award,
   BarChart2,
@@ -19,32 +19,6 @@ import {
 import { GlobalStyles as GlobalStyle } from './styles/GlobalStyles';
 import { theme as darkTheme, lightTheme } from './styles/theme';
 
-// Import pages
-import Home from './pages/Home';
-import Tournaments from './pages/Tournaments';
-import Profile from './pages/Profile';
-import News from './pages/News';
-import Teams from './pages/Teams';
-import Rankings from './pages/Rankings';
-import Prizes from './pages/Prizes';
-import Matches from './pages/Matches';
-import Wallet from './pages/Wallet';
-import Settings from './pages/Settings';
-import AnalyticsPage from './pages/Analytics/AnalyticsPage';
-import AdminPage from './pages/Admin/AdminPage';
-import AdminAccessPage from './pages/Admin/AdminAccessPage';
-import AdminOcrPage from './pages/Admin/AdminOcrPage';
-import AuthPage from './pages/Auth/AuthPage';
-import TournamentDetailsPage from './pages/Tournaments/TournamentDetailsPage';
-import BillingPage from './pages/Billing/BillingPage';
-import PublicProfilePage from './pages/Profile/PublicProfilePage';
-import TeamPage from './pages/Teams/TeamPage';
-import GameHubPage from './pages/Games/GameHubPage';
-import ScoutHubPage from './pages/ScoutHub/ScoutHubPage';
-import PublicScoutProfilePage from './pages/ScoutHub/PublicScoutProfilePage';
-import NewsDetail from './components/News/NewsDetail';
-import PublicLandingPage from './pages/PublicLanding';
-
 // Import components
 import TermsGuard from './components/Legal/TermsGuard';
 import { AppProvider, useApp } from './contexts/AppContext';
@@ -53,12 +27,75 @@ import { NotificationProvider, useNotifications } from './contexts/NotificationC
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { api } from './services/api';
 
+const Home = React.lazy(() => import('./pages/Home'));
+const Tournaments = React.lazy(() => import('./pages/Tournaments'));
+const Profile = React.lazy(() => import('./pages/Profile'));
+const News = React.lazy(() => import('./pages/News'));
+const Teams = React.lazy(() => import('./pages/Teams'));
+const Rankings = React.lazy(() => import('./pages/Rankings'));
+const Prizes = React.lazy(() => import('./pages/Prizes'));
+const Matches = React.lazy(() => import('./pages/Matches'));
+const Wallet = React.lazy(() => import('./pages/Wallet'));
+const Settings = React.lazy(() => import('./pages/Settings'));
+const AnalyticsPage = React.lazy(() => import('./pages/Analytics/AnalyticsPage'));
+const AdminPage = React.lazy(() => import('./pages/Admin/AdminPage'));
+const AdminAccessPage = React.lazy(() => import('./pages/Admin/AdminAccessPage'));
+const AdminOcrPage = React.lazy(() => import('./pages/Admin/AdminOcrPage'));
+const AuthPage = React.lazy(() => import('./pages/Auth/AuthPage'));
+const TournamentDetailsPage = React.lazy(() => import('./pages/Tournaments/TournamentDetailsPage'));
+const BillingPage = React.lazy(() => import('./pages/Billing/BillingPage'));
+const PublicProfilePage = React.lazy(() => import('./pages/Profile/PublicProfilePage'));
+const TeamPage = React.lazy(() => import('./pages/Teams/TeamPage'));
+const GameHubPage = React.lazy(() => import('./pages/Games/GameHubPage'));
+const ScoutHubPage = React.lazy(() => import('./pages/ScoutHub/ScoutHubPage'));
+const PublicScoutProfilePage = React.lazy(() => import('./pages/ScoutHub/PublicScoutProfilePage'));
+const NewsDetail = React.lazy(() => import('./components/News/NewsDetail'));
+const PublicLandingPage = React.lazy(() => import('./pages/PublicLanding'));
+
 type NavItem = {
   label: string;
   to: string;
   icon: React.ReactNode;
   adminOnly?: boolean;
 };
+
+const shellGlow = keyframes`
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.58;
+  }
+  50% {
+    transform: translate3d(1.5%, -2%, 0) scale(1.08);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.58;
+  }
+`;
+
+const routeReveal = keyframes`
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.992);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+`;
+
+const signalPulse = keyframes`
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.72;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+`;
 
 const AppShell = styled.div`
   height: var(--app-height, 100vh);
@@ -67,7 +104,7 @@ const AppShell = styled.div`
     ${({ theme }) =>
       theme.isLight
         ? 'radial-gradient(900px 600px at 10% -10%, rgba(255, 214, 170, 0.34), transparent 60%), radial-gradient(800px 500px at 90% -20%, rgba(255, 242, 224, 0.9), transparent 58%), radial-gradient(760px 520px at 85% 110%, rgba(201, 106, 22, 0.12), transparent 60%),'
-        : 'radial-gradient(900px 600px at 10% -10%, rgba(255, 138, 31, 0.16), transparent 58%), radial-gradient(800px 500px at 90% -20%, rgba(255, 255, 255, 0.06), transparent 60%), radial-gradient(680px 420px at 82% 110%, rgba(255, 107, 0, 0.1), transparent 62%),'}
+        : 'radial-gradient(900px 600px at 10% -10%, rgba(245, 154, 74, 0.12), transparent 58%), radial-gradient(860px 560px at 90% -20%, rgba(255, 255, 255, 0.04), transparent 60%), radial-gradient(620px 420px at 84% 110%, rgba(255, 255, 255, 0.03), transparent 62%),'}
     ${({ theme }) => theme.colors.bg.primary};
   color: ${({ theme }) => theme.colors.text.primary};
   font-family: ${({ theme }) => theme.fonts.primary};
@@ -79,20 +116,45 @@ const AppShell = styled.div`
   padding-right: var(--sar);
   overflow-x: hidden;
   overflow-y: hidden;
+  position: relative;
+  isolation: isolate;
+`;
+
+const ShellGlow = styled.div<{ $position: 'left' | 'right' }>`
+  position: fixed;
+  top: ${({ $position }) => ($position === 'left' ? '14%' : '52%')};
+  ${({ $position }) => ($position === 'left' ? 'left: -12rem;' : 'right: -14rem;')}
+  width: clamp(18rem, 34vw, 30rem);
+  height: clamp(18rem, 34vw, 30rem);
+  border-radius: 999px;
+  background: ${({ $position }) =>
+    $position === 'left'
+      ? 'radial-gradient(circle, rgba(245, 154, 74, 0.18) 0%, rgba(245, 154, 74, 0.06) 38%, transparent 68%)'
+      : 'radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 36%, transparent 70%)'};
+  filter: blur(18px);
+  pointer-events: none;
+  z-index: -1;
+  animation: ${shellGlow} 20s ease-in-out infinite;
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    opacity: 0.58;
+    width: 16rem;
+    height: 16rem;
+  }
 `;
 
 const Sidebar = styled.aside`
   display: none;
-  width: clamp(220px, 22vw, 280px);
-  min-width: clamp(200px, 18vw, 240px);
-  padding: 1.5rem 1rem;
+  width: clamp(250px, 21vw, 300px);
+  min-width: clamp(230px, 19vw, 270px);
+  padding: 1.4rem 1rem 1.5rem;
   background: ${({ theme }) =>
     theme.isLight
       ? theme.colors.glass.panel
-      : 'linear-gradient(180deg, rgba(8, 10, 13, 0.88) 0%, rgba(4, 5, 7, 0.94) 100%)'};
-  border-right: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
-  backdrop-filter: blur(16px);
-  box-shadow: ${({ theme }) => (theme.isLight ? 'none' : '12px 0 36px rgba(0, 0, 0, 0.24)')};
+      : 'linear-gradient(180deg, rgba(9, 12, 16, 0.92) 0%, rgba(4, 6, 8, 0.98) 100%)'};
+  border-right: 1px solid ${({ theme }) => theme.colors.border.light};
+  backdrop-filter: blur(18px);
+  box-shadow: ${({ theme }) => (theme.isLight ? 'none' : '22px 0 54px rgba(0, 0, 0, 0.22)')};
   position: sticky;
   top: 0;
   height: var(--app-height, 100vh);
@@ -106,38 +168,93 @@ const Sidebar = styled.aside`
   }
 `;
 
+const SidebarAura = styled.div`
+  position: absolute;
+  top: 1.2rem;
+  left: 1rem;
+  right: 1rem;
+  height: 10rem;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top left, rgba(245, 154, 74, 0.16), transparent 42%),
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.08), transparent 34%);
+  pointer-events: none;
+  filter: blur(4px);
+  opacity: 0.9;
+`;
+
 const SidebarBrand = styled.div`
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.45rem;
+  padding: 0.65rem 0.75rem 1.15rem;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.light};
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 `;
 
 const Logo = styled.div`
-  font-family: ${({ theme }) => theme.fonts.title};
-  font-size: clamp(0.95rem, 3vw, 1.2rem);
+  font-family: ${({ theme }) => theme.fonts.brand || theme.fonts.title};
+  font-size: clamp(0.95rem, 3vw, 1.15rem);
   font-weight: ${({ theme }) => theme.fontWeights.bold};
-  letter-spacing: clamp(1px, 0.4vw, 2px);
+  letter-spacing: clamp(1px, 0.4vw, 2.5px);
   text-transform: uppercase;
   color: ${({ theme }) => theme.colors.text.primary};
+  text-shadow: 0 0 24px rgba(245, 154, 74, 0.12);
+`;
+
+const BrandMeta = styled.div`
+  color: ${({ theme }) => theme.colors.text.tertiary};
+  font-size: 0.78rem;
+  line-height: 1.5;
+  max-width: 18rem;
+`;
+
+const BrandSignal = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: fit-content;
+  min-height: 30px;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: ${({ theme }) => theme.fonts.accent};
+`;
+
+const BrandSignalDot = styled.span`
+  width: 0.48rem;
+  height: 0.48rem;
+  border-radius: 50%;
+  background: #f5a04d;
+  box-shadow: 0 0 0 0.34rem rgba(245, 160, 77, 0.12);
+  animation: ${signalPulse} 2.4s ease-in-out infinite;
 `;
 
 const SidebarNav = styled.nav`
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  margin-top: 1.5rem;
+  gap: 0.65rem;
+  margin-top: 1.1rem;
 `;
 
 const NavItemLink = styled(Link) <{ $active?: boolean; $compact?: boolean }>`
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: ${({ $compact }) => ($compact ? '0.6rem 0.75rem' : '0.75rem 0.9rem')};
-  border-radius: 12px;
+  padding: ${({ $compact }) => ($compact ? '0.7rem 0.85rem' : '0.9rem 1rem')};
+  border-radius: 16px;
   text-decoration: none;
   color: ${({ $active, theme }) => ($active ? theme.colors.text.primary : theme.colors.text.secondary)};
-  background: ${({ $active, theme }) => ($active ? theme.colors.glass.panelHover : theme.colors.glass.panel)};
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.border.strong : theme.colors.glass.panelBorder)};
+  background: ${({ $active }) => ($active ? 'rgba(255, 255, 255, 0.07)' : 'transparent')};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.border.accent : 'transparent')};
   transition: all ${({ theme }) => theme.transitions.fast};
   backdrop-filter: blur(12px);
   position: relative;
@@ -146,20 +263,20 @@ const NavItemLink = styled(Link) <{ $active?: boolean; $compact?: boolean }>`
   &::before {
     content: '';
     position: absolute;
-    inset: 9px auto 9px 0;
+    inset: 10px auto 10px 0;
     width: 3px;
     border-radius: 0 999px 999px 0;
     background: ${({ $active, theme }) => ($active ? theme.colors.accent : 'transparent')};
-    box-shadow: ${({ $active }) => ($active ? '0 0 16px rgba(255, 107, 0, 0.55)' : 'none')};
+    box-shadow: ${({ $active }) => ($active ? '0 0 16px rgba(245, 154, 74, 0.42)' : 'none')};
   }
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
       background: ${({ theme }) => theme.colors.glass.panelHover};
       color: ${({ theme }) => theme.colors.text.primary};
-      border-color: ${({ theme }) => theme.colors.border.strong};
+      border-color: ${({ theme }) => theme.colors.border.light};
       transform: translateY(-1px);
-      box-shadow: ${({ theme }) => (theme.isLight ? theme.shadows.small : '0 10px 24px rgba(0, 0, 0, 0.24), 0 0 18px rgba(255, 107, 0, 0.08)')};
+      box-shadow: ${({ theme }) => (theme.isLight ? theme.shadows.small : '0 16px 30px rgba(0, 0, 0, 0.2)')};
     }
   }
 
@@ -183,9 +300,9 @@ const NavItemIcon = styled.span`
 
 const NavItemLabel = styled.span`
   font-family: ${({ theme }) => theme.fonts.accent};
-  font-size: 0.85rem;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
+  font-size: 0.9rem;
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  letter-spacing: 0.01em;
 `;
 
 const ContentColumn = styled.div`
@@ -204,7 +321,7 @@ const TopBar = styled.header`
   position: sticky;
   top: 0;
   z-index: 140;
-  padding: calc(0.75rem + var(--sat)) 1rem 0.75rem;
+  padding: calc(0.8rem + var(--sat)) 1rem 0.8rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -212,9 +329,9 @@ const TopBar = styled.header`
   background: ${({ theme }) =>
     theme.isLight
       ? theme.colors.glass.bar
-      : 'linear-gradient(90deg, rgba(5, 6, 7, 0.92) 0%, rgba(12, 14, 18, 0.86) 54%, rgba(18, 9, 3, 0.78) 100%)'};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.glass.barBorder};
-  backdrop-filter: blur(14px);
+      : 'linear-gradient(180deg, rgba(8, 10, 13, 0.92) 0%, rgba(8, 10, 13, 0.82) 100%)'};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border.light};
+  backdrop-filter: blur(18px);
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     padding: 0.9rem 1.5rem;
@@ -228,9 +345,24 @@ const TopBar = styled.header`
 const TopBarTitle = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0.1rem;
   min-width: 0;
   flex: 1;
+`;
+
+const TopBarEyebrow = styled.span`
+  color: ${({ theme }) => theme.colors.text.tertiary};
+  font-family: ${({ theme }) => theme.fonts.accent};
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+`;
+
+const TopBarPageTitle = styled.h1`
+  margin: 0;
+  font-size: clamp(1rem, 2vw, 1.35rem);
+  line-height: 1.1;
+  letter-spacing: 0.01em;
 `;
 
 const BurgerButton = styled.button`
@@ -239,8 +371,8 @@ const BurgerButton = styled.button`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
+  border-radius: 16px;
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
   background: ${({ theme }) => theme.colors.glass.panel};
   color: ${({ theme }) => theme.colors.text.primary};
 
@@ -274,13 +406,12 @@ const TopActionButton = styled.button`
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border-radius: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
+  border-radius: 16px;
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
   background: ${({ theme }) => theme.colors.glass.panel};
   color: ${({ theme }) => theme.colors.text.primary};
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.7px;
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
@@ -306,29 +437,35 @@ const MainContent = styled.main`
   -webkit-overflow-scrolling: touch;
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    padding: 1.5rem 2rem 2rem;
+    padding: 1.35rem 1.75rem 2rem;
   }
 
   @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
-    padding: 2rem 2.5rem 2.5rem;
+    padding: 1.6rem 2.1rem 2.4rem;
   }
 `;
 
 const ContentInner = styled.div`
-  width: 100%;
+  width: min(100%, 1480px);
   max-width: 100%;
-  margin: 0;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.35rem;
+`;
+
+const RouteStage = styled.div`
+  display: grid;
+  gap: 1rem;
+  animation: ${routeReveal} 360ms cubic-bezier(0.22, 1, 0.36, 1);
 `;
 
 const Footer = styled.footer`
   background: ${({ theme }) =>
     theme.isLight
       ? theme.colors.glass.bar
-      : 'linear-gradient(90deg, rgba(5, 6, 7, 0.94) 0%, rgba(12, 14, 18, 0.9) 58%, rgba(18, 9, 3, 0.84) 100%)'};
-  border-top: 1px solid ${({ theme }) => theme.colors.glass.barBorder};
+      : 'linear-gradient(180deg, rgba(8, 10, 13, 0.96) 0%, rgba(6, 8, 11, 0.98) 100%)'};
+  border-top: 1px solid ${({ theme }) => theme.colors.border.light};
   padding: 1.5rem 1rem;
   text-align: center;
   color: ${({ theme }) => theme.colors.text.secondary};
@@ -347,11 +484,11 @@ const BottomNav = styled.nav`
   bottom: 0;
   z-index: 150;
   display: flex;
-  gap: 6px;
+  gap: 8px;
   padding: 10px calc(10px + var(--sar)) calc(10px + var(--sab, 0px)) calc(10px + var(--sal));
   background: ${({ theme }) => theme.colors.glass.bar};
-  border-top: 1px solid ${({ theme }) => theme.colors.glass.barBorder};
-  backdrop-filter: blur(12px);
+  border-top: 1px solid ${({ theme }) => theme.colors.border.light};
+  backdrop-filter: blur(18px);
   overflow-x: auto;
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
@@ -363,9 +500,9 @@ const BottomNavItem = styled(Link) <{ $active?: boolean }>`
   flex: 0 0 auto;
   min-width: 68px;
   min-height: 48px;
-  border-radius: 12px;
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.border.strong : 'transparent')};
-  background: ${({ $active, theme }) => ($active ? theme.colors.glass.panelHover : 'transparent')};
+  border-radius: 16px;
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.border.accent : 'transparent')};
+  background: ${({ $active }) => ($active ? 'rgba(255, 255, 255, 0.06)' : 'transparent')};
   color: ${({ $active, theme }) => ($active ? theme.colors.text.primary : theme.colors.text.secondary)};
   display: flex;
   flex-direction: column;
@@ -373,10 +510,9 @@ const BottomNavItem = styled(Link) <{ $active?: boolean }>`
   justify-content: center;
   gap: 4px;
   font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.04em;
   text-decoration: none;
-  box-shadow: ${({ $active, theme }) => ($active && !theme.isLight ? '0 0 18px rgba(255, 107, 0, 0.1)' : 'none')};
+  box-shadow: ${({ $active, theme }) => ($active && !theme.isLight ? '0 16px 28px rgba(0, 0, 0, 0.22)' : 'none')};
 `;
 
 const BottomNavIcon = styled.span`
@@ -391,6 +527,53 @@ const BottomNavIcon = styled.span`
     height: 18px;
   }
 `;
+
+const RouteLoader = styled.div`
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  border-radius: 24px;
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
+  background: ${({ theme }) => theme.colors.glass.panel};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-family: ${({ theme }) => theme.fonts.accent};
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+`;
+
+const LoaderOrb = styled.div`
+  width: 2.9rem;
+  height: 2.9rem;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,0.82), rgba(255,255,255,0) 28%),
+    radial-gradient(circle, rgba(245, 154, 74, 0.9), rgba(245, 154, 74, 0.22) 54%, transparent 70%);
+  box-shadow: 0 0 0 0.55rem rgba(245, 154, 74, 0.09), 0 0 36px rgba(245, 154, 74, 0.16);
+  animation: ${signalPulse} 2.1s ease-in-out infinite;
+`;
+
+const LoaderCaption = styled.div`
+  color: ${({ theme }) => theme.colors.text.tertiary};
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+`;
+
+const renderLazyRoute = (element: React.ReactNode) => (
+  <React.Suspense
+    fallback={
+      <RouteLoader>
+        <LoaderOrb />
+        <div>Loading page...</div>
+        <LoaderCaption>Preparing the next scene</LoaderCaption>
+      </RouteLoader>
+    }
+  >
+    {element}
+  </React.Suspense>
+);
 
 const MobileMenuOverlay = styled.div<{ $open: boolean }>`
   position: fixed;
@@ -414,12 +597,13 @@ const MobileMenuPanel = styled.div`
   background: ${({ theme }) =>
     theme.isLight
       ? theme.colors.glass.panel
-      : 'linear-gradient(180deg, rgba(8, 10, 13, 0.96) 0%, rgba(4, 5, 7, 0.98) 100%)'};
-  border-right: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
+      : 'linear-gradient(180deg, rgba(8, 10, 13, 0.98) 0%, rgba(4, 5, 7, 1) 100%)'};
+  border-right: 1px solid ${({ theme }) => theme.colors.border.light};
   padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  box-shadow: 26px 0 64px rgba(0, 0, 0, 0.3);
 `;
 
 const MobileMenuHeader = styled.div`
@@ -431,8 +615,7 @@ const MobileMenuHeader = styled.div`
 const MobileMenuTitle = styled.div`
   font-family: ${({ theme }) => theme.fonts.accent};
   font-weight: ${({ theme }) => theme.fontWeights.bold};
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  letter-spacing: 0.05em;
 `;
 
 const CloseButton = styled.button`
@@ -441,8 +624,8 @@ const CloseButton = styled.button`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
+  border-radius: 16px;
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
   background: ${({ theme }) => theme.colors.glass.panel};
   color: ${({ theme }) => theme.colors.text.primary};
 
@@ -464,14 +647,42 @@ const MobileMenuActionButton = styled.button`
   justify-content: center;
   gap: 8px;
   min-height: 44px;
-  border-radius: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
+  border-radius: 16px;
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
   background: ${({ theme }) => theme.colors.glass.panel};
   color: ${({ theme }) => theme.colors.text.primary};
   font-family: ${({ theme }) => theme.fonts.accent};
-  font-size: 0.85rem;
-  letter-spacing: 0.6px;
+  font-size: 0.88rem;
+  letter-spacing: 0.02em;
+`;
+
+const TopBarStatus = styled.div`
+  display: none;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 40px;
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
+  background: ${({ theme }) => theme.colors.glass.panel};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-family: ${({ theme }) => theme.fonts.accent};
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    display: inline-flex;
+  }
+`;
+
+const TopBarStatusDot = styled.span`
+  width: 0.48rem;
+  height: 0.48rem;
+  border-radius: 50%;
+  background: #f5a04d;
+  box-shadow: 0 0 0 0.34rem rgba(245, 160, 77, 0.12);
+  animation: ${signalPulse} 2.3s ease-in-out infinite;
 `;
 
 const AppContent: React.FC = () => {
@@ -554,6 +765,21 @@ const AppContent: React.FC = () => {
     return location.pathname.startsWith(path);
   };
 
+  const currentSectionTitle = React.useMemo(() => {
+    if (location.pathname.startsWith('/tournaments/')) return 'Tournament Details';
+    if (location.pathname.startsWith('/teams/')) return 'Team Profile';
+    if (location.pathname.startsWith('/profile/')) return 'Player Profile';
+    if (location.pathname.startsWith('/news/')) return 'News Detail';
+    if (location.pathname.startsWith('/games/')) return 'Game Hub';
+    if (location.pathname.startsWith('/scouts/')) return 'Scout Profile';
+
+    return navItems.find((item) => isActive(item.to))?.label || 'WAY Esports';
+  }, [location.pathname, navItems]);
+
+  const currentSectionMeta = isAuthenticated
+    ? 'Unified esports dashboard built for speed, clarity and focus.'
+    : 'Competitive esports platform with refined discovery, teams and tournaments.';
+
   React.useEffect(() => {
     // Initialize API notification handler
     api.setNotifyHandler((type, title, message) => {
@@ -601,9 +827,17 @@ const AppContent: React.FC = () => {
 
   return (
     <AppShell>
+      <ShellGlow $position="left" />
+      <ShellGlow $position="right" />
       <Sidebar>
+        <SidebarAura />
         <SidebarBrand>
           <Logo>WAY ESPORTS</Logo>
+          <BrandMeta>Premium esports workspace with cleaner navigation, tighter surfaces and focused action flow.</BrandMeta>
+          <BrandSignal>
+            <BrandSignalDot />
+            Competitive mode active
+          </BrandSignal>
         </SidebarBrand>
         <SidebarNav>
           {navItems.map((item) => (
@@ -618,9 +852,14 @@ const AppContent: React.FC = () => {
       <ContentColumn>
         <TopBar>
           <TopBarTitle>
-            <Logo>WAY ESPORTS</Logo>
+            <TopBarEyebrow>{currentSectionMeta}</TopBarEyebrow>
+            <TopBarPageTitle>{currentSectionTitle}</TopBarPageTitle>
           </TopBarTitle>
           <TopBarActions>
+            <TopBarStatus>
+              <TopBarStatusDot />
+              Live atmosphere
+            </TopBarStatus>
             {!isAuthenticated && (
               <TopActionButton type="button" onClick={handleLogin} aria-label="Login">
                 Login
@@ -640,39 +879,41 @@ const AppContent: React.FC = () => {
 
         <MainContent>
           <ContentInner>
+            <RouteStage key={location.pathname}>
             <Routes>
-              <Route path="/" element={isAuthenticated ? <Home /> : <PublicLandingPage />} />
-              <Route path="/tournaments" element={<Tournaments />} />
-              <Route path="/tournaments/:id" element={<TournamentDetailsPage />} />
-              <Route path="/tournament/:id" element={<TournamentDetailsPage />} />
-              <Route path="/games/:game" element={<GameHubPage />} />
-              <Route path="/teams" element={<Teams />} />
-              <Route path="/rankings" element={<Rankings />} />
-              <Route path="/matches" element={<Matches />} />
-              <Route path="/prizes" element={<Prizes />} />
-              <Route path="/rewards" element={<Prizes />} />
-              <Route path="/news" element={<News />} />
-              <Route path="/news/category/:category" element={<News />} />
-              <Route path="/news/:id" element={<NewsDetail />} />
-                <Route path="/wallet" element={<RequireAuth><Wallet /></RequireAuth>} />
-                <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
-                <Route path="/scout-hub" element={<RequireScoutHubAccess><ScoutHubPage /></RequireScoutHubAccess>} />
-                <Route path="/analytics" element={<RequireAuth><AnalyticsPage /></RequireAuth>} />
-                <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
-                <Route path="/profile/:id" element={<PublicProfilePage />} />
-                <Route path="/user/:id" element={<PublicProfilePage />} />
-                <Route path="/scouts/:identifier" element={<PublicScoutProfilePage />} />
-                <Route path="/team/:id" element={<TeamPage />} />
-              <Route path="/teams/:id" element={<TeamPage />} />
-              <Route path="/billing" element={<BillingPage />} />
+              <Route path="/" element={renderLazyRoute(isAuthenticated ? <Home /> : <PublicLandingPage />)} />
+              <Route path="/tournaments" element={renderLazyRoute(<Tournaments />)} />
+              <Route path="/tournaments/:id" element={renderLazyRoute(<TournamentDetailsPage />)} />
+              <Route path="/tournament/:id" element={renderLazyRoute(<TournamentDetailsPage />)} />
+              <Route path="/games/:game" element={renderLazyRoute(<GameHubPage />)} />
+              <Route path="/teams" element={renderLazyRoute(<Teams />)} />
+              <Route path="/rankings" element={renderLazyRoute(<Rankings />)} />
+              <Route path="/matches" element={renderLazyRoute(<Matches />)} />
+              <Route path="/prizes" element={renderLazyRoute(<Prizes />)} />
+              <Route path="/rewards" element={renderLazyRoute(<Prizes />)} />
+              <Route path="/news" element={renderLazyRoute(<News />)} />
+              <Route path="/news/category/:category" element={renderLazyRoute(<News />)} />
+              <Route path="/news/:id" element={renderLazyRoute(<NewsDetail />)} />
+              <Route path="/wallet" element={renderLazyRoute(<RequireAuth><Wallet /></RequireAuth>)} />
+              <Route path="/profile" element={renderLazyRoute(<RequireAuth><Profile /></RequireAuth>)} />
+              <Route path="/scout-hub" element={renderLazyRoute(<RequireScoutHubAccess><ScoutHubPage /></RequireScoutHubAccess>)} />
+              <Route path="/analytics" element={renderLazyRoute(<RequireAuth><AnalyticsPage /></RequireAuth>)} />
+              <Route path="/settings" element={renderLazyRoute(<RequireAuth><Settings /></RequireAuth>)} />
+              <Route path="/profile/:id" element={renderLazyRoute(<PublicProfilePage />)} />
+              <Route path="/user/:id" element={renderLazyRoute(<PublicProfilePage />)} />
+              <Route path="/scouts/:identifier" element={renderLazyRoute(<PublicScoutProfilePage />)} />
+              <Route path="/team/:id" element={renderLazyRoute(<TeamPage />)} />
+              <Route path="/teams/:id" element={renderLazyRoute(<TeamPage />)} />
+              <Route path="/billing" element={renderLazyRoute(<BillingPage />)} />
               <Route path="/admin" element={<AdminRoute />} />
               <Route path="/admin/ocr" element={<AdminOcrRoute />} />
-              <Route path="/auth" element={isAuthenticated ? <Navigate to="/" replace /> : <AuthPage />} />
-              <Route path="/admin-access" element={<AdminAccessPage />} />
-              <Route path="/control-access" element={<AdminAccessPage />} />
+              <Route path="/auth" element={isAuthenticated ? <Navigate to="/" replace /> : renderLazyRoute(<AuthPage />)} />
+              <Route path="/admin-access" element={renderLazyRoute(<AdminAccessPage />)} />
+              <Route path="/control-access" element={renderLazyRoute(<AdminAccessPage />)} />
               <Route path="/control" element={<Navigate to="/control-access" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            </RouteStage>
           </ContentInner>
         </MainContent>
 
@@ -735,7 +976,7 @@ const AdminRoute: React.FC = () => {
     return <Navigate to="/control-access" replace />;
   }
 
-  return <AdminPage />;
+  return renderLazyRoute(<AdminPage />);
 };
 
 const AdminOcrRoute: React.FC = () => {
@@ -749,7 +990,7 @@ const AdminOcrRoute: React.FC = () => {
     return <Navigate to="/control-access" replace />;
   }
 
-  return <AdminOcrPage />;
+  return renderLazyRoute(<AdminOcrPage />);
 };
 
 const RequireAuth: React.FC<{ children: React.ReactElement }> = ({ children }) => {

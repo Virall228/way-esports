@@ -3,28 +3,85 @@ import styled from 'styled-components';
 import { api } from '../../services/api';
 import { getFullUrl } from '../../config/api';
 import { useAuth } from '../../contexts/AuthContext';
+import Button from '../../components/UI/Button';
+import Card from '../../components/UI/Card';
+import Input from '../../components/UI/Input';
+import {
+  FilterGroup,
+  FilterLabel,
+  FilterRail,
+  NoticeBanner,
+  PageEmptyState,
+  PageHero,
+  PageHeroContent,
+  PageHeroLayout,
+  PageShell,
+  PageSubtitle,
+  PageTitle
+} from '../../components/UI/PageLayout';
 
-const Page = styled.div`
-  display: grid;
-  gap: 16px;
+const Page = styled(PageShell)`
+  gap: 1.15rem;
 `;
 
-const Card = styled.section`
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 16px;
+const HeroMetrics = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
 `;
 
-const Title = styled.h2`
-  margin: 0 0 12px;
-  font-size: 1.1rem;
+const HeroMetric = styled.div`
+  min-width: 148px;
+  padding: 0.95rem 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+`;
+
+const HeroMetricLabel = styled.div`
+  color: ${({ theme }) => theme.colors.text.tertiary};
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.45rem;
+`;
+
+const HeroMetricValue = styled.div`
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-size: clamp(1.15rem, 2vw, 1.7rem);
+  font-weight: 700;
 `;
 
 const Grid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+`;
+
+const SectionCard = styled(Card).attrs({ variant: 'outlined' })`
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1rem, 2vw, 1.35rem);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.025);
+`;
+
+const SectionHeader = styled.div`
+  display: grid;
+  gap: 0.35rem;
+`;
+
+const SectionTitle = styled.h2`
+  margin: 0;
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-size: clamp(1.02rem, 2vw, 1.28rem);
+`;
+
+const SectionCopy = styled.p`
+  margin: 0;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 0.92rem;
+  line-height: 1.6;
 `;
 
 const TrendSvg = styled.svg`
@@ -34,31 +91,94 @@ const TrendSvg = styled.svg`
 
 const HeatmapCanvas = styled.canvas`
   width: 100%;
-  height: 280px;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.35);
+  height: 300px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(8, 10, 13, 0.95), rgba(16, 20, 25, 0.9));
   border: 1px solid rgba(255, 255, 255, 0.08);
 `;
 
-const Input = styled.input`
+const RadarWrap = styled.div`
   width: 100%;
-  min-height: 42px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.04);
-  color: #fff;
-  padding: 8px 10px;
+  display: flex;
+  justify-content: center;
 `;
 
-const ActionButton = styled.button`
-  min-height: 42px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 107, 0, 0.5);
-  background: #ff6b00;
-  color: #000;
-  font-weight: 700;
-  padding: 0 14px;
-  cursor: pointer;
+const RadarSvg = styled.svg`
+  width: min(100%, 360px);
+  height: auto;
+`;
+
+const StatsList = styled.div`
+  display: grid;
+  gap: 0.8rem;
+`;
+
+const ListItem = styled.div`
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.95rem 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+`;
+
+const ItemHeading = styled.div`
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-weight: 600;
+  line-height: 1.45;
+`;
+
+const ItemMeta = styled.div`
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 0.86rem;
+  line-height: 1.55;
+`;
+
+const ComparisonGrid = styled.div`
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  @media (max-width: 820px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const ComparisonResults = styled.div`
+  display: grid;
+  gap: 0.75rem;
+`;
+
+const ComparisonTrack = styled.div`
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  display: flex;
+`;
+
+const ComparisonFill = styled.div<{ $tone?: 'accent' | 'cool'; $width: number }>`
+  width: ${({ $width }) => `${Math.max(0, Math.min(100, $width))}%`};
+  background: ${({ $tone = 'accent' }) =>
+    $tone === 'cool'
+      ? 'linear-gradient(90deg, rgba(90, 161, 255, 0.92), rgba(129, 195, 255, 0.92))'
+      : 'linear-gradient(90deg, rgba(240, 138, 50, 0.92), rgba(255, 186, 120, 0.92))'};
+`;
+
+const ComparisonHint = styled.div`
+  color: #ffd0a4;
+  font-size: 0.86rem;
+`;
+
+const ActionRow = styled.div`
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+`;
+
+const Muted = styled.div`
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 type AnalyticsPayload = {
@@ -105,17 +225,6 @@ const unwrapApiData = <T,>(payload: any): T => {
 
 const radarKeys: Array<keyof AnalyticsPayload['skills']> = ['aiming', 'positioning', 'utility', 'clutchFactor', 'teamplay'];
 
-const RadarWrap = styled.div`
-  width: 100%;
-  display: flex;
-  justify-content: center;
-`;
-
-const RadarSvg = styled.svg`
-  width: min(100%, 360px);
-  height: auto;
-`;
-
 const RadarChart: React.FC<{ skills: AnalyticsPayload['skills'] }> = ({ skills }) => {
   const size = 300;
   const center = size / 2;
@@ -138,36 +247,43 @@ const RadarChart: React.FC<{ skills: AnalyticsPayload['skills'] }> = ({ skills }
     };
   });
 
-  const polygon = points.map((p) => `${p.x},${p.y}`).join(' ');
+  const polygon = points.map((point) => `${point.x},${point.y}`).join(' ');
   const rings = [20, 40, 60, 80, 100];
 
   return (
     <RadarWrap>
-    <RadarSvg viewBox={`-18 -18 ${size + 36} ${size + 36}`} preserveAspectRatio="xMidYMid meet">
-      {rings.map((ring) => (
-        <circle
-          key={ring}
-          cx={center}
-          cy={center}
-          r={(maxR * ring) / 100}
-          fill="none"
-          stroke="rgba(255,255,255,0.12)"
-          strokeWidth="1"
-        />
-      ))}
-      {points.map((p) => (
-        <line key={`${p.key}-line`} x1={center} y1={center} x2={p.labelX} y2={p.labelY} stroke="rgba(255,255,255,0.14)" />
-      ))}
-      <polygon points={polygon} fill="rgba(255,107,0,0.24)" stroke="#ff6b00" strokeWidth="2" />
-      {points.map((p) => (
-        <g key={p.key}>
-          <circle cx={p.x} cy={p.y} r="3" fill="#ff6b00" />
-          <text x={p.labelX} y={p.labelY} fill="#ddd" fontSize="12" textAnchor={p.anchor}>
-            {p.key}
-          </text>
-        </g>
-      ))}
-    </RadarSvg>
+      <RadarSvg viewBox={`-18 -18 ${size + 36} ${size + 36}`} preserveAspectRatio="xMidYMid meet">
+        {rings.map((ring) => (
+          <circle
+            key={ring}
+            cx={center}
+            cy={center}
+            r={(maxR * ring) / 100}
+            fill="none"
+            stroke="rgba(255,255,255,0.12)"
+            strokeWidth="1"
+          />
+        ))}
+        {points.map((point) => (
+          <line
+            key={`${point.key}-line`}
+            x1={center}
+            y1={center}
+            x2={point.labelX}
+            y2={point.labelY}
+            stroke="rgba(255,255,255,0.14)"
+          />
+        ))}
+        <polygon points={polygon} fill="rgba(240,138,50,0.2)" stroke="#f5a04d" strokeWidth="2" />
+        {points.map((point) => (
+          <g key={point.key}>
+            <circle cx={point.x} cy={point.y} r="3" fill="#f5a04d" />
+            <text x={point.labelX} y={point.labelY} fill="#d9d9d9" fontSize="12" textAnchor={point.anchor}>
+              {point.key}
+            </text>
+          </g>
+        ))}
+      </RadarSvg>
     </RadarWrap>
   );
 };
@@ -177,14 +293,14 @@ const TrendChart: React.FC<{ trend: Array<{ date: string; points?: number; ratin
   const height = 220;
   const padding = 24;
   const points = trend.slice(-30);
-  const metric = (p: { points?: number; rating?: number }) => Number(p.points ?? p.rating ?? 0);
+  const metric = (point: { points?: number; rating?: number }) => Number(point.points ?? point.rating ?? 0);
   const max = Math.max(100, ...points.map(metric));
   const min = Math.min(0, ...points.map(metric));
 
-  const path = points.map((p, idx) => {
-    const x = padding + (idx * (width - padding * 2)) / Math.max(1, points.length - 1);
-    const y = height - padding - ((metric(p) - min) / Math.max(1, max - min)) * (height - padding * 2);
-    return `${idx === 0 ? 'M' : 'L'}${x},${y}`;
+  const path = points.map((point, index) => {
+    const x = padding + (index * (width - padding * 2)) / Math.max(1, points.length - 1);
+    const y = height - padding - ((metric(point) - min) / Math.max(1, max - min)) * (height - padding * 2);
+    return `${index === 0 ? 'M' : 'L'}${x},${y}`;
   }).join(' ');
 
   const areaPath = `${path} L${width - padding},${height - padding} L${padding},${height - padding} Z`;
@@ -192,8 +308,8 @@ const TrendChart: React.FC<{ trend: Array<{ date: string; points?: number; ratin
   return (
     <TrendSvg viewBox={`0 0 ${width} ${height}`}>
       <rect x="0" y="0" width={width} height={height} fill="transparent" />
-      <path d={areaPath} fill="rgba(255,107,0,0.18)" />
-      <path d={path} fill="none" stroke="#ff6b00" strokeWidth="2.5" />
+      <path d={areaPath} fill="rgba(240,138,50,0.14)" />
+      <path d={path} fill="none" stroke="#f5a04d" strokeWidth="2.5" />
     </TrendSvg>
   );
 };
@@ -218,7 +334,7 @@ const renderHeatmap = (
     const radius = 12 + Math.min(28, point.count * 2);
     const alpha = Math.min(0.8, 0.18 + point.count * 0.05);
     const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-    const tone = point.eventType === 'death' ? '255,59,48' : '52,199,89';
+    const tone = point.eventType === 'death' ? '255,84,84' : '78,201,140';
     gradient.addColorStop(0, `rgba(${tone}, ${alpha})`);
     gradient.addColorStop(1, `rgba(${tone}, 0)`);
     ctx.fillStyle = gradient;
@@ -237,7 +353,12 @@ const AnalyticsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [leftRating, setLeftRating] = useState('1000');
   const [rightRating, setRightRating] = useState('1000');
-  const [winProbability, setWinProbability] = useState<{ leftProbability: number; rightProbability: number; leftPoints?: number; rightPoints?: number } | null>(null);
+  const [winProbability, setWinProbability] = useState<{
+    leftProbability: number;
+    rightProbability: number;
+    leftPoints?: number;
+    rightPoints?: number;
+  } | null>(null);
   const [leftTeamId, setLeftTeamId] = useState('');
   const [rightTeamId, setRightTeamId] = useState('');
   const [teamCompareResult, setTeamCompareResult] = useState<any | null>(null);
@@ -265,8 +386,8 @@ const AnalyticsPage: React.FC = () => {
         setData(analyticsData && analyticsData.skills ? analyticsData : null);
         setProspects(Array.isArray(prospectsData) ? prospectsData : []);
         setHallOfFame(Array.isArray(hallData) ? hallData.slice(0, 10) : []);
-      } catch (e: any) {
-        setError(e?.message || 'Failed to load analytics');
+      } catch (loadError: any) {
+        setError(loadError?.message || 'Failed to load analytics');
       } finally {
         setLoading(false);
       }
@@ -338,7 +459,9 @@ const AnalyticsPage: React.FC = () => {
         left: { points: Number(leftRating) || 1000, rating: Number(leftRating) || 1000, winRate: 50 },
         right: { points: Number(rightRating) || 1000, rating: Number(rightRating) || 1000, winRate: 50 }
       });
-      setWinProbability(unwrapApiData<{ leftProbability: number; rightProbability: number; leftPoints?: number; rightPoints?: number } | null>(res));
+      setWinProbability(
+        unwrapApiData<{ leftProbability: number; rightProbability: number; leftPoints?: number; rightPoints?: number } | null>(res)
+      );
     } catch {
       setWinProbability(null);
     }
@@ -367,146 +490,249 @@ const AnalyticsPage: React.FC = () => {
     }
   };
 
-  if (loading) return <Page>Loading analytics...</Page>;
-  if (error) return <Page>{error}</Page>;
-  if (!data) return <Page>No analytics available</Page>;
+  if (loading) {
+    return (
+      <Page>
+        <PageEmptyState>Loading analytics...</PageEmptyState>
+      </Page>
+    );
+  }
+
+  if (error) {
+    return (
+      <Page>
+        <NoticeBanner $tone="error">{error}</NoticeBanner>
+      </Page>
+    );
+  }
+
+  if (!data) {
+    return (
+      <Page>
+        <PageEmptyState>No analytics available</PageEmptyState>
+      </Page>
+    );
+  }
 
   return (
     <Page>
-      <Card>
-        <Title>Digital Athlete</Title>
-        <div style={{ color: '#bbb', fontSize: 13 }}>
-          Role: <strong>{data.primaryRole}</strong> | Impact Rating: <strong>{data.impactRating.toFixed(1)}</strong>
-        </div>
-      </Card>
+      <PageHero>
+        <PageHeroLayout>
+          <PageHeroContent>
+            <PageTitle>Digital Athlete Intelligence</PageTitle>
+            <PageSubtitle>
+              A cleaner command view of your skill profile, momentum, scouting signals and live rating movement across the platform.
+            </PageSubtitle>
+          </PageHeroContent>
+          <HeroMetrics>
+            <HeroMetric>
+              <HeroMetricLabel>Primary Role</HeroMetricLabel>
+              <HeroMetricValue>{data.primaryRole}</HeroMetricValue>
+            </HeroMetric>
+            <HeroMetric>
+              <HeroMetricLabel>Impact Rating</HeroMetricLabel>
+              <HeroMetricValue>{data.impactRating.toFixed(1)}</HeroMetricValue>
+            </HeroMetric>
+            <HeroMetric>
+              <HeroMetricLabel>Rank Stream</HeroMetricLabel>
+              <HeroMetricValue>{rankStreamConnected ? 'LIVE' : 'Offline'}</HeroMetricValue>
+            </HeroMetric>
+          </HeroMetrics>
+        </PageHeroLayout>
+      </PageHero>
 
       <Grid>
-        <Card>
-          <Title>Radar Skill Chart</Title>
+        <SectionCard>
+          <SectionHeader>
+            <SectionTitle>Radar Skill Chart</SectionTitle>
+            <SectionCopy>Mechanical and tactical balance across the five core dimensions of your competitive profile.</SectionCopy>
+          </SectionHeader>
           <RadarChart skills={data.skills} />
-        </Card>
-        <Card>
-          <Title>Performance Trend (30 days)</Title>
+        </SectionCard>
+
+        <SectionCard>
+          <SectionHeader>
+            <SectionTitle>Performance Trend</SectionTitle>
+            <SectionCopy>Thirty-day movement snapshot with a steadier, less noisy visual read on form.</SectionCopy>
+          </SectionHeader>
           <TrendChart trend={data.trend30d} />
-        </Card>
+        </SectionCard>
       </Grid>
 
-      <Card>
-        <Title>Heatmap</Title>
+      <SectionCard>
+        <SectionHeader>
+          <SectionTitle>Heatmap</SectionTitle>
+          <SectionCopy>Spatial concentration of combat events with cleaner contrast between pressure and survival zones.</SectionCopy>
+        </SectionHeader>
         <HeatmapCanvas ref={canvasRef} />
-      </Card>
-
-      <Card>
-        <Title>AI Insights - Top Prospects</Title>
-        {topProspects.length === 0 && <div style={{ color: '#aaa' }}>No insights generated yet.</div>}
-        {topProspects.map((row, index) => (
-          <div key={`${row.username}-${index}`} style={{ padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-            <strong>@{row.username}</strong> | {row.tag} | Score {Number(row.score).toFixed(1)}
-            <div style={{ color: '#bbb', marginTop: 4, fontSize: 13 }}>{row.summary}</div>
-          </div>
-        ))}
-      </Card>
+      </SectionCard>
 
       <Grid>
-        <Card>
-          <Title>Hall of Fame</Title>
-          {!hallOfFame.length && <div style={{ color: '#999' }}>No hall of fame data yet.</div>}
-          {hallOfFame.map((row, index) => (
-            <div key={row._id || `${row.userId}-${index}`} style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-              <strong>#{index + 1} {row.username}</strong> - {row.consecutiveDaysRank1} days at #1
-            </div>
-          ))}
-        </Card>
-
-        <Card>
-          <Title>Realtime Rank Updates</Title>
-          <div style={{ color: rankStreamConnected ? '#81c784' : '#ffab91', fontSize: 12, marginBottom: 8 }}>
-            Stream: {rankStreamConnected ? 'LIVE' : 'OFFLINE'}
-            {rankStreamLastUpdateAt ? ` • Last: ${new Date(rankStreamLastUpdateAt).toLocaleTimeString()}` : ''}
-          </div>
-          {!rankUpdates.length && <div style={{ color: '#999' }}>Waiting for rank updates...</div>}
-          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr auto', marginBottom: 12 }}>
-            <Input
-              value={minDeltaFilter}
-              onChange={(e) => setMinDeltaFilter(e.target.value)}
-              placeholder="Min delta filter (example: 15)"
-            />
-          </div>
-          {rankUpdates
-            .filter((row) => Math.abs(Number(row.pointsDelta ?? row.delta ?? 0)) >= (Number(minDeltaFilter) || 0))
-            .map((row, index) => (
-            <div key={`${row.userId || 'user'}-${row.at}-${index}`} style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-              User: <strong>{row.userId || 'unknown'}</strong> | {Number(row.previousPoints ?? row.previousRating)} -&gt; {Number(row.newPoints ?? row.newRating)} points ({Number(row.pointsDelta ?? row.delta) >= 0 ? '+' : ''}{Number(row.pointsDelta ?? row.delta)})
-            </div>
-          ))}
-        </Card>
-
-        <Card>
-          <Title>Comparison Engine</Title>
-          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr auto' }}>
-            <Input value={leftRating} onChange={(e) => setLeftRating(e.target.value)} placeholder="Left points" />
-            <Input value={rightRating} onChange={(e) => setRightRating(e.target.value)} placeholder="Right points" />
-            <ActionButton onClick={handleCompare}>Compare</ActionButton>
-          </div>
-          {winProbability && (
-            <div style={{ marginTop: 12, color: '#ddd', display: 'grid', gap: 8 }}>
-              <div>
-                Left: <strong>{(winProbability.leftProbability * 100).toFixed(1)}%</strong> | Right:{' '}
-                <strong>{(winProbability.rightProbability * 100).toFixed(1)}%</strong>
-              </div>
-              <div style={{ color: '#bbb', fontSize: 13 }}>
-                Points baseline: <strong>{Number(winProbability.leftPoints ?? (Number(leftRating) || 1000))}</strong> vs{' '}
-                <strong>{Number(winProbability.rightPoints ?? (Number(rightRating) || 1000))}</strong>
-              </div>
-              <div style={{ height: 10, borderRadius: 6, background: 'rgba(255,255,255,0.1)', overflow: 'hidden', display: 'flex' }}>
-                <div style={{ width: `${Math.round(winProbability.leftProbability * 100)}%`, background: '#ff6b00' }} />
-                <div style={{ width: `${Math.round(winProbability.rightProbability * 100)}%`, background: '#4da3ff' }} />
-              </div>
-              <div style={{ color: '#ffcf99', fontSize: 13 }}>
-                Suggested favorite: <strong>{comparisonLeader}</strong>
-              </div>
-            </div>
+        <SectionCard>
+          <SectionHeader>
+            <SectionTitle>Top Prospects</SectionTitle>
+            <SectionCopy>AI scouting suggestions ranked by projected upside and immediate relevance.</SectionCopy>
+          </SectionHeader>
+          {!topProspects.length ? (
+            <Muted>No insights generated yet.</Muted>
+          ) : (
+            <StatsList>
+              {topProspects.map((row, index) => (
+                <ListItem key={`${row.username}-${index}`}>
+                  <ItemHeading>@{row.username} · {row.tag} · Score {Number(row.score).toFixed(1)}</ItemHeading>
+                  <ItemMeta>{row.summary}</ItemMeta>
+                </ListItem>
+              ))}
+            </StatsList>
           )}
-          <div style={{ marginTop: 14, display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr auto' }}>
-            <Input value={leftTeamId} onChange={(e) => setLeftTeamId(e.target.value)} placeholder="Left teamId (optional)" />
-            <Input value={rightTeamId} onChange={(e) => setRightTeamId(e.target.value)} placeholder="Right teamId (optional)" />
-            <ActionButton onClick={handleCompareTeams}>Team vs Team</ActionButton>
-          </div>
-          {teamCompareResult && (
-            <div style={{ marginTop: 12, color: '#ddd', display: 'grid', gap: 8 }}>
-              <div>
-                {teamCompareResult.left?.name || 'Left'}: <strong>{((teamCompareResult.left?.probability || 0) * 100).toFixed(1)}%</strong> |{' '}
-                {teamCompareResult.right?.name || 'Right'}: <strong>{((teamCompareResult.right?.probability || 0) * 100).toFixed(1)}%</strong>
-              </div>
-              <div style={{ color: '#bbb', fontSize: 13 }}>
-                Team points: <strong>{Number(teamCompareResult?.left?.points ?? teamCompareResult?.left?.rating ?? (Number(leftRating) || 1000))}</strong> vs{' '}
-                <strong>{Number(teamCompareResult?.right?.points ?? teamCompareResult?.right?.rating ?? (Number(rightRating) || 1000))}</strong>
-              </div>
-              <div style={{ height: 10, borderRadius: 6, background: 'rgba(255,255,255,0.1)', overflow: 'hidden', display: 'flex' }}>
-                <div style={{ width: `${Math.round(Number(teamCompareResult?.left?.probability || 0) * 100)}%`, background: '#ff6b00' }} />
-                <div style={{ width: `${Math.round(Number(teamCompareResult?.right?.probability || 0) * 100)}%`, background: '#4da3ff' }} />
-              </div>
-              <div style={{ color: '#ffcf99', fontSize: 13 }}>
-                Suggested favorite: <strong>{teamLeader}</strong>
-              </div>
-            </div>
-          )}
-        </Card>
+        </SectionCard>
 
-        <Card>
-          <Title>AI Style Match</Title>
-          <ActionButton onClick={handleStyleMatch}>Match vs Pro Profiles</ActionButton>
-          <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
-            {styleMatches.map((row) => (
-              <div key={row.pro} style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 8 }}>
-                <strong>{row.pro}</strong> | {row.similarity.toFixed(1)}%
-                <div style={{ color: '#bbb', fontSize: 13 }}>{row.summary}</div>
-              </div>
-            ))}
-            {!styleMatches.length && <div style={{ color: '#999' }}>No style match calculated yet.</div>}
-          </div>
-        </Card>
+        <SectionCard>
+          <SectionHeader>
+            <SectionTitle>Hall of Fame</SectionTitle>
+            <SectionCopy>Players holding the strongest multi-day control of the number-one slot.</SectionCopy>
+          </SectionHeader>
+          {!hallOfFame.length ? (
+            <Muted>No hall of fame data yet.</Muted>
+          ) : (
+            <StatsList>
+              {hallOfFame.map((row, index) => (
+                <ListItem key={row._id || `${row.userId}-${index}`}>
+                  <ItemHeading>#{index + 1} {row.username}</ItemHeading>
+                  <ItemMeta>{row.consecutiveDaysRank1} days at #1</ItemMeta>
+                </ListItem>
+              ))}
+            </StatsList>
+          )}
+        </SectionCard>
       </Grid>
+
+      <Grid>
+        <SectionCard>
+          <SectionHeader>
+            <SectionTitle>Realtime Rank Updates</SectionTitle>
+            <SectionCopy>
+              Stream health and larger rating changes, filtered so the panel stays useful during busy periods.
+            </SectionCopy>
+          </SectionHeader>
+          <FilterRail>
+            <FilterGroup>
+              <FilterLabel>Stream</FilterLabel>
+              <Muted>{rankStreamConnected ? 'LIVE' : 'OFFLINE'}</Muted>
+            </FilterGroup>
+            {rankStreamLastUpdateAt ? (
+              <FilterGroup>
+                <FilterLabel>Last Update</FilterLabel>
+                <Muted>{new Date(rankStreamLastUpdateAt).toLocaleTimeString()}</Muted>
+              </FilterGroup>
+            ) : null}
+            <FilterGroup style={{ minWidth: '220px', flex: 1 }}>
+              <Input
+                fullWidth
+                value={minDeltaFilter}
+                onChange={(e) => setMinDeltaFilter(e.target.value)}
+                placeholder="Min delta filter"
+              />
+            </FilterGroup>
+          </FilterRail>
+          {!rankUpdates.length ? (
+            <Muted>Waiting for rank updates...</Muted>
+          ) : (
+            <StatsList>
+              {rankUpdates
+                .filter((row) => Math.abs(Number(row.pointsDelta ?? row.delta ?? 0)) >= (Number(minDeltaFilter) || 0))
+                .map((row, index) => (
+                  <ListItem key={`${row.userId || 'user'}-${row.at}-${index}`}>
+                    <ItemHeading>
+                      {row.userId || 'unknown'} · {Number(row.previousPoints ?? row.previousRating)} → {Number(row.newPoints ?? row.newRating)}
+                    </ItemHeading>
+                    <ItemMeta>
+                      Delta {Number(row.pointsDelta ?? row.delta) >= 0 ? '+' : ''}
+                      {Number(row.pointsDelta ?? row.delta)} · {new Date(row.at).toLocaleString()}
+                    </ItemMeta>
+                  </ListItem>
+                ))}
+            </StatsList>
+          )}
+        </SectionCard>
+
+        <SectionCard>
+          <SectionHeader>
+            <SectionTitle>Comparison Engine</SectionTitle>
+            <SectionCopy>Quick probability reads for points-based duels and optional team-vs-team scenarios.</SectionCopy>
+          </SectionHeader>
+
+          <ComparisonGrid>
+            <Input fullWidth value={leftRating} onChange={(e) => setLeftRating(e.target.value)} placeholder="Left points" />
+            <Input fullWidth value={rightRating} onChange={(e) => setRightRating(e.target.value)} placeholder="Right points" />
+            <Button variant="brand" onClick={handleCompare}>Compare</Button>
+          </ComparisonGrid>
+
+          {winProbability ? (
+            <ComparisonResults>
+              <ItemMeta>
+                Left <strong>{(winProbability.leftProbability * 100).toFixed(1)}%</strong> · Right{' '}
+                <strong>{(winProbability.rightProbability * 100).toFixed(1)}%</strong>
+              </ItemMeta>
+              <ItemMeta>
+                Points baseline <strong>{Number(winProbability.leftPoints ?? (Number(leftRating) || 1000))}</strong> vs{' '}
+                <strong>{Number(winProbability.rightPoints ?? (Number(rightRating) || 1000))}</strong>
+              </ItemMeta>
+              <ComparisonTrack>
+                <ComparisonFill $width={Math.round(winProbability.leftProbability * 100)} />
+                <ComparisonFill $tone="cool" $width={Math.round(winProbability.rightProbability * 100)} />
+              </ComparisonTrack>
+              {comparisonLeader ? <ComparisonHint>Suggested favorite: <strong>{comparisonLeader}</strong></ComparisonHint> : null}
+            </ComparisonResults>
+          ) : null}
+
+          <ComparisonGrid>
+            <Input fullWidth value={leftTeamId} onChange={(e) => setLeftTeamId(e.target.value)} placeholder="Left teamId (optional)" />
+            <Input fullWidth value={rightTeamId} onChange={(e) => setRightTeamId(e.target.value)} placeholder="Right teamId (optional)" />
+            <Button variant="outline" onClick={handleCompareTeams}>Team vs Team</Button>
+          </ComparisonGrid>
+
+          {teamCompareResult ? (
+            <ComparisonResults>
+              <ItemMeta>
+                {teamCompareResult.left?.name || 'Left'} <strong>{((teamCompareResult.left?.probability || 0) * 100).toFixed(1)}%</strong> ·{' '}
+                {teamCompareResult.right?.name || 'Right'} <strong>{((teamCompareResult.right?.probability || 0) * 100).toFixed(1)}%</strong>
+              </ItemMeta>
+              <ItemMeta>
+                Team points <strong>{Number(teamCompareResult?.left?.points ?? teamCompareResult?.left?.rating ?? (Number(leftRating) || 1000))}</strong> vs{' '}
+                <strong>{Number(teamCompareResult?.right?.points ?? teamCompareResult?.right?.rating ?? (Number(rightRating) || 1000))}</strong>
+              </ItemMeta>
+              <ComparisonTrack>
+                <ComparisonFill $width={Math.round(Number(teamCompareResult?.left?.probability || 0) * 100)} />
+                <ComparisonFill $tone="cool" $width={Math.round(Number(teamCompareResult?.right?.probability || 0) * 100)} />
+              </ComparisonTrack>
+              {teamLeader ? <ComparisonHint>Suggested favorite: <strong>{teamLeader}</strong></ComparisonHint> : null}
+            </ComparisonResults>
+          ) : null}
+        </SectionCard>
+      </Grid>
+
+      <SectionCard>
+        <SectionHeader>
+          <SectionTitle>AI Style Match</SectionTitle>
+          <SectionCopy>Cross-reference your current skill shape against pro-like archetypes and stylistic overlaps.</SectionCopy>
+        </SectionHeader>
+        <ActionRow>
+          <Button variant="brand" onClick={handleStyleMatch}>Match vs Pro Profiles</Button>
+        </ActionRow>
+        {!styleMatches.length ? (
+          <Muted>No style match calculated yet.</Muted>
+        ) : (
+          <StatsList>
+            {styleMatches.map((row) => (
+              <ListItem key={row.pro}>
+                <ItemHeading>{row.pro} · {row.similarity.toFixed(1)}%</ItemHeading>
+                <ItemMeta>{row.summary}</ItemMeta>
+              </ListItem>
+            ))}
+          </StatsList>
+        )}
+      </SectionCard>
     </Page>
   );
 };

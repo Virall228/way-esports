@@ -12,7 +12,7 @@ import { designTokens } from '../../styles/designTokens';
 
 const Container = styled.div`
   box-sizing: border-box;
-  padding: 40px;
+  padding: clamp(18px, 2vw, 34px);
   width: 100%;
   max-width: 100%;
   margin: 0;
@@ -28,15 +28,15 @@ const HeroSection = styled(Card).attrs({ variant: 'elevated' })`
   background: ${({ theme }) =>
     theme.isLight
       ? theme.colors.bg.secondary
-      : 'linear-gradient(135deg, rgba(7, 8, 10, 0.92) 0%, rgba(13, 15, 19, 0.86) 54%, rgba(30, 14, 4, 0.7) 100%)'};
-  border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.medium : theme.colors.glass.panelBorder)};
-  border-radius: 20px;
-  padding: 80px 40px;
+      : 'linear-gradient(135deg, rgba(9, 11, 14, 0.94) 0%, rgba(14, 17, 21, 0.9) 54%, rgba(20, 15, 10, 0.88) 100%)'};
+  border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.medium : theme.colors.border.light)};
+  border-radius: 28px;
+  padding: clamp(28px, 5vw, 88px) clamp(22px, 4vw, 48px);
   text-align: center;
-  margin-bottom: 60px;
+  margin-bottom: 32px;
   position: relative;
   overflow: hidden;
-  box-shadow: ${({ theme }) => (theme.isLight ? theme.shadows.large : '0 28px 70px rgba(0, 0, 0, 0.55), 0 0 50px rgba(255, 107, 0, 0.12)')};
+  box-shadow: ${({ theme }) => (theme.isLight ? theme.shadows.large : '0 32px 72px rgba(0, 0, 0, 0.42), 0 0 40px rgba(245, 154, 74, 0.08)')};
   
   &::before {
     content: '';
@@ -46,12 +46,12 @@ const HeroSection = styled(Card).attrs({ variant: 'elevated' })`
       theme.isLight
         ? "url('/images/main2.png') center/cover"
         : `
-      linear-gradient(180deg, rgba(0, 0, 0, 0.42), rgba(5, 6, 7, 0.82)),
-      radial-gradient(circle at 12% 50%, rgba(255, 107, 0, 0.28), transparent 28%),
-      radial-gradient(circle at 86% 48%, rgba(255, 138, 31, 0.22), transparent 26%),
+      linear-gradient(180deg, rgba(0, 0, 0, 0.46), rgba(5, 6, 7, 0.84)),
+      radial-gradient(circle at 12% 50%, rgba(245, 154, 74, 0.22), transparent 28%),
+      radial-gradient(circle at 86% 48%, rgba(255, 255, 255, 0.08), transparent 26%),
       url('/images/way-twitter-banner-bg.jpg') center/cover
     `};
-    opacity: ${({ theme }) => (theme.isLight ? 0.1 : 0.72)};
+    opacity: ${({ theme }) => (theme.isLight ? 0.1 : 0.62)};
     z-index: 0;
   }
 
@@ -87,21 +87,21 @@ const HeroSection = styled(Card).attrs({ variant: 'elevated' })`
 `;
 
 const Logo = styled.div`
-  width: 120px;
-  height: 120px;
+  width: 118px;
+  height: 118px;
   background:
     url('/images/way-main-logo-metal-v2.jpg?v=3') center/cover no-repeat,
     url('/images/way-esports-logo.png.jpg') center/cover no-repeat;
-  border-radius: 50%;
+  border-radius: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 30px;
-  border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.medium : 'rgba(255, 177, 93, 0.42)')};
+  border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.medium : 'rgba(255, 255, 255, 0.1)')};
   box-shadow: ${({ theme }) =>
     theme.isLight
       ? '0 12px 28px rgba(0, 0, 0, 0.18)'
-      : '0 16px 36px rgba(0, 0, 0, 0.46), 0 0 34px rgba(255, 107, 0, 0.22)'};
+      : '0 16px 36px rgba(0, 0, 0, 0.46), 0 0 34px rgba(245, 154, 74, 0.12)'};
   overflow: hidden;
 
   @media (max-width: 768px) {
@@ -112,12 +112,12 @@ const Logo = styled.div`
 `;
 
 const HeroTitle = styled.h1`
-  font-size: 4rem;
-  font-weight: 900;
+  font-size: clamp(2.4rem, 7vw, 4.8rem);
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.text.primary};
-  margin-bottom: 20px;
-  letter-spacing: 4px;
-  text-shadow: ${({ theme }) => (theme.isLight ? '0 6px 18px rgba(132, 95, 58, 0.16)' : '0 0 22px rgba(255, 255, 255, 0.18), 0 0 38px rgba(255, 107, 0, 0.18)')};
+  margin-bottom: 14px;
+  letter-spacing: 0.03em;
+  text-shadow: ${({ theme }) => (theme.isLight ? '0 6px 18px rgba(132, 95, 58, 0.16)' : '0 10px 26px rgba(0, 0, 0, 0.32)')};
 
   @media (max-width: 768px) {
     font-size: 2rem;
@@ -127,10 +127,11 @@ const HeroTitle = styled.h1`
 `;
 
 const HeroSubtitle = styled.p`
-  font-size: 1.3rem;
+  font-size: clamp(1rem, 2vw, 1.18rem);
   color: ${({ theme }) => theme.colors.text.secondary};
-  margin-bottom: 40px;
-  line-height: 1.6;
+  margin: 0 auto 28px;
+  max-width: 760px;
+  line-height: 1.75;
 
   @media (max-width: 768px) {
     font-size: 0.95rem;
@@ -140,9 +141,9 @@ const HeroSubtitle = styled.p`
 
 const CTAButton = styled(Button).attrs({ variant: 'brand', size: 'large' })`
   padding: 18px 40px;
-  border-radius: 8px;
-  font-size: 1.1rem;
-  letter-spacing: 1px;
+  border-radius: 18px;
+  font-size: 1rem;
+  letter-spacing: 0.03em;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 
   &:hover {
@@ -164,8 +165,8 @@ const CTAButton = styled(Button).attrs({ variant: 'brand', size: 'large' })`
 const FeaturesGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 40px;
-  margin-bottom: 80px;
+  gap: 18px;
+  margin-bottom: 32px;
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -178,14 +179,14 @@ const FeatureCard = styled(Card).attrs({ variant: 'outlined' })`
   background: ${({ theme }) =>
     theme.isLight
       ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(250, 245, 238, 0.88) 100%)'
-      : '#2a2a2a'};
-  border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.light : 'rgba(255, 255, 255, 0.1)')};
-  border-radius: 16px;
-  padding: 40px;
+      : 'linear-gradient(180deg, rgba(18, 22, 27, 0.82) 0%, rgba(8, 10, 13, 0.92) 100%)'};
+  border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.light : theme.colors.border.light)};
+  border-radius: 22px;
+  padding: 32px 28px;
   text-align: center;
   transition: all 0.3s ease;
 
-  &:hover { transform: translateY(-10px); border-color: ${({ theme }) => theme.colors.border.strong}; box-shadow: ${({ theme }) => (theme.isLight ? '0 22px 40px rgba(109, 78, 44, 0.12)' : '0 20px 40px rgba(0,0,0,0.3)')}; }
+  &:hover { transform: translateY(-6px); border-color: ${({ theme }) => theme.colors.border.accent}; box-shadow: ${({ theme }) => (theme.isLight ? '0 22px 40px rgba(109, 78, 44, 0.12)' : '0 24px 44px rgba(0,0,0,0.3)')}; }
 
   @media (max-width: 768px) {
     padding: 18px 14px;
@@ -220,15 +221,15 @@ const FeatureIcon = styled.div`
   background: ${({ theme }) =>
     theme.isLight
       ? 'linear-gradient(135deg, rgba(255, 248, 240, 1), rgba(239, 225, 208, 1))'
-      : `linear-gradient(135deg, ${theme.colors.gray[700]}, ${theme.colors.gray[900]})`};
-  border-radius: 16px;
+      : `linear-gradient(135deg, rgba(40, 46, 56, 0.92), rgba(13, 15, 19, 0.96))`};
+  border-radius: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 2rem;
   margin: 0 auto 25px;
-  color: ${({ theme }) => (theme.isLight ? theme.colors.accent : '#ffffff')};
-  border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.light : 'transparent')};
+  color: ${({ theme }) => (theme.isLight ? theme.colors.accent : theme.colors.text.primary)};
+  border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.light : theme.colors.border.light)};
 
   @media (max-width: 768px) {
     width: 52px;
@@ -263,10 +264,11 @@ const FeatureDescription = styled.p`
 `;
 
 const StatsSection = styled.section`
-  background: ${({ theme }) => theme.colors.bg.elevated};
-  border-radius: 20px;
-  padding: 60px 40px;
-  margin-bottom: 80px;
+  background: ${({ theme }) => (theme.isLight ? theme.colors.bg.elevated : 'linear-gradient(180deg, rgba(18, 22, 27, 0.84) 0%, rgba(9, 11, 14, 0.92) 100%)')};
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
+  border-radius: 24px;
+  padding: 36px 28px;
+  margin-bottom: 24px;
 
   @media (max-width: 768px) {
     padding: 20px 14px;
@@ -304,9 +306,9 @@ const StatsGrid = styled.div`
 const StatCard = styled(Card).attrs({ variant: 'outlined' })`
   text-align: center;
   padding: 30px;
-  background: ${({ theme }) => theme.colors.bg.secondary};
-  border-radius: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.border.medium};
+  background: ${({ theme }) => (theme.isLight ? theme.colors.bg.secondary : 'rgba(255, 255, 255, 0.03)')};
+  border-radius: 18px;
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
 
   @media (max-width: 768px) {
     padding: 12px 8px;
@@ -398,8 +400,8 @@ const TinyGrid = styled.div`
 
 const TinyStat = styled.div`
   background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.74)' : 'rgba(255, 255, 255, 0.04)')};
-  border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.light : 'rgba(255, 255, 255, 0.09)')};
-  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
+  border-radius: 14px;
   padding: 10px;
 `;
 
@@ -442,8 +444,8 @@ const ListRow = styled.div`
   align-items: center;
   gap: 10px;
   background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.74)' : 'rgba(255, 255, 255, 0.04)')};
-  border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.light : 'rgba(255, 255, 255, 0.09)')};
-  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
+  border-radius: 14px;
   padding: 10px;
 
   @media (max-width: 1024px) {
@@ -458,9 +460,9 @@ const StatusPill = styled.span<{ $tone?: 'ok' | 'warn' }>`
   border-radius: 999px;
   padding: 4px 8px;
   font-size: 0.72rem;
-  border: 1px solid ${({ $tone }) => ($tone === 'warn' ? 'rgba(255,171,64,0.5)' : 'rgba(129,199,132,0.5)')};
-  color: ${({ $tone }) => ($tone === 'warn' ? '#ffd180' : '#a5d6a7')};
-  background: ${({ $tone }) => ($tone === 'warn' ? 'rgba(255,171,64,0.12)' : 'rgba(129,199,132,0.12)')};
+  border: 1px solid ${({ $tone }) => ($tone === 'warn' ? 'rgba(245,154,74,0.38)' : 'rgba(52,211,153,0.34)')};
+  color: ${({ $tone }) => ($tone === 'warn' ? '#ffcd9b' : '#9ff0cf')};
+  background: ${({ $tone }) => ($tone === 'warn' ? 'rgba(245,154,74,0.12)' : 'rgba(52,211,153,0.12)')};
   white-space: nowrap;
 `;
 
@@ -481,8 +483,8 @@ const RecommendationRow = styled.div`
   align-items: flex-start;
   gap: 10px;
   background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.74)' : 'rgba(255, 255, 255, 0.04)')};
-  border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.light : 'rgba(255, 255, 255, 0.09)')};
-  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
+  border-radius: 14px;
   padding: 10px;
 
   @media (max-width: 1280px) {
@@ -770,7 +772,7 @@ const HomePage: React.FC = () => {
         <InfoCard>
           <InfoTitle>My Action Center</InfoTitle>
           <div style={{ color: theme.colors.text.secondary, fontSize: '0.85rem', marginBottom: 10 }}>
-            Sub: <strong style={{ color: user?.isSubscribed ? '#a5d6a7' : '#ffd180' }}>{user?.isSubscribed ? 'ACTIVE' : 'INACTIVE'}</strong>{' '}
+            Sub: <strong style={{ color: user?.isSubscribed ? '#9ff0cf' : '#ffcd9b' }}>{user?.isSubscribed ? 'ACTIVE' : 'INACTIVE'}</strong>{' '}
             • Entries: <strong>{Number((user as any)?.freeEntriesCount || 0) + Number((user as any)?.bonusEntries || 0)}</strong>
           </div>
           <QuickActions>
@@ -846,7 +848,7 @@ const HomePage: React.FC = () => {
                     {(() => {
                       const roomVisibleAt = item.roomVisibleAt ? new Date(item.roomVisibleAt).getTime() : NaN;
                       const roomOpen = Boolean(item.hasRoomCredentials) && Number.isFinite(roomVisibleAt) && roomVisibleAt <= Date.now();
-                      return roomOpen ? <TimeMeta style={{ color: '#a5d6a7' }}>Room is open now</TimeMeta> : null;
+                      return roomOpen ? <TimeMeta style={{ color: '#9ff0cf' }}>Room is open now</TimeMeta> : null;
                     })()}
                   </div>
                   <StatusPill $tone={item.status === 'live' ? 'ok' : 'warn'}>
@@ -862,7 +864,11 @@ const HomePage: React.FC = () => {
         </InfoCard>
       </BottomInfoGrid>
 
-      <SectionHeading title={t('whyChoose')} center />
+      <SectionHeading
+        title={t('whyChoose')}
+        subtitle="A more premium, unified interface across tournaments, teams, profiles, analytics and match flow."
+        center
+      />
 
       <FeaturesGrid>
         <FeatureCard>

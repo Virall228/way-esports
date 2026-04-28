@@ -20,11 +20,35 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    // Temporary stability mode: keep output readable and preserve execution order
-    // while tracking down Telegram WebView runtime TDZ in production bundle.
-    sourcemap: true,
-    minify: false,
-    chunkSizeWarningLimit: 1000
+    sourcemap: false,
+    minify: 'terser',
+    chunkSizeWarningLimit: 700,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('@tanstack/react-query')) return 'query';
+            if (id.includes('react-router')) return 'router';
+            if (
+              id.includes('react-dom') ||
+              id.includes('react/index') ||
+              id.endsWith('/react.js') ||
+              id.includes('scheduler')
+            ) {
+              return 'react-core';
+            }
+            if (id.includes('styled-components')) return 'styled';
+          }
+
+          if (id.includes('/src/pages/Admin/')) return 'admin';
+          if (id.includes('/src/pages/Analytics/')) return 'analytics';
+          if (id.includes('/src/pages/ScoutHub/')) return 'scout-hub';
+          if (id.includes('/src/pages/Tournaments/')) return 'tournaments';
+
+          return undefined;
+        }
+      }
+    }
   },
   define: {
     'process.env': {}

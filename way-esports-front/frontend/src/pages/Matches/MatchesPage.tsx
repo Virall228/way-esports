@@ -6,6 +6,20 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
+import {
+  FilterGroup,
+  FilterLabel,
+  FilterRail,
+  NoticeBanner,
+  PageEmptyState,
+  PageHero,
+  PageHeroContent,
+  PageHeroLayout,
+  PageShell,
+  PageSubtitle,
+  PageTitle,
+  SelectField
+} from '../../components/UI/PageLayout';
 import { Seo } from '../../components/SEO';
 
 type MatchItem = {
@@ -28,65 +42,22 @@ type RoomData = {
   expiresAt?: string;
 };
 
-const Container = styled.div`
-  padding: 1rem;
-  width: 100%;
-  max-width: 100%;
-  margin: 0;
-  color: #ffffff;
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    padding: 1.5rem;
-  }
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
-    padding: 2.5rem;
-  }
-`;
-
-const Header = styled(Card).attrs({ variant: 'elevated' })`
-  background: ${({ theme }) => theme.colors.bg.secondary};
-  border-radius: 16px;
-  padding: 1.25rem;
-  margin-bottom: 1.5rem;
-  border: 1px solid ${({ theme }) => theme.colors.border.light};
-`;
-
-const Title = styled.h1`
-  margin: 0 0 0.5rem 0;
-  color: ${({ theme }) => theme.colors.text.primary};
-  font-size: clamp(1.5rem, 4vw, 2.25rem);
-`;
-
-const Subtitle = styled.div`
-  color: ${({ theme }) => theme.colors.text.secondary};
-  font-size: 0.95rem;
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+const HeaderKicker = styled.div`
+  margin-bottom: 0.75rem;
+  color: ${({ theme }) => theme.colors.text.tertiary};
+  font-family: ${({ theme }) => theme.fonts.accent};
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 `;
 
 const Filters = styled.div`
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 1rem;
 `;
 
-const FilterSelect = styled.select`
-  background: ${({ theme }) => theme.colors.bg.secondary};
-  color: #ffffff;
-  border: 1px solid ${({ theme }) => theme.colors.border.light};
-  padding: 10px 14px;
-  border-radius: 8px;
-  min-height: 44px;
-  cursor: pointer;
-
-  option {
-    background: ${({ theme }) => theme.colors.bg.secondary};
-    color: #ffffff;
-  }
-`;
+const FilterSelect = styled(SelectField)``;
 
 const List = styled.div`
   display: grid;
@@ -94,9 +65,12 @@ const List = styled.div`
 `;
 
 const SurfaceCard = styled(Card).attrs({ variant: 'outlined' })`
-  background: ${({ theme }) => theme.colors.bg.secondary};
-  border-radius: 12px;
-  padding: 14px;
+  background: ${({ theme }) =>
+    theme.isLight
+      ? 'linear-gradient(180deg, rgba(255,255,255,0.9), rgba(247,239,229,0.88))'
+      : 'linear-gradient(180deg, rgba(18, 22, 27, 0.88), rgba(8, 10, 13, 0.96))'};
+  border-radius: 22px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -123,7 +97,7 @@ const TeamsRow = styled.div`
 `;
 
 const TeamName = styled.div`
-  color: #ffffff;
+  color: ${({ theme }) => theme.colors.text.primary};
   font-weight: 700;
 `;
 
@@ -145,18 +119,13 @@ const StatusBadge = styled.span<{ $status: string }>`
   text-transform: uppercase;
   font-weight: 700;
   letter-spacing: 0.6px;
-  color: ${({ $status }) => ($status === 'live' ? '#fff' : '#0d0d0d')};
+  color: ${({ $status }) => ($status === 'live' ? '#fff' : '#111827')};
   background: ${({ $status }) => {
-    if ($status === 'live') return '#ff4757';
-    if ($status === 'completed') return '#2ed573';
-    if ($status === 'cancelled') return '#888888';
-    return '#f6c343';
+    if ($status === 'live') return '#fb7185';
+    if ($status === 'completed') return '#86efac';
+    if ($status === 'cancelled') return '#9ca3af';
+    return '#fcd34d';
   }};
-`;
-
-const EmptyState = styled.div`
-  padding: 20px 0;
-  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const MatchesPage: React.FC = () => {
@@ -222,7 +191,7 @@ const MatchesPage: React.FC = () => {
   };
 
   return (
-    <Container>
+    <PageShell>
       <Seo
         title="Live and Upcoming Esports Matches | WAY Esports"
         description="Track live, upcoming and recent esports matches across tournaments on WAY Esports."
@@ -236,41 +205,52 @@ const MatchesPage: React.FC = () => {
           description: 'Live, upcoming and recent esports matches across the WAY Esports platform.'
         }}
       />
-      <Header>
-        <Title>Matches</Title>
-        <Subtitle>
-          <span>Live, upcoming, and recent matches across the platform.</span>
-        </Subtitle>
-      </Header>
+      <PageHero>
+        <PageHeroLayout>
+          <PageHeroContent>
+            <HeaderKicker>Live operations</HeaderKicker>
+            <PageTitle>Matches</PageTitle>
+            <PageSubtitle>Live, upcoming, and recent matches across the platform with room access and schedule context in one place.</PageSubtitle>
+          </PageHeroContent>
+        </PageHeroLayout>
+      </PageHero>
 
-      <Filters>
-        <FilterSelect value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
-          <option value="all">All Statuses</option>
-          <option value="upcoming">Upcoming</option>
-          <option value="live">Live</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-        </FilterSelect>
-        <FilterSelect value={gameFilter} onChange={(e) => setGameFilter(e.target.value)}>
-          <option value="all">All Games</option>
-          <option value="valorant-mobile">Valorant Mobile</option>
-          <option value="critical-ops">Critical Ops</option>
-          <option value="pubg-mobile">PUBG Mobile</option>
-          <option value="cs2">CS2</option>
-          <option value="dota2">Dota 2</option>
-          <option value="standoff2">Standoff 2</option>
-        </FilterSelect>
-        <Button variant="outline" size="small" onClick={() => { setStatusFilter('all'); setGameFilter('all'); }}>
-          Reset Filters
-        </Button>
-      </Filters>
+      <FilterRail>
+        <Filters>
+          <FilterGroup>
+            <FilterLabel>Status</FilterLabel>
+            <FilterSelect value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
+              <option value="all">All Statuses</option>
+              <option value="upcoming">Upcoming</option>
+              <option value="live">Live</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </FilterSelect>
+          </FilterGroup>
+          <FilterGroup>
+            <FilterLabel>Game</FilterLabel>
+            <FilterSelect value={gameFilter} onChange={(e) => setGameFilter(e.target.value)}>
+              <option value="all">All Games</option>
+              <option value="valorant-mobile">Valorant Mobile</option>
+              <option value="critical-ops">Critical Ops</option>
+              <option value="pubg-mobile">PUBG Mobile</option>
+              <option value="cs2">CS2</option>
+              <option value="dota2">Dota 2</option>
+              <option value="standoff2">Standoff 2</option>
+            </FilterSelect>
+          </FilterGroup>
+          <Button variant="outline" size="small" onClick={() => { setStatusFilter('all'); setGameFilter('all'); }}>
+            Reset Filters
+          </Button>
+        </Filters>
+      </FilterRail>
 
       {error && (
-        <EmptyState>{(error as Error)?.message || 'Failed to load matches'}</EmptyState>
+        <NoticeBanner $tone="error">{(error as Error)?.message || 'Failed to load matches'}</NoticeBanner>
       )}
 
       {isLoading && !error && (
-        <EmptyState>Loading...</EmptyState>
+        <PageEmptyState>Loading...</PageEmptyState>
       )}
 
       {!isLoading && !error && (
@@ -309,7 +289,7 @@ const MatchesPage: React.FC = () => {
                     </Button>
                     {roomByMatch[m.id] && (
                       <Meta>
-                        Room: <strong>{roomByMatch[m.id].roomId}</strong> · Password: <strong>{roomByMatch[m.id].password}</strong>
+                        Room: <strong>{roomByMatch[m.id].roomId}</strong> • Password: <strong>{roomByMatch[m.id].password}</strong>
                       </Meta>
                     )}
                   </Row>
@@ -318,11 +298,11 @@ const MatchesPage: React.FC = () => {
             );
           })}
           {!matches.length && (
-            <EmptyState>No matches found.</EmptyState>
+            <PageEmptyState>No matches found.</PageEmptyState>
           )}
         </List>
       )}
-    </Container>
+    </PageShell>
   );
 };
 

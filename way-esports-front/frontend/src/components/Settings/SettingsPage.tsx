@@ -5,25 +5,45 @@ import { useApp } from '../../contexts/AppContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import SupportChat from '../Support/SupportChat';
+import Card from '../UI/Card';
+import Button from '../UI/Button';
+import Input from '../UI/Input';
+import {
+    NoticeBanner,
+    PageHero,
+    PageHeroContent,
+    PageHeroLayout,
+    PageShell,
+    PageSubtitle,
+    PageTitle
+} from '../UI/PageLayout';
 
-const Container = styled.div`
-    width: 100%;
-    max-width: 100%;
-    margin: 0;
-    padding: 20px;
+const Container = styled(PageShell)``;
+
+const HeaderKicker = styled.div`
+    margin-bottom: 0.75rem;
+    color: ${({ theme }) => theme.colors.text.tertiary};
+    font-family: ${({ theme }) => theme.fonts.accent};
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 `;
 
-const Section = styled.div`
-    background: ${({ theme }) => theme.colors.glass.panel};
-    border-radius: 16px;
-    padding: 24px;
-    margin-bottom: 24px;
-    border: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
+const SettingsGrid = styled.div`
+    display: grid;
+    gap: 1.25rem;
+`;
+
+const Section = styled(Card).attrs({ variant: 'outlined' })`
+    padding: 1.4rem;
+    border-radius: 24px;
+    border: 1px solid ${({ theme }) => theme.colors.border.light};
+    background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.84)' : 'rgba(255,255,255,0.03)')};
 `;
 
 const SectionTitle = styled.h2`
-    color: #FF6B00;
-    font-size: 24px;
+    color: ${({ theme }) => theme.colors.text.primary};
+    font-size: 1.4rem;
     margin: 0 0 20px 0;
     display: flex;
     align-items: center;
@@ -66,7 +86,7 @@ const SettingValue = styled.div`
 
 const ThemeToggle = styled.button<{ isLight: boolean }>`
     background: ${({ isLight, theme }) => (isLight ? theme.colors.surface : theme.colors.bg.secondary)};
-    border: 2px solid ${({ isLight, theme }) => (isLight ? theme.colors.border.light : theme.colors.border.medium)};
+    border: 1px solid ${({ isLight, theme }) => (isLight ? theme.colors.border.medium : theme.colors.border.light)};
     width: 64px;
     height: 32px;
     border-radius: 16px;
@@ -82,25 +102,22 @@ const ThemeToggle = styled.button<{ isLight: boolean }>`
         width: 24px;
         height: 24px;
         border-radius: 50%;
-        background: ${props => props.isLight ? '#FF6B00' : '#FFD700'};
+        background: ${({ theme }) => theme.colors.accent};
         transition: all 0.3s ease;
     }
 `;
 
-const LanguageButton = styled.button<{ active: boolean }>`
-    background: ${props => props.active ? 'linear-gradient(135deg, #FF6B00 0%, #FFD700 100%)' : 'transparent'};
-    color: ${props => props.active ? '#000' : '#FF6B00'};
-    border: 2px solid #FF6B00;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    margin-right: 10px;
+const LanguageGroup = styled.div`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+`;
 
-    &:hover {
-        background: ${props => !props.active && 'rgba(255, 107, 0, 0.1)'};
-    }
+const LanguageButton = styled(Button).attrs<{ active: boolean }>((props) => ({
+    variant: props.active ? 'brand' : 'outline',
+    size: 'small'
+}))<{ active: boolean }>`
+    min-width: 72px;
 `;
 
 const ContactForm = styled.form`
@@ -109,25 +126,10 @@ const ContactForm = styled.form`
     gap: 16px;
 `;
 
-const Input = styled.input`
-    background: ${({ theme }) => theme.colors.surface};
-    border: 1px solid ${({ theme }) => theme.colors.border.medium};
-    border-radius: 8px;
-    padding: 12px;
-    color: ${({ theme }) => theme.colors.text.primary};
-    font-size: 16px;
-    width: 100%;
-
-    &:focus {
-        outline: none;
-        border-color: #FF6B00;
-    }
-`;
-
 const TextArea = styled.textarea`
     background: ${({ theme }) => theme.colors.surface};
     border: 1px solid ${({ theme }) => theme.colors.border.medium};
-    border-radius: 8px;
+    border-radius: ${({ theme }) => theme.borderRadius.medium};
     padding: 12px;
     color: ${({ theme }) => theme.colors.text.primary};
     font-size: 16px;
@@ -137,24 +139,12 @@ const TextArea = styled.textarea`
 
     &:focus {
         outline: none;
-        border-color: #FF6B00;
+        border-color: ${({ theme }) => theme.colors.border.accent};
     }
 `;
 
-const SubmitButton = styled.button`
-    background: linear-gradient(135deg, #FF6B00 0%, #FFD700 100%);
-    color: #000;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: opacity 0.3s ease;
+const SubmitButton = styled(Button).attrs({ variant: 'brand' })`
     align-self: flex-start;
-
-    &:hover {
-        opacity: 0.9;
-    }
 `;
 
 const ContactInfo = styled.div`
@@ -171,11 +161,11 @@ const ContactItem = styled.div`
     color: ${({ theme }) => theme.colors.text.primary};
 
     svg {
-        color: #FF6B00;
+        color: ${({ theme }) => theme.colors.accent};
     }
 
     a {
-        color: #FF6B00;
+        color: ${({ theme }) => theme.colors.accent};
         text-decoration: none;
         
         &:hover {
@@ -220,6 +210,17 @@ const SettingsPage: React.FC = () => {
 
     return (
         <Container>
+            <PageHero>
+                <PageHeroLayout>
+                    <PageHeroContent>
+                        <HeaderKicker>Workspace controls</HeaderKicker>
+                        <PageTitle>Settings</PageTitle>
+                        <PageSubtitle>Manage account visibility, interface preferences, support access and direct contact details from one calm control surface.</PageSubtitle>
+                    </PageHeroContent>
+                </PageHeroLayout>
+            </PageHero>
+
+            <SettingsGrid>
             <Section>
                 <SectionTitle>
                     <svg viewBox="0 0 24 24" fill="currentColor">
@@ -267,6 +268,7 @@ const SettingsPage: React.FC = () => {
                         <SettingDescription>{t('selectLanguage')}</SettingDescription>
                     </div>
                     <div>
+                        <LanguageGroup>
                         <LanguageButton 
                             active={language === 'en'}
                             onClick={() => handleLanguageChange('en')}
@@ -279,6 +281,7 @@ const SettingsPage: React.FC = () => {
                         >
                             RU
                         </LanguageButton>
+                        </LanguageGroup>
                     </div>
                 </SettingRow>
             </Section>
@@ -306,6 +309,7 @@ const SettingsPage: React.FC = () => {
                         placeholder={t('yourName')}
                         value={contactForm.name}
                         onChange={(e) => setContactForm(prev => ({ ...prev, name: e.target.value }))}
+                        fullWidth
                         required
                     />
                     <Input
@@ -313,6 +317,7 @@ const SettingsPage: React.FC = () => {
                         placeholder={t('yourEmail')}
                         value={contactForm.email}
                         onChange={(e) => setContactForm(prev => ({ ...prev, email: e.target.value }))}
+                        fullWidth
                         required
                     />
                     <TextArea
@@ -325,10 +330,10 @@ const SettingsPage: React.FC = () => {
                         {submitState.status === 'loading' ? t('sendingMessage') : t('sendMessage')}
                     </SubmitButton>
                     {submitState.status === 'success' && (
-                        <div style={{ color: '#4CAF50', fontWeight: 'bold' }}>{t('messageSent')}</div>
+                        <NoticeBanner $tone="success">{t('messageSent')}</NoticeBanner>
                     )}
                     {submitState.status === 'error' && (
-                        <div style={{ color: '#ff6b6b', fontWeight: 'bold' }}>{t('messageFailed')}</div>
+                        <NoticeBanner $tone="error">{t('messageFailed')}</NoticeBanner>
                     )}
                 </ContactForm>
 
@@ -353,6 +358,7 @@ const SettingsPage: React.FC = () => {
                     </ContactItem>
                 </ContactInfo>
             </Section>
+            </SettingsGrid>
         </Container>
     );
 };

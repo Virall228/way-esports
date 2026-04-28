@@ -7,6 +7,22 @@ import { teamsService } from '../../services/teamsService';
 import { tournamentService } from '../../services/tournamentService';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
+import {
+  FilterGroup,
+  FilterLabel,
+  FilterRail,
+  ModalActionRow,
+  ModalCopy,
+  NoticeBanner,
+  PageEmptyState,
+  PageHero,
+  PageHeroContent,
+  PageHeroLayout,
+  PageShell,
+  PageSubtitle,
+  PageTitle,
+  SelectField
+} from '../../components/UI/PageLayout';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
@@ -15,55 +31,13 @@ import FlameAuraAvatar from '../../components/UI/FlameAuraAvatar';
 import { getTeamPoints, getTierByPoints, getIntensityByPointsAndRank } from '../../utils/flameRank';
 import { Seo } from '../../components/SEO';
 
-const Container = styled.div`
-  padding: 1rem;
-  width: 100%;
-  max-width: 100%;
-  margin: 0;
-  color: #ffffff;
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    padding: 1.5rem;
-  }
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
-    padding: 2.5rem;
-  }
-`;
-
-const Header = styled(Card).attrs({ variant: 'elevated' })`
-  background: ${({ theme }) => theme.colors.bg.secondary};
-  border-radius: 16px;
-  padding: 1.25rem;
-  margin-bottom: 1.5rem;
-  position: relative;
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    padding: 2rem;
-    margin-bottom: 2rem;
-  }
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
-    padding: 2.5rem;
-    margin-bottom: 2.5rem;
-  }
-`;
-
-const HeaderContent = styled.div`
-  flex: 1;
-`;
-
-const Title = styled.h1`
-  font-size: 3rem;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.text.primary};
-  margin-bottom: 15px;
-`;
-
-const Subtitle = styled.p`
-  color: #cccccc;
-  font-size: 1.2rem;
-  line-height: 1.6;
+const HeaderKicker = styled.div`
+  margin-bottom: 0.75rem;
+  color: ${({ theme }) => theme.colors.text.tertiary};
+  font-family: ${({ theme }) => theme.fonts.accent};
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 `;
 
 const CreateTeamButton = styled(Button).attrs({ variant: 'brand', size: 'small' })`
@@ -106,27 +80,13 @@ const FilterTab = styled(Button).attrs<{ $active: boolean }>((props) => ({
   white-space: nowrap;
 `;
 
-const FilterDropdown = styled.select`
-  background: ${({ theme }) => theme.colors.bg.secondary};
-  color: #ffffff;
-  border: 1px solid ${({ theme }) => theme.colors.border.light};
-  padding: 10px 15px;
-  border-radius: 8px;
+const FilterDropdown = styled(SelectField)`
   font-size: 14px;
-  cursor: pointer;
-  min-height: 44px;
   width: 100%;
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     width: auto;
     min-width: 180px;
-  }
-
-  &:focus { outline: none; border-color: ${({ theme }) => theme.colors.border.strong}; }
-
-  option {
-    background: #2a2a2a;
-    color: #ffffff;
   }
 `;
 
@@ -152,9 +112,12 @@ const TeamsGrid = styled.div`
 `;
 
 const TeamCard = styled(Card).attrs({ variant: 'outlined' })`
-  background: ${({ theme }) => theme.colors.bg.secondary};
-  border-radius: 16px;
-  padding: 25px;
+  background: ${({ theme }) =>
+    theme.isLight
+      ? 'linear-gradient(180deg, rgba(255,255,255,0.92), rgba(247,239,229,0.9))'
+      : 'linear-gradient(180deg, rgba(18, 22, 27, 0.9), rgba(8, 10, 13, 0.96))'};
+  border-radius: 24px;
+  padding: 24px;
   position: relative;
   overflow: hidden;
 
@@ -176,23 +139,6 @@ const TeamHeader = styled.div`
   margin-bottom: 20px;
 `;
 
-const TeamAvatar = styled.div<{ $imageUrl?: string }>`
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: ${({ $imageUrl, theme }) => (
-    $imageUrl
-      ? `url(${$imageUrl}) center/cover no-repeat`
-      : `linear-gradient(135deg, ${theme.colors.gray[700]}, ${theme.colors.gray[900]})`
-  )};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  color: white;
-  font-weight: bold;
-`;
-
 const TeamInfo = styled.div`
   flex: 1;
 `;
@@ -205,15 +151,15 @@ const TeamName = styled.h3`
 
 const TeamTag = styled.div`
   color: ${({ theme }) => theme.colors.text.secondary};
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.9rem;
 `;
 
 const TeamDescription = styled.p`
-  color: #cccccc;
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: 20px;
   font-size: 0.9rem;
-  line-height: 1.4;
+  line-height: 1.6;
 `;
 
 const TeamStats = styled.div`
@@ -256,12 +202,13 @@ const Members = styled.div`
 `;
 
 const MemberTag = styled.span<{ $role: 'captain' | 'player' }>`
-  background: ${({ $role }) => $role === 'captain' ? 'rgba(255,255,255,0.12)' : 'rgba(255, 255, 255, 0.06)'};
-  color: ${({ theme }) => theme.colors.text.secondary};
-  padding: 4px 8px;
-  border-radius: 12px;
+  background: ${({ $role }) => $role === 'captain' ? 'rgba(245, 154, 74, 0.12)' : 'rgba(255, 255, 255, 0.05)'};
+  color: ${({ theme, $role }) => ($role === 'captain' ? theme.colors.highlight : theme.colors.text.secondary)};
+  padding: 5px 9px;
+  border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 500;
+  border: 1px solid ${({ theme, $role }) => ($role === 'captain' ? theme.colors.border.accent : theme.colors.border.light)};
 `;
 
 const ActionButtons = styled.div`
@@ -292,7 +239,7 @@ const ModalOverlay = styled.div`
 const ModalCard = styled(Card).attrs({ variant: 'elevated' })`
   width: min(640px, 100%);
   background: ${({ theme }) => theme.colors.bg.secondary};
-  border-radius: 16px;
+  border-radius: 24px;
   padding: 1rem;
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
@@ -336,12 +283,23 @@ const ModalTextarea = styled.textarea`
   resize: vertical;
 `;
 
-const ModalActions = styled.div`
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+const MetaBlock = styled.div`
   margin-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 10px;
+`;
+
+const MetaLine = styled.div<{ $tone?: 'warning' | 'default' }>`
+  color: ${({ $tone = 'default' }) => ($tone === 'warning' ? '#ffc8c8' : '#cfd8dc')};
+  font-size: 12px;
+  margin-bottom: 8px;
+`;
+
+const InlineCheckbox = styled.label`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const UploadRow = styled.div`
@@ -747,7 +705,7 @@ const TeamsPage: React.FC = () => {
   };
 
   return (
-    <Container>
+    <PageShell>
       <Seo
         title="Esports Teams Directory | WAY Esports"
         description="Discover esports teams, rosters, performance stats and recruitment opportunities on WAY Esports."
@@ -761,71 +719,80 @@ const TeamsPage: React.FC = () => {
           description: 'Public team directory with rosters, stats and competitive results.'
         }}
       />
-      <Header>
-        <HeaderContent>
-          <Title>{t('teamsTitle')}</Title>
-          <Subtitle>
-            {t('teamsSubtitle')}
-            {' '}
-            {t('teamsSubtitle2')}
-          </Subtitle>
-        </HeaderContent>
-      </Header>
-
-      <FilterSection>
-        <FilterTabs>
-          <FilterTab
-            $active={activeFilter === 'teams'}
-            onClick={() => setActiveFilter('teams')}
-          >
-            {t('teams')}
-          </FilterTab>
-          <FilterTab
-            $active={activeFilter === 'rankings'}
-            onClick={() => setActiveFilter('rankings')}
-          >
-            {t('rankings')}
-          </FilterTab>
-        </FilterTabs>
-        {activeFilter === 'teams' && (
-          <>
-            <FilterDropdown
-              value={selectedGame}
-              onChange={(e) => setSelectedGame(e.target.value)}
-            >
-              <option value="all">{t('allTeams')}</option>
-              <option value="valorant-mobile">Valorant Mobile</option>
-              <option value="critical-ops">Critical Ops</option>
-              <option value="pubg-mobile">PUBG Mobile</option>
-              <option value="cs2">CS2</option>
-              <option value="dota2">Dota 2</option>
-              <option value="standoff2">Standoff 2</option>
-            </FilterDropdown>
+      <PageHero>
+        <PageHeroLayout>
+          <PageHeroContent>
+            <HeaderKicker>Roster network</HeaderKicker>
+            <PageTitle>{t('teamsTitle')}</PageTitle>
+            <PageSubtitle>
+              {t('teamsSubtitle')}
+              {' '}
+              {t('teamsSubtitle2')}
+            </PageSubtitle>
+          </PageHeroContent>
+          {activeFilter === 'teams' && (
             <CreateTeamButton onClick={() => setIsCreateModalOpen(true)}>
               {t('createTeam')}
             </CreateTeamButton>
-          </>
-        )}
-      </FilterSection>
+          )}
+        </PageHeroLayout>
+      </PageHero>
+
+      <FilterRail>
+        <FilterSection>
+          <FilterGroup>
+            <FilterLabel>View</FilterLabel>
+            <FilterTabs>
+              <FilterTab
+                $active={activeFilter === 'teams'}
+                onClick={() => setActiveFilter('teams')}
+              >
+                {t('teams')}
+              </FilterTab>
+              <FilterTab
+                $active={activeFilter === 'rankings'}
+                onClick={() => setActiveFilter('rankings')}
+              >
+                {t('rankings')}
+              </FilterTab>
+            </FilterTabs>
+          </FilterGroup>
+          {activeFilter === 'teams' && (
+            <FilterGroup>
+              <FilterLabel>Game</FilterLabel>
+              <FilterDropdown
+                value={selectedGame}
+                onChange={(e) => setSelectedGame(e.target.value)}
+              >
+                <option value="all">{t('allTeams')}</option>
+                <option value="valorant-mobile">Valorant Mobile</option>
+                <option value="critical-ops">Critical Ops</option>
+                <option value="pubg-mobile">PUBG Mobile</option>
+                <option value="cs2">CS2</option>
+                <option value="dota2">Dota 2</option>
+                <option value="standoff2">Standoff 2</option>
+              </FilterDropdown>
+            </FilterGroup>
+          )}
+        </FilterSection>
+      </FilterRail>
 
       {activeFilter === 'teams' && (
         <>
           {error && (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#e57373' }}>
+            <NoticeBanner $tone="error">
               {error}
-            </div>
+            </NoticeBanner>
           )}
 
           {!error && actionInfo && (
-            <div style={{ textAlign: 'center', padding: '16px 20px', color: '#81c784' }}>
+            <NoticeBanner $tone="success">
               {actionInfo}
-            </div>
+            </NoticeBanner>
           )}
 
           {loading && !error && (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#cccccc' }}>
-              {t('loading')}
-            </div>
+            <PageEmptyState>{t('loading')}</PageEmptyState>
           )}
 
           {!loading && !error && (
@@ -929,23 +896,23 @@ const TeamsPage: React.FC = () => {
                     </ActionButtons>
 
                     {matchmakingByTeam[team.id] && (
-                      <div style={{ marginTop: 12, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 10 }}>
+                      <MetaBlock>
                         {Array.isArray(matchmakingByTeam[team.id].warnings) && matchmakingByTeam[team.id].warnings!.length > 0 && (
-                          <div style={{ color: '#ffb4b4', fontSize: 12, marginBottom: 8 }}>
+                          <MetaLine $tone="warning">
                             Warnings: {matchmakingByTeam[team.id].warnings!.join(' | ')}
-                          </div>
+                          </MetaLine>
                         )}
                         {Array.isArray(matchmakingByTeam[team.id].recommendations) && matchmakingByTeam[team.id].recommendations!.length > 0 && (
-                          <div style={{ color: '#cfd8dc', fontSize: 12, marginBottom: 8 }}>
+                          <MetaLine>
                             Recommendations: {matchmakingByTeam[team.id].recommendations!.join(' | ')}
-                          </div>
+                          </MetaLine>
                         )}
                         {matchmakingByTeam[team.id].teamMetrics && (
-                          <div style={{ color: '#cfd8dc', fontSize: 12 }}>
+                          <MetaLine>
                             Team metrics: Chill {matchmakingByTeam[team.id].teamMetrics!.avgChill.toFixed(1)} · Leadership {matchmakingByTeam[team.id].teamMetrics!.avgLeadership.toFixed(1)} · Conflict {matchmakingByTeam[team.id].teamMetrics!.avgConflict.toFixed(1)}
-                          </div>
+                          </MetaLine>
                         )}
-                      </div>
+                      </MetaBlock>
                     )}
                   </TeamCard>
                 ))}
@@ -963,6 +930,7 @@ const TeamsPage: React.FC = () => {
           <div onClick={(e) => e.stopPropagation()}>
             <ModalCard>
             <ModalTitle>Manage Team</ModalTitle>
+            <ModalCopy>Update visuals, metadata and join policy so the team profile stays clean and consistent.</ModalCopy>
 
             <ModalField>
               <ModalLabel>Team Logo</ModalLabel>
@@ -1021,28 +989,28 @@ const TeamsPage: React.FC = () => {
             </ModalField>
 
             <ModalField>
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#fff' }}>
+              <InlineCheckbox>
                 <input
                   type="checkbox"
                   checked={Boolean(editTeamForm.isPrivate)}
                   onChange={(e) => handleEditField('isPrivate', e.target.checked)}
                 />
                 Private team (invite only)
-              </label>
+              </InlineCheckbox>
             </ModalField>
 
             <ModalField>
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#fff' }}>
+              <InlineCheckbox>
                 <input
                   type="checkbox"
                   checked={Boolean(editTeamForm.requiresApproval)}
                   onChange={(e) => handleEditField('requiresApproval', e.target.checked)}
                 />
                 Require approval for joining
-              </label>
+              </InlineCheckbox>
             </ModalField>
 
-            <ModalActions>
+            <ModalActionRow>
               <ActionButton
                 $variant="secondary"
                 onClick={() => {
@@ -1059,7 +1027,7 @@ const TeamsPage: React.FC = () => {
               >
                 {updateTeamMutation.isPending ? 'Saving...' : 'Save Changes'}
               </ActionButton>
-            </ModalActions>
+            </ModalActionRow>
             </ModalCard>
           </div>
         </ModalOverlay>
@@ -1071,7 +1039,7 @@ const TeamsPage: React.FC = () => {
         onCreateTeam={handleCreateTeam}
         tournaments={tournaments}
       />
-    </Container>
+    </PageShell>
   );
 };
 

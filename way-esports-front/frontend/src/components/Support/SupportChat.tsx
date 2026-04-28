@@ -68,10 +68,10 @@ const Messages = styled.div`
   min-height: 220px;
   max-height: 420px;
   overflow-y: auto;
-  background: rgba(0, 0, 0, 0.22);
-  border: 1px solid ${({ theme }) => theme.colors.border.medium};
-  border-radius: 12px;
-  padding: 12px;
+  background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.74)' : 'rgba(255, 255, 255, 0.03)')};
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
+  border-radius: 18px;
+  padding: 14px;
   display: grid;
   gap: 10px;
 `;
@@ -84,19 +84,19 @@ const Bubble = styled.div<{ $sender: SenderType }>`
   background:
     ${({ $sender }) =>
       $sender === 'user'
-        ? 'rgba(255,107,0,0.18)'
+        ? 'rgba(245,154,74,0.16)'
         : $sender === 'admin'
-          ? 'rgba(76,175,80,0.17)'
+          ? 'rgba(52,211,153,0.14)'
           : $sender === 'ai'
             ? 'rgba(255,255,255,0.08)'
-            : 'rgba(255,255,255,0.05)'};
+            : 'rgba(255,255,255,0.04)'};
   border: 1px solid
     ${({ $sender }) =>
       $sender === 'user'
-        ? 'rgba(255,107,0,0.45)'
+        ? 'rgba(245,154,74,0.32)'
         : $sender === 'admin'
-          ? 'rgba(76,175,80,0.4)'
-          : 'rgba(255,255,255,0.16)'};
+          ? 'rgba(52,211,153,0.28)'
+          : 'rgba(255,255,255,0.12)'};
 `;
 
 const BubbleMeta = styled.div`
@@ -126,9 +126,9 @@ const SendButton = styled.button`
   min-width: 120px;
   min-height: 48px;
   border: none;
-  border-radius: 10px;
-  background: #ff6b00;
-  color: #000;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f08a32 0%, #ffb267 52%, #f08a32 100%);
+  color: #1a1108;
   font-weight: 700;
   cursor: pointer;
 `;
@@ -139,10 +139,10 @@ const Hint = styled.div`
 `;
 
 const DiagnosticToggle = styled.button`
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.04);
-  color: #ddd;
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 12px;
   padding: 6px 10px;
   cursor: pointer;

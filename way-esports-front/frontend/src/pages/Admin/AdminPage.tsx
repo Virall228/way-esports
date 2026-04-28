@@ -10,21 +10,17 @@ import { useApp } from '../../contexts/AppContext';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import SponsorshipApplicationsPanel from '../../components/Admin/SponsorshipApplicationsPanel';
+import {
+  NoticeBanner,
+  PageHero,
+  PageHeroContent,
+  PageHeroLayout,
+  PageShell,
+  PageSubtitle,
+  PageTitle
+} from '../../components/UI/PageLayout';
 
-const Container = styled.div`
-  padding: 1rem;
-  width: 100%;
-  max-width: 100%;
-  margin: 0;
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    padding: 1.5rem;
-  }
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
-    padding: 2rem;
-  }
-`;
+const Container = styled(PageShell)``;
 
 const CloseButton = styled.button`
   position: absolute;
@@ -50,43 +46,14 @@ const CloseButton = styled.button`
   }
 `;
 
-const Header = styled(Card).attrs({ variant: 'elevated' })`
-  background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
-  border-radius: 12px;
-  padding: 1.25rem;
-  margin-bottom: 1.25rem;
-  border: 2px solid #ff6b00;
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-  }
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
-    padding: 1.75rem;
-    margin-bottom: 1.75rem;
-  }
-`;
-
-const Title = styled.h1`
-  color: #ffffff;
-  margin: 0;
-  font-size: clamp(1.5rem, 4vw, 2rem);
-  background: linear-gradient(135deg, #ff6b00, #ffd700);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+const Header = styled(PageHero)`
+  padding: clamp(1.2rem, 2.5vw, 1.8rem);
 `;
 
 const TabContainer = styled.div`
   display: flex;
   gap: 8px;
-  margin-bottom: 1.25rem;
   flex-wrap: wrap;
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    margin-bottom: 1.5rem;
-  }
 `;
 
 const Tab = styled(Button).attrs<{ $active: boolean }>((props) => ({
@@ -99,11 +66,12 @@ const Tab = styled(Button).attrs<{ $active: boolean }>((props) => ({
 `;
 
 const ContentArea = styled(Card).attrs({ variant: 'outlined' })`
-  background: rgba(42, 42, 42, 0.9);
-  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(14, 17, 22, 0.96), rgba(8, 10, 13, 0.98));
+  border-radius: 28px;
   padding: 1rem;
   min-height: 600px;
   backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     padding: 1.25rem;
@@ -122,22 +90,22 @@ const StatsGrid = styled.div`
 `;
 
 const StatCard = styled(Card).attrs({ variant: 'outlined' })`
-  background: linear-gradient(145deg, rgba(26, 26, 26, 0.9), rgba(42, 42, 42, 0.9));
-  border-radius: 12px;
+  background: linear-gradient(160deg, rgba(17, 20, 25, 0.92), rgba(8, 10, 13, 0.98));
+  border-radius: 20px;
   padding: 20px;
-  border: 1px solid rgba(255, 107, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   text-align: center;
 `;
 
 const StatValue = styled.div`
   font-size: 32px;
   font-weight: 700;
-  color: #ff6b00;
+  color: #ffe0c2;
   margin-bottom: 8px;
 `;
 
 const StatLabel = styled.div`
-  color: #cccccc;
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 14px;
 `;
 
@@ -154,16 +122,16 @@ const TableWrap = styled.div`
 `;
 
 const Th = styled.th`
-  background: rgba(255, 107, 0, 0.1);
+  background: rgba(255, 255, 255, 0.04);
   color: #ffffff;
   padding: 12px;
   text-align: left;
-  border-bottom: 2px solid #ff6b00;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 `;
 
 const Td = styled.td`
   padding: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   color: #ffffff;
 `;
 
@@ -178,16 +146,16 @@ const UserAvatar = styled.img`
   height: 32px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid rgba(255, 107, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.18);
 `;
 
 const UserAvatarFallback = styled.div`
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 107, 0, 0.45);
-  background: rgba(255, 107, 0, 0.18);
-  color: #ffb680;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffe0c2;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -238,14 +206,14 @@ const Modal = styled.div<{ $isOpen: boolean }>`
 `;
 
 const ModalContent = styled.div`
-  background: linear-gradient(145deg, rgba(42, 42, 42, 0.95), rgba(26, 26, 26, 0.95));
-  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(18, 21, 27, 0.98), rgba(8, 10, 13, 1));
+  border-radius: 24px;
   position: relative;
   padding: 1rem;
   width: min(92vw, 600px);
   max-height: 86vh;
   overflow-y: auto;
-  border: 2px solid #ff6b00;
+  border: 1px solid rgba(255, 255, 255, 0.12);
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     padding: 1.5rem;
@@ -264,26 +232,26 @@ const Form = styled.form`
 `;
 
 const Input = styled.input`
-  background: rgba(26, 26, 26, 0.8);
-  border: 1px solid rgba(255, 107, 0, 0.3);
+  background: linear-gradient(180deg, rgba(14, 17, 22, 0.96), rgba(8, 10, 13, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.12);
   padding: 12px;
-  border-radius: 8px;
+  border-radius: 14px;
   color: #ffffff;
   font-size: 14px;
   min-height: 44px;
 
   &:focus {
     outline: none;
-    border-color: #ff6b00;
-    box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.2);
+    border-color: rgba(240, 138, 50, 0.55);
+    box-shadow: 0 0 0 4px rgba(240, 138, 50, 0.1);
   }
 `;
 
 const TextArea = styled.textarea`
-  background: rgba(26, 26, 26, 0.8);
-  border: 1px solid rgba(255, 107, 0, 0.3);
+  background: linear-gradient(180deg, rgba(14, 17, 22, 0.96), rgba(8, 10, 13, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.12);
   padding: 12px;
-  border-radius: 8px;
+  border-radius: 14px;
   color: #ffffff;
   font-size: 14px;
   min-height: 160px;
@@ -291,28 +259,28 @@ const TextArea = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: #ff6b00;
-    box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.2);
+    border-color: rgba(240, 138, 50, 0.55);
+    box-shadow: 0 0 0 4px rgba(240, 138, 50, 0.1);
   }
 `;
 
 const Select = styled.select`
-  background: rgba(26, 26, 26, 0.8);
-  border: 1px solid rgba(255, 107, 0, 0.3);
+  background: linear-gradient(180deg, rgba(14, 17, 22, 0.96), rgba(8, 10, 13, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.12);
   padding: 12px;
-  border-radius: 8px;
+  border-radius: 14px;
   color: #ffffff;
   font-size: 14px;
   min-height: 44px;
 
   &:focus {
     outline: none;
-    border-color: #ff6b00;
-    box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.2);
+    border-color: rgba(240, 138, 50, 0.55);
+    box-shadow: 0 0 0 4px rgba(240, 138, 50, 0.1);
   }
 
   option {
-    background: #1a1a1a;
+    background: #111417;
     color: #ffffff;
   }
 `;
@@ -422,7 +390,12 @@ interface IntelligenceReadiness {
   };
   integrations?: {
     telegramBotUsernameConfigured?: boolean;
+    telegramBotTokenConfigured?: boolean;
     hallOfFameCronTokenConfigured?: boolean;
+    botWebhookEnabled?: boolean;
+    botWebhookPublicUrlConfigured?: boolean;
+    botWebhookPathConfigured?: boolean;
+    botWebhookSecretConfigured?: boolean;
   };
   infrastructure?: {
     mongoConnected?: boolean;
@@ -2308,7 +2281,7 @@ const AdminPage: React.FC = () => {
     } | null
   }> => {
     if (!selectedTournamentId) {
-      return { data: [], pagination: null, summary: { filteredTotal: 0, roomsPrepared: 0 } };
+      return { data: [], pagination: null, summary: { filteredTotal: 0, roomsPreparedAll: 0 } };
     }
     const params = new URLSearchParams({
       page: String(matchesPage),
@@ -2361,7 +2334,7 @@ const AdminPage: React.FC = () => {
     }
     const result: any = await api.get(`/api/tournaments/admin/requests/recent?${params.toString()}`);
     const items: any[] = (result && result.data) || [];
-    const rows = items.map((row: any) => ({
+    const rows: AdminTournamentRequestHistoryRow[] = items.map((row: any) => ({
       id: String(row.id || ''),
       tournamentId: String(row.tournamentId || ''),
       tournamentName: String(row.tournamentName || ''),
@@ -2481,7 +2454,7 @@ const AdminPage: React.FC = () => {
     }
     const result: any = await api.get(`/api/admin/wallet/transactions?${params.toString()}`);
     const items: any[] = Array.isArray(result) ? result : (result?.data || []);
-    const rows = items.map((tx: any) => ({
+    const rows: AdminWalletTransaction[] = items.map((tx: any) => ({
       id: (tx.id || tx._id || '').toString(),
       userId: (tx.userId || '').toString(),
       source: tx.source === 'wallet' ? 'wallet' : 'user',
@@ -5123,7 +5096,7 @@ const AdminPage: React.FC = () => {
                   <Td>
                     {user.wallpaperUrl ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <a href={user.wallpaperUrl} target="_blank" rel="noreferrer" style={{ color: '#ff6b00', fontSize: 12 }}>
+                        <a href={user.wallpaperUrl} target="_blank" rel="noreferrer" style={{ color: '#ffd4ad', fontSize: 12 }}>
                           View
                         </a>
                         <span style={{ color: user.wallpaperStatus === 'active' ? '#81c784' : '#ffab91', fontSize: 11 }}>
@@ -5794,11 +5767,11 @@ const AdminPage: React.FC = () => {
   function renderTournaments() {
     const selectedTournament = tournaments.find((item: any) => item.id === selectedTournamentId) || null;
     const overview = tournamentOverview;
+    const matchOpsSummaryData = matchOpsSummary || null;
     const allMatchesTotal = Number(
       tournamentMatchesSummary?.totalAll ||
       (Array.isArray((overview as any)?.matches) ? (overview as any).matches.length : 0)
     );
-    const filteredTournamentRequests = tournamentRequests;
     const sortedTournamentRequests = tournamentRequests;
     const pendingRequestsTotal = Number(tournamentRequestsPagination?.total || sortedTournamentRequests.length || 0);
     const tournamentsTotalPages = Number(tournamentsPagination?.totalPages || 1);
@@ -5880,15 +5853,15 @@ const AdminPage: React.FC = () => {
         return payloadTournamentId === selectedTournamentId || entityId === selectedTournamentId;
       })
       .slice(0, 8);
-    const statusCodeSummary = Array.isArray(matchOpsSummary?.byStatusCode) ? matchOpsSummary.byStatusCode : [];
+    const statusCodeSummary = matchOpsSummaryData?.byStatusCode ?? [];
     const successfulOps = statusCodeSummary
       .filter((item) => item.statusCode >= 200 && item.statusCode < 300)
       .reduce((sum, item) => sum + Number(item.count || 0), 0);
     const failedOps = statusCodeSummary
       .filter((item) => item.statusCode >= 400)
       .reduce((sum, item) => sum + Number(item.count || 0), 0);
-    const successRate = matchOpsSummary?.total
-      ? Math.round((successfulOps / Math.max(matchOpsSummary.total, 1)) * 100)
+    const successRate = matchOpsSummaryData?.total
+      ? Math.round((successfulOps / Math.max(matchOpsSummaryData.total, 1)) * 100)
       : 0;
     const exportRecentMatchOpsCsv = () => {
       if (!recentMatchOps.length) {
@@ -5924,7 +5897,7 @@ const AdminPage: React.FC = () => {
     const preparedRoomsCount = Number(
       tournamentMatchesSummary?.roomsPreparedAll ||
       (Array.isArray(overview?.matches)
-        ? overview.matches.filter((match: any) => Boolean(match?.hasRoomCredentials)).length
+        ? (overview?.matches || []).filter((match: any) => Boolean(match?.hasRoomCredentials)).length
         : 0)
     );
     const approvedTeams = tournamentParticipants;
@@ -6151,7 +6124,7 @@ const AdminPage: React.FC = () => {
                   <Td>
                     {tournament.pendingRequestsCount || 0}
                     {(newTournamentRequestCounts[tournament.id] || 0) > 0 ? (
-                      <span style={{ marginLeft: 8, color: '#ff6b00', fontSize: 12, fontWeight: 700 }}>
+                      <span style={{ marginLeft: 8, color: '#ffd4ad', fontSize: 12, fontWeight: 700 }}>
                         +{newTournamentRequestCounts[tournament.id]} new
                       </span>
                     ) : null}
@@ -6273,7 +6246,7 @@ const AdminPage: React.FC = () => {
               {(newTournamentRequestCounts[selectedTournamentId] || 0) > 0 ? (
                 <>
                   {' • '}
-                  New: <strong style={{ color: '#ff6b00' }}>{newTournamentRequestCounts[selectedTournamentId]}</strong>
+                  New: <strong style={{ color: '#ffd4ad' }}>{newTournamentRequestCounts[selectedTournamentId]}</strong>
                 </>
               ) : null}
               {' • '}
@@ -7686,10 +7659,11 @@ const AdminPage: React.FC = () => {
       return { color: '#b0bec5', border: '1px solid rgba(176,190,197,0.35)', padding: '4px 8px', borderRadius: 999 };
     };
     const providerLabel = scoutProvider?.provider || 'unknown';
-    const readinessProviders = intelligenceReadiness?.providers || {};
-    const readinessIntegrations = intelligenceReadiness?.integrations || {};
-    const readinessChecks = Array.isArray(intelligenceReadiness?.checks) ? intelligenceReadiness.checks : [];
-    const readinessScore = Number(intelligenceReadiness?.readinessScore ?? 0);
+    const readinessPayload = intelligenceReadiness || {};
+    const readinessProviders = readinessPayload.providers || {};
+    const readinessIntegrations = readinessPayload.integrations || {};
+    const readinessChecks = Array.isArray(readinessPayload.checks) ? readinessPayload.checks : [];
+    const readinessScore = Number(readinessPayload.readinessScore ?? 0);
     const readinessSupportEnabled = Boolean(readinessProviders?.support?.aiEnabled);
     const readinessTelegram = Boolean(readinessIntegrations?.telegramBotUsernameConfigured);
     const readinessCron = Boolean(readinessIntegrations?.hallOfFameCronTokenConfigured);
@@ -8516,13 +8490,15 @@ const AdminPage: React.FC = () => {
   }
 
   function renderSystem() {
-    const readinessProviders = intelligenceReadiness?.providers || {};
-    const readinessIntegrations = intelligenceReadiness?.integrations || {};
-    const readinessInfra = intelligenceReadiness?.infrastructure || {};
-    const readinessRealtime = intelligenceReadiness?.realtime || {};
-    const readinessChecks = Array.isArray(intelligenceReadiness?.checks) ? intelligenceReadiness.checks : [];
-    const readinessScore = Number(intelligenceReadiness?.readinessScore ?? 0);
-    const smokeChecks = Array.isArray(readinessSmoke?.checks) ? readinessSmoke.checks : [];
+    const readinessPayload = intelligenceReadiness || {};
+    const smokePayload = readinessSmoke || {};
+    const readinessProviders = readinessPayload.providers || {};
+    const readinessIntegrations = readinessPayload.integrations || {};
+    const readinessInfra = readinessPayload.infrastructure || {};
+    const readinessRealtime = readinessPayload.realtime || {};
+    const readinessChecks = Array.isArray(readinessPayload.checks) ? readinessPayload.checks : [];
+    const readinessScore = Number(readinessPayload.readinessScore ?? 0);
+    const smokeChecks = Array.isArray(smokePayload.checks) ? smokePayload.checks : [];
     const systemSmokeRows = Array.isArray(systemSmokeAuditEvents) ? systemSmokeAuditEvents : [];
     const outboxRows = Array.isArray(botOutboxRows) ? botOutboxRows : [];
 
@@ -8945,8 +8921,8 @@ const AdminPage: React.FC = () => {
                 <option value="active">Active</option>
                 <option value="banned">Banned</option>
               </Select>
-              <div style={{ padding: '12px', background: 'rgba(255, 107, 0, 0.05)', border: '1px solid rgba(255, 107, 0, 0.2)', borderRadius: '8px' }}>
-                <label style={{ color: '#ff6b00', fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '12px' }}>WALLET & SUBSCRIPTION</label>
+              <div style={{ padding: '12px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '14px' }}>
+                <label style={{ color: '#ffd4ad', fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '12px' }}>WALLET & SUBSCRIPTION</label>
                 <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
                   <div style={{ flex: 1 }}>
                     <label style={{ color: '#ccc', fontSize: '11px', display: 'block', marginBottom: '4px' }}>Balance ($)</label>
@@ -9461,30 +9437,24 @@ const AdminPage: React.FC = () => {
   return (
     <Container>
       <Header>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <Title>Control Center</Title>
-            <p style={{ color: '#cccccc', margin: '8px 0 0 0' }}>
-              Manage users, player promotion, tournaments, news, payments and operations
-            </p>
-          </div>
+        <PageHeroLayout>
+          <PageHeroContent>
+            <PageTitle>Control Center</PageTitle>
+            <PageSubtitle>
+              Manage users, promotion, tournaments, news, payments, support flows and operational health from one cleaner command surface.
+            </PageSubtitle>
+          </PageHeroContent>
           <ActionButton onClick={() => load()}>
             {isBusy ? '...' : 'Refresh'}
           </ActionButton>
-        </div>
+        </PageHeroLayout>
       </Header>
 
-      {effectiveError && (
-        <div style={{ marginBottom: '16px', color: '#ff4757', padding: '12px', background: 'rgba(255, 71, 87, 0.1)', border: '1px solid #ff4757', borderRadius: '8px' }}>
-          {effectiveError}
-        </div>
-      )}
+      {effectiveError ? <NoticeBanner $tone="error">{effectiveError}</NoticeBanner> : null}
 
 
       {isBusy && (
-        <div style={{ marginBottom: '16px', color: '#cccccc' }}>
-          Loading...
-        </div>
+        <NoticeBanner $tone="info">Loading...</NoticeBanner>
       )}
 
       <TabContainer>

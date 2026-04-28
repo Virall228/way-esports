@@ -40,11 +40,11 @@ interface NotificationContextType {
 // Styled Components
 const slideIn = keyframes`
   from {
-    transform: translateX(100%);
+    transform: translateX(100%) scale(0.96);
     opacity: 0;
   }
   to {
-    transform: translateX(0);
+    transform: translateX(0) scale(1);
     opacity: 1;
   }
 `;
@@ -60,36 +60,73 @@ const slideOut = keyframes`
   }
 `;
 
+const floatAura = keyframes`
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -4px, 0) scale(1.02);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+`;
+
 const NotificationContainer = styled.div`
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: calc(18px + var(--sat, 0px));
+  right: calc(18px + var(--sar, 0px));
   z-index: 10000;
   display: flex;
   flex-direction: column;
   gap: 12px;
   width: 90vw;
-  max-width: 100%;
+  max-width: 380px;
 `;
 
 const NotificationItem = styled.div<{ $type: string; $isVisible: boolean }>`
-  background: linear-gradient(145deg, rgba(42, 42, 42, 0.95), rgba(26, 26, 26, 0.95));
-  border-radius: 12px;
-  padding: 16px;
-  border-left: 4px solid ${({ $type }) => 
-    $type === 'success' ? '#2ed573' :
-    $type === 'error' ? '#ff4757' :
-    $type === 'warning' ? '#ffa502' : '#3742fa'};
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(160deg, rgba(18, 21, 27, 0.96), rgba(8, 10, 13, 0.98));
+  border-radius: 20px;
+  padding: 16px 16px 14px;
+  border: 1px solid
+    ${({ $type }) =>
+      $type === 'success'
+        ? 'rgba(52, 211, 153, 0.26)'
+        : $type === 'error'
+          ? 'rgba(248, 113, 113, 0.28)'
+          : $type === 'warning'
+            ? 'rgba(245, 154, 74, 0.3)'
+            : 'rgba(96, 165, 250, 0.26)'};
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(18px);
   animation: ${({ $isVisible }) => $isVisible ? slideIn : slideOut} 0.3s ease-in-out;
   cursor: pointer;
-  transition: all 0.3s ease;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: auto -18% -36% auto;
+    width: 9rem;
+    height: 9rem;
+    border-radius: 50%;
+    background: ${({ $type }) =>
+      $type === 'success'
+        ? 'radial-gradient(circle, rgba(52, 211, 153, 0.24), transparent 68%)'
+        : $type === 'error'
+          ? 'radial-gradient(circle, rgba(248, 113, 113, 0.24), transparent 68%)'
+          : $type === 'warning'
+            ? 'radial-gradient(circle, rgba(245, 154, 74, 0.22), transparent 68%)'
+            : 'radial-gradient(circle, rgba(96, 165, 250, 0.22), transparent 68%)'};
+    pointer-events: none;
+    animation: ${floatAura} 6s ease-in-out infinite;
+  }
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 28px 52px rgba(0, 0, 0, 0.38);
   }
 `;
 
@@ -98,72 +135,125 @@ const NotificationHeader = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 8px;
+  gap: 12px;
 `;
 
 const NotificationTitle = styled.div`
-  font-weight: 600;
+  font-weight: 700;
   color: #ffffff;
   font-size: 14px;
   margin-bottom: 4px;
 `;
 
 const NotificationMessage = styled.div`
-  color: #cccccc;
+  color: #cfd6df;
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.55;
 `;
 
 const NotificationTime = styled.div`
-  color: #888888;
+  color: #8f98a5;
   font-size: 11px;
-  margin-top: 8px;
+  margin-top: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 `;
 
 const CloseButton = styled.button`
-  background: none;
-  border: none;
-  color: #888888;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #aeb6c0;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 14px;
+  min-width: 30px;
+  min-height: 30px;
+  border-radius: 10px;
   padding: 0;
-  margin-left: 8px;
-  transition: color 0.3s ease;
+  transition: color 0.24s ease, background 0.24s ease, border-color 0.24s ease;
 
   &:hover {
     color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.14);
   }
 `;
 
 const ActionButton = styled.button`
-  background: linear-gradient(135deg, #ff6b00, #ff8533);
-  border: none;
-  color: #ffffff;
-  padding: 6px 12px;
-  border-radius: 6px;
+  background: linear-gradient(135deg, #f08a32, #ffb267);
+  border: 1px solid rgba(255, 214, 169, 0.42);
+  color: #1b1209;
+  padding: 7px 12px;
+  border-radius: 10px;
   font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
-  margin-top: 8px;
-  transition: all 0.3s ease;
+  margin-top: 10px;
+  transition: transform 0.24s ease, box-shadow 0.24s ease;
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
+    box-shadow: 0 10px 24px rgba(245, 154, 74, 0.22);
   }
+`;
+
+const NotificationMeta = styled.div`
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+`;
+
+const ToneBadge = styled.span<{ $type: Notification['type'] }>`
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 24px;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: ${({ $type }) =>
+    $type === 'success'
+      ? '#a9f0d1'
+      : $type === 'error'
+        ? '#ffc3c3'
+        : $type === 'warning'
+          ? '#ffd1a3'
+          : '#c7dcff'};
+  background: ${({ $type }) =>
+    $type === 'success'
+      ? 'rgba(52, 211, 153, 0.12)'
+      : $type === 'error'
+        ? 'rgba(248, 113, 113, 0.12)'
+        : $type === 'warning'
+          ? 'rgba(245, 154, 74, 0.12)'
+          : 'rgba(96, 165, 250, 0.12)'};
+  border: 1px solid
+    ${({ $type }) =>
+      $type === 'success'
+        ? 'rgba(52, 211, 153, 0.18)'
+        : $type === 'error'
+          ? 'rgba(248, 113, 113, 0.18)'
+          : $type === 'warning'
+            ? 'rgba(245, 154, 74, 0.2)'
+            : 'rgba(96, 165, 250, 0.2)'};
 `;
 
 const NotificationPanel = styled.div<{ $isOpen: boolean }>`
   position: fixed;
   top: 0;
-  right: ${({ $isOpen }) => $isOpen ? '0' : '-400px'};
-  width: 400px;
+  right: ${({ $isOpen }) => $isOpen ? '0' : '-430px'};
+  width: min(410px, 100vw);
   height: 100vh;
-  background: linear-gradient(145deg, rgba(26, 26, 26, 0.95), rgba(42, 42, 42, 0.95));
-  backdrop-filter: blur(10px);
-  border-left: 2px solid #ff6b00;
+  background: linear-gradient(180deg, rgba(11, 14, 19, 0.98), rgba(6, 8, 11, 1));
+  backdrop-filter: blur(18px);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
   transition: right 0.3s ease;
   z-index: 9999;
   display: flex;
   flex-direction: column;
+  box-shadow: -28px 0 60px rgba(0, 0, 0, 0.34);
 `;
 
 const PanelHeader = styled.div`
@@ -200,18 +290,39 @@ const NotificationList = styled.div`
 `;
 
 const NotificationListItem = styled.div<{ $read: boolean }>`
-  background: ${({ $read }) => $read ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 107, 0, 0.1)'};
-  border-radius: 8px;
+  background: ${({ $read }) => $read ? 'rgba(255, 255, 255, 0.04)' : 'rgba(245, 154, 74, 0.1)'};
+  border-radius: 16px;
   padding: 16px;
   margin-bottom: 12px;
-  border: 1px solid ${({ $read }) => $read ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 107, 0, 0.3)'};
+  border: 1px solid ${({ $read }) => $read ? 'rgba(255, 255, 255, 0.08)' : 'rgba(245, 154, 74, 0.2)'};
   cursor: pointer;
   transition: all 0.3s ease;
 
   &:hover {
-    background: ${({ $read }) => $read ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 107, 0, 0.15)'};
+    background: ${({ $read }) => $read ? 'rgba(255, 255, 255, 0.06)' : 'rgba(245, 154, 74, 0.14)'};
     transform: translateY(-1px);
   }
+`;
+
+const EmptyPanelState = styled.div`
+  display: grid;
+  gap: 0.7rem;
+  align-content: center;
+  justify-items: center;
+  min-height: 240px;
+  color: #9ba5b2;
+  text-align: center;
+  padding: 2rem 1rem;
+`;
+
+const EmptyPanelOrb = styled.div`
+  width: 3.2rem;
+  height: 3.2rem;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 32%, rgba(255,255,255,0.82), rgba(255,255,255,0) 28%),
+    radial-gradient(circle, rgba(245, 154, 74, 0.82), rgba(245, 154, 74, 0.18) 58%, transparent 72%);
+  box-shadow: 0 0 0 0.65rem rgba(245, 154, 74, 0.08);
 `;
 
 const SettingsPanel = styled.div`

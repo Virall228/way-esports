@@ -8,76 +8,33 @@ import { tournamentService } from '../../services/tournamentService';
 import { teamsService } from '../../services/teamsService';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
+import Input from '../../components/UI/Input';
+import {
+  FilterGroup,
+  FilterLabel,
+  FilterRail,
+  ModalActionRow,
+  ModalCopy,
+  ModalOverlay,
+  ModalPanel,
+  ModalTitle,
+  NoticeBanner,
+  PageEmptyState,
+  PageFilterSection,
+  PageHero,
+  PageHeroContent,
+  PageHeroLayout,
+  PageShell,
+  PageSubtitle,
+  PageTitle
+} from '../../components/UI/PageLayout';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { resolveMediaUrl } from '../../utils/media';
 import { Seo } from '../../components/SEO';
 
-const Container = styled.div`
-  padding: 1rem;
-  width: 100%;
-  max-width: 100%;
-  margin: 0;
-  color: #ffffff;
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    padding: 1.5rem;
-  }
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
-    padding: 2.5rem;
-  }
-`;
-
-const Header = styled(Card).attrs({ variant: 'elevated' })`
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid ${({ theme }) => theme.colors.border.medium};
-  border-radius: 16px;
-  padding: 1.25rem;
-  margin-bottom: 1.5rem;
-  position: relative;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-
-  @media (max-width: ${({ theme }) => theme.breakpoints.desktop}) {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    padding: 2rem;
-    margin-bottom: 2rem;
-  }
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
-    padding: 2.5rem;
-    margin-bottom: 2.5rem;
-    flex-direction: row;
-    align-items: center;
-  }
-`;
-
-const HeaderContent = styled.div`
-  flex: 1;
-`;
-
-const Title = styled.h1`
-  font-size: clamp(2rem, 8vw, 3.5rem);
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.text.primary};
-  margin-bottom: 15px;
-  line-height: 1.1;
-`;
-
-const Subtitle = styled.p`
-  color: #cccccc;
-  font-size: 1.2rem;
-`;
-
 const RulesButton = styled(Button).attrs({ variant: 'secondary', size: 'small' })`
-  padding: 0.75rem 1.25rem;
+  padding: 0.75rem 1.15rem;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -85,27 +42,20 @@ const RulesButton = styled(Button).attrs({ variant: 'secondary', size: 'small' }
   justify-content: center;
 `;
 
-const FilterSection = styled.div`
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-`;
-
-const FilterTabs = styled.div`
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  justify-content: center;
-  flex-wrap: wrap;
+const HeaderKicker = styled.div`
+  margin-bottom: 0.75rem;
+  color: ${({ theme }) => theme.colors.text.tertiary};
+  font-family: ${({ theme }) => theme.fonts.accent};
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 `;
 
 const FilterTab = styled(Button).attrs<{ $active: boolean }>((props) => ({
   variant: props.$active ? 'brand' : 'outline',
   size: 'small'
 }))<{ $active: boolean }>`
-  padding: 0.75rem 1.25rem;
+  padding: 0.72rem 1.1rem;
   min-height: 44px;
   white-space: nowrap;
 `;
@@ -128,13 +78,16 @@ const TournamentsGrid = styled.div`
 `;
 
 const TournamentCard = styled(Card).attrs({ clickable: true })<{ $status: string }>`
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  padding: 25px;
+  background: ${({ theme }) =>
+    theme.isLight
+      ? 'linear-gradient(180deg, rgba(255,255,255,0.92), rgba(247, 239, 229, 0.9))'
+      : 'linear-gradient(180deg, rgba(18, 22, 27, 0.9), rgba(8, 10, 13, 0.96))'};
+  border-radius: 24px;
+  padding: 22px;
   border: 1px solid ${({ theme, $status }) => {
     switch ($status) {
       case 'live': return theme.colors.success;
-      case 'upcoming': return theme.colors.accent;
+      case 'upcoming': return theme.colors.border.accent;
       case 'completed': return theme.colors.text.disabled;
       default: return theme.colors.border.light;
     }
@@ -146,33 +99,34 @@ const TournamentCard = styled(Card).attrs({ clickable: true })<{ $status: string
 `;
 
 const GameIcon = styled.img`
-  width: 48px;
-  height: 48px;
-  margin-bottom: 15px;
-  border-radius: 8px;
+  width: 58px;
+  height: 58px;
+  margin-bottom: 18px;
+  border-radius: 16px;
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
 `;
 
 const TournamentTitle = styled.h3`
-  color: #ffffff;
-  margin-bottom: 10px;
-  font-size: 1.3rem;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin-bottom: 12px;
+  font-size: 1.28rem;
 `;
 
 const StatusBadge = styled.div<{ $status: string }>`
   display: inline-block;
   padding: 6px 12px;
-  border-radius: 20px;
+  border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 600;
   margin-bottom: 15px;
   background: ${({ $status }) =>
-    $status === 'live' ? 'rgba(76, 175, 80, 0.2)' :
-      $status === 'upcoming' ? 'rgba(33, 150, 243, 0.2)' :
-        'rgba(255, 107, 0, 0.2)'};
+    $status === 'live' ? 'rgba(52, 211, 153, 0.16)' :
+      $status === 'upcoming' ? 'rgba(96, 165, 250, 0.14)' :
+        'rgba(245, 154, 74, 0.14)'};
   color: ${({ $status }) =>
-    $status === 'live' ? '#4CAF50' :
-      $status === 'upcoming' ? '#2196F3' :
-        '#ff6b00'};
+    $status === 'live' ? '#9ff0cf' :
+      $status === 'upcoming' ? '#bfdbfe' :
+        '#ffcd9b'};
 `;
 
 const BadgeRow = styled.div`
@@ -186,12 +140,12 @@ const BadgeRow = styled.div`
 const TeamModeBadge = styled.div`
   display: inline-block;
   padding: 6px 12px;
-  border-radius: 20px;
+  border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 700;
-  background: rgba(255, 107, 0, 0.15);
-  border: 1px solid rgba(255, 107, 0, 0.35);
-  color: #ff9a4f;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
+  color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
 const InfoRow = styled.div`
@@ -202,20 +156,20 @@ const InfoRow = styled.div`
 `;
 
 const InfoLabel = styled.span`
-  color: #cccccc;
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const InfoValue = styled.span`
-  color: #ffffff;
-  font-weight: 500;
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-weight: 600;
 `;
 
 const PrizePool = styled.div`
   font-size: 1.5rem;
   font-weight: 700;
-  color: #ff6b00;
-  text-align: center;
-  margin: 15px 0;
+  color: ${({ theme }) => theme.colors.accent};
+  text-align: left;
+  margin: 0 0 16px;
 `;
 
 const ActionButton = styled(Button).attrs<{ $variant?: 'brand' | 'outline' }>((props) => ({
@@ -227,10 +181,27 @@ const ActionButton = styled(Button).attrs<{ $variant?: 'brand' | 'outline' }>((p
   min-height: 44px;
 `;
 
-const EmptyState = styled.div`
-  text-align: center;
-  padding: 60px 20px;
-  color: #999;
+const FormFieldGrid = styled.div`
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1rem;
+`;
+
+const RulesContent = styled.div`
+  color: ${({ theme }) => theme.colors.text.secondary};
+  display: grid;
+  gap: 1rem;
+
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  ul {
+    padding-left: 1.15rem;
+    display: grid;
+    gap: 0.5rem;
+  }
 `;
 
 interface Tournament {
@@ -430,7 +401,7 @@ const TournamentsPage: React.FC = () => {
   };
 
   return (
-    <Container>
+    <PageShell>
       <Seo
         title="Esports Tournaments | WAY Esports"
         description="Browse active, upcoming and completed esports tournaments on WAY Esports across mobile and PC titles."
@@ -444,25 +415,33 @@ const TournamentsPage: React.FC = () => {
           description: 'Browse upcoming, live and completed esports tournaments on WAY Esports.'
         }}
       />
-      <Header>
-        <HeaderContent>
-          <Title>{t('tournamentsTitle')}</Title>
-          <Subtitle>{t('tournamentsSubtitle')}</Subtitle>
-        </HeaderContent>
-        <RulesButton onClick={() => setIsRulesModalOpen(true)}>
-          {'\u{1F4CB}'} {t('rules')}
-        </RulesButton>
-      </Header>
+      <PageHero>
+        <PageHeroLayout>
+          <PageHeroContent>
+            <HeaderKicker>Competitive calendar</HeaderKicker>
+            <PageTitle>{t('tournamentsTitle')}</PageTitle>
+            <PageSubtitle>{t('tournamentsSubtitle')}</PageSubtitle>
+          </PageHeroContent>
+          <RulesButton onClick={() => setIsRulesModalOpen(true)}>
+            {'\u{1F4CB}'} {t('rules')}
+          </RulesButton>
+        </PageHeroLayout>
+      </PageHero>
 
-      <FilterSection>
-        <FilterTabs>
+      <PageFilterSection>
+        <FilterRail>
+          <FilterGroup>
+            <FilterLabel>Status</FilterLabel>
           {['all', 'upcoming', 'live', 'completed'].map(f => (
             <FilterTab key={f} $active={activeFilter === f} onClick={() => setActiveFilter(f)}>
               {f === 'all' ? t('allFilter') : f === 'upcoming' ? t('upcoming') : f === 'completed' ? t('completed') : t('live')}
             </FilterTab>
           ))}
-        </FilterTabs>
-        <FilterTabs>
+          </FilterGroup>
+        </FilterRail>
+        <FilterRail>
+          <FilterGroup>
+            <FilterLabel>Games</FilterLabel>
           {[
             { key: 'all', label: 'All Games' },
             { key: 'Critical Ops', label: 'Critical Ops' },
@@ -476,8 +455,11 @@ const TournamentsPage: React.FC = () => {
               {g.label}
             </FilterTab>
           ))}
-        </FilterTabs>
-        <FilterTabs>
+          </FilterGroup>
+        </FilterRail>
+        <FilterRail>
+          <FilterGroup>
+            <FilterLabel>Cadence</FilterLabel>
           {([
             { key: 'all', label: 'All Cycles' },
             { key: 'daily', label: 'Daily' },
@@ -487,8 +469,9 @@ const TournamentsPage: React.FC = () => {
               {c.label}
             </FilterTab>
           ))}
-        </FilterTabs>
-        <FilterTabs>
+          </FilterGroup>
+          <FilterGroup>
+            <FilterLabel>Mode</FilterLabel>
           {([
             { key: 'all', label: 'All Modes' },
             { key: '2v2', label: '2v2' },
@@ -498,26 +481,20 @@ const TournamentsPage: React.FC = () => {
               {m.label}
             </FilterTab>
           ))}
-        </FilterTabs>
-      </FilterSection>
+          </FilterGroup>
+        </FilterRail>
+      </PageFilterSection>
 
       {joinFeedback && (
-        <div style={{
-          marginBottom: '1rem',
-          padding: '10px 14px',
-          borderRadius: '10px',
-          background: 'rgba(255, 107, 0, 0.12)',
-          border: '1px solid rgba(255, 107, 0, 0.35)',
-          color: '#ffd3b1'
-        }}>
+        <NoticeBanner $tone="warning">
           {joinFeedback}
-        </div>
+        </NoticeBanner>
       )}
 
       {loading ? (
-        <EmptyState>{t('loading')}</EmptyState>
+        <PageEmptyState>{t('loading')}</PageEmptyState>
       ) : errorMessage ? (
-        <EmptyState>{errorMessage}</EmptyState>
+        <PageEmptyState>{errorMessage}</PageEmptyState>
       ) : (
         <TournamentsGrid>
           {filteredTournaments.map((tournament) => (
@@ -546,7 +523,7 @@ const TournamentsPage: React.FC = () => {
                 <InfoValue>{tournament.format}</InfoValue>
               </InfoRow>
 
-              <ActionButton $variant={tournament.status === 'upcoming' ? 'brand' : 'outline'} style={{ marginTop: '15px' }}>
+              <ActionButton $variant={tournament.status === 'upcoming' ? 'brand' : 'outline'} style={{ marginTop: '18px' }}>
                 {tournament.status === 'upcoming' ? t('joinNow') : tournament.status === 'live' ? t('viewDetails') : t('results')}
               </ActionButton>
             </TournamentCard>
@@ -554,79 +531,59 @@ const TournamentsPage: React.FC = () => {
         </TournamentsGrid>
       )}
 
-      {filteredTournaments.length === 0 && !loading && <EmptyState>{t('noTournamentsFound')}</EmptyState>}
+      {filteredTournaments.length === 0 && !loading && <PageEmptyState>{t('noTournamentsFound')}</PageEmptyState>}
 
       {showGuard && (
         <TournamentRegistrationGuard onAccessDenied={() => setShowGuard(false)}>
-            <div style={{
-              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-              background: 'rgba(0,0,0,0.8)', zIndex: 1100, display: 'flex',
-              alignItems: 'center', justifyContent: 'center'
-            }}>
-            <div style={{ background: '#1a1a1a', padding: '30px', borderRadius: '16px', maxWidth: '400px', textAlign: 'center' }}>
-              <h2>{t('confirmEntry')}</h2>
-              <p>{t('confirmEntryText')}</p>
-              <input
-                type="text"
-                placeholder="In-game nickname"
-                value={ingameNickname}
-                onChange={(e) => setIngameNickname(e.target.value)}
-                style={{
-                  width: '100%',
-                  marginBottom: 10,
-                  padding: '10px 12px',
-                  borderRadius: 10,
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  background: '#101010',
-                  color: '#fff'
-                }}
-              />
-              <input
-                type="text"
-                placeholder="In-game ID"
-                value={ingameId}
-                onChange={(e) => setIngameId(e.target.value)}
-                style={{
-                  width: '100%',
-                  marginBottom: 12,
-                  padding: '10px 12px',
-                  borderRadius: 10,
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  background: '#101010',
-                  color: '#fff'
-                }}
-              />
-              <ActionButton onClick={onRegistrationConfirm}>{t('confirmJoin')}</ActionButton>
-              <ActionButton $variant="outline" onClick={() => setShowGuard(false)} style={{ marginTop: '10px' }}>{t('cancel')}</ActionButton>
-            </div>
-          </div>
+          <ModalOverlay>
+            <ModalPanel style={{ maxWidth: '420px' }}>
+              <ModalTitle>{t('confirmEntry')}</ModalTitle>
+              <ModalCopy>{t('confirmEntryText')}</ModalCopy>
+              <FormFieldGrid>
+                <Input
+                  fullWidth
+                  placeholder="In-game nickname"
+                  value={ingameNickname}
+                  onChange={(e) => setIngameNickname(e.target.value)}
+                />
+                <Input
+                  fullWidth
+                  placeholder="In-game ID"
+                  value={ingameId}
+                  onChange={(e) => setIngameId(e.target.value)}
+                />
+              </FormFieldGrid>
+              <ModalActionRow>
+                <ActionButton onClick={onRegistrationConfirm}>{t('confirmJoin')}</ActionButton>
+                <ActionButton $variant="outline" onClick={() => setShowGuard(false)}>{t('cancel')}</ActionButton>
+              </ModalActionRow>
+            </ModalPanel>
+          </ModalOverlay>
         </TournamentRegistrationGuard>
       )}
 
       {isRulesModalOpen && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex',
-          alignItems: 'center', justifyContent: 'center'
-        }} onClick={() => setIsRulesModalOpen(false)}>
-          <div style={{
-            background: '#1a1a1a', padding: '30px', borderRadius: '16px',
-            maxWidth: '600px', width: '90%', maxHeight: '80vh', overflowY: 'auto'
-          }} onClick={e => e.stopPropagation()}>
-            <h2 style={{ color: '#ff6b00' }}>{t('rules')}</h2>
-            <div style={{ color: '#ccc', marginTop: '20px' }}>
+        <ModalOverlay onClick={() => setIsRulesModalOpen(false)}>
+          <ModalPanel
+            style={{ maxWidth: '600px', width: '90%', maxHeight: '80vh', overflowY: 'auto' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <ModalTitle>{t('rules')}</ModalTitle>
+            <RulesContent>
               <h3>{t('rulesGeneral')}</h3>
               <ul>
                 <li>{t('rulesItem1')}</li>
                 <li>{t('rulesItem2')}</li>
                 <li>{t('rulesItem3')}</li>
               </ul>
-            </div>
-            <ActionButton onClick={() => setIsRulesModalOpen(false)}>{t('close')}</ActionButton>
-          </div>
-        </div>
+            </RulesContent>
+            <ModalActionRow>
+              <ActionButton onClick={() => setIsRulesModalOpen(false)}>{t('close')}</ActionButton>
+            </ModalActionRow>
+          </ModalPanel>
+        </ModalOverlay>
       )}
-    </Container>
+    </PageShell>
   );
 };
 

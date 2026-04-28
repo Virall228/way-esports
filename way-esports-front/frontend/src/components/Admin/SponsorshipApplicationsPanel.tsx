@@ -7,7 +7,6 @@ import { useNotifications } from '../../contexts/NotificationContext';
 import {
   sponsorshipService,
   SponsorshipApplicantType,
-  SponsorshipApplication,
   SponsorshipApplicationStatus
 } from '../../services/sponsorshipService';
 import { resolveMediaUrl } from '../../utils/media';

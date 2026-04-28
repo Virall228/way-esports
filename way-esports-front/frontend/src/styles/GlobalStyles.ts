@@ -1,21 +1,14 @@
 import { createGlobalStyle } from 'styled-components';
 
 export const GlobalStyles = createGlobalStyle`
-  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&display=swap');
   @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700;800&display=swap');
-  @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&display=swap');
 
   * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-  }
-
-  html {
-    font-size: 16px;
-    scroll-behavior: smooth;
-    height: 100%;
-    overflow: hidden;
   }
 
   :root {
@@ -24,22 +17,31 @@ export const GlobalStyles = createGlobalStyle`
     --sal: env(safe-area-inset-left);
     --sar: env(safe-area-inset-right);
     --app-height: 100vh;
-    --bg-pattern-opacity: 0.32;
-    --bg-glow-opacity: 0.9;
+    --bg-pattern-opacity: 0.24;
+    --bg-glow-opacity: 0.94;
+    --ambient-drift-duration: 24s;
+  }
+
+  html {
+    font-size: 16px;
+    height: 100%;
+    overflow: hidden;
+    scroll-behavior: smooth;
+    text-rendering: optimizeLegibility;
   }
 
   body[data-bg-preset='subtle'] {
-    --bg-pattern-opacity: 0.2;
-    --bg-glow-opacity: 0.65;
+    --bg-pattern-opacity: 0.14;
+    --bg-glow-opacity: 0.82;
   }
 
   body[data-bg-preset='default'] {
-    --bg-pattern-opacity: 0.32;
-    --bg-glow-opacity: 0.9;
+    --bg-pattern-opacity: 0.24;
+    --bg-glow-opacity: 0.94;
   }
 
   body[data-bg-preset='strong'] {
-    --bg-pattern-opacity: 0.42;
+    --bg-pattern-opacity: 0.32;
     --bg-glow-opacity: 1;
   }
 
@@ -50,20 +52,42 @@ export const GlobalStyles = createGlobalStyle`
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     margin: 0;
-    padding: 0;
     overflow: hidden;
     width: 100%;
-    max-width: 100%;
     min-width: 0;
     position: relative;
     height: 100%;
     overscroll-behavior: none;
+    line-height: 1.6;
+  }
+
+  @keyframes wayAmbientDrift {
+    0% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+      transform: translate3d(0, -1.5%, 0) scale(1.025);
+    }
+    100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+  }
+
+  @keyframes wayGridShift {
+    0% {
+      transform: translate3d(0, 0, 0);
+    }
+    50% {
+      transform: translate3d(-0.6%, 0.5%, 0);
+    }
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
   }
 
   #root {
     height: 100%;
     width: 100%;
-    max-width: 100%;
     position: relative;
     z-index: 1;
   }
@@ -71,369 +95,190 @@ export const GlobalStyles = createGlobalStyle`
   body::before {
     content: '';
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background: ${({ theme }) =>
       theme.isLight
         ? `
-      radial-gradient(circle at 12% 12%, rgba(255, 204, 153, 0.26) 0%, transparent 34%),
-      radial-gradient(circle at 82% 16%, rgba(255, 229, 198, 0.3) 0%, transparent 28%),
-      radial-gradient(circle at 78% 78%, rgba(201, 106, 22, 0.12) 0%, transparent 32%),
-      linear-gradient(145deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 248, 239, 0.12) 62%)
+      radial-gradient(circle at 12% 10%, rgba(255, 221, 188, 0.38) 0%, transparent 34%),
+      radial-gradient(circle at 86% 14%, rgba(255, 240, 222, 0.9) 0%, transparent 28%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(247, 239, 229, 0.98) 100%)
     `
         : `
-      linear-gradient(180deg, rgba(0, 0, 0, 0.78) 0%, rgba(5, 6, 7, 0.94) 58%, rgba(5, 6, 7, 0.98) 100%),
-      radial-gradient(circle at 12% 40%, rgba(255, 107, 0, 0.24) 0%, transparent 22%),
-      radial-gradient(circle at 86% 42%, rgba(255, 138, 31, 0.2) 0%, transparent 24%),
-      radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.12) 0%, transparent 34%),
+      radial-gradient(circle at 14% 12%, rgba(245, 154, 74, 0.14) 0%, transparent 26%),
+      radial-gradient(circle at 86% 18%, rgba(255, 255, 255, 0.06) 0%, transparent 24%),
+      radial-gradient(circle at 50% 0%, rgba(120, 125, 134, 0.08) 0%, transparent 32%),
+      linear-gradient(180deg, rgba(3, 4, 6, 0.86) 0%, rgba(5, 7, 10, 0.95) 54%, rgba(4, 5, 7, 0.99) 100%),
       url('/images/way-twitter-banner-bg.jpg') center/cover no-repeat
     `};
+    opacity: var(--bg-glow-opacity);
     pointer-events: none;
     z-index: -2;
-    opacity: var(--bg-glow-opacity);
+    transform-origin: center top;
+    animation: wayAmbientDrift var(--ambient-drift-duration) ease-in-out infinite;
   }
 
   body::after {
     content: '';
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background-image: ${({ theme }) =>
       theme.isLight
         ? `
-      linear-gradient(30deg, rgba(122, 88, 49, 0.07) 1px, transparent 1px),
-      linear-gradient(150deg, rgba(201, 106, 22, 0.045) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(122, 88, 49, 0.035) 1px, transparent 1px)
+      linear-gradient(90deg, rgba(122, 88, 49, 0.04) 1px, transparent 1px),
+      linear-gradient(rgba(122, 88, 49, 0.04) 1px, transparent 1px)
     `
         : `
-      linear-gradient(115deg, transparent 0 45%, rgba(255, 138, 31, 0.16) 45.4%, transparent 46%),
-      linear-gradient(64deg, transparent 0 58%, rgba(255, 255, 255, 0.07) 58.25%, transparent 59%),
-      linear-gradient(30deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-      linear-gradient(150deg, rgba(255, 138, 31, 0.035) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px)
+      linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+      linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+      linear-gradient(120deg, transparent 0 48%, rgba(245, 154, 74, 0.08) 48.5%, transparent 49%)
     `};
-    background-size: 420px 240px, 520px 280px, 56px 32px, 56px 32px, 56px 32px;
-    background-position: -80px 8%, 70% 62%, 0 0, 0 0, 28px 16px;
+    background-size: 56px 56px, 56px 56px, 420px 220px;
+    background-position: 0 0, 0 0, 50% 0;
     opacity: var(--bg-pattern-opacity);
     pointer-events: none;
     z-index: -1;
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.92), rgba(0, 0, 0, 0.58));
+    animation: wayGridShift 28s ease-in-out infinite;
   }
 
-  /* CS:GO Tournament Elements */
-  .csgo-bg-elements {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    pointer-events: none;
-    z-index: -1;
-    overflow: hidden;
-  }
-
-  .csgo-bg-elements::before {
-    content: 'CS:GO';
-    position: absolute;
-    top: 10%;
-    right: 5%;
-    font-family: 'Orbitron', monospace;
-    font-size: 14px;
-    color: rgba(255, 107, 0, 0.1);
-    transform: rotate(15deg);
-    animation: csgoFloat 8s ease-in-out infinite;
-  }
-
-  .csgo-bg-elements::after {
-    content: 'LAN';
-    position: absolute;
-    bottom: 15%;
-    left: 3%;
-    font-family: 'Orbitron', monospace;
-    font-size: 12px;
-    color: rgba(255, 71, 87, 0.08);
-    transform: rotate(-10deg);
-    animation: csgoFloat 6s ease-in-out infinite reverse;
-  }
-
-  @keyframes csgoFloat {
-    0%, 100% { transform: rotate(15deg) translateY(0px); }
-    50% { transform: rotate(15deg) translateY(-10px); }
-  }
-
-  /* CS:GO Tournament Icons */
-  .csgo-tournament-icon {
-    position: absolute;
-    width: 20px;
-    height: 20px;
-    background: rgba(255, 107, 0, 0.05);
-    border: 1px solid rgba(255, 107, 0, 0.1);
-    border-radius: 50%;
-    animation: tournamentPulse 4s ease-in-out infinite;
-  }
-
-  .csgo-tournament-icon:nth-child(1) {
-    top: 25%;
-    left: 10%;
-    animation-delay: 0s;
-  }
-
-  .csgo-tournament-icon:nth-child(2) {
-    top: 60%;
-    right: 15%;
-    animation-delay: 1s;
-  }
-
-  .csgo-tournament-icon:nth-child(3) {
-    bottom: 30%;
-    left: 20%;
-    animation-delay: 2s;
-  }
-
-  @keyframes tournamentPulse {
-    0%, 100% { 
-      transform: scale(1);
-      opacity: 0.3;
-    }
-    50% { 
-      transform: scale(1.2);
-      opacity: 0.6;
-    }
-  }
-
-  /* CS:GO Score Elements */
-  .csgo-score-element {
-    position: absolute;
-    font-family: 'Orbitron', monospace;
-    font-size: 10px;
-    color: rgba(255, 215, 0, 0.1);
-    animation: scoreFade 5s ease-in-out infinite;
-  }
-
-  .csgo-score-element:nth-child(4) {
-    top: 40%;
-    right: 8%;
-    content: '16:14';
-    animation-delay: 0s;
-  }
-
-  .csgo-score-element:nth-child(5) {
-    top: 70%;
-    left: 5%;
-    content: '13:16';
-    animation-delay: 2s;
-  }
-
-  @keyframes scoreFade {
-    0%, 100% { opacity: 0.1; }
-    50% { opacity: 0.3; }
-  }
-
-  /* Global title styles */
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: ${({ theme }) => theme.fonts.title};
     font-weight: ${({ theme }) => theme.fontWeights.semibold};
-    letter-spacing: 1px;
-    margin-bottom: 1rem;
-    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    line-height: 1.08;
+    margin-bottom: 0.75rem;
   }
 
   h1 {
+    font-size: clamp(2.2rem, 5vw, 4rem);
     font-weight: ${({ theme }) => theme.fontWeights.bold};
-    font-size: 2.5rem;
-    letter-spacing: 2px;
   }
 
   h2 {
-    font-weight: ${({ theme }) => theme.fontWeights.semibold};
-    font-size: 2rem;
-    letter-spacing: 1.5px;
+    font-size: clamp(1.55rem, 3.2vw, 2.6rem);
   }
 
   h3 {
-    font-weight: ${({ theme }) => theme.fontWeights.medium};
-    font-size: 1.5rem;
-    letter-spacing: 1px;
+    font-size: clamp(1.15rem, 2.2vw, 1.55rem);
   }
 
-  /* Body text styles */
-  p, span, div, li, a {
+  p,
+  span,
+  div,
+  li,
+  a {
     font-family: ${({ theme }) => theme.fonts.primary};
-    font-weight: ${({ theme }) => theme.fontWeights.regular};
   }
 
-  /* Button styles */
   button {
     font-family: ${({ theme }) => theme.fonts.accent};
-    font-weight: ${({ theme }) => theme.fontWeights.medium};
-    letter-spacing: 1px;
-    text-transform: uppercase;
+    font-weight: ${({ theme }) => theme.fontWeights.semibold};
+    letter-spacing: 0.02em;
   }
 
-  /* Input styles */
-  input, textarea, select {
+  input,
+  textarea,
+  select {
     font-family: ${({ theme }) => theme.fonts.primary};
     font-weight: ${({ theme }) => theme.fontWeights.regular};
   }
 
-  /* Label styles */
   label {
     font-family: ${({ theme }) => theme.fonts.accent};
     font-weight: ${({ theme }) => theme.fontWeights.medium};
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
 
-  /* Link styles */
   a {
     text-decoration: none;
     color: inherit;
-    transition: color 0.3s ease;
+    transition: color ${({ theme }) => theme.transitions.fast};
   }
 
-  a:hover { color: ${({ theme }) => theme.colors.accent}; }
+  a:hover {
+    color: ${({ theme }) => theme.colors.accent};
+  }
 
-  /* Focus styles */
-  *:focus { outline: 2px solid ${({ theme }) => theme.colors.highlight}; outline-offset: 2px; }
+  img,
+  picture,
+  video,
+  canvas,
+  svg {
+    display: block;
+    max-width: 100%;
+  }
 
-  /* Selection styles */
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  *:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.highlight};
+    outline-offset: 2px;
+  }
+
   ::selection {
-    background: ${({ theme }) => (theme.isLight ? 'rgba(251, 146, 60, 0.28)' : 'rgba(255, 138, 31, 0.38)')};
-    color: ${({ theme }) => (theme.isLight ? theme.colors.text.primary : '#ffffff')};
+    background: ${({ theme }) => (theme.isLight ? 'rgba(251, 146, 60, 0.24)' : 'rgba(245, 154, 74, 0.28)')};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 
-  /* Scrollbar styles */
   ::-webkit-scrollbar {
-    width: 12px;
+    width: 10px;
+    height: 10px;
   }
 
   ::-webkit-scrollbar-track {
-    background: ${({ theme }) => (theme.isLight ? 'rgba(237, 226, 211, 0.9)' : '#0f0f0f')};
-    border-radius: 6px;
+    background: ${({ theme }) => (theme.isLight ? 'rgba(237, 226, 211, 0.82)' : 'rgba(255, 255, 255, 0.03)')};
   }
 
   ::-webkit-scrollbar-thumb {
     background: ${({ theme }) =>
       theme.isLight
-        ? 'linear-gradient(180deg, #d7c1a8, #bea284)'
-        : 'linear-gradient(180deg, #ff8a1f, #41200a)'};
-    border-radius: 6px;
-    border: 2px solid ${({ theme }) => (theme.isLight ? 'rgba(237, 226, 211, 0.9)' : '#0f0f0f')};
-    box-shadow: none;
+        ? 'linear-gradient(180deg, #d0b291, #bea284)'
+        : 'linear-gradient(180deg, rgba(141, 149, 163, 0.82), rgba(62, 69, 79, 0.92))'};
+    border-radius: 999px;
+    border: 2px solid ${({ theme }) => (theme.isLight ? 'rgba(237, 226, 211, 0.82)' : 'rgba(255, 255, 255, 0.03)')};
   }
 
   ::-webkit-scrollbar-thumb:hover {
     background: ${({ theme }) =>
       theme.isLight
-        ? 'linear-gradient(180deg, #cfae89, #b98b5f)'
-        : 'linear-gradient(180deg, #ffb15d, #ff6b00)'};
+        ? 'linear-gradient(180deg, #c59d73, #b18051)'
+        : 'linear-gradient(180deg, rgba(245, 154, 74, 0.82), rgba(90, 52, 20, 0.94))'};
   }
 
-  /* Firefox scrollbar */
   * {
     scrollbar-width: thin;
-    scrollbar-color: ${({ theme }) => (theme.isLight ? '#bea284 #ede2d3' : '#ff8a1f #0f0f0f')};
+    scrollbar-color: ${({ theme }) => (theme.isLight ? '#bea284 #ede2d3' : '#606b78 rgba(255,255,255,0.03)')};
   }
 
-  /* Responsive typography */
   @media (max-width: 768px) {
     body::before {
-      opacity: calc(var(--bg-glow-opacity) * 0.84);
+      opacity: calc(var(--bg-glow-opacity) * 0.86);
     }
 
     body::after {
-      opacity: calc(var(--bg-pattern-opacity) * 0.7);
-      background-size: 300px 180px, 360px 210px, 44px 26px, 44px 26px, 44px 26px;
-      background-position: -70px 8%, 62% 62%, 0 0, 0 0, 22px 13px;
+      opacity: calc(var(--bg-pattern-opacity) * 0.72);
+      background-size: 42px 42px, 42px 42px, 300px 180px;
     }
 
     html {
       font-size: 14px;
     }
+  }
 
-    h1 {
-      font-size: 1.8rem;
-      letter-spacing: 1.5px;
-    }
-
-    h2 {
-      font-size: 1.5rem;
-      letter-spacing: 1px;
-    }
-
-    h3 {
-      font-size: 1.2rem;
-      letter-spacing: 0.8px;
+  @media (prefers-reduced-motion: reduce) {
+    body::before,
+    body::after {
+      animation: none !important;
     }
   }
-
-  @media (min-width: 769px) {
-    html {
-      font-size: 16px;
-    }
-
-    h1 {
-      font-size: 2.5rem;
-      letter-spacing: 2px;
-    }
-
-    h2 {
-      font-size: 2rem;
-      letter-spacing: 1.5px;
-    }
-
-    h3 {
-      font-size: 1.5rem;
-      letter-spacing: 1px;
-    }
-  }
-
-  /* Utility classes for fonts */
-  .font-title {
-    font-family: ${({ theme }) => theme.fonts.accent} !important;
-  }
-
-  .font-body {
-    font-family: ${({ theme }) => theme.fonts.primary} !important;
-  }
-
-  .font-weight-light {
-    font-weight: ${({ theme }) => theme.fontWeights.regular} !important;
-  }
-
-  .font-weight-regular {
-    font-weight: ${({ theme }) => theme.fontWeights.regular} !important;
-  }
-
-  .font-weight-medium {
-    font-weight: ${({ theme }) => theme.fontWeights.medium} !important;
-  }
-
-  .font-weight-semibold {
-    font-weight: ${({ theme }) => theme.fontWeights.semibold} !important;
-  }
-
-  .font-weight-bold {
-    font-weight: ${({ theme }) => theme.fontWeights.bold} !important;
-  }
-
-  .letter-spacing-tight {
-    letter-spacing: 0.5px !important;
-  }
-
-  .letter-spacing-normal {
-    letter-spacing: 1px !important;
-  }
-
-  .letter-spacing-wide {
-    letter-spacing: 2px !important;
-  }
-
-  .text-uppercase {
-    text-transform: uppercase !important;
-  }
-`; 
-
+`;

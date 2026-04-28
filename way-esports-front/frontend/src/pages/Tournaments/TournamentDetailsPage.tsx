@@ -15,18 +15,14 @@ import { resolveMediaUrl, resolveTeamLogoUrl } from '../../utils/media';
 import { getIntensityByPointsAndRank, getTeamPoints, getTierByPoints } from '../../utils/flameRank';
 import { Seo } from '../../components/SEO';
 import { getGameHubPath } from '../../utils/discovery';
-
-type MatchItem = {
-  id?: string;
-  team1?: any;
-  team2?: any;
-  round?: string;
-  map?: string;
-  startTime?: string;
-  endTime?: string;
-  status?: string;
-  score?: { team1?: number; team2?: number };
-};
+import {
+  NoticeBanner,
+  PageEmptyState,
+  PageHero,
+  PageShell,
+  PageSubtitle,
+  PageTitle
+} from '../../components/UI/PageLayout';
 
 type RoomData = {
   roomId: string;
@@ -43,44 +39,14 @@ type TeamVisual = {
   points: number;
 };
 
-const Container = styled.div`
-  padding: 1rem;
-  width: 100%;
-  max-width: 100%;
-  margin: 0;
+const Container = styled(PageShell)`
   color: #ffffff;
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    padding: 1.5rem;
-  }
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.desktop}) {
-    padding: 2.5rem;
-  }
-`;
-
-const Title = styled.h1`
-  margin: 0 0 0.5rem 0;
-  color: ${({ theme }) => theme.colors.text.primary};
-  font-size: clamp(1.5rem, 4vw, 2.25rem);
-  word-break: break-word;
-  overflow-wrap: anywhere;
-`;
-
-const Subtitle = styled.div`
-  color: ${({ theme }) => theme.colors.text.secondary};
-  font-size: 0.95rem;
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  min-width: 0;
 `;
 
 const Tabs = styled.div`
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 1rem;
 `;
 
 const Tab = styled(Button).attrs<{ $active: boolean }>((props) => ({
@@ -172,10 +138,10 @@ const RegisteredTeamItem = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
-  border-radius: 10px;
+  padding: 0.75rem 0.85rem;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   min-width: 0;
 `;
 
@@ -194,22 +160,28 @@ const DiscoveryLink = styled(Link)`
   display: grid;
   gap: 0.45rem;
   padding: 1rem;
-  border-radius: 16px;
+  border-radius: 20px;
   text-decoration: none;
   color: inherit;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform ${({ theme }) => theme.transitions.fast}, border-color ${({ theme }) => theme.transitions.fast}, background ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: rgba(240, 138, 50, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+  }
 `;
 
-const Banner = styled.div<{ $src?: string }>`
+const Banner = styled(PageHero)<{ $src?: string }>`
   height: 250px;
   width: 100%;
-  background: ${({ $src, theme }) => ($src ? `url(${$src})` : theme.colors.bg.tertiary)};
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.12), rgba(0,0,0,0.62)),
+    ${({ $src, theme }) => ($src ? `url(${$src})` : theme.colors.bg.tertiary)};
   background-size: cover;
   background-position: center;
-  border-radius: 16px;
-  margin-bottom: 1.5rem;
-  border: 1px solid ${({ theme }) => theme.colors.border.light};
   display: flex;
   align-items: flex-end;
   padding: 2rem;
@@ -236,6 +208,42 @@ const Banner = styled.div<{ $src?: string }>`
     position: relative;
     z-index: 1;
   }
+`;
+
+const HeroMetaRow = styled.div`
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+`;
+
+const HeroMetaPill = styled.span<{ $tone?: 'default' | 'live' | 'muted' }>`
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  background: ${({ $tone = 'default' }) =>
+    $tone === 'live'
+      ? 'rgba(76, 175, 80, 0.14)'
+      : $tone === 'muted'
+        ? 'rgba(255,255,255,0.06)'
+        : 'rgba(240, 138, 50, 0.16)'};
+  border: 1px solid
+    ${({ $tone = 'default' }) =>
+      $tone === 'live'
+        ? 'rgba(76, 175, 80, 0.22)'
+        : $tone === 'muted'
+          ? 'rgba(255,255,255,0.08)'
+          : 'rgba(240, 138, 50, 0.22)'};
+  color: ${({ $tone = 'default' }) =>
+    $tone === 'live' ? '#b8f4c1' : $tone === 'muted' ? '#d8d8d8' : '#ffd4ae'};
+  font-size: 0.88rem;
+`;
+
+const DiscoveryCopy = styled.span`
+  color: ${({ theme }) => theme.colors.text.secondary};
+  line-height: 1.55;
 `;
 
 const TournamentDetailsPage: React.FC = () => {
@@ -430,22 +438,25 @@ const TournamentDetailsPage: React.FC = () => {
       />
       <Banner $src={tournamentBanner || '/images/main.png'}>
         <div style={{ minWidth: 0, width: '100%' }}>
-          <Title style={{ color: '#fff', marginBottom: '0.25rem' }}>{title}</Title>
-          <Subtitle>
-            <span style={{ color: '#ff6b00', fontWeight: 'bold' }}>{tournament?.game || '\u2014'}</span>
-            <span style={{ color: '#fff' }}>{'\u2022'} {tournament?.status || '\u2014'}</span>
-            <span style={{ color: '#fff' }}>
-              {'\u2022'} {tournament?.startDate ? new Date(tournament.startDate).toLocaleDateString() : '\u2014'}
-            </span>
-            <span style={{ color: streamConnected ? '#81c784' : '#ffab91' }}>
-              {'\u2022'} Realtime: {streamConnected ? 'LIVE' : 'OFFLINE'}
-            </span>
+          <PageTitle style={{ color: '#fff', marginBottom: '0.25rem' }}>{title}</PageTitle>
+          <PageSubtitle style={{ color: 'rgba(255,255,255,0.82)', maxWidth: '760px' }}>
+            {tournament?.description || `${title} on ${tournament?.game || 'WAY Esports'} with live schedule, standings and bracket context.`}
+          </PageSubtitle>
+          <HeroMetaRow>
+            <HeroMetaPill>{tournament?.game || '\u2014'}</HeroMetaPill>
+            <HeroMetaPill $tone="muted">{tournament?.status || '\u2014'}</HeroMetaPill>
+            <HeroMetaPill $tone="muted">
+              {tournament?.startDate ? new Date(tournament.startDate).toLocaleDateString() : '\u2014'}
+            </HeroMetaPill>
+            <HeroMetaPill $tone={streamConnected ? 'live' : 'default'}>
+              Realtime: {streamConnected ? 'LIVE' : 'OFFLINE'}
+            </HeroMetaPill>
             {streamUpdatedAt ? (
-              <span style={{ color: '#d1d1d1' }}>
-                {'\u2022'} Updated: {new Date(streamUpdatedAt).toLocaleTimeString()}
-              </span>
+              <HeroMetaPill $tone="muted">
+                Updated: {new Date(streamUpdatedAt).toLocaleTimeString()}
+              </HeroMetaPill>
             ) : null}
-          </Subtitle>
+          </HeroMetaRow>
         </div>
       </Banner>
 
@@ -464,12 +475,11 @@ const TournamentDetailsPage: React.FC = () => {
           </Row>
           <RegisteredTeamsGrid>
             {registeredTeams.map((team: any) => {
-              const visual = getTeamDisplay(team);
-              return (
+                const visual = getTeamDisplay(team);
+                return (
               <RegisteredTeamItem key={team.id || team.name}>
                 <FlameAuraAvatar
-                  image={visual.logo || undefined}
-                  alt={visual.name}
+                  imageUrl={visual.logo || undefined}
                   size={28}
                   tier={visual.tier}
                   intensity={visual.intensity}
@@ -482,12 +492,10 @@ const TournamentDetailsPage: React.FC = () => {
         </RegisteredTeamsCard>
       )}
 
-      {error && (
-        <div style={{ color: '#e57373', padding: '20px 0' }}>{error}</div>
-      )}
+      {error ? <NoticeBanner $tone="error">{error}</NoticeBanner> : null}
 
       {loading && !error && (
-        <div style={{ color: '#cccccc', padding: '20px 0' }}>Loading...</div>
+        <PageEmptyState>Loading...</PageEmptyState>
       )}
 
       {!loading && !error && tab !== 'bracket' && (
@@ -507,8 +515,7 @@ const TournamentDetailsPage: React.FC = () => {
                 <TeamsRow>
                   <TeamCell>
                     <FlameAuraAvatar
-                      image={t1.logo || undefined}
-                      alt={t1.name}
+                      imageUrl={t1.logo || undefined}
                       size={28}
                       tier={t1.tier}
                       intensity={t1.intensity}
@@ -519,8 +526,7 @@ const TournamentDetailsPage: React.FC = () => {
                   <Vs>{tab === 'schedule' ? 'vs' : score}</Vs>
                   <TeamCell $align="right">
                     <FlameAuraAvatar
-                      image={t2.logo || undefined}
-                      alt={t2.name}
+                      imageUrl={t2.logo || undefined}
                       size={28}
                       tier={t2.tier}
                       intensity={t2.intensity}
@@ -557,7 +563,7 @@ const TournamentDetailsPage: React.FC = () => {
           })}
 
           {!filteredMatches.length && (
-            <div style={{ color: '#cccccc', padding: '20px 0' }}>No matches</div>
+            <PageEmptyState>No matches</PageEmptyState>
           )}
         </List>
       )}
@@ -574,20 +580,20 @@ const TournamentDetailsPage: React.FC = () => {
           {gameHubPath ? (
             <DiscoveryLink to={gameHubPath}>
               <strong>{tournament?.game || 'Game'} hub</strong>
-              <span style={{ color: '#b7b7b7' }}>Open the wider game page with related events, teams and news.</span>
+              <DiscoveryCopy>Open the wider game page with related events, teams and news.</DiscoveryCopy>
             </DiscoveryLink>
           ) : null}
           <DiscoveryLink to="/tournaments">
             <strong>All tournaments</strong>
-            <span style={{ color: '#b7b7b7' }}>Keep navigating through the public event index.</span>
+            <DiscoveryCopy>Keep navigating through the public event index.</DiscoveryCopy>
           </DiscoveryLink>
           <DiscoveryLink to="/teams">
             <strong>Teams</strong>
-            <span style={{ color: '#b7b7b7' }}>Move from tournament pages into public team profiles.</span>
+            <DiscoveryCopy>Move from tournament pages into public team profiles.</DiscoveryCopy>
           </DiscoveryLink>
           <DiscoveryLink to="/matches">
             <strong>Matches</strong>
-            <span style={{ color: '#b7b7b7' }}>Track live and recent match activity across the platform.</span>
+            <DiscoveryCopy>Track live and recent match activity across the platform.</DiscoveryCopy>
           </DiscoveryLink>
         </DiscoveryGrid>
       )}

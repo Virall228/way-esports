@@ -17,18 +17,21 @@ const getInputSize = (size: InputSize = 'medium') => {
   switch (size) {
     case 'small':
       return css`
-        padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
+        min-height: 40px;
+        padding: 0.7rem 0.9rem;
         font-size: ${({ theme }) => theme.typography.body2.fontSize};
       `;
     case 'medium':
       return css`
-        padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
+        min-height: 46px;
+        padding: 0.85rem 1rem;
         font-size: ${({ theme }) => theme.typography.body1.fontSize};
       `;
     case 'large':
       return css`
-        padding: ${({ theme }) => `${theme.spacing.md} ${theme.spacing.lg}`};
-        font-size: ${({ theme }) => theme.typography.h3.fontSize};
+        min-height: 54px;
+        padding: 1rem 1.15rem;
+        font-size: ${({ theme }) => theme.typography.h5.fontSize};
       `;
   }
 };
@@ -36,60 +39,60 @@ const getInputSize = (size: InputSize = 'medium') => {
 const InputContainer = styled.div<{ fullWidth?: boolean }>`
   display: flex;
   flex-direction: column;
+  gap: 0.45rem;
   width: ${({ fullWidth }) => (fullWidth ? '100%' : 'auto')};
+  position: relative;
+`;
+
+const FieldShell = styled.div`
   position: relative;
 `;
 
 const Label = styled.label`
   color: ${({ theme }) => theme.colors.text.secondary};
-  margin-bottom: ${({ theme }) => theme.spacing.xs};
-  font-size: ${({ theme }) => theme.typography.body2.fontSize};
+  font-size: 0.82rem;
+  letter-spacing: 0.03em;
 `;
 
 const StyledInput = styled.input<InputProps>`
-  background: ${({ theme }) =>
-    theme.isLight
-      ? 'rgba(255, 255, 255, 0.88)'
-      : 'linear-gradient(145deg, rgba(11, 14, 18, 0.82) 0%, rgba(4, 6, 8, 0.9) 100%)'};
+  width: 100%;
   color: ${({ theme }) => theme.colors.text.primary};
   border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.medium : theme.colors.border.medium)};
   border-radius: ${({ theme }) => theme.borderRadius.medium};
   outline: none;
-  transition: all ${({ theme }) => theme.transitions.fast};
-  width: 100%;
+  transition:
+    border-color ${({ theme }) => theme.transitions.fast},
+    background ${({ theme }) => theme.transitions.medium},
+    box-shadow ${({ theme }) => theme.transitions.medium},
+    transform ${({ theme }) => theme.transitions.fast};
   backdrop-filter: blur(12px);
-  box-shadow: ${({ theme }) => (theme.isLight ? '0 6px 18px rgba(109, 78, 44, 0.05)' : 'inset 0 1px 0 rgba(255, 255, 255, 0.04)')};
+  box-shadow: ${({ theme }) => (theme.isLight ? '0 8px 18px rgba(109, 78, 44, 0.05)' : 'inset 0 1px 0 rgba(255, 255, 255, 0.03)')};
+  background: ${({ theme }) =>
+    theme.isLight
+      ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(247, 240, 230, 0.86) 100%)'
+      : 'linear-gradient(180deg, rgba(12, 15, 19, 0.9) 0%, rgba(7, 9, 12, 0.96) 100%)'};
 
   ${({ size }) => getInputSize(size)}
 
   ${({ variant, theme }) =>
     variant === 'filled' &&
     css`
-      background: ${theme.isLight ? 'rgba(244, 235, 224, 0.72)' : 'rgba(255, 138, 31, 0.07)'};
-      border: 1px solid ${theme.isLight ? theme.colors.border.light : theme.colors.glass.panelBorder};
-      border-radius: ${theme.borderRadius.small} ${theme.borderRadius.small} 0 0;
-
-      &:focus {
-        border-color: ${theme.colors.accent};
-        background: ${theme.isLight ? 'rgba(255, 245, 233, 0.94)' : 'rgba(255, 138, 31, 0.1)'};
-      }
+      background: ${theme.isLight ? 'rgba(244, 235, 224, 0.78)' : 'rgba(255, 255, 255, 0.05)'};
+      border-color: ${theme.isLight ? theme.colors.border.light : theme.colors.border.light};
     `}
 
   ${({ variant, theme }) =>
     variant === 'outlined' &&
     css`
-      background: ${theme.isLight ? 'rgba(255, 255, 255, 0.72)' : 'rgba(5, 7, 10, 0.74)'};
-      border: 1px solid ${theme.isLight ? theme.colors.border.medium : theme.colors.border.medium};
-
-      &:focus {
-        border-color: ${theme.colors.accent};
-        box-shadow: 0 0 0 2px ${`${theme.colors.accent}33`};
-      }
+      background: ${theme.isLight ? 'rgba(255, 255, 255, 0.64)' : 'transparent'};
     `}
 
   &:focus {
-    border-color: ${({ theme }) => theme.colors.accent};
-    box-shadow: ${({ theme }) => `${theme.isLight ? '0 0 0 3px rgba(201, 106, 22, 0.14), 0 10px 24px rgba(109, 78, 44, 0.08)' : `0 0 0 2px ${theme.colors.accent}33, 0 0 24px rgba(255, 107, 0, 0.16)`}`};
+    border-color: ${({ theme }) => theme.colors.border.accent};
+    box-shadow: ${({ theme }) =>
+      theme.isLight
+        ? '0 0 0 4px rgba(201, 106, 22, 0.1), 0 14px 26px rgba(109, 78, 44, 0.08)'
+        : '0 0 0 4px rgba(245, 154, 74, 0.12), 0 16px 28px rgba(0, 0, 0, 0.28)'};
   }
 
   &:disabled {
@@ -101,8 +104,9 @@ const StyledInput = styled.input<InputProps>`
     error &&
     css`
       border-color: ${theme.colors.error} !important;
+
       &:focus {
-        box-shadow: 0 0 0 2px ${`${theme.colors.error}33`};
+        box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.12);
       }
     `}
 
@@ -115,7 +119,7 @@ const IconWrapper = styled.div`
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  color: ${({ theme }) => theme.colors.text.secondary};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -124,23 +128,16 @@ const IconWrapper = styled.div`
 
   &.left {
     left: ${({ theme }) => theme.spacing.sm};
-    & + input {
-      padding-left: ${({ theme }) => theme.spacing.xl};
-    }
-  }
 
-  &.right {
-    right: ${({ theme }) => theme.spacing.sm};
-    & ~ input {
-      padding-right: ${({ theme }) => theme.spacing.xl};
+    & + input {
+      padding-left: calc(${({ theme }) => theme.spacing.xl} + 0.1rem);
     }
   }
 `;
 
 const ErrorText = styled.span`
   color: ${({ theme }) => theme.colors.error};
-  font-size: ${({ theme }) => theme.typography.body2.fontSize};
-  margin-top: ${({ theme }) => theme.spacing.xs};
+  font-size: 0.8rem;
 `;
 
 const Input: React.FC<InputProps> = ({
@@ -152,20 +149,15 @@ const Input: React.FC<InputProps> = ({
   icon,
   className,
   ...props
-}) => {
-  return (
-    <InputContainer fullWidth={fullWidth} className={className}>
-      {label && <Label>{label}</Label>}
+}) => (
+  <InputContainer fullWidth={fullWidth} className={className}>
+    {label && <Label>{label}</Label>}
+    <FieldShell>
       {icon && <IconWrapper className="left">{icon}</IconWrapper>}
-      <StyledInput
-        variant={variant}
-        size={size}
-        error={error}
-        {...props}
-      />
-      {error && <ErrorText>{error}</ErrorText>}
-    </InputContainer>
-  );
-};
+      <StyledInput variant={variant} size={size} error={error} {...props} />
+    </FieldShell>
+    {error && <ErrorText>{error}</ErrorText>}
+  </InputContainer>
+);
 
-export default Input; 
+export default Input;

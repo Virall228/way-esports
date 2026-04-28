@@ -2,6 +2,7 @@ import 'styled-components';
 
 declare module 'styled-components' {
   export interface DefaultTheme {
+    isLight: boolean;
     fonts: {
       primary: string;
       secondary: string;
@@ -9,6 +10,7 @@ declare module 'styled-components' {
       body: string;
       accent: string;
       mono?: string;
+      brand?: string;
     };
     fontWeights: {
       light: number;
@@ -29,6 +31,9 @@ declare module 'styled-components' {
       surface: string;
       white: string;
       black: string;
+      brand?: {
+        primary: string;
+      };
       ring: string;
       highlight: string;
       gray: {
@@ -65,6 +70,7 @@ declare module 'styled-components' {
         light: string;
         medium: string;
         strong: string;
+        accent: string;
       };
       glass: {
         panel: string;
@@ -84,6 +90,7 @@ declare module 'styled-components' {
       xxl: string;
     };
     borderRadius: {
+      none?: string;
       sm: string;
       small: string;
       md: string;
@@ -92,6 +99,7 @@ declare module 'styled-components' {
       large: string;
       xl: string;
       full: string;
+      round?: string;
     };
     shadows: {
       sm: string;
@@ -106,6 +114,7 @@ declare module 'styled-components' {
       fast: string;
       medium: string;
       slow: string;
+      default?: string;
     };
     typography: {
       fontFamily: string;

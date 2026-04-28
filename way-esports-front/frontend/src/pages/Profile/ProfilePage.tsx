@@ -26,6 +26,7 @@ import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import FlameAuraAvatar from '../../components/UI/FlameAuraAvatar';
 import { getTierByPoints, getIntensityByPointsAndRank, getPlayerPoints } from '../../utils/flameRank';
+import { SelectField } from '../../components/UI/PageLayout';
 
 type TelegramStatusCardData = {
   userId: string;
@@ -240,8 +241,8 @@ const GhostBadge = styled.div`
   gap: 8px;
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(255, 107, 0, 0.16);
-  border: 1px solid rgba(255, 107, 0, 0.5);
+  background: rgba(245, 154, 74, 0.14);
+  border: 1px solid ${({ theme }) => theme.colors.border.accent};
   color: #ffd7b8;
   font-size: 0.8rem;
   margin-bottom: 10px;
@@ -352,12 +353,13 @@ const HeaderPrimaryButton = styled(Button).attrs({ size: 'small', variant: 'outl
 `;
 
 const ShareLinkButton = styled.a`
-  color: #ff6b00;
+  color: ${({ theme }) => theme.colors.accent};
   font-size: 0.85rem;
   text-decoration: none;
-  border: 1px solid rgba(255,107,0,0.5);
-  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.colors.border.accent};
+  border-radius: 14px;
   padding: 6px 10px;
+  background: rgba(245, 154, 74, 0.08);
 
   @media (max-width: 768px) {
     width: 100%;
@@ -385,13 +387,13 @@ const WallpaperSecondaryButton = styled(Button).attrs({ size: 'small', variant: 
 const InlineConfirm = styled(Button).attrs({ variant: 'text', size: 'small' })`
   min-height: auto;
   padding: 0;
-  color: #00ff00;
+  color: #9ff0cf;
 `;
 
 const InlineCancel = styled(Button).attrs({ variant: 'text', size: 'small' })`
   min-height: auto;
   padding: 0;
-  color: #ff4444;
+  color: #ffc1c1;
 `;
 
 const InlineInput = styled.input`
@@ -407,6 +409,65 @@ const HistoryList = styled.div`
   display: flex;
   flex-direction: column;
   gap: 10px;
+`;
+
+const PublicProfileLink = styled(Link)`
+  color: ${({ theme }) => theme.colors.accent};
+  font-size: 0.9rem;
+  text-decoration: none;
+`;
+
+const StatusMetric = styled.span`
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 0.82rem;
+`;
+
+const BioEditor = styled.textarea`
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  border-radius: ${({ theme }) => theme.borderRadius.medium};
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
+  background: rgba(255,255,255,0.04);
+  color: ${({ theme }) => theme.colors.text.primary};
+  padding: 0.9rem 1rem;
+`;
+
+const PremiumHeading = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+`;
+
+const PremiumTag = styled.span`
+  font-size: 0.75rem;
+  color: #ffcd9b;
+`;
+
+const HistoryControlBar = styled.div`
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+`;
+
+const HistorySelect = styled(SelectField)`
+  min-height: 38px;
+  min-width: 160px;
+`;
+
+const HistoryDateInput = styled.input`
+  min-height: 38px;
+  border-radius: ${({ theme }) => theme.borderRadius.medium};
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
+  background: ${({ theme }) => theme.colors.bg.secondary};
+  color: ${({ theme }) => theme.colors.text.primary};
+  padding: 0 10px;
+`;
+
+const MutedText = styled.div`
+  color: ${({ theme }) => theme.colors.text.tertiary};
 `;
 
 const ProfilePage: React.FC = () => {
@@ -629,11 +690,13 @@ const ProfilePage: React.FC = () => {
   const wins = Number(profile?.stats?.wins || 0);
   const losses = Number(profile?.stats?.losses || 0);
   const points = getPlayerPoints(wins, losses);
-  const historySummary = historyData?.summary || { tournaments: 0, matches: 0, wins: 0, losses: 0, winRate: 0 };
-  const historyItems = Array.isArray(historyData?.items) ? historyData.items : [];
-  const historyBasePagination = historyData?.pagination || { page: 1, limit: 6, total: 0, totalPages: 0 };
-  const detailedItems = Array.isArray(detailedHistoryData?.items) ? detailedHistoryData.items : [];
-  const detailedPagination = detailedHistoryData?.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 };
+  const historyPayload: any = historyData || {};
+  const detailedHistoryPayload: any = detailedHistoryData || {};
+  const historySummary = historyPayload.summary || { tournaments: 0, matches: 0, wins: 0, losses: 0, winRate: 0 };
+  const historyItems = Array.isArray(historyPayload.items) ? historyPayload.items : [];
+  const historyBasePagination = historyPayload.pagination || { page: 1, limit: 6, total: 0, totalPages: 0 };
+  const detailedItems = Array.isArray(detailedHistoryPayload.items) ? detailedHistoryPayload.items : [];
+  const detailedPagination = detailedHistoryPayload.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 };
   const profileTier = getTierByPoints(points);
   const profileIntensity = getIntensityByPointsAndRank(points);
   const wallpaperMeta = (profile as any)?.profileWallpaper;
@@ -782,9 +845,9 @@ const ProfilePage: React.FC = () => {
               </div>
               <UserOrg>{t('memberLabel')}</UserOrg>
               {aiGhostBadge && <GhostBadge>AI Ghost: {aiGhostBadge}</GhostBadge>}
-              <Link to={`/profile/${profile?.id || user?.id}`} style={{ color: '#ff6b00', fontSize: '0.9rem', textDecoration: 'none' }}>
+              <PublicProfileLink to={`/profile/${profile?.id || user?.id}`}>
                 {'\u{1F517}'} {t('viewPublicProfile')}
-              </Link>
+              </PublicProfileLink>
               <HeaderActionRow>
                 <HeaderPrimaryButton onClick={copyStatusCard}>
                   Copy Player Card
@@ -799,9 +862,9 @@ const ProfilePage: React.FC = () => {
                   </ShareLinkButton>
                 ) : null}
                 {statusCardData?.points ? (
-                  <span style={{ color: statusCardData.rankColor || '#ffd7b8', fontSize: '0.82rem' }}>
+                  <StatusMetric style={{ color: statusCardData.rankColor || '#ffd7b8' }}>
                     Points {Number(statusCardData.points).toFixed(0)} • WinRate {Number(statusCardData.winRate || 0).toFixed(1)}%
-                  </span>
+                  </StatusMetric>
                 ) : null}
               </HeaderActionRow>
               <WallpaperActionRow>
@@ -864,19 +927,9 @@ const ProfilePage: React.FC = () => {
             </div>
 
             {isEditingBio ? (
-              <textarea
+              <BioEditor
                 value={newBio}
                 onChange={(e) => setNewBio(e.target.value)}
-                style={{
-                  width: '100%',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid #333',
-                  color: '#fff',
-                  padding: '10px',
-                  borderRadius: '8px',
-                  minHeight: '80px',
-                  resize: 'vertical'
-                }}
                 placeholder={t('bioPlaceholder')}
               />
             ) : (
@@ -902,7 +955,7 @@ const ProfilePage: React.FC = () => {
                 onSortChange={setHistoryBaseSort}
               />
             }
-            items={historyItems.map((item) => ({
+            items={historyItems.map((item: any) => ({
               key: item.tournamentId,
               to: `/tournament/${item.tournamentId}`,
               title: item.tournamentName,
@@ -921,24 +974,24 @@ const ProfilePage: React.FC = () => {
 
         <StatsCard>
           <CardTitle>{t('achievementsLabel')}</CardTitle>
-          <div style={{ color: '#999', fontStyle: 'italic', textAlign: 'center', padding: '40px 0' }}>
+          <MutedText style={{ fontStyle: 'italic', textAlign: 'center', padding: '40px 0' }}>
             {t('noAchievementsYet')}
-          </div>
+          </MutedText>
         </StatsCard>
       </StatsGrid>
 
       <StatsCard>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+        <PremiumHeading>
           <span style={{ fontSize: '1.5rem' }}>{'\u{1F4CA}'}</span>
           <CardTitle style={{ margin: 0 }}>
-            Premium Match History <span style={{ fontSize: '0.75rem', color: '#ffb074' }}>PRO</span>
+            Premium Match History <PremiumTag>PRO</PremiumTag>
           </CardTitle>
-        </div>
+        </PremiumHeading>
 
         {!hasActiveSubscription ? (
-          <div style={{ color: '#c7c7c7' }}>
+          <MutedText>
             Detailed match history, filters and CSV export are available with active subscription.
-          </div>
+          </MutedText>
         ) : (
           <>
             <StatFilters>
@@ -947,11 +1000,10 @@ const ProfilePage: React.FC = () => {
               <StatFilterButton variant="outline">Winrate ({historySummary.winRate.toFixed(1)}%)</StatFilterButton>
             </StatFilters>
 
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
-              <select
+            <HistoryControlBar>
+              <HistorySelect
                 value={historyGameFilter}
                 onChange={(e) => setHistoryGameFilter(e.target.value)}
-                style={{ minHeight: 36, background: '#121418', color: '#fff', border: '1px solid #2b2f38', borderRadius: 8, padding: '0 10px' }}
               >
                 <option value="all">All games</option>
                 <option value="Critical Ops">Critical Ops</option>
@@ -960,26 +1012,23 @@ const ProfilePage: React.FC = () => {
                 <option value="Standoff 2">Standoff 2</option>
                 <option value="Dota 2">Dota 2</option>
                 <option value="Valorant Mobile">Valorant Mobile</option>
-              </select>
-              <select
+              </HistorySelect>
+              <HistorySelect
                 value={historySort}
                 onChange={(e) => setHistorySort(e.target.value as 'recent' | 'oldest')}
-                style={{ minHeight: 36, background: '#121418', color: '#fff', border: '1px solid #2b2f38', borderRadius: 8, padding: '0 10px' }}
               >
                 <option value="recent">Recent first</option>
                 <option value="oldest">Oldest first</option>
-              </select>
-              <input
+              </HistorySelect>
+              <HistoryDateInput
                 type="date"
                 value={historyFromFilter}
                 onChange={(e) => setHistoryFromFilter(e.target.value)}
-                style={{ minHeight: 36, background: '#121418', color: '#fff', border: '1px solid #2b2f38', borderRadius: 8, padding: '0 10px' }}
               />
-              <input
+              <HistoryDateInput
                 type="date"
                 value={historyToFilter}
                 onChange={(e) => setHistoryToFilter(e.target.value)}
-                style={{ minHeight: 36, background: '#121418', color: '#fff', border: '1px solid #2b2f38', borderRadius: 8, padding: '0 10px' }}
               />
               <Button size="small" variant="outline" onClick={() => refetchDetailedHistory()} disabled={isDetailedHistoryLoading}>
                 {isDetailedHistoryLoading ? 'Refreshing...' : 'Refresh'}
@@ -987,12 +1036,12 @@ const ProfilePage: React.FC = () => {
               <Button size="small" variant="outline" onClick={exportHistoryCsv} disabled={isExportingHistory}>
                 {isExportingHistory ? 'Exporting...' : 'Export CSV'}
               </Button>
-            </div>
+            </HistoryControlBar>
 
             {isDetailedHistoryLoading ? (
-              <div style={{ color: '#999' }}>Loading detailed history...</div>
+              <MutedText>Loading detailed history...</MutedText>
             ) : !detailedItems.length ? (
-              <div style={{ color: '#999' }}>No matches for selected filters.</div>
+              <MutedText>No matches for selected filters.</MutedText>
             ) : (
               <HistoryList>
                 {detailedItems.map((row: any) => (

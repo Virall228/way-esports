@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
+import Input from '../../components/UI/Input';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 import { teamsService } from '../../services/teamsService';
@@ -20,57 +21,41 @@ import {
 import { getTeamPoints, getTierByPoints, getIntensityByPointsAndRank } from '../../utils/flameRank';
 import { Seo } from '../../components/SEO';
 import { getGameHubPath } from '../../utils/discovery';
+import {
+  FilterGroup,
+  FilterLabel,
+  FilterRail,
+  NoticeBanner,
+  PageEmptyState,
+  PageHero,
+  PageHeroContent,
+  PageHeroLayout,
+  PageShell,
+  PageSubtitle,
+  PageTitle,
+  SelectField
+} from '../../components/UI/PageLayout';
 
-const Container = styled.div`
-  padding: 2rem 1rem;
-  width: 100%;
-  max-width: 100%;
-  margin: 0;
+const Container = styled(PageShell)`
   color: #fff;
 `;
 
-const TeamHeader = styled(Card)`
+const TeamHeader = styled(PageHero)`
   display: flex;
   align-items: center;
   gap: 2rem;
-  padding: 2rem;
-  margin-bottom: 2rem;
-  background: linear-gradient(135deg, ${({ theme }) => theme.colors.bg.secondary}, ${({ theme }) => theme.colors.bg.tertiary});
   min-width: 0;
 
   @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
-    padding: 1.25rem;
   }
 `;
 
-const Logo = styled.img`
-  width: 120px;
-  height: 120px;
-  border-radius: 16px;
-  border: 2px solid #ff6b00;
-  object-fit: cover;
-`;
-
-const LogoPlaceholder = styled.div`
-  width: 120px;
-  height: 120px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #ff6b00, #ff9500);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 3rem;
-  font-weight: bold;
-  color: white;
-`;
-
-const TeamTitle = styled.h1`
-  font-size: 2.5rem;
-  margin: 0;
-  color: #ff6b00;
+const TeamTitle = styled(PageTitle)`
+  margin-bottom: 0.35rem;
+  font-size: clamp(1.9rem, 4vw, 3rem);
   word-break: break-word;
   overflow-wrap: anywhere;
 
@@ -83,18 +68,20 @@ const TeamTitle = styled.h1`
 const TeamHeaderMeta = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.8rem;
   min-width: 0;
 `;
 
 const TeamTag = styled.span`
-  background: #ff6b00;
-  color: #fff;
-  padding: 4px 12px;
-  border-radius: 8px;
-  font-size: 1rem;
-  margin-left: 1rem;
-  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.36rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(240, 138, 50, 0.16);
+  border: 1px solid rgba(240, 138, 50, 0.28);
+  color: #ffd5ae;
+  font-size: 0.85rem;
+  margin-left: 0.9rem;
   word-break: break-word;
   overflow-wrap: anywhere;
 
@@ -106,18 +93,53 @@ const TeamTag = styled.span`
 `;
 
 const TeamLogoActions = styled.div`
-  margin-top: 0.25rem;
-  padding: 10px;
-  border-radius: 10px;
-  border: 1px dashed rgba(255, 255, 255, 0.2);
+  margin-top: 0.1rem;
+  padding: 0.95rem 1rem;
+  border-radius: 18px;
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.03);
 `;
 
 const ShareRow = styled.div`
-  margin-top: 0.75rem;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 0.75rem;
   align-items: center;
+`;
+
+const TeamMetaRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+`;
+
+const MetaPill = styled.span`
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 0.9rem;
+`;
+
+const HelpText = styled.div`
+  margin-top: 0.55rem;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 0.8rem;
+`;
+
+const InlineLink = styled.a`
+  color: #ffcfaa;
+  font-size: 0.88rem;
+  text-decoration: none;
+
+  &:hover {
+    color: #ffe3ca;
+  }
 `;
 
 const HiddenFileInput = styled.input`
@@ -128,14 +150,42 @@ const UploadLogoButton = styled(Button).attrs({ variant: 'outline', size: 'small
   min-height: 40px;
 `;
 
-const Section = styled.div`
-  margin-bottom: 3rem;
+const Section = styled(Card).attrs({ variant: 'outlined' })`
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1rem, 2vw, 1.35rem);
+  border-radius: 24px;
 `;
 
 const SectionTitle = styled.h2`
-  border-bottom: 2px solid #ff6b00;
-  padding-bottom: 0.5rem;
-  margin-bottom: 1.5rem;
+  margin: 0;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-size: clamp(1rem, 2vw, 1.28rem);
+`;
+
+const SectionTitleRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+`;
+
+const ProTag = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(240, 138, 50, 0.14);
+  border: 1px solid rgba(240, 138, 50, 0.24);
+  color: #ffcd9b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
 `;
 
 const DiscoveryGrid = styled.div`
@@ -146,38 +196,44 @@ const DiscoveryGrid = styled.div`
 
 const DiscoveryLink = styled(Link)`
   display: grid;
-  gap: 0.45rem;
-  padding: 1rem;
-  border-radius: 16px;
+  gap: 0.5rem;
+  padding: 1rem 1.05rem;
+  border-radius: 20px;
   text-decoration: none;
   color: inherit;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform ${({ theme }) => theme.transitions.fast}, border-color ${({ theme }) => theme.transitions.fast}, background ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: rgba(240, 138, 50, 0.22);
+    background: rgba(255, 255, 255, 0.05);
+  }
 `;
 
 const StatsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1.5rem;
-  margin-bottom: 2rem;
 `;
 
 const StatCard = styled(Card) <{ $color: string }>`
   padding: 1.5rem;
-  text-align: center;
-  background: ${({ $color }) => `rgba(${$color}, 0.1)`};
-  border-left: 4px solid ${({ $color }) => `rgb(${$color})`};
+  text-align: left;
+  background: ${({ $color }) => `linear-gradient(180deg, rgba(${$color}, 0.16), rgba(9, 11, 15, 0.9))`};
+  border: 1px solid ${({ $color }) => `rgba(${$color}, 0.22)`};
 `;
 
 const StatValue = styled.h3<{ $color: string }>`
   color: ${({ $color }) => `rgb(${$color})`};
-  font-size: 2.5rem;
-  margin: 0 0 0.5rem 0;
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  margin: 0 0 0.35rem 0;
 `;
 
 const StatLabel = styled.p`
   margin: 0;
-  opacity: 0.8;
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.9rem;
 `;
 
@@ -194,15 +250,15 @@ const MemberCard = styled(Link)`
   align-items: center;
   gap: 1rem;
   padding: 1rem;
-  background: rgba(255,255,255,0.05);
-  border-radius:12px;
-  border: 1px solid transparent;
-  transition: all 0.3s ease;
+  background: rgba(255,255,255,0.04);
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.07);
+  transition: transform ${({ theme }) => theme.transitions.fast}, border-color ${({ theme }) => theme.transitions.fast}, background ${({ theme }) => theme.transitions.fast};
   min-width: 0;
 
   &:hover {
-    border-color: #ff6b00;
-    background: rgba(255,107,0,0.1);
+    border-color: rgba(240, 138, 50, 0.25);
+    background: rgba(255,255,255,0.06);
     transform: translateY(-3px);
   }
 `;
@@ -218,7 +274,7 @@ const AvatarPlaceholder = styled.div`
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(240,138,50,0.2));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -238,11 +294,11 @@ const AchievementCard = styled(Card)`
   justify-content: space-between;
   align-items: center;
   background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.08);
   
   &:hover {
-    border-color: #ff6b00;
-    background: rgba(255,107,0,0.05);
+    border-color: rgba(240, 138, 50, 0.22);
+    background: rgba(255,255,255,0.05);
   }
 `;
 
@@ -257,8 +313,9 @@ const JoinRequestCard = styled(Card).attrs({ variant: 'outlined' })`
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px;
+  padding: 0.95rem 1rem;
   background: rgba(255, 255, 255, 0.03);
+  border-radius: 20px;
 `;
 
 const JoinRequestUser = styled.div`
@@ -285,7 +342,7 @@ const RequestAvatarFallback = styled.div`
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -298,6 +355,21 @@ const HistoryList = styled.div`
   display: flex;
   flex-direction: column;
   gap: 10px;
+`;
+
+const TextMeta = styled.p`
+  margin: 0;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  line-height: 1.6;
+`;
+
+const DateField = styled(Input)`
+  min-width: 170px;
+`;
+
+const DiscoveryCopy = styled.span`
+  color: ${({ theme }) => theme.colors.text.secondary};
+  line-height: 1.55;
 `;
 
 const TeamPage: React.FC = () => {
@@ -512,10 +584,21 @@ const TeamPage: React.FC = () => {
     event.preventDefault();
   };
 
-  if (isLoading) return <Container><div style={{ textAlign: 'center', padding: '3rem' }}>Loading team details...</div></Container>;
+  if (isLoading) {
+    return (
+      <Container>
+        <PageEmptyState>Loading team details...</PageEmptyState>
+      </Container>
+    );
+  }
+
   if (error || !team) {
     const message = (error as Error | undefined)?.message || 'Team not found';
-    return <Container><div style={{ textAlign: 'center', padding: '3rem', color: '#ff6b6b' }}>{message}</div></Container>;
+    return (
+      <Container>
+        <NoticeBanner $tone="error">{message}</NoticeBanner>
+      </Container>
+    );
   }
 
   const totalPrizeMoney = team.stats?.totalPrizeMoney || 0;
@@ -524,11 +607,13 @@ const TeamPage: React.FC = () => {
   const winRate = team.stats?.winRate || 0;
   const teamLogo = resolveTeamLogoUrl(team.logo);
   const gameHubPath = getGameHubPath(team.game);
-  const historySummary = teamHistory?.summary || { tournaments: 0, matches: 0, wins: 0, losses: 0, winRate: 0 };
-  const historyItems = Array.isArray(teamHistory?.items) ? teamHistory.items : [];
-  const historyBasePagination = teamHistory?.pagination || { page: 1, limit: 6, total: 0, totalPages: 0 };
-  const teamDetailedItems = Array.isArray(teamDetailedHistory?.items) ? teamDetailedHistory.items : [];
-  const teamDetailedPagination = teamDetailedHistory?.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 };
+  const historyPayload: any = teamHistory || {};
+  const detailedHistoryPayload: any = teamDetailedHistory || {};
+  const historySummary = historyPayload.summary || { tournaments: 0, matches: 0, wins: 0, losses: 0, winRate: 0 };
+  const historyItems = Array.isArray(historyPayload.items) ? historyPayload.items : [];
+  const historyBasePagination = historyPayload.pagination || { page: 1, limit: 6, total: 0, totalPages: 0 };
+  const teamDetailedItems = Array.isArray(detailedHistoryPayload.items) ? detailedHistoryPayload.items : [];
+  const teamDetailedPagination = detailedHistoryPayload.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 };
 
   const exportTeamHistoryCsv = async () => {
     if (!id) return;
@@ -569,7 +654,7 @@ const TeamPage: React.FC = () => {
         }}
       />
       <TeamHeader>
-        <div>
+        <PageHeroLayout>
           <FlameAuraAvatar
             imageUrl={teamLogo || undefined}
             fallbackText={team.tag?.replace('#', '') || team.name?.charAt(0) || '?'}
@@ -578,49 +663,57 @@ const TeamPage: React.FC = () => {
             intensity={getIntensityByPointsAndRank(getTeamPoints(wins, losses, winRate, Number(team?.achievements?.length || 0)))}
             rounded={false}
           />
-        </div>
-        <TeamHeaderMeta>
-          <TeamTitle>
-            {team.name}
-            <TeamTag>{team.tag}</TeamTag>
-          </TeamTitle>
-          <p style={{ margin: '0.5rem 0', opacity: 0.8 }}>{team.game}</p>
-          {canManageLogo && (
-            <TeamLogoActions onDrop={handleDropTeamLogo} onDragOver={handleDragOverTeamLogo}>
-              <UploadLogoButton type="button" disabled={isUploadingLogo} onClick={openTeamLogoPicker}>
-                {isUploadingLogo ? 'Uploading...' : teamLogo ? 'Change Team Logo' : 'Upload Team Logo'}
-              </UploadLogoButton>
-              <HiddenFileInput
-                ref={logoInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleTeamLogoUpload}
-                disabled={isUploadingLogo}
-              />
-              <div style={{ marginTop: '8px', color: '#c9c9c9', fontSize: '0.8rem' }}>or drag & drop image here</div>
-              {logoError && (
-                <div style={{ marginTop: '8px', color: '#ff6b6b', fontSize: '0.9rem' }}>
-                  {logoError}
-                </div>
+          <PageHeroContent>
+            <TeamHeaderMeta>
+              <div>
+                <TeamTitle>
+                  {team.name}
+                  {team.tag ? <TeamTag>{team.tag}</TeamTag> : null}
+                </TeamTitle>
+                <PageSubtitle>{team.description || `${team.name} competes in ${team.game || 'esports'} through WAY Esports.`}</PageSubtitle>
+              </div>
+
+              <TeamMetaRow>
+                <MetaPill>{team.game || 'Game pending'}</MetaPill>
+                <MetaPill>{team.members?.length || 0}/5 roster slots filled</MetaPill>
+                <MetaPill>{team.achievements?.length || 0} achievements logged</MetaPill>
+              </TeamMetaRow>
+
+              {canManageLogo && (
+                <TeamLogoActions onDrop={handleDropTeamLogo} onDragOver={handleDragOverTeamLogo}>
+                  <UploadLogoButton type="button" disabled={isUploadingLogo} onClick={openTeamLogoPicker}>
+                    {isUploadingLogo ? 'Uploading...' : teamLogo ? 'Change Team Logo' : 'Upload Team Logo'}
+                  </UploadLogoButton>
+                  <HiddenFileInput
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleTeamLogoUpload}
+                    disabled={isUploadingLogo}
+                  />
+                  <HelpText>Or drag and drop an image here.</HelpText>
+                  {logoError ? <NoticeBanner $tone="error">{logoError}</NoticeBanner> : null}
+                </TeamLogoActions>
               )}
-            </TeamLogoActions>
-          )}
-          <ShareRow>
-            <Button variant="outline" size="small" onClick={loadInviteLink}>
-              Generate Telegram Invite
-            </Button>
-            {!!inviteLink && (
-              <>
-                <Button variant="primary" size="small" onClick={copyInviteLink}>
-                  Copy Link
+
+              <ShareRow>
+                <Button variant="outline" size="small" onClick={loadInviteLink}>
+                  Generate Telegram Invite
                 </Button>
-                <a href={inviteLink} target="_blank" rel="noreferrer" style={{ color: '#ffb680', fontSize: 13 }}>
-                  Open
-                </a>
-              </>
-            )}
-          </ShareRow>
-        </TeamHeaderMeta>
+                {!!inviteLink && (
+                  <>
+                    <Button variant="primary" size="small" onClick={copyInviteLink}>
+                      Copy Link
+                    </Button>
+                    <InlineLink href={inviteLink} target="_blank" rel="noreferrer">
+                      Open
+                    </InlineLink>
+                  </>
+                )}
+              </ShareRow>
+            </TeamHeaderMeta>
+          </PageHeroContent>
+        </PageHeroLayout>
       </TeamHeader>
 
       {/* Stats Section */}
@@ -680,59 +773,56 @@ const TeamPage: React.FC = () => {
       </Section>
 
       <Section>
-        <SectionTitle>Premium Match History <span style={{ fontSize: '0.75rem', color: '#ffb074' }}>PRO</span></SectionTitle>
+        <SectionTitleRow>
+          <SectionTitle>Premium Match History</SectionTitle>
+          <ProTag>PRO</ProTag>
+        </SectionTitleRow>
         {!canManageLogo ? (
-          <div style={{ opacity: 0.75 }}>Only team owner can access this section.</div>
+          <NoticeBanner $tone="warning">Only the team owner can access this section.</NoticeBanner>
         ) : !hasActiveSubscription ? (
-          <div style={{ opacity: 0.75 }}>Active subscription required for detailed history, filters and CSV export.</div>
+          <NoticeBanner $tone="warning">Active subscription required for detailed history, filters and CSV export.</NoticeBanner>
         ) : (
           <>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-              <select
-                value={historyGameFilter}
-                onChange={(e) => setHistoryGameFilter(e.target.value)}
-                style={{ minHeight: 36, background: '#121418', color: '#fff', border: '1px solid #2b2f38', borderRadius: 8, padding: '0 10px' }}
-              >
-                <option value="all">All games</option>
-                <option value="Critical Ops">Critical Ops</option>
-                <option value="CS2">CS2</option>
-                <option value="PUBG Mobile">PUBG Mobile</option>
-                <option value="Standoff 2">Standoff 2</option>
-                <option value="Dota 2">Dota 2</option>
-                <option value="Valorant Mobile">Valorant Mobile</option>
-              </select>
-              <select
-                value={historySort}
-                onChange={(e) => setHistorySort(e.target.value as 'recent' | 'oldest')}
-                style={{ minHeight: 36, background: '#121418', color: '#fff', border: '1px solid #2b2f38', borderRadius: 8, padding: '0 10px' }}
-              >
-                <option value="recent">Recent first</option>
-                <option value="oldest">Oldest first</option>
-              </select>
-              <input
-                type="date"
-                value={historyFromFilter}
-                onChange={(e) => setHistoryFromFilter(e.target.value)}
-                style={{ minHeight: 36, background: '#121418', color: '#fff', border: '1px solid #2b2f38', borderRadius: 8, padding: '0 10px' }}
-              />
-              <input
-                type="date"
-                value={historyToFilter}
-                onChange={(e) => setHistoryToFilter(e.target.value)}
-                style={{ minHeight: 36, background: '#121418', color: '#fff', border: '1px solid #2b2f38', borderRadius: 8, padding: '0 10px' }}
-              />
+            <FilterRail>
+              <FilterGroup>
+                <FilterLabel>Game</FilterLabel>
+                <SelectField value={historyGameFilter} onChange={(e) => setHistoryGameFilter(e.target.value)}>
+                  <option value="all">All games</option>
+                  <option value="Critical Ops">Critical Ops</option>
+                  <option value="CS2">CS2</option>
+                  <option value="PUBG Mobile">PUBG Mobile</option>
+                  <option value="Standoff 2">Standoff 2</option>
+                  <option value="Dota 2">Dota 2</option>
+                  <option value="Valorant Mobile">Valorant Mobile</option>
+                </SelectField>
+              </FilterGroup>
+              <FilterGroup>
+                <FilterLabel>Order</FilterLabel>
+                <SelectField value={historySort} onChange={(e) => setHistorySort(e.target.value as 'recent' | 'oldest')}>
+                  <option value="recent">Recent first</option>
+                  <option value="oldest">Oldest first</option>
+                </SelectField>
+              </FilterGroup>
+              <FilterGroup>
+                <FilterLabel>From</FilterLabel>
+                <DateField type="date" value={historyFromFilter} onChange={(e) => setHistoryFromFilter(e.target.value)} />
+              </FilterGroup>
+              <FilterGroup>
+                <FilterLabel>To</FilterLabel>
+                <DateField type="date" value={historyToFilter} onChange={(e) => setHistoryToFilter(e.target.value)} />
+              </FilterGroup>
               <Button variant="outline" size="small" onClick={() => refetchTeamDetailedHistory()} disabled={isTeamDetailedHistoryLoading}>
                 {isTeamDetailedHistoryLoading ? 'Refreshing...' : 'Refresh'}
               </Button>
               <Button variant="outline" size="small" onClick={exportTeamHistoryCsv} disabled={isExportingHistory}>
                 {isExportingHistory ? 'Exporting...' : 'Export CSV'}
               </Button>
-            </div>
+            </FilterRail>
 
             {isTeamDetailedHistoryLoading ? (
-              <div style={{ opacity: 0.8 }}>Loading detailed matches...</div>
+              <TextMeta>Loading detailed matches...</TextMeta>
             ) : !teamDetailedItems.length ? (
-              <div style={{ opacity: 0.75 }}>No matches for selected filters.</div>
+              <PageEmptyState>No matches for selected filters.</PageEmptyState>
             ) : (
               <HistoryList>
                 {teamDetailedItems.map((row: any) => (
@@ -761,11 +851,9 @@ const TeamPage: React.FC = () => {
       {canManageLogo && (
         <Section>
           <SectionTitle>Join Requests</SectionTitle>
-          {requestError && (
-            <div style={{ color: '#ff6b6b', marginBottom: '10px' }}>{requestError}</div>
-          )}
+          {requestError ? <NoticeBanner $tone="error">{requestError}</NoticeBanner> : null}
           {isJoinRequestsLoading ? (
-            <div style={{ opacity: 0.8 }}>Loading requests...</div>
+            <TextMeta>Loading requests...</TextMeta>
           ) : (
             <JoinRequestsList>
               {(Array.isArray(joinRequests) ? joinRequests : []).map((request: any) => {
@@ -808,9 +896,7 @@ const TeamPage: React.FC = () => {
                   </JoinRequestCard>
                 );
               })}
-              {!joinRequests?.length && (
-                <div style={{ opacity: 0.75 }}>No pending requests.</div>
-              )}
+              {!joinRequests?.length && <PageEmptyState>No pending requests.</PageEmptyState>}
             </JoinRequestsList>
           )}
         </Section>
@@ -848,10 +934,10 @@ const TeamPage: React.FC = () => {
             {team.achievements.map((ach: any, index: number) => (
               <AchievementCard key={index}>
                 <div>
-                  <h4 style={{ margin: '0 0 0.5rem 0', color: '#ff6b00' }}>{ach.tournamentName || 'Tournament'}</h4>
-                  <p style={{ margin: 0, opacity: 0.8 }}>
-                    Position: {ach.position} {'\u2022'} Prize: ${ach.prize?.toLocaleString() || 0}
-                  </p>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: '#ffe0c2' }}>{ach.tournamentName || 'Tournament'}</h4>
+                  <TextMeta>
+                    Position: {ach.position} • Prize: ${ach.prize?.toLocaleString() || 0}
+                  </TextMeta>
                 </div>
                 <div style={{ fontSize: '2rem' }}>
                   {ach.position === 1
@@ -874,27 +960,27 @@ const TeamPage: React.FC = () => {
           {gameHubPath ? (
             <DiscoveryLink to={gameHubPath}>
               <strong>{team.game || 'Game'} hub</strong>
-              <span style={{ color: '#b7b7b7' }}>See more tournaments, teams and news tied to this title.</span>
+              <DiscoveryCopy>See more tournaments, teams and news tied to this title.</DiscoveryCopy>
             </DiscoveryLink>
           ) : null}
           <DiscoveryLink to="/teams">
             <strong>Team directory</strong>
-            <span style={{ color: '#b7b7b7' }}>Continue through public team pages and related rosters.</span>
+            <DiscoveryCopy>Continue through public team pages and related rosters.</DiscoveryCopy>
           </DiscoveryLink>
           <DiscoveryLink to="/rankings">
             <strong>Rankings</strong>
-            <span style={{ color: '#b7b7b7' }}>Compare active teams across competitive ladders.</span>
+            <DiscoveryCopy>Compare active teams across competitive ladders.</DiscoveryCopy>
           </DiscoveryLink>
           <DiscoveryLink to="/matches">
             <strong>Matches</strong>
-            <span style={{ color: '#b7b7b7' }}>Follow live and recent matches connected to the platform.</span>
+            <DiscoveryCopy>Follow live and recent matches connected to the platform.</DiscoveryCopy>
           </DiscoveryLink>
         </DiscoveryGrid>
       </Section>
 
       <Section>
         <SectionTitle>Team Support</SectionTitle>
-        <Card>
+        <Card variant="outlined">
           {canAccessTeamSupport ? (
             <SupportChat teamId={team.id || team._id} source="team" subject={`Team Support: ${team.name || 'Team'}`} />
           ) : (

@@ -4,7 +4,9 @@ import styled, { css, keyframes } from 'styled-components';
 type FlameTier = 'top20' | 'top50' | 'top100' | 'top150' | 'default';
 
 interface FlameAuraAvatarProps {
+  image?: string | null;
   imageUrl?: string | null;
+  alt?: string;
   fallbackText?: string;
   size?: number;
   tier?: FlameTier;
@@ -82,7 +84,9 @@ const tierToColor = (tier: FlameTier) => {
 };
 
 const FlameAuraAvatar: React.FC<FlameAuraAvatarProps> = ({
+  image,
   imageUrl,
+  alt = 'avatar',
   fallbackText = '?',
   size = 56,
   tier = 'default',
@@ -90,17 +94,18 @@ const FlameAuraAvatar: React.FC<FlameAuraAvatarProps> = ({
   rounded = true,
   borderColor
 }) => {
+  const resolvedImageUrl = imageUrl ?? image ?? null;
   const [imageBroken, setImageBroken] = React.useState(false);
   React.useEffect(() => {
     setImageBroken(false);
-  }, [imageUrl]);
+  }, [resolvedImageUrl]);
 
   const auraColor = borderColor || tierToColor(tier);
-  const safeImageUrl = imageUrl && !imageBroken ? imageUrl : null;
+  const safeImageUrl = resolvedImageUrl && !imageBroken ? resolvedImageUrl : null;
   return (
     <Wrapper $size={size} $rounded={rounded} $auraColor={auraColor} $intensity={intensity}>
       {safeImageUrl ? (
-        <AvatarImage src={safeImageUrl} alt="avatar" $rounded={rounded} onError={() => setImageBroken(true)} />
+        <AvatarImage src={safeImageUrl} alt={alt} $rounded={rounded} onError={() => setImageBroken(true)} />
       ) : (
         <Fallback $rounded={rounded}>{fallbackText.slice(0, 1).toUpperCase()}</Fallback>
       )}

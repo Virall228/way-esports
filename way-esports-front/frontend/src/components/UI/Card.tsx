@@ -9,7 +9,8 @@ interface CardProps {
   noPadding?: boolean;
   children: React.ReactNode;
   className?: string;
-  onClick?: () => void;
+  style?: React.CSSProperties;
+  onClick?: React.MouseEventHandler<HTMLDivElement>;
 }
 
 const getCardStyles = (variant: CardVariant = 'default') => {
@@ -18,51 +19,64 @@ const getCardStyles = (variant: CardVariant = 'default') => {
       return css`
         background: ${({ theme }) =>
           theme.isLight
-            ? 'rgba(255, 255, 255, 0.84)'
-            : 'linear-gradient(145deg, rgba(18, 22, 28, 0.82) 0%, rgba(6, 8, 11, 0.88) 100%)'};
-        border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.light : theme.colors.glass.panelBorder)};
-        box-shadow: ${({ theme }) => (theme.isLight ? theme.shadows.medium : theme.shadows.medium)};
-        backdrop-filter: blur(16px);
+            ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(247, 240, 230, 0.92) 100%)'
+            : 'linear-gradient(180deg, rgba(17, 20, 25, 0.88) 0%, rgba(9, 11, 15, 0.94) 100%)'};
+        border-color: ${({ theme }) => (theme.isLight ? theme.colors.border.light : theme.colors.border.light)};
+        box-shadow: ${({ theme }) => theme.shadows.medium};
       `;
     case 'outlined':
       return css`
         background: ${({ theme }) =>
           theme.isLight
-            ? 'rgba(255, 252, 247, 0.76)'
-            : 'linear-gradient(145deg, rgba(11, 14, 18, 0.72) 0%, rgba(4, 6, 8, 0.82) 100%)'};
-        border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.medium : theme.colors.border.medium)};
-        backdrop-filter: blur(12px);
+            ? 'rgba(255, 255, 255, 0.78)'
+            : 'linear-gradient(180deg, rgba(12, 15, 19, 0.8) 0%, rgba(7, 9, 12, 0.9) 100%)'};
+        border-color: ${({ theme }) => (theme.isLight ? theme.colors.border.medium : theme.colors.border.medium)};
       `;
     case 'elevated':
       return css`
         background: ${({ theme }) =>
           theme.isLight
-            ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(252, 246, 237, 0.92) 100%)'
-            : 'linear-gradient(145deg, rgba(24, 28, 36, 0.92) 0%, rgba(6, 8, 11, 0.96) 58%, rgba(19, 11, 4, 0.88) 100%)'};
-        border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.medium : theme.colors.glass.panelBorder)};
-        box-shadow: ${({ theme }) => (theme.isLight ? theme.shadows.large : theme.shadows.large)};
-        backdrop-filter: blur(20px);
+            ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 239, 229, 0.94) 100%)'
+            : 'linear-gradient(180deg, rgba(24, 28, 34, 0.94) 0%, rgba(10, 12, 15, 0.98) 58%, rgba(17, 12, 8, 0.94) 100%)'};
+        border-color: ${({ theme }) => (theme.isLight ? theme.colors.border.medium : theme.colors.border.accent)};
+        box-shadow: ${({ theme }) => theme.shadows.large};
       `;
   }
 };
 
 const StyledCard = styled.div<CardProps>`
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
-  padding: ${({ theme, noPadding }) => noPadding ? '0' : theme.spacing.md};
-  transition: all ${({ theme }) => theme.transitions.fast};
   position: relative;
   overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: ${({ theme }) => theme.borderRadius.large};
+  padding: ${({ theme, noPadding }) => (noPadding ? '0' : theme.spacing.md)};
+  transition:
+    transform ${({ theme }) => theme.transitions.fast},
+    border-color ${({ theme }) => theme.transitions.fast},
+    box-shadow ${({ theme }) => theme.transitions.medium},
+    background ${({ theme }) => theme.transitions.medium};
+  backdrop-filter: blur(14px);
+  isolation: isolate;
 
   ${({ variant }) => getCardStyles(variant)}
 
   &::before {
-    content: ${({ theme }) => (theme.isLight ? 'none' : "''")};
+    content: '';
     position: absolute;
-    top: 0;
-    right: 0;
-    width: 42%;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255, 138, 31, 0.58), transparent);
+    inset: 0;
+    background:
+      radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 34%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 26%);
+    opacity: ${({ theme }) => (theme.isLight ? 0.3 : 1)};
+    pointer-events: none;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 1px solid rgba(255, 255, 255, 0.03);
     pointer-events: none;
   }
 
@@ -75,11 +89,13 @@ const StyledCard = styled.div<CardProps>`
     clickable &&
     css`
       cursor: pointer;
+
       &:hover {
-        transform: translateY(-2px);
-        box-shadow: ${({ theme }) => (theme.isLight ? theme.shadows.large : theme.shadows.glow)};
-        border-color: ${({ theme }) => theme.colors.border.strong};
+        transform: translateY(-3px);
+        border-color: ${({ theme }) => theme.colors.border.accent};
+        box-shadow: ${({ theme }) => theme.shadows.glow};
       }
+
       &:active {
         transform: translateY(0);
       }
@@ -92,19 +108,19 @@ const Card: React.FC<CardProps> = ({
   noPadding = false,
   children,
   className,
-  onClick,
-}) => {
-  return (
-    <StyledCard
-      variant={variant}
-      clickable={clickable}
-      noPadding={noPadding}
-      className={className}
-      onClick={onClick}
-    >
-      {children}
-    </StyledCard>
-  );
-};
+  style,
+  onClick
+}) => (
+  <StyledCard
+    variant={variant}
+    clickable={clickable}
+    noPadding={noPadding}
+    className={className}
+    style={style}
+    onClick={onClick}
+  >
+    {children}
+  </StyledCard>
+);
 
-export default Card; 
+export default Card;
