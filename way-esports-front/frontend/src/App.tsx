@@ -168,31 +168,12 @@ const Sidebar = styled.aside`
   }
 `;
 
-const SidebarAura = styled.div`
-  position: absolute;
-  top: 1.2rem;
-  left: 1rem;
-  right: 1rem;
-  height: 10rem;
-  border-radius: 28px;
-  background:
-    radial-gradient(circle at top left, rgba(245, 154, 74, 0.16), transparent 42%),
-    radial-gradient(circle at top right, rgba(255, 255, 255, 0.08), transparent 34%);
-  pointer-events: none;
-  filter: blur(4px);
-  opacity: 0.9;
-`;
-
 const SidebarBrand = styled.div`
-  position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  padding: 0.65rem 0.75rem 1.15rem;
+  align-items: center;
+  min-height: 52px;
+  padding: 0.15rem 0.2rem 0.95rem;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border.light};
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.03);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 `;
 
 const Logo = styled.div`
@@ -203,39 +184,6 @@ const Logo = styled.div`
   text-transform: uppercase;
   color: ${({ theme }) => theme.colors.text.primary};
   text-shadow: 0 0 24px rgba(245, 154, 74, 0.12);
-`;
-
-const BrandMeta = styled.div`
-  color: ${({ theme }) => theme.colors.text.tertiary};
-  font-size: 0.78rem;
-  line-height: 1.5;
-  max-width: 18rem;
-`;
-
-const BrandSignal = styled.div`
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  width: fit-content;
-  min-height: 30px;
-  padding: 0.3rem 0.75rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: ${({ theme }) => theme.colors.text.secondary};
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-family: ${({ theme }) => theme.fonts.accent};
-`;
-
-const BrandSignalDot = styled.span`
-  width: 0.48rem;
-  height: 0.48rem;
-  border-radius: 50%;
-  background: #f5a04d;
-  box-shadow: 0 0 0 0.34rem rgba(245, 160, 77, 0.12);
-  animation: ${signalPulse} 2.4s ease-in-out infinite;
 `;
 
 const SidebarNav = styled.nav`
@@ -344,18 +292,9 @@ const TopBar = styled.header`
 
 const TopBarTitle = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
+  align-items: center;
   min-width: 0;
   flex: 1;
-`;
-
-const TopBarEyebrow = styled.span`
-  color: ${({ theme }) => theme.colors.text.tertiary};
-  font-family: ${({ theme }) => theme.fonts.accent};
-  font-size: 0.76rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 `;
 
 const TopBarPageTitle = styled.h1`
@@ -656,35 +595,6 @@ const MobileMenuActionButton = styled.button`
   letter-spacing: 0.02em;
 `;
 
-const TopBarStatus = styled.div`
-  display: none;
-  align-items: center;
-  gap: 0.6rem;
-  min-height: 40px;
-  padding: 0.5rem 0.85rem;
-  border-radius: 999px;
-  border: 1px solid ${({ theme }) => theme.colors.border.light};
-  background: ${({ theme }) => theme.colors.glass.panel};
-  color: ${({ theme }) => theme.colors.text.secondary};
-  font-family: ${({ theme }) => theme.fonts.accent};
-  font-size: 0.74rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-
-  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    display: inline-flex;
-  }
-`;
-
-const TopBarStatusDot = styled.span`
-  width: 0.48rem;
-  height: 0.48rem;
-  border-radius: 50%;
-  background: #f5a04d;
-  box-shadow: 0 0 0 0.34rem rgba(245, 160, 77, 0.12);
-  animation: ${signalPulse} 2.3s ease-in-out infinite;
-`;
-
 const AppContent: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const { addNotification } = useNotifications();
@@ -776,10 +686,6 @@ const AppContent: React.FC = () => {
     return navItems.find((item) => isActive(item.to))?.label || 'WAY Esports';
   }, [location.pathname, navItems]);
 
-  const currentSectionMeta = isAuthenticated
-    ? 'Unified esports dashboard built for speed, clarity and focus.'
-    : 'Competitive esports platform with refined discovery, teams and tournaments.';
-
   React.useEffect(() => {
     // Initialize API notification handler
     api.setNotifyHandler((type, title, message) => {
@@ -830,14 +736,8 @@ const AppContent: React.FC = () => {
       <ShellGlow $position="left" />
       <ShellGlow $position="right" />
       <Sidebar>
-        <SidebarAura />
         <SidebarBrand>
           <Logo>WAY ESPORTS</Logo>
-          <BrandMeta>Premium esports workspace with cleaner navigation, tighter surfaces and focused action flow.</BrandMeta>
-          <BrandSignal>
-            <BrandSignalDot />
-            Competitive mode active
-          </BrandSignal>
         </SidebarBrand>
         <SidebarNav>
           {navItems.map((item) => (
@@ -852,14 +752,9 @@ const AppContent: React.FC = () => {
       <ContentColumn>
         <TopBar>
           <TopBarTitle>
-            <TopBarEyebrow>{currentSectionMeta}</TopBarEyebrow>
             <TopBarPageTitle>{currentSectionTitle}</TopBarPageTitle>
           </TopBarTitle>
           <TopBarActions>
-            <TopBarStatus>
-              <TopBarStatusDot />
-              Live atmosphere
-            </TopBarStatus>
             {!isAuthenticated && (
               <TopActionButton type="button" onClick={handleLogin} aria-label="Login">
                 Login

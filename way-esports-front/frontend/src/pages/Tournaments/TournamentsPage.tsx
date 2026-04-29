@@ -78,6 +78,8 @@ const TournamentsGrid = styled.div`
 `;
 
 const TournamentCard = styled(Card).attrs({ clickable: true })<{ $status: string }>`
+  display: grid;
+  gap: 0.95rem;
   background: ${({ theme }) =>
     theme.isLight
       ? 'linear-gradient(180deg, rgba(255,255,255,0.92), rgba(247, 239, 229, 0.9))'
@@ -96,20 +98,64 @@ const TournamentCard = styled(Card).attrs({ clickable: true })<{ $status: string
   position: relative;
   overflow: hidden;
   cursor: pointer;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: ${({ $status }) =>
+      $status === 'live'
+        ? 'linear-gradient(180deg, rgba(52, 211, 153, 0.95), rgba(52, 211, 153, 0.1))'
+        : $status === 'upcoming'
+          ? 'linear-gradient(180deg, rgba(245, 154, 74, 0.95), rgba(245, 154, 74, 0.1))'
+          : 'linear-gradient(180deg, rgba(255,255,255,0.34), rgba(255,255,255,0.04))'};
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: ${({ theme }) => theme.shadows.lg};
+    }
+  }
 `;
 
-const GameIcon = styled.img`
-  width: 58px;
-  height: 58px;
-  margin-bottom: 18px;
-  border-radius: 16px;
+const TournamentCover = styled.div<{ $image?: string }>`
+  position: relative;
+  height: 168px;
+  border-radius: 18px;
+  overflow: hidden;
   border: 1px solid ${({ theme }) => theme.colors.border.light};
+  background:
+    ${({ $image, theme }) =>
+      $image
+        ? `linear-gradient(180deg, rgba(0,0,0,${theme.isLight ? '0.08' : '0.18'}), rgba(0,0,0,${theme.isLight ? '0.26' : '0.48'})), url(${$image}) center/cover`
+        : theme.isLight
+          ? 'linear-gradient(135deg, rgba(255, 182, 116, 0.42), rgba(255,255,255,0.86))'
+          : 'linear-gradient(135deg, rgba(245, 154, 74, 0.24), rgba(255,255,255,0.03))'};
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 42%;
+    background: linear-gradient(180deg, transparent, rgba(7, 9, 12, 0.72));
+  }
+`;
+
+const TournamentKicker = styled.div`
+  color: ${({ theme }) => theme.colors.text.tertiary};
+  font-family: ${({ theme }) => theme.fonts.accent};
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 `;
 
 const TournamentTitle = styled.h3`
   color: ${({ theme }) => theme.colors.text.primary};
-  margin-bottom: 12px;
+  margin: 0;
   font-size: 1.28rem;
+  line-height: 1.22;
 `;
 
 const StatusBadge = styled.div<{ $status: string }>`
@@ -135,6 +181,11 @@ const BadgeRow = styled.div`
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 15px;
+`;
+
+const TournamentInfoStack = styled.div`
+  display: grid;
+  gap: 0.6rem;
 `;
 
 const TeamModeBadge = styled.div`
@@ -169,7 +220,7 @@ const PrizePool = styled.div`
   font-weight: 700;
   color: ${({ theme }) => theme.colors.accent};
   text-align: left;
-  margin: 0 0 16px;
+  margin: 0;
 `;
 
 const ActionButton = styled(Button).attrs<{ $variant?: 'brand' | 'outline' }>((props) => ({
@@ -179,6 +230,7 @@ const ActionButton = styled(Button).attrs<{ $variant?: 'brand' | 'outline' }>((p
   width: 100%;
   padding: 0.75rem;
   min-height: 44px;
+  margin-top: 0.3rem;
 `;
 
 const FormFieldGrid = styled.div`
@@ -499,31 +551,34 @@ const TournamentsPage: React.FC = () => {
         <TournamentsGrid>
           {filteredTournaments.map((tournament) => (
             <TournamentCard key={tournament.id} $status={tournament.status} onClick={() => handleTournamentClick(tournament)}>
-              <GameIcon src={getTournamentCardImage(tournament)} alt={tournament.title || tournament.game} />
+              <TournamentCover $image={getTournamentCardImage(tournament)} />
               <BadgeRow>
                 <StatusBadge $status={tournament.status}>{getStatusLabel(tournament.status)}</StatusBadge>
                 {tournament.teamMode && tournament.teamMode !== 'custom' && (
                   <TeamModeBadge>{tournament.teamMode.toUpperCase()}</TeamModeBadge>
                 )}
               </BadgeRow>
+              <TournamentKicker>{tournament.game}</TournamentKicker>
               <TournamentTitle>{tournament.title}</TournamentTitle>
 
               <PrizePool>{tournament.prizePool}</PrizePool>
 
-              <InfoRow>
-                <InfoLabel>{t('participantsLabel')}</InfoLabel>
-                <InfoValue>{tournament.participants}/{tournament.maxParticipants}</InfoValue>
-              </InfoRow>
-              <InfoRow>
-                <InfoLabel>{t('dateLabel')}</InfoLabel>
-                <InfoValue>{tournament.date}</InfoValue>
-              </InfoRow>
-              <InfoRow>
-                <InfoLabel>{t('formatLabel')}</InfoLabel>
-                <InfoValue>{tournament.format}</InfoValue>
-              </InfoRow>
+              <TournamentInfoStack>
+                <InfoRow>
+                  <InfoLabel>{t('participantsLabel')}</InfoLabel>
+                  <InfoValue>{tournament.participants}/{tournament.maxParticipants}</InfoValue>
+                </InfoRow>
+                <InfoRow>
+                  <InfoLabel>{t('dateLabel')}</InfoLabel>
+                  <InfoValue>{tournament.date}</InfoValue>
+                </InfoRow>
+                <InfoRow>
+                  <InfoLabel>{t('formatLabel')}</InfoLabel>
+                  <InfoValue>{tournament.format}</InfoValue>
+                </InfoRow>
+              </TournamentInfoStack>
 
-              <ActionButton $variant={tournament.status === 'upcoming' ? 'brand' : 'outline'} style={{ marginTop: '18px' }}>
+              <ActionButton $variant={tournament.status === 'upcoming' ? 'brand' : 'outline'}>
                 {tournament.status === 'upcoming' ? t('joinNow') : tournament.status === 'live' ? t('viewDetails') : t('results')}
               </ActionButton>
             </TournamentCard>

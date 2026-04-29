@@ -330,6 +330,26 @@ const SettingsPanel = styled.div`
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 `;
 
+const SettingsHeading = styled.div`
+  display: grid;
+  gap: 0.3rem;
+  margin-bottom: 1rem;
+`;
+
+const SettingsTitle = styled.h4`
+  margin: 0;
+  color: #ffffff;
+  font-size: 0.96rem;
+  letter-spacing: 0.01em;
+`;
+
+const SettingsCopy = styled.p`
+  margin: 0;
+  color: #8f98a5;
+  font-size: 0.8rem;
+  line-height: 1.55;
+`;
+
 const SettingItem = styled.div`
   display: flex;
   justify-content: space-between;
@@ -386,6 +406,20 @@ const ToggleSlider = styled.span`
     border-radius: 50%;
   }
 `;
+
+const getToneLabel = (type: Notification['type']) => {
+  switch (type) {
+    case 'success':
+      return 'Success';
+    case 'error':
+      return 'Alert';
+    case 'warning':
+      return 'Watch';
+    case 'info':
+    default:
+      return 'Update';
+  }
+};
 
 // Context
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -485,7 +519,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             onClick={() => markAsRead(notification.id)}
           >
             <NotificationHeader>
-              <div>
+              <NotificationMeta>
+                <ToneBadge $type={notification.type}>{getToneLabel(notification.type)}</ToneBadge>
                 <NotificationTitle>{notification.title}</NotificationTitle>
                 <NotificationMessage>{notification.message}</NotificationMessage>
                 {notification.action && (
@@ -496,7 +531,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                     {notification.action.label}
                   </ActionButton>
                 )}
-              </div>
+              </NotificationMeta>
               <CloseButton onClick={(e) => {
                 e.stopPropagation();
                 removeNotification(notification.id);
@@ -521,9 +556,13 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         
         <NotificationList>
           {notifications.length === 0 ? (
-            <div style={{ color: '#888888', textAlign: 'center', padding: '40px' }}>
-              No notifications
-            </div>
+            <EmptyPanelState>
+              <EmptyPanelOrb aria-hidden="true" />
+              <NotificationTitle>All clear for now</NotificationTitle>
+              <NotificationMessage>
+                Match results, rewards, team updates and important signals will appear here the moment they matter.
+              </NotificationMessage>
+            </EmptyPanelState>
           ) : (
             notifications.map(notification => (
               <NotificationListItem
@@ -531,6 +570,9 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 $read={notification.read}
                 onClick={() => markAsRead(notification.id)}
               >
+                <NotificationMeta>
+                  <ToneBadge $type={notification.type}>{getToneLabel(notification.type)}</ToneBadge>
+                </NotificationMeta>
                 <NotificationTitle>{notification.title}</NotificationTitle>
                 <NotificationMessage>{notification.message}</NotificationMessage>
                 <NotificationTime>
@@ -542,7 +584,12 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         </NotificationList>
 
         <SettingsPanel>
-          <h4 style={{ color: '#ffffff', marginBottom: '16px' }}>Settings</h4>
+          <SettingsHeading>
+            <SettingsTitle>Notification settings</SettingsTitle>
+            <SettingsCopy>
+              Keep the signal high and the noise low. Choose which updates deserve your attention.
+            </SettingsCopy>
+          </SettingsHeading>
           <SettingItem>
             <SettingLabel>Push Notifications</SettingLabel>
             <ToggleSwitch>

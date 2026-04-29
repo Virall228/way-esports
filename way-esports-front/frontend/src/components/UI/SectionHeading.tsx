@@ -17,10 +17,25 @@ const Root = styled.div<{ $center: boolean }>`
 `;
 
 const AccentLine = styled.span`
-  width: 72px;
-  height: 1px;
+  position: relative;
+  width: 88px;
+  height: 2px;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(245, 154, 74, 0), rgba(245, 154, 74, 0.9), rgba(255, 255, 255, 0.24));
+  background: linear-gradient(90deg, rgba(245, 154, 74, 0), rgba(245, 154, 74, 0.92), rgba(255, 255, 255, 0.22));
+  box-shadow: 0 0 18px rgba(245, 154, 74, 0.16);
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    transform: translateY(-50%);
+    background: radial-gradient(circle, rgba(255,255,255,0.88), rgba(255,255,255,0) 62%);
+    opacity: 0.6;
+  }
 `;
 
 const Title = styled.h2`
@@ -29,6 +44,7 @@ const Title = styled.h2`
   font-size: clamp(1.35rem, 2.8vw, 2.65rem);
   letter-spacing: 0.01em;
   line-height: 1.04;
+  text-wrap: balance;
 `;
 
 const Subtitle = styled.p`
@@ -37,6 +53,7 @@ const Subtitle = styled.p`
   color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.98rem;
   line-height: 1.65;
+  text-wrap: pretty;
 `;
 
 const SectionHeading: React.FC<SectionHeadingProps> = ({ title, subtitle, center = false, className }) => (

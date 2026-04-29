@@ -74,6 +74,7 @@ const SocialLink = styled.a`
 `;
 
 const NewsItem = styled(Card).attrs({ variant: 'outlined' })`
+  display: grid;
   background: ${({ theme }) =>
     theme.isLight
       ? 'linear-gradient(180deg, rgba(255,255,255,0.92), rgba(247,239,229,0.9))'
@@ -95,9 +96,9 @@ const NewsItem = styled(Card).attrs({ variant: 'outlined' })`
 
 const NewsItemImage = styled.img`
   width: 100%;
-  height: 200px;
+  height: 228px;
   object-fit: cover;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     height: 300px;
@@ -105,6 +106,8 @@ const NewsItemImage = styled.img`
 `;
 
 const NewsContentWrapper = styled.div`
+  display: grid;
+  gap: 0.9rem;
   padding: 1.25rem;
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
@@ -113,16 +116,21 @@ const NewsContentWrapper = styled.div`
 `;
 
 const NewsItemTitle = styled.h2`
-  color: #ffffff;
-  margin-bottom: 0.75rem;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 0;
   font-size: 1.5rem;
   font-weight: 700;
+  line-height: 1.18;
 `;
 
 const NewsItemContent = styled.p`
-  color: #bbbbbb;
-  margin-bottom: 0.5rem;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  margin: 0;
   line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 `;
 
 const ReadMoreLink = styled(Link)`
@@ -164,9 +172,9 @@ const MetaRow = styled.div`
   flex-wrap: wrap;
   gap: 0.6rem;
   align-items: center;
-  color: #9e9e9e;
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-size: 0.82rem;
-  margin-bottom: 0.5rem;
+  margin: 0;
 `;
 
 const MetaChip = styled(Link)`
@@ -187,7 +195,7 @@ const ReactionsRow = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 14px;
+  flex-wrap: wrap;
 `;
 
 const ReactionButton = styled.button<{ $active?: boolean; $tone: 'like' | 'dislike' }>`
@@ -212,6 +220,15 @@ const ReactionButton = styled.button<{ $active?: boolean; $tone: 'like' | 'disli
   min-height: 34px;
   padding: 0 12px;
   cursor: pointer;
+`;
+
+const NewsFooter = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
 `;
 
 const NewsPage: React.FC = () => {
@@ -365,23 +382,25 @@ const NewsPage: React.FC = () => {
               ) : null}
             </MetaRow>
             <NewsItemContent>{item.content}</NewsItemContent>
-            <ReactionsRow>
-              <ReactionButton
-                $tone="like"
-                $active={item.myReaction === 'like'}
-                onClick={() => reactionMutation.mutate({ newsId: item.id, value: 'like' })}
-              >
-                <ThumbsUp size={14} /> {item.likeCount}
-              </ReactionButton>
-              <ReactionButton
-                $tone="dislike"
-                $active={item.myReaction === 'dislike'}
-                onClick={() => reactionMutation.mutate({ newsId: item.id, value: 'dislike' })}
-              >
-                <ThumbsDown size={14} /> {item.dislikeCount}
-              </ReactionButton>
-            </ReactionsRow>
-            <ReadMoreLink to={`/news/${item.id}`}>Read full article</ReadMoreLink>
+            <NewsFooter>
+              <ReactionsRow>
+                <ReactionButton
+                  $tone="like"
+                  $active={item.myReaction === 'like'}
+                  onClick={() => reactionMutation.mutate({ newsId: item.id, value: 'like' })}
+                >
+                  <ThumbsUp size={14} /> {item.likeCount}
+                </ReactionButton>
+                <ReactionButton
+                  $tone="dislike"
+                  $active={item.myReaction === 'dislike'}
+                  onClick={() => reactionMutation.mutate({ newsId: item.id, value: 'dislike' })}
+                >
+                  <ThumbsDown size={14} /> {item.dislikeCount}
+                </ReactionButton>
+              </ReactionsRow>
+              <ReadMoreLink to={`/news/${item.id}`}>Read full article</ReadMoreLink>
+            </NewsFooter>
           </NewsContentWrapper>
         </NewsItem>
       ))}

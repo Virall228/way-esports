@@ -127,6 +127,8 @@ export const SelectField = styled.select`
 `;
 
 export const NoticeBanner = styled.div<{ $tone?: 'info' | 'success' | 'error' | 'warning' }>`
+  position: relative;
+  overflow: hidden;
   padding: 0.95rem 1rem;
   border-radius: 18px;
   border: 1px solid
@@ -156,14 +158,63 @@ export const NoticeBanner = styled.div<{ $tone?: 'info' | 'success' | 'error' | 
           : $tone === 'warning'
             ? '#ffcd9b'
             : '#bfdbfe'};
+  box-shadow: 0 18px 32px rgba(0, 0, 0, 0.16);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: auto -12% -80% auto;
+    width: 10rem;
+    height: 10rem;
+    border-radius: 50%;
+    background:
+      ${({ $tone = 'info' }) =>
+        $tone === 'success'
+          ? 'radial-gradient(circle, rgba(52, 211, 153, 0.18), transparent 68%)'
+          : $tone === 'error'
+            ? 'radial-gradient(circle, rgba(248, 113, 113, 0.18), transparent 68%)'
+            : $tone === 'warning'
+              ? 'radial-gradient(circle, rgba(245, 154, 74, 0.2), transparent 68%)'
+              : 'radial-gradient(circle, rgba(96, 165, 250, 0.18), transparent 68%)'};
+    pointer-events: none;
+  }
 `;
 
 export const PageEmptyState = styled(Card).attrs({ variant: 'outlined' })`
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 0.75rem;
+  justify-items: center;
   text-align: center;
   padding: 3rem 1.25rem;
+  min-height: 220px;
   color: ${({ theme }) => theme.colors.text.secondary};
   border-radius: 24px;
-  background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.02)')};
+  background:
+    ${({ theme }) =>
+      theme.isLight
+        ? 'linear-gradient(180deg, rgba(255,255,255,0.86), rgba(247,240,230,0.8))'
+        : 'linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02))'};
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
+  box-shadow: ${({ theme }) => theme.shadows.medium};
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -2rem;
+    width: 7rem;
+    height: 7rem;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(245, 154, 74, 0.18), transparent 70%);
+    filter: blur(2px);
+    pointer-events: none;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
 `;
 
 export const ModalOverlay = styled.div`

@@ -112,6 +112,8 @@ const TeamsGrid = styled.div`
 `;
 
 const TeamCard = styled(Card).attrs({ variant: 'outlined' })`
+  display: grid;
+  gap: 1rem;
   background: ${({ theme }) =>
     theme.isLight
       ? 'linear-gradient(180deg, rgba(255,255,255,0.92), rgba(247,239,229,0.9))'
@@ -120,6 +122,7 @@ const TeamCard = styled(Card).attrs({ variant: 'outlined' })`
   padding: 24px;
   position: relative;
   overflow: hidden;
+  transition: transform ${({ theme }) => theme.transitions.fast}, box-shadow ${({ theme }) => theme.transitions.fast}, border-color ${({ theme }) => theme.transitions.fast};
 
   &::before {
     content: '';
@@ -130,13 +133,20 @@ const TeamCard = styled(Card).attrs({ variant: 'outlined' })`
     height: 4px;
     background: linear-gradient(90deg, ${({ theme }) => theme.colors.gray[700]}, ${({ theme }) => theme.colors.gray[900]});
   }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: ${({ theme }) => theme.shadows.lg};
+      border-color: ${({ theme }) => theme.colors.border.accent};
+    }
+  }
 `;
 
 const TeamHeader = styled.div`
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 15px;
-  margin-bottom: 20px;
 `;
 
 const TeamInfo = styled.div`
@@ -144,9 +154,10 @@ const TeamInfo = styled.div`
 `;
 
 const TeamName = styled.h3`
-  color: #ffffff;
-  margin-bottom: 5px;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 0 0 5px;
   font-size: 1.3rem;
+  line-height: 1.2;
 `;
 
 const TeamTag = styled.div`
@@ -157,19 +168,28 @@ const TeamTag = styled.div`
 
 const TeamDescription = styled.p`
   color: ${({ theme }) => theme.colors.text.secondary};
-  margin-bottom: 20px;
+  margin: 0;
   font-size: 0.9rem;
   line-height: 1.6;
+  min-height: 4.5em;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 `;
 
 const TeamStats = styled.div`
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
 `;
 
 const StatItem = styled.div`
+  background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.76)' : 'rgba(255, 255, 255, 0.04)')};
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
+  border-radius: 16px;
   text-align: center;
+  padding: 0.85rem 0.5rem;
 `;
 
 const StatValue = styled.div`
@@ -185,13 +205,13 @@ const StatLabel = styled.div`
 `;
 
 const MembersList = styled.div`
-  margin-bottom: 20px;
+  display: grid;
+  gap: 0.65rem;
 `;
 
 const MembersTitle = styled.div`
-  color: #ffffff;
+  color: ${({ theme }) => theme.colors.text.primary};
   font-weight: 600;
-  margin-bottom: 10px;
   font-size: 0.9rem;
 `;
 
@@ -212,8 +232,13 @@ const MemberTag = styled.span<{ $role: 'captain' | 'player' }>`
 `;
 
 const ActionButtons = styled.div`
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const ActionButton = styled(Button).attrs<{ $variant: 'brand' | 'secondary' | 'danger' }>((props) => ({

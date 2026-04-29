@@ -46,7 +46,36 @@ const bounce = keyframes`
   }
 `;
 
+const shimmer = keyframes`
+  0% {
+    transform: rotate(0deg) scale(0.98);
+    opacity: 0.72;
+  }
+  50% {
+    transform: rotate(180deg) scale(1.04);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(360deg) scale(0.98);
+    opacity: 0.72;
+  }
+`;
+
+const getDotSize = (size: LoadingSize = 'medium') => {
+  switch (size) {
+    case 'small':
+      return '0.38rem';
+    case 'medium':
+      return '0.55rem';
+    case 'large':
+      return '0.72rem';
+  }
+};
+
 const LoadingContainer = styled.div<{ fullScreen?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   ${({ fullScreen }) =>
     fullScreen &&
     `
@@ -63,27 +92,54 @@ const LoadingContainer = styled.div<{ fullScreen?: boolean }>`
   `}
 `;
 
+const LoadingStage = styled.div<LoadingProps>`
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(${({ size }) => getSize(size)} * 1.9);
+  height: calc(${({ size }) => getSize(size)} * 1.9);
+`;
+
+const LoadingHalo = styled.div<LoadingProps>`
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, ${({ color }) => color || 'rgba(245, 154, 74, 0.22)'} 0%, rgba(245, 154, 74, 0.06) 42%, transparent 72%);
+  filter: blur(10px);
+  animation: ${shimmer} 4.6s linear infinite;
+  pointer-events: none;
+`;
+
 const Spinner = styled.div<LoadingProps>`
+  position: relative;
+  z-index: 1;
   width: ${({ size }) => getSize(size)};
   height: ${({ size }) => getSize(size)};
-  border: 2px solid transparent;
+  border: 2px solid rgba(255, 255, 255, 0.08);
   border-top-color: ${({ theme, color }) => color || theme.colors.accent};
+  border-right-color: rgba(255, 255, 255, 0.24);
   border-radius: 50%;
   animation: ${spin} 0.8s linear infinite;
+  box-shadow: 0 0 0 0.4rem rgba(245, 154, 74, 0.06);
 `;
 
 const DotsContainer = styled.div<LoadingProps>`
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 `;
 
 const Dot = styled.div<LoadingProps>`
-  width: ${({ size }) => getSize(size)};
-  height: ${({ size }) => getSize(size)};
-  background: ${({ theme, color }) => color || theme.colors.accent};
+  width: ${({ size }) => getDotSize(size)};
+  height: ${({ size }) => getDotSize(size)};
+  background: linear-gradient(180deg, ${({ theme, color }) => color || theme.colors.accent}, rgba(255, 255, 255, 0.95));
   border-radius: 50%;
   animation: ${bounce} 0.5s ease-in-out infinite;
+  box-shadow: 0 0 0 0.35rem rgba(245, 154, 74, 0.08);
 
   &:nth-child(2) {
     animation-delay: 0.1s;
@@ -95,11 +151,16 @@ const Dot = styled.div<LoadingProps>`
 `;
 
 const PulseCircle = styled.div<LoadingProps>`
+  position: relative;
+  z-index: 1;
   width: ${({ size }) => getSize(size)};
   height: ${({ size }) => getSize(size)};
-  background: ${({ theme, color }) => color || theme.colors.accent};
+  background:
+    radial-gradient(circle at 35% 35%, rgba(255,255,255,0.94), rgba(255,255,255,0) 28%),
+    radial-gradient(circle, ${({ theme, color }) => color || theme.colors.accent}, rgba(245, 154, 74, 0.24));
   border-radius: 50%;
   animation: ${pulse} 1.2s ease-in-out infinite;
+  box-shadow: 0 0 0 0.45rem rgba(245, 154, 74, 0.08);
 `;
 
 const Loading: React.FC<LoadingProps> = ({
@@ -111,17 +172,30 @@ const Loading: React.FC<LoadingProps> = ({
   const content = () => {
     switch (variant) {
       case 'spinner':
-        return <Spinner size={size} color={color} />;
+        return (
+          <LoadingStage size={size} color={color}>
+            <LoadingHalo size={size} color={color} />
+            <Spinner size={size} color={color} />
+          </LoadingStage>
+        );
       case 'dots':
         return (
-          <DotsContainer>
-            <Dot size={size} color={color} />
-            <Dot size={size} color={color} />
-            <Dot size={size} color={color} />
-          </DotsContainer>
+          <LoadingStage size={size} color={color}>
+            <LoadingHalo size={size} color={color} />
+            <DotsContainer>
+              <Dot size={size} color={color} />
+              <Dot size={size} color={color} />
+              <Dot size={size} color={color} />
+            </DotsContainer>
+          </LoadingStage>
         );
       case 'pulse':
-        return <PulseCircle size={size} color={color} />;
+        return (
+          <LoadingStage size={size} color={color}>
+            <LoadingHalo size={size} color={color} />
+            <PulseCircle size={size} color={color} />
+          </LoadingStage>
+        );
     }
   };
 

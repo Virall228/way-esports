@@ -28,11 +28,10 @@ const HeroSection = styled(Card).attrs({ variant: 'elevated' })`
   background: ${({ theme }) =>
     theme.isLight
       ? theme.colors.bg.secondary
-      : 'linear-gradient(135deg, rgba(9, 11, 14, 0.94) 0%, rgba(14, 17, 21, 0.9) 54%, rgba(20, 15, 10, 0.88) 100%)'};
+      : 'linear-gradient(145deg, rgba(7, 9, 12, 0.98) 0%, rgba(10, 12, 16, 0.96) 54%, rgba(12, 10, 8, 0.94) 100%)'};
   border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.medium : theme.colors.border.light)};
   border-radius: 28px;
   padding: clamp(28px, 5vw, 88px) clamp(22px, 4vw, 48px);
-  text-align: center;
   margin-bottom: 32px;
   position: relative;
   overflow: hidden;
@@ -46,12 +45,12 @@ const HeroSection = styled(Card).attrs({ variant: 'elevated' })`
       theme.isLight
         ? "url('/images/main2.png') center/cover"
         : `
-      linear-gradient(180deg, rgba(0, 0, 0, 0.46), rgba(5, 6, 7, 0.84)),
-      radial-gradient(circle at 12% 50%, rgba(245, 154, 74, 0.22), transparent 28%),
-      radial-gradient(circle at 86% 48%, rgba(255, 255, 255, 0.08), transparent 26%),
-      url('/images/way-twitter-banner-bg.jpg') center/cover
+      radial-gradient(circle at 18% 24%, rgba(245, 154, 74, 0.16), transparent 26%),
+      radial-gradient(circle at 82% 22%, rgba(255, 255, 255, 0.07), transparent 22%),
+      radial-gradient(circle at 50% 100%, rgba(245, 154, 74, 0.08), transparent 34%),
+      linear-gradient(180deg, rgba(0, 0, 0, 0.14), rgba(5, 6, 8, 0.42))
     `};
-    opacity: ${({ theme }) => (theme.isLight ? 0.1 : 0.62)};
+    opacity: ${({ theme }) => (theme.isLight ? 0.1 : 1)};
     z-index: 0;
   }
 
@@ -60,9 +59,9 @@ const HeroSection = styled(Card).attrs({ variant: 'elevated' })`
     position: absolute;
     inset: 0;
     background:
-      linear-gradient(118deg, transparent 0 41%, rgba(255, 138, 31, 0.2) 41.5%, transparent 42%),
-      linear-gradient(64deg, transparent 0 62%, rgba(255, 255, 255, 0.08) 62.25%, transparent 63%);
-    opacity: ${({ theme }) => (theme.isLight ? 0 : 1)};
+      linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 16%, transparent 84%, rgba(0, 0, 0, 0.24)),
+      radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.05), transparent 36%);
+    opacity: ${({ theme }) => (theme.isLight ? 0 : 0.95)};
     z-index: 0;
     pointer-events: none;
   }
@@ -76,6 +75,7 @@ const HeroSection = styled(Card).attrs({ variant: 'elevated' })`
     padding: 28px 16px;
     margin-bottom: 28px;
     border-radius: 14px;
+    text-align: center;
     background: ${({ theme }) => theme.colors.bg.secondary};
     box-shadow: none;
 
@@ -86,17 +86,51 @@ const HeroSection = styled(Card).attrs({ variant: 'elevated' })`
   }
 `;
 
+const HeroLayout = styled.div`
+  display: grid;
+  gap: 1.6rem;
+
+  @media (min-width: 960px) {
+    grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+    align-items: end;
+  }
+`;
+
+const HeroBody = styled.div`
+  display: grid;
+  justify-items: start;
+  gap: 1rem;
+
+  @media (max-width: 768px) {
+    justify-items: center;
+  }
+`;
+
+const HeroEyebrow = styled.span`
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-family: ${({ theme }) => theme.fonts.accent};
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+`;
+
 const Logo = styled.div`
   width: 118px;
   height: 118px;
   background:
-    url('/images/way-main-logo-metal-v2.jpg?v=3') center/cover no-repeat,
-    url('/images/way-esports-logo.png.jpg') center/cover no-repeat;
+    #050608 url('/images/way-main-logo-metal-v2.jpg?v=20260428') center/cover no-repeat;
   border-radius: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 30px;
+  margin: 0;
   border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.medium : 'rgba(255, 255, 255, 0.1)')};
   box-shadow: ${({ theme }) =>
     theme.isLight
@@ -107,7 +141,7 @@ const Logo = styled.div`
   @media (max-width: 768px) {
     width: 88px;
     height: 88px;
-    margin: 0 auto 16px;
+    margin: 0 auto;
   }
 `;
 
@@ -115,27 +149,37 @@ const HeroTitle = styled.h1`
   font-size: clamp(2.4rem, 7vw, 4.8rem);
   font-weight: 700;
   color: ${({ theme }) => theme.colors.text.primary};
-  margin-bottom: 14px;
+  margin: 0;
   letter-spacing: 0.03em;
   text-shadow: ${({ theme }) => (theme.isLight ? '0 6px 18px rgba(132, 95, 58, 0.16)' : '0 10px 26px rgba(0, 0, 0, 0.32)')};
+  line-height: 0.94;
 
   @media (max-width: 768px) {
     font-size: 2rem;
     letter-spacing: 1px;
-    margin-bottom: 10px;
   }
 `;
 
 const HeroSubtitle = styled.p`
   font-size: clamp(1rem, 2vw, 1.18rem);
   color: ${({ theme }) => theme.colors.text.secondary};
-  margin: 0 auto 28px;
+  margin: 0;
   max-width: 760px;
   line-height: 1.75;
 
   @media (max-width: 768px) {
     font-size: 0.95rem;
-    margin-bottom: 18px;
+  }
+`;
+
+const HeroActions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: center;
   }
 `;
 
@@ -151,7 +195,7 @@ const CTAButton = styled(Button).attrs({ variant: 'brand', size: 'large' })`
   }
 
   @media (max-width: 768px) {
-    width: 100%;
+    flex: 1 1 100%;
     font-size: 0.95rem;
     padding: 12px 14px;
     transition: none;
@@ -160,6 +204,66 @@ const CTAButton = styled(Button).attrs({ variant: 'brand', size: 'large' })`
       transform: none;
     }
   }
+`;
+
+const HeroSecondaryButton = styled(Button).attrs({ variant: 'outline', size: 'large' })`
+  min-height: 58px;
+  padding: 16px 26px;
+  border-radius: 18px;
+
+  @media (max-width: 768px) {
+    flex: 1 1 100%;
+    min-height: 48px;
+    padding: 12px 14px;
+  }
+`;
+
+const HeroMetrics = styled.div`
+  display: grid;
+  gap: 0.85rem;
+  align-self: stretch;
+
+  @media (min-width: 620px) and (max-width: 959px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+`;
+
+const HeroMetric = styled.div`
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem 1.05rem;
+  border-radius: 18px;
+  background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.82)' : 'rgba(255, 255, 255, 0.04)')};
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: auto -16% -50% auto;
+    width: 7rem;
+    height: 7rem;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(245, 154, 74, 0.16), transparent 68%);
+    pointer-events: none;
+  }
+`;
+
+const HeroMetricValue = styled.div`
+  position: relative;
+  z-index: 1;
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-size: clamp(1.35rem, 2vw, 1.9rem);
+  font-weight: 800;
+`;
+
+const HeroMetricLabel = styled.div`
+  position: relative;
+  z-index: 1;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 0.82rem;
+  line-height: 1.45;
 `;
 
 const FeaturesGrid = styled.div`
@@ -263,89 +367,11 @@ const FeatureDescription = styled.p`
   }
 `;
 
-const StatsSection = styled.section`
-  background: ${({ theme }) => (theme.isLight ? theme.colors.bg.elevated : 'linear-gradient(180deg, rgba(18, 22, 27, 0.84) 0%, rgba(9, 11, 14, 0.92) 100%)')};
-  border: 1px solid ${({ theme }) => theme.colors.border.light};
-  border-radius: 24px;
-  padding: 36px 28px;
-  margin-bottom: 24px;
-
-  @media (max-width: 768px) {
-    padding: 20px 14px;
-    border-radius: 14px;
-    margin-bottom: 20px;
-  }
-`;
-
-const StatsTitle = styled.h2`
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.text.primary};
-  text-align: center;
-  margin-bottom: 50px;
-  letter-spacing: 2px;
-
-  @media (max-width: 768px) {
-    font-size: 1.35rem;
-    margin-bottom: 14px;
-    letter-spacing: 0.5px;
-  }
-`;
-
-const StatsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 40px;
-
-  @media (max-width: 768px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-`;
-
-const StatCard = styled(Card).attrs({ variant: 'outlined' })`
-  text-align: center;
-  padding: 30px;
-  background: ${({ theme }) => (theme.isLight ? theme.colors.bg.secondary : 'rgba(255, 255, 255, 0.03)')};
-  border-radius: 18px;
-  border: 1px solid ${({ theme }) => theme.colors.border.light};
-
-  @media (max-width: 768px) {
-    padding: 12px 8px;
-  }
-`;
-
-const StatNumber = styled.div`
-  font-size: 3rem;
-  font-weight: 900;
-  color: ${({ theme }) => theme.colors.text.primary};
-  margin-bottom: 10px;
-
-  @media (max-width: 768px) {
-    font-size: 1.35rem;
-    margin-bottom: 4px;
-  }
-`;
-
-const StatLabel = styled.div`
-  color: ${({ theme }) => theme.colors.text.secondary};
-  font-size: 1.1rem;
-  font-weight: 500;
-
-  @media (max-width: 768px) {
-    font-size: 0.78rem;
-  }
-`;
-
 const TopInfoGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, minmax(280px, 1fr));
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
   gap: 14px;
   margin-bottom: 14px;
-
-  @media (max-width: 1600px) {
-    grid-template-columns: repeat(2, minmax(280px, 1fr));
-  }
 
   @media (max-width: 1280px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -390,31 +416,6 @@ const InfoTitle = styled.h3`
   margin: 0 0 10px;
   font-size: 1rem;
   color: ${({ theme }) => theme.colors.text.primary};
-`;
-
-const TinyGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-`;
-
-const TinyStat = styled.div`
-  background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.74)' : 'rgba(255, 255, 255, 0.04)')};
-  border: 1px solid ${({ theme }) => theme.colors.border.light};
-  border-radius: 14px;
-  padding: 10px;
-`;
-
-const TinyValue = styled.div`
-  font-size: 1.1rem;
-  font-weight: 800;
-  color: ${({ theme }) => theme.colors.text.primary};
-`;
-
-const TinyLabel = styled.div`
-  font-size: 0.78rem;
-  color: ${({ theme }) => theme.colors.text.tertiary};
-  margin-top: 2px;
 `;
 
 const QuickActions = styled.div`
@@ -736,41 +737,48 @@ const HomePage: React.FC = () => {
     <PageRoot>
       <Container>
       <HeroSection style={isMobile ? { minHeight: 'auto' } : undefined}>
-        <Logo aria-label="WAY logo" />
-        <HeroTitle>WAY ESPORTS</HeroTitle>
-        <HeroSubtitle>
-          {t('homeHeroSubtitle')}
-        </HeroSubtitle>
-        <CTAButton onClick={() => navigate('/tournaments')}>
-          {t('joinTournament')}
-        </CTAButton>
+        <HeroLayout>
+          <HeroBody>
+            <HeroEyebrow>Competitive gaming platform</HeroEyebrow>
+            <Logo aria-label="WAY logo" />
+            <HeroTitle>WAY ESPORTS</HeroTitle>
+            <HeroSubtitle>
+              {t('homeHeroSubtitle')}
+            </HeroSubtitle>
+            <HeroActions>
+              <CTAButton onClick={() => navigate('/tournaments')}>
+                {t('joinTournament')}
+              </CTAButton>
+              <HeroSecondaryButton onClick={() => navigate('/matches')}>
+                Open matches
+              </HeroSecondaryButton>
+            </HeroActions>
+          </HeroBody>
+
+          <HeroMetrics>
+            <HeroMetric>
+              <HeroMetricValue>{stats.activeTournaments}</HeroMetricValue>
+              <HeroMetricLabel>Active tournaments open for entry and live progress.</HeroMetricLabel>
+            </HeroMetric>
+            <HeroMetric>
+              <HeroMetricValue>{stats.activeTeams}</HeroMetricValue>
+              <HeroMetricLabel>Teams building lineups, scrims and tournament runs.</HeroMetricLabel>
+            </HeroMetric>
+            <HeroMetric>
+              <HeroMetricValue>{stats.totalUsers.toLocaleString()}</HeroMetricValue>
+              <HeroMetricLabel>Players already inside the ecosystem.</HeroMetricLabel>
+            </HeroMetric>
+            <HeroMetric>
+              <HeroMetricValue>${stats.totalPrizePool.toLocaleString()}</HeroMetricValue>
+              <HeroMetricLabel>Total prize pool visible across the platform.</HeroMetricLabel>
+            </HeroMetric>
+          </HeroMetrics>
+        </HeroLayout>
       </HeroSection>
 
       <TopInfoGrid>
         <InfoCard>
-          <InfoTitle>Live Snapshot</InfoTitle>
-          <TinyGrid>
-            <TinyStat>
-              <TinyValue>{stats.activeTournaments}</TinyValue>
-              <TinyLabel>Active Tournaments</TinyLabel>
-            </TinyStat>
-            <TinyStat>
-              <TinyValue>{stats.activeTeams}</TinyValue>
-              <TinyLabel>Active Teams</TinyLabel>
-            </TinyStat>
-            <TinyStat>
-              <TinyValue>{stats.totalUsers.toLocaleString()}</TinyValue>
-              <TinyLabel>Players</TinyLabel>
-            </TinyStat>
-            <TinyStat>
-              <TinyValue>{recentNewsCount}</TinyValue>
-              <TinyLabel>News (latest)</TinyLabel>
-            </TinyStat>
-          </TinyGrid>
-        </InfoCard>
-
-        <InfoCard>
-          <InfoTitle>My Action Center</InfoTitle>
+          <InfoTitle>Quick actions</InfoTitle>
           <div style={{ color: theme.colors.text.secondary, fontSize: '0.85rem', marginBottom: 10 }}>
             Sub: <strong style={{ color: user?.isSubscribed ? '#9ff0cf' : '#ffcd9b' }}>{user?.isSubscribed ? 'ACTIVE' : 'INACTIVE'}</strong>{' '}
             • Entries: <strong>{Number((user as any)?.freeEntriesCount || 0) + Number((user as any)?.bonusEntries || 0)}</strong>
@@ -789,7 +797,7 @@ const HomePage: React.FC = () => {
         </InfoCard>
 
         <InfoCard>
-          <InfoTitle>Recommended For You</InfoTitle>
+          <InfoTitle>Recommended next</InfoTitle>
           <RecommendationList>
             {recommendations.map((item) => (
               <RecommendationRow key={item.key}>
@@ -865,8 +873,8 @@ const HomePage: React.FC = () => {
       </BottomInfoGrid>
 
       <SectionHeading
-        title={t('whyChoose')}
-        subtitle="A more premium, unified interface across tournaments, teams, profiles, analytics and match flow."
+        title="Platform strengths"
+        subtitle="A cleaner, more focused interface across tournaments, teams, profiles, analytics and match flow."
         center
       />
 
@@ -920,27 +928,6 @@ const HomePage: React.FC = () => {
         </FeatureCard>
       </FeaturesGrid>
 
-      <StatsSection>
-        <StatsTitle>{t('platformStatistics')}</StatsTitle>
-        <StatsGrid>
-          <StatCard>
-            <StatNumber>{stats.activeTournaments}+</StatNumber>
-            <StatLabel>{t('statActiveTournaments')}</StatLabel>
-          </StatCard>
-          <StatCard>
-            <StatNumber>{stats.totalUsers.toLocaleString()}+</StatNumber>
-            <StatLabel>{t('statRegisteredPlayers')}</StatLabel>
-          </StatCard>
-          <StatCard>
-            <StatNumber>{stats.activeTeams}+</StatNumber>
-            <StatLabel>{t('statActiveTeams')}</StatLabel>
-          </StatCard>
-          <StatCard>
-            <StatNumber>${stats.totalPrizePool.toLocaleString()}</StatNumber>
-            <StatLabel>{t('statTotalPrizePool')}</StatLabel>
-          </StatCard>
-        </StatsGrid>
-      </StatsSection>
       </Container>
     </PageRoot>
   );

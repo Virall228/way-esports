@@ -17,7 +17,7 @@ const Page = styled.div`
 const Hero = styled(Card).attrs({ variant: 'elevated' })`
   position: relative;
   overflow: hidden;
-  padding: 2rem;
+  padding: clamp(1.5rem, 4vw, 3rem);
   border-radius: 28px;
   border: 1px solid ${({ theme }) => theme.colors.border.light};
   background: ${({ theme }) =>
@@ -34,8 +34,58 @@ const Hero = styled(Card).attrs({ variant: 'elevated' })`
   `};
 `;
 
+const HeroLayout = styled.div`
+  display: grid;
+  gap: 1.5rem;
+
+  @media (min-width: 980px) {
+    grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+    align-items: end;
+  }
+`;
+
+const HeroBody = styled.div`
+  display: grid;
+  gap: 1rem;
+  justify-items: start;
+
+  @media (max-width: 768px) {
+    justify-items: center;
+    text-align: center;
+  }
+`;
+
+const HeroEyebrow = styled.span`
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-family: ${({ theme }) => theme.fonts.accent};
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+`;
+
+const HeroLogo = styled.div`
+  width: 92px;
+  height: 92px;
+  border-radius: 24px;
+  background: #050608 url('/images/way-main-logo-metal-v2.jpg?v=20260428') center/cover no-repeat;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28);
+
+  @media (max-width: 768px) {
+    width: 78px;
+    height: 78px;
+  }
+`;
+
 const HeroTitle = styled.h1`
-  margin: 0 0 0.75rem;
+  margin: 0;
   font-size: clamp(2.2rem, 6vw, 4.5rem);
   line-height: 0.96;
 `;
@@ -52,11 +102,19 @@ const ButtonRow = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 0.85rem;
-  margin-top: 1.4rem;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: center;
+  }
 `;
 
 const LinkButton = styled(Link)`
   text-decoration: none;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
 `;
 
 const StatsGrid = styled.div`
@@ -81,6 +139,14 @@ const StatLabel = styled.div`
   margin-top: 0.4rem;
   color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.86rem;
+`;
+
+const HeroMetrics = styled(StatsGrid)`
+  align-self: stretch;
+
+  @media (min-width: 980px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 `;
 
 const Section = styled.section`
@@ -119,6 +185,13 @@ const ContentCard = styled(Card).attrs({ variant: 'outlined' })`
   border-radius: 18px;
   background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.82)' : 'rgba(255, 255, 255, 0.03)')};
   border: 1px solid ${({ theme }) => theme.colors.border.light};
+  transition: transform ${({ theme }) => theme.transitions.fast}, border-color ${({ theme }) => theme.transitions.fast}, box-shadow ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    transform: translateY(-3px);
+    border-color: ${({ theme }) => theme.colors.border.accent};
+    box-shadow: ${({ theme }) => (theme.isLight ? '0 18px 36px rgba(109, 78, 44, 0.14)' : '0 22px 38px rgba(0, 0, 0, 0.24)')};
+  }
 `;
 
 const Cover = styled.div<{ $image?: string }>`
@@ -270,42 +343,47 @@ const PublicLandingPage: React.FC = () => {
       />
 
       <Hero>
-        <HeroTitle>Competitive esports platform built to be found.</HeroTitle>
-        <HeroSubtitle>
-          WAY Esports brings together tournament pages, team directories, player profiles, rankings, live matches and scout discovery so people can find your platform, your events and your players from search, social previews and direct links.
-        </HeroSubtitle>
-        <ButtonRow>
-          <LinkButton to="/tournaments"><Button variant="brand">Browse Tournaments</Button></LinkButton>
-          <LinkButton to="/teams"><Button variant="outline">Explore Teams</Button></LinkButton>
-          <LinkButton to="/news"><Button variant="outline">Read News</Button></LinkButton>
-          <LinkButton to="/auth"><Button variant="ghost">Open Platform</Button></LinkButton>
-        </ButtonRow>
-      </Hero>
+        <HeroLayout>
+          <HeroBody>
+            <HeroEyebrow>Public esports platform</HeroEyebrow>
+            <HeroLogo aria-hidden="true" />
+            <HeroTitle>WAY ESPORTS</HeroTitle>
+            <HeroSubtitle>
+              Discover tournaments, teams, rankings, player profiles and match stories in one focused competitive space built to feel premium from the first click.
+            </HeroSubtitle>
+            <ButtonRow>
+              <LinkButton to="/tournaments"><Button variant="brand">Browse Tournaments</Button></LinkButton>
+              <LinkButton to="/teams"><Button variant="outline">Explore Teams</Button></LinkButton>
+              <LinkButton to="/auth"><Button variant="ghost">Open Platform</Button></LinkButton>
+            </ButtonRow>
+          </HeroBody>
 
-      <StatsGrid>
-        <StatCard>
-          <StatValue>{Number(stats?.totalUsers || 0).toLocaleString()}</StatValue>
-          <StatLabel>Registered players</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>{Number(stats?.activeTournaments || 0)}</StatValue>
-          <StatLabel>Active tournaments</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>{Number(stats?.activeTeams || 0)}</StatValue>
-          <StatLabel>Active teams</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>${Number(stats?.totalPrizePool || 0).toLocaleString()}</StatValue>
-          <StatLabel>Total prize pool</StatLabel>
-        </StatCard>
-      </StatsGrid>
+          <HeroMetrics>
+            <StatCard>
+              <StatValue>{Number(stats?.totalUsers || 0).toLocaleString()}</StatValue>
+              <StatLabel>Registered players inside the ecosystem</StatLabel>
+            </StatCard>
+            <StatCard>
+              <StatValue>{Number(stats?.activeTournaments || 0)}</StatValue>
+              <StatLabel>Active tournaments visible right now</StatLabel>
+            </StatCard>
+            <StatCard>
+              <StatValue>{Number(stats?.activeTeams || 0)}</StatValue>
+              <StatLabel>Teams building their public presence</StatLabel>
+            </StatCard>
+            <StatCard>
+              <StatValue>${Number(stats?.totalPrizePool || 0).toLocaleString()}</StatValue>
+              <StatLabel>Total prize pool across the platform</StatLabel>
+            </StatCard>
+          </HeroMetrics>
+        </HeroLayout>
+      </Hero>
 
       <Section>
         <SectionHead>
           <div>
-            <SectionTitle>Popular Game Hubs</SectionTitle>
-            <SectionCopy>Indexable entry points for game-specific searches and traffic.</SectionCopy>
+            <SectionTitle>Game hubs</SectionTitle>
+            <SectionCopy>Start from your game and jump straight into the competitive scene around it.</SectionCopy>
           </div>
         </SectionHead>
         <GameGrid>
@@ -321,8 +399,8 @@ const PublicLandingPage: React.FC = () => {
       <Section>
         <SectionHead>
           <div>
-            <SectionTitle>Featured Tournaments</SectionTitle>
-            <SectionCopy>Public tournament pages are your strongest search and share assets.</SectionCopy>
+            <SectionTitle>Featured tournaments</SectionTitle>
+            <SectionCopy>Live and upcoming competitions worth opening first.</SectionCopy>
           </div>
           <InlineLink to="/tournaments">See all tournaments</InlineLink>
         </SectionHead>
@@ -332,7 +410,7 @@ const PublicLandingPage: React.FC = () => {
               <Cover $image={resolveMediaUrl(item.coverImage || item.image || '')} />
               <CardTitle>{item.title || item.name}</CardTitle>
               <CardMeta>
-                {item.game || 'Esports'} • {item.status || 'upcoming'} • ${Number(item.prizePool || 0).toLocaleString()}
+                {item.game || 'Esports'} | {item.status || 'upcoming'} | ${Number(item.prizePool || 0).toLocaleString()}
               </CardMeta>
               <InlineLink to={`/tournaments/${item.id || item._id}`}>Open tournament page</InlineLink>
             </ContentCard>
@@ -343,8 +421,8 @@ const PublicLandingPage: React.FC = () => {
       <Section>
         <SectionHead>
           <div>
-            <SectionTitle>Latest News</SectionTitle>
-            <SectionCopy>News detail pages help you capture long-tail search and social shares.</SectionCopy>
+            <SectionTitle>Latest news</SectionTitle>
+            <SectionCopy>Fresh updates, announcements and storylines around the platform.</SectionCopy>
           </div>
           <InlineLink to="/news">Open news hub</InlineLink>
         </SectionHead>
@@ -363,8 +441,8 @@ const PublicLandingPage: React.FC = () => {
       <Section>
         <SectionHead>
           <div>
-            <SectionTitle>Team Directory</SectionTitle>
-            <SectionCopy>Public team pages create more entry points from branded and game-specific search.</SectionCopy>
+            <SectionTitle>Team directory</SectionTitle>
+            <SectionCopy>Explore the teams shaping the current competitive landscape.</SectionCopy>
           </div>
           <InlineLink to="/teams">View all teams</InlineLink>
         </SectionHead>
@@ -375,7 +453,7 @@ const PublicLandingPage: React.FC = () => {
                 <TeamLogo src={resolveTeamLogoUrl(item.logo || '') || '/images/main.png'} alt={item.name} />
                 <div>
                   <CardTitle>{item.name}{item.tag ? ` (${item.tag})` : ''}</CardTitle>
-                  <CardMeta>{item.game || 'Esports'} • {Math.round(Number(item.stats?.winRate || 0))}% win rate</CardMeta>
+                  <CardMeta>{item.game || 'Esports'} | {Math.round(Number(item.stats?.winRate || 0))}% win rate</CardMeta>
                 </div>
               </TeamRow>
               <InlineLink to={`/teams/${item.id || item._id}`}>Open team profile</InlineLink>
@@ -385,9 +463,9 @@ const PublicLandingPage: React.FC = () => {
       </Section>
 
       <Cta>
-        <SectionTitle>Public pages that keep feeding discovery</SectionTitle>
+        <SectionTitle>Move deeper into the platform</SectionTitle>
         <SectionCopy>
-          Rankings, matches, teams, tournaments, profiles and scout pages now cross-link into each other so your platform has more paths for search engines and social crawlers to understand and index.
+          Open rankings, matches and game hubs to keep exploring the platform from different angles without losing the same clean visual language.
         </SectionCopy>
         <ButtonRow>
           <LinkButton to="/rankings"><Button variant="outline">Open Rankings</Button></LinkButton>
