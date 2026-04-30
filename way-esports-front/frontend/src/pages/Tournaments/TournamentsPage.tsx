@@ -159,20 +159,32 @@ const TournamentTitle = styled.h3`
 `;
 
 const StatusBadge = styled.div<{ $status: string }>`
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   padding: 6px 12px;
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 600;
   margin-bottom: 15px;
-  background: ${({ $status }) =>
-    $status === 'live' ? 'rgba(52, 211, 153, 0.16)' :
-      $status === 'upcoming' ? 'rgba(96, 165, 250, 0.14)' :
-        'rgba(245, 154, 74, 0.14)'};
-  color: ${({ $status }) =>
-    $status === 'live' ? '#9ff0cf' :
-      $status === 'upcoming' ? '#bfdbfe' :
-        '#ffcd9b'};
+  background: ${({ theme, $status }) =>
+    $status === 'live'
+      ? 'rgba(52, 211, 153, 0.08)'
+      : $status === 'upcoming'
+        ? (theme.isLight ? 'rgba(255,255,255,0.88)' : 'rgba(255, 255, 255, 0.04)')
+        : 'rgba(255, 255, 255, 0.04)'};
+  color: ${({ theme, $status }) =>
+    $status === 'live'
+      ? theme.colors.text.primary
+      : $status === 'upcoming'
+        ? theme.colors.text.primary
+        : theme.colors.text.secondary};
+  border: 1px solid
+    ${({ theme, $status }) =>
+      $status === 'live'
+        ? 'rgba(52, 211, 153, 0.22)'
+        : $status === 'upcoming'
+          ? theme.colors.border.strong
+          : theme.colors.border.light};
 `;
 
 const BadgeRow = styled.div`
@@ -189,7 +201,8 @@ const TournamentInfoStack = styled.div`
 `;
 
 const TeamModeBadge = styled.div`
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   padding: 6px 12px;
   border-radius: 999px;
   font-size: 0.8rem;

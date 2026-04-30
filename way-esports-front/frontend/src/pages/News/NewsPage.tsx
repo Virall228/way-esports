@@ -52,7 +52,7 @@ const SocialLinksHeader = styled.div`
 
 const SocialLink = styled.a`
   color: ${({ theme }) => theme.colors.text.primary};
-  background: rgba(255, 255, 255, 0.05);
+  background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.78)' : 'linear-gradient(180deg, rgba(24, 28, 34, 0.96), rgba(12, 15, 20, 0.98))')};
   text-decoration: none;
   font-size: 0.85rem;
   font-weight: 600;
@@ -65,8 +65,8 @@ const SocialLink = styled.a`
   transition: all ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: rgba(245, 154, 74, 0.16);
-    border-color: ${({ theme }) => theme.colors.border.accent};
+    background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.92)' : 'linear-gradient(180deg, rgba(31, 35, 41, 0.98), rgba(16, 19, 24, 1))')};
+    border-color: ${({ theme }) => theme.colors.border.strong};
     color: ${({ theme }) => theme.colors.text.primary};
     transform: translateY(-2px);
     box-shadow: ${({ theme }) => theme.shadows.md};
@@ -161,8 +161,11 @@ const CategoryLink = styled(Link)<{ $active?: boolean }>`
   border-radius: 999px;
   text-decoration: none;
   color: ${({ $active, theme }) => ($active ? theme.colors.text.primary : theme.colors.text.secondary)};
-  background: ${({ $active }) => ($active ? 'rgba(245, 154, 74, 0.18)' : 'rgba(255, 255, 255, 0.04)')};
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.border.accent : theme.colors.border.light)};
+  background: ${({ $active, theme }) =>
+    $active
+      ? (theme.isLight ? 'rgba(255,255,255,0.9)' : 'linear-gradient(180deg, rgba(24, 28, 34, 0.96), rgba(12, 15, 20, 0.98))')
+      : 'rgba(255, 255, 255, 0.04)'};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.border.strong : theme.colors.border.light)};
   font-size: 0.84rem;
   font-weight: 700;
 `;
@@ -204,22 +207,27 @@ const ReactionButton = styled.button<{ $active?: boolean; $tone: 'like' | 'disli
   gap: 6px;
   border-radius: 999px;
   border: 1px solid
-    ${({ $active, $tone }) =>
+    ${({ $active, $tone, theme }) =>
       $active
         ? $tone === 'like'
-          ? 'rgba(76, 175, 80, 0.8)'
-          : 'rgba(244, 67, 54, 0.8)'
-        : 'rgba(255, 255, 255, 0.2)'};
-  background: ${({ $active, $tone }) =>
+          ? 'rgba(52, 211, 153, 0.28)'
+          : 'rgba(248, 113, 113, 0.28)'
+        : theme.colors.border.light};
+  background: ${({ $active, $tone, theme }) =>
     $active
       ? $tone === 'like'
-        ? 'rgba(76, 175, 80, 0.2)'
-        : 'rgba(244, 67, 54, 0.2)'
-      : 'rgba(255, 255, 255, 0.06)'};
-  color: #fff;
+        ? 'rgba(52, 211, 153, 0.08)'
+        : 'rgba(248, 113, 113, 0.08)'
+      : (theme.isLight ? 'rgba(255,255,255,0.8)' : 'rgba(255, 255, 255, 0.04)')};
+  color: ${({ theme }) => theme.colors.text.primary};
   min-height: 34px;
   padding: 0 12px;
   cursor: pointer;
+  transition: background ${({ theme }) => theme.transitions.fast}, border-color ${({ theme }) => theme.transitions.fast}, transform ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    transform: translateY(-1px);
+  }
 `;
 
 const NewsFooter = styled.div`

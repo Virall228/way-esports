@@ -50,8 +50,9 @@ const FieldShell = styled.div`
 
 const Label = styled.label`
   color: ${({ theme }) => theme.colors.text.secondary};
-  font-size: 0.82rem;
-  letter-spacing: 0.03em;
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 `;
 
 const StyledInput = styled.input<InputProps>`
@@ -88,11 +89,11 @@ const StyledInput = styled.input<InputProps>`
     `}
 
   &:focus {
-    border-color: ${({ theme }) => theme.colors.border.accent};
+    border-color: ${({ theme }) => theme.colors.border.strong};
     box-shadow: ${({ theme }) =>
       theme.isLight
-        ? '0 0 0 4px rgba(201, 106, 22, 0.1), 0 14px 26px rgba(109, 78, 44, 0.08)'
-        : '0 0 0 4px rgba(245, 154, 74, 0.12), 0 16px 28px rgba(0, 0, 0, 0.28)'};
+        ? '0 0 0 4px rgba(44, 33, 22, 0.08), 0 14px 26px rgba(109, 78, 44, 0.08)'
+        : '0 0 0 4px rgba(255, 255, 255, 0.07), 0 16px 28px rgba(0, 0, 0, 0.28)'};
   }
 
   &:disabled {

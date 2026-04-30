@@ -309,8 +309,9 @@ const BurgerButton = styled.button`
   justify-content: center;
   border-radius: 16px;
   border: 1px solid ${({ theme }) => theme.colors.border.light};
-  background: ${({ theme }) => theme.colors.glass.panel};
+  background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.72)' : 'linear-gradient(180deg, rgba(24, 28, 34, 0.96), rgba(12, 15, 20, 0.98))')};
   color: ${({ theme }) => theme.colors.text.primary};
+  box-shadow: ${({ theme }) => (theme.isLight ? 'none' : '0 14px 24px rgba(0, 0, 0, 0.18)')};
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     display: none;
@@ -318,7 +319,7 @@ const BurgerButton = styled.button`
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      background: ${({ theme }) => theme.colors.glass.panelHover};
+      background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.88)' : 'linear-gradient(180deg, rgba(31, 35, 41, 0.98), rgba(16, 19, 24, 1))')};
       border-color: ${({ theme }) => theme.colors.border.strong};
     }
   }
@@ -344,14 +345,15 @@ const TopActionButton = styled.button`
   gap: 6px;
   border-radius: 16px;
   border: 1px solid ${({ theme }) => theme.colors.border.light};
-  background: ${({ theme }) => theme.colors.glass.panel};
+  background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.76)' : 'linear-gradient(180deg, rgba(24, 28, 34, 0.96), rgba(12, 15, 20, 0.98))')};
   color: ${({ theme }) => theme.colors.text.primary};
   font-size: 0.8rem;
   letter-spacing: 0.03em;
+  box-shadow: ${({ theme }) => (theme.isLight ? 'none' : '0 14px 24px rgba(0, 0, 0, 0.18)')};
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      background: ${({ theme }) => theme.colors.glass.panelHover};
+      background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.9)' : 'linear-gradient(180deg, rgba(31, 35, 41, 0.98), rgba(16, 19, 24, 1))')};
       border-color: ${({ theme }) => theme.colors.border.strong};
     }
   }
@@ -437,8 +439,11 @@ const BottomNavItem = styled(Link) <{ $active?: boolean }>`
   min-width: 68px;
   min-height: 48px;
   border-radius: 16px;
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.border.accent : 'transparent')};
-  background: ${({ $active }) => ($active ? 'rgba(255, 255, 255, 0.06)' : 'transparent')};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.border.strong : 'rgba(255,255,255,0.02)')};
+  background: ${({ $active, theme }) =>
+    $active
+      ? (theme.isLight ? 'rgba(255,255,255,0.86)' : 'linear-gradient(180deg, rgba(24, 28, 34, 0.96), rgba(12, 15, 20, 0.98))')
+      : 'transparent'};
   color: ${({ $active, theme }) => ($active ? theme.colors.text.primary : theme.colors.text.secondary)};
   display: flex;
   flex-direction: column;
@@ -448,7 +453,7 @@ const BottomNavItem = styled(Link) <{ $active?: boolean }>`
   font-size: 10px;
   letter-spacing: 0.04em;
   text-decoration: none;
-  box-shadow: ${({ $active, theme }) => ($active && !theme.isLight ? '0 16px 28px rgba(0, 0, 0, 0.22)' : 'none')};
+  box-shadow: ${({ $active, theme }) => ($active && !theme.isLight ? '0 14px 24px rgba(0, 0, 0, 0.22)' : 'none')};
 `;
 
 const BottomNavIcon = styled.span`
@@ -572,12 +577,12 @@ const CloseButton = styled.button`
   justify-content: center;
   border-radius: 16px;
   border: 1px solid ${({ theme }) => theme.colors.border.light};
-  background: ${({ theme }) => theme.colors.glass.panel};
+  background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.72)' : 'linear-gradient(180deg, rgba(24, 28, 34, 0.96), rgba(12, 15, 20, 0.98))')};
   color: ${({ theme }) => theme.colors.text.primary};
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      background: ${({ theme }) => theme.colors.glass.panelHover};
+      background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.88)' : 'linear-gradient(180deg, rgba(31, 35, 41, 0.98), rgba(16, 19, 24, 1))')};
       border-color: ${({ theme }) => theme.colors.border.strong};
     }
   }
@@ -595,7 +600,7 @@ const MobileMenuActionButton = styled.button`
   min-height: 44px;
   border-radius: 16px;
   border: 1px solid ${({ theme }) => theme.colors.border.light};
-  background: ${({ theme }) => theme.colors.glass.panel};
+  background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.76)' : 'linear-gradient(180deg, rgba(24, 28, 34, 0.96), rgba(12, 15, 20, 0.98))')};
   color: ${({ theme }) => theme.colors.text.primary};
   font-family: ${({ theme }) => theme.fonts.accent};
   font-size: 0.88rem;

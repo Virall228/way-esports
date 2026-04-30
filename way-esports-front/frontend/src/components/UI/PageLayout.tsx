@@ -12,7 +12,7 @@ export const PageShell = styled.div`
 export const PageHero = styled(Card).attrs({ variant: 'elevated' })`
   position: relative;
   overflow: hidden;
-  padding: clamp(1.25rem, 3vw, 2.4rem);
+  padding: clamp(1.35rem, 3vw, 2.7rem);
   border-radius: 28px;
   border: 1px solid ${({ theme }) => theme.colors.border.light};
   background:
@@ -23,7 +23,7 @@ export const PageHero = styled(Card).attrs({ variant: 'elevated' })`
       linear-gradient(145deg, rgba(255,255,255,0.98), rgba(247, 239, 229, 0.94))
     `
         : `
-      radial-gradient(circle at top right, rgba(245, 154, 74, 0.18), transparent 32%),
+      radial-gradient(circle at top right, rgba(245, 154, 74, 0.14), transparent 32%),
       radial-gradient(circle at bottom left, rgba(255,255,255,0.05), transparent 24%),
       linear-gradient(160deg, rgba(18, 22, 27, 0.96), rgba(8, 10, 13, 0.98))
     `};
@@ -51,16 +51,17 @@ export const PageTitle = styled.h1`
   margin: 0 0 0.75rem;
   color: ${({ theme }) => theme.colors.text.primary};
   font-size: clamp(1.85rem, 5vw, 3.45rem);
-  line-height: 0.98;
-  letter-spacing: 0.01em;
+  line-height: 0.94;
+  letter-spacing: 0.006em;
 `;
 
 export const PageSubtitle = styled.p`
   margin: 0;
-  max-width: 860px;
+  max-width: 780px;
   color: ${({ theme }) => theme.colors.text.secondary};
   font-size: clamp(0.95rem, 1.9vw, 1.12rem);
-  line-height: 1.72;
+  line-height: 1.68;
+  text-wrap: pretty;
 `;
 
 export const PageToolbar = styled.div`
@@ -80,7 +81,7 @@ export const FilterRail = styled(Card).attrs({ variant: 'outlined' })`
   flex-wrap: wrap;
   gap: 0.75rem;
   align-items: center;
-  padding: 1rem;
+  padding: 0.95rem 1rem;
   border-radius: 22px;
   background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.03)')};
   border: 1px solid ${({ theme }) => theme.colors.border.light};
@@ -116,8 +117,8 @@ export const SelectField = styled.select`
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.colors.border.accent};
-    box-shadow: 0 0 0 4px rgba(245, 154, 74, 0.1);
+    border-color: ${({ theme }) => theme.colors.border.strong};
+    box-shadow: ${({ theme }) => (theme.isLight ? '0 0 0 4px rgba(44, 33, 22, 0.08)' : '0 0 0 4px rgba(255, 255, 255, 0.07)')};
   }
 
   option {
@@ -158,7 +159,7 @@ export const NoticeBanner = styled.div<{ $tone?: 'info' | 'success' | 'error' | 
           : $tone === 'warning'
             ? '#ffcd9b'
             : '#bfdbfe'};
-  box-shadow: 0 18px 32px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 14px 24px rgba(0, 0, 0, 0.14);
 
   &::after {
     content: '';
@@ -184,10 +185,10 @@ export const PageEmptyState = styled(Card).attrs({ variant: 'outlined' })`
   position: relative;
   overflow: hidden;
   display: grid;
-  gap: 0.75rem;
+  gap: 0.6rem;
   justify-items: center;
   text-align: center;
-  padding: 3rem 1.25rem;
+  padding: 3.15rem 1.4rem;
   min-height: 220px;
   color: ${({ theme }) => theme.colors.text.secondary};
   border-radius: 24px;

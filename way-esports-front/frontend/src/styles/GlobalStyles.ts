@@ -17,8 +17,8 @@ export const GlobalStyles = createGlobalStyle`
     --sal: env(safe-area-inset-left);
     --sar: env(safe-area-inset-right);
     --app-height: 100vh;
-    --bg-pattern-opacity: 0.24;
-    --bg-glow-opacity: 0.94;
+    --bg-pattern-opacity: 0.18;
+    --bg-glow-opacity: 0.9;
     --ambient-drift-duration: 24s;
   }
 
@@ -36,8 +36,8 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   body[data-bg-preset='default'] {
-    --bg-pattern-opacity: 0.24;
-    --bg-glow-opacity: 0.94;
+    --bg-pattern-opacity: 0.18;
+    --bg-glow-opacity: 0.9;
   }
 
   body[data-bg-preset='strong'] {
@@ -59,6 +59,7 @@ export const GlobalStyles = createGlobalStyle`
     height: 100%;
     overscroll-behavior: none;
     line-height: 1.6;
+    letter-spacing: 0.003em;
   }
 
   @keyframes wayAmbientDrift {
@@ -105,7 +106,7 @@ export const GlobalStyles = createGlobalStyle`
     `
         : `
       radial-gradient(circle at 14% 12%, rgba(245, 154, 74, 0.14) 0%, transparent 26%),
-      radial-gradient(circle at 86% 18%, rgba(255, 255, 255, 0.06) 0%, transparent 24%),
+      radial-gradient(circle at 86% 18%, rgba(255, 255, 255, 0.05) 0%, transparent 24%),
       radial-gradient(circle at 50% 0%, rgba(120, 125, 134, 0.08) 0%, transparent 32%),
       linear-gradient(180deg, rgba(3, 4, 6, 0.86) 0%, rgba(5, 7, 10, 0.95) 54%, rgba(4, 5, 7, 0.99) 100%),
       url('/images/way-twitter-banner-bg.jpg') center/cover no-repeat
@@ -130,7 +131,7 @@ export const GlobalStyles = createGlobalStyle`
         : `
       linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
       linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
-      linear-gradient(120deg, transparent 0 48%, rgba(245, 154, 74, 0.08) 48.5%, transparent 49%)
+      linear-gradient(120deg, transparent 0 48%, rgba(245, 154, 74, 0.05) 48.5%, transparent 49%)
     `};
     background-size: 56px 56px, 56px 56px, 420px 220px;
     background-position: 0 0, 0 0, 50% 0;
@@ -149,9 +150,10 @@ export const GlobalStyles = createGlobalStyle`
   h6 {
     font-family: ${({ theme }) => theme.fonts.title};
     font-weight: ${({ theme }) => theme.fontWeights.semibold};
-    letter-spacing: 0.01em;
-    line-height: 1.08;
-    margin-bottom: 0.75rem;
+    letter-spacing: 0.006em;
+    line-height: 1.02;
+    margin-bottom: 0.65rem;
+    text-wrap: balance;
   }
 
   h1 {
@@ -175,10 +177,15 @@ export const GlobalStyles = createGlobalStyle`
     font-family: ${({ theme }) => theme.fonts.primary};
   }
 
+  p,
+  li {
+    line-height: 1.68;
+  }
+
   button {
     font-family: ${({ theme }) => theme.fonts.accent};
     font-weight: ${({ theme }) => theme.fontWeights.semibold};
-    letter-spacing: 0.02em;
+    letter-spacing: 0.015em;
   }
 
   input,
@@ -221,12 +228,12 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   *:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.highlight};
+    outline: 2px solid ${({ theme }) => (theme.isLight ? 'rgba(44, 33, 22, 0.42)' : 'rgba(255, 255, 255, 0.3)')};
     outline-offset: 2px;
   }
 
   ::selection {
-    background: ${({ theme }) => (theme.isLight ? 'rgba(251, 146, 60, 0.24)' : 'rgba(245, 154, 74, 0.28)')};
+    background: ${({ theme }) => (theme.isLight ? 'rgba(44, 33, 22, 0.16)' : 'rgba(255, 255, 255, 0.14)')};
     color: ${({ theme }) => theme.colors.text.primary};
   }
 
@@ -252,7 +259,7 @@ export const GlobalStyles = createGlobalStyle`
     background: ${({ theme }) =>
       theme.isLight
         ? 'linear-gradient(180deg, #c59d73, #b18051)'
-        : 'linear-gradient(180deg, rgba(245, 154, 74, 0.82), rgba(90, 52, 20, 0.94))'};
+        : 'linear-gradient(180deg, rgba(162, 170, 182, 0.92), rgba(74, 82, 94, 0.96))'};
   }
 
   * {

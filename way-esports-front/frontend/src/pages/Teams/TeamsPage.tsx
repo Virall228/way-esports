@@ -222,13 +222,16 @@ const Members = styled.div`
 `;
 
 const MemberTag = styled.span<{ $role: 'captain' | 'player' }>`
-  background: ${({ $role }) => $role === 'captain' ? 'rgba(245, 154, 74, 0.12)' : 'rgba(255, 255, 255, 0.05)'};
-  color: ${({ theme, $role }) => ($role === 'captain' ? theme.colors.highlight : theme.colors.text.secondary)};
+  background: ${({ theme, $role }) =>
+    $role === 'captain'
+      ? (theme.isLight ? 'rgba(255,255,255,0.9)' : 'rgba(255, 255, 255, 0.05)')
+      : 'rgba(255, 255, 255, 0.05)'};
+  color: ${({ theme }) => theme.colors.text.secondary};
   padding: 5px 9px;
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 500;
-  border: 1px solid ${({ theme, $role }) => ($role === 'captain' ? theme.colors.border.accent : theme.colors.border.light)};
+  border: 1px solid ${({ theme, $role }) => ($role === 'captain' ? theme.colors.border.strong : theme.colors.border.light)};
 `;
 
 const ActionButtons = styled.div`
