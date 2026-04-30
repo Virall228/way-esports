@@ -179,20 +179,24 @@ const CloseButton = styled.button`
 `;
 
 const ActionButton = styled.button`
-  background: linear-gradient(135deg, #f08a32, #ffb267);
-  border: 1px solid rgba(255, 214, 169, 0.42);
-  color: #1b1209;
-  padding: 7px 12px;
-  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(34, 38, 45, 0.96), rgba(16, 19, 24, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f5f7fa;
+  padding: 8px 13px;
+  border-radius: 12px;
   font-size: 12px;
   font-weight: 700;
+  letter-spacing: 0.03em;
   cursor: pointer;
   margin-top: 10px;
-  transition: transform 0.24s ease, box-shadow 0.24s ease;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
+  transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease, background 0.24s ease;
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 10px 24px rgba(245, 154, 74, 0.22);
+    background: linear-gradient(180deg, rgba(40, 45, 53, 0.98), rgba(19, 22, 27, 1));
+    border-color: rgba(255, 255, 255, 0.18);
+    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.28);
   }
 `;
 
@@ -365,8 +369,8 @@ const SettingLabel = styled.div`
 const ToggleSwitch = styled.label`
   position: relative;
   display: inline-block;
-  width: 50px;
-  height: 24px;
+  width: 54px;
+  height: 32px;
 `;
 
 const ToggleInput = styled.input`
@@ -375,11 +379,21 @@ const ToggleInput = styled.input`
   height: 0;
 
   &:checked + span {
-    background: linear-gradient(135deg, #ff6b00, #ff8533);
+    background: linear-gradient(180deg, rgba(68, 211, 139, 0.92), rgba(34, 197, 94, 0.96));
+    border-color: rgba(167, 243, 208, 0.28);
+    box-shadow:
+      0 12px 26px rgba(34, 197, 94, 0.18),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.12);
   }
 
   &:checked + span:before {
-    transform: translateX(26px);
+    transform: translateX(22px);
+  }
+
+  &:focus-visible + span {
+    box-shadow:
+      0 0 0 4px rgba(255, 255, 255, 0.08),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   }
 `;
 
@@ -390,19 +404,26 @@ const ToggleSlider = styled.span`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.2);
-  transition: 0.3s;
-  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.06));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.22);
+  transition: background 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+  border-radius: 999px;
 
   &:before {
     position: absolute;
     content: "";
-    height: 18px;
-    width: 18px;
+    height: 24px;
+    width: 24px;
     left: 3px;
-    bottom: 3px;
-    background: #ffffff;
-    transition: 0.3s;
+    top: 3px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(228, 233, 240, 0.94));
+    box-shadow:
+      0 6px 14px rgba(0, 0, 0, 0.22),
+      0 1px 0 rgba(255, 255, 255, 0.7) inset;
+    transition: transform 0.24s ease;
     border-radius: 50%;
   }
 `;

@@ -51,13 +51,38 @@ const HeaderKicker = styled.div`
   text-transform: uppercase;
 `;
 
-const FilterTab = styled(Button).attrs<{ $active: boolean }>((props) => ({
-  variant: props.$active ? 'brand' : 'outline',
+const FilterTab = styled(Button).attrs<{ $active: boolean }>({
+  variant: 'ghost',
   size: 'small'
-}))<{ $active: boolean }>`
-  padding: 0.72rem 1.1rem;
-  min-height: 44px;
+})<{ $active: boolean }>`
+  padding: 0.68rem 1rem;
+  min-height: 40px;
+  border-radius: 999px;
   white-space: nowrap;
+  border-color: ${({ theme, $active }) => ($active ? theme.colors.border.medium : 'transparent')};
+  background: ${({ theme, $active }) =>
+    $active
+      ? theme.isLight
+        ? 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248, 241, 231, 0.94))'
+        : 'linear-gradient(180deg, rgba(47, 52, 61, 0.96), rgba(19, 22, 27, 0.98))'
+      : theme.isLight
+        ? 'rgba(255,255,255,0.32)'
+        : 'rgba(255,255,255,0.018)'};
+  color: ${({ theme, $active }) => ($active ? theme.colors.text.primary : theme.colors.text.secondary)};
+  box-shadow: ${({ $active }) => ($active ? '0 12px 24px rgba(0, 0, 0, 0.2)' : 'none')};
+
+  &:hover:not(:disabled) {
+    transform: translateY(0);
+    border-color: ${({ theme, $active }) => ($active ? theme.colors.border.strong : theme.colors.border.light)};
+    background: ${({ theme, $active }) =>
+      $active
+        ? theme.isLight
+          ? 'linear-gradient(180deg, rgba(255,255,255,1), rgba(248, 241, 231, 0.96))'
+          : 'linear-gradient(180deg, rgba(51, 56, 65, 0.98), rgba(22, 25, 30, 1))'
+        : theme.isLight
+          ? 'rgba(255,255,255,0.7)'
+          : 'rgba(255,255,255,0.046)'};
+  }
 `;
 
 const TournamentsGrid = styled.div`

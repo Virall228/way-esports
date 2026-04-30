@@ -67,17 +67,52 @@ const FilterSection = styled.div`
 
 const FilterTabs = styled.div`
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 0.3rem;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.28rem;
+  border-radius: 999px;
+  background: ${({ theme }) =>
+    theme.isLight
+      ? 'linear-gradient(180deg, rgba(255,255,255,0.92), rgba(243, 236, 226, 0.88))'
+      : 'linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04))'};
+  border: 1px solid ${({ theme }) => theme.colors.border.light};
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 10px 24px rgba(0, 0, 0, 0.16);
 `;
 
-const FilterTab = styled(Button).attrs<{ $active: boolean }>((props) => ({
-  variant: props.$active ? 'brand' : 'outline',
+const FilterTab = styled(Button).attrs<{ $active: boolean }>({
+  variant: 'ghost',
   size: 'small'
-}))<{ $active: boolean }>`
-  padding: 0.75rem 1.25rem;
-  min-height: 44px;
+})<{ $active: boolean }>`
+  padding: 0.7rem 1.1rem;
+  min-height: 40px;
+  border-radius: 999px;
   white-space: nowrap;
+  border-color: ${({ theme, $active }) => ($active ? theme.colors.border.medium : 'transparent')};
+  background: ${({ theme, $active }) =>
+    $active
+      ? theme.isLight
+        ? 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248, 241, 231, 0.94))'
+        : 'linear-gradient(180deg, rgba(48, 53, 62, 0.96), rgba(20, 23, 28, 0.98))'
+      : 'transparent'};
+  color: ${({ theme, $active }) => ($active ? theme.colors.text.primary : theme.colors.text.secondary)};
+  box-shadow: ${({ $active }) => ($active ? '0 12px 26px rgba(0, 0, 0, 0.22)' : 'none')};
+
+  &:hover:not(:disabled) {
+    transform: translateY(0);
+    border-color: ${({ theme, $active }) => ($active ? theme.colors.border.strong : theme.colors.border.light)};
+    background: ${({ theme, $active }) =>
+      $active
+        ? theme.isLight
+          ? 'linear-gradient(180deg, rgba(255,255,255,1), rgba(248, 241, 231, 0.96))'
+          : 'linear-gradient(180deg, rgba(52, 57, 66, 0.98), rgba(24, 27, 32, 1))'
+        : theme.isLight
+          ? 'rgba(255,255,255,0.74)'
+          : 'rgba(255,255,255,0.05)'};
+    box-shadow: ${({ $active }) => ($active ? '0 16px 28px rgba(0, 0, 0, 0.24)' : 'none')};
+  }
 `;
 
 const FilterDropdown = styled(SelectField)`

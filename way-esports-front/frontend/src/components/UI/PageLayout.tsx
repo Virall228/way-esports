@@ -223,25 +223,53 @@ export const ModalOverlay = styled.div`
   inset: 0;
   z-index: 1200;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   padding: 1rem;
-  background: rgba(0, 0, 0, 0.72);
-  backdrop-filter: blur(10px);
+  background:
+    linear-gradient(180deg, rgba(1, 2, 4, 0.34), rgba(1, 2, 4, 0.8)),
+    rgba(0, 0, 0, 0.66);
+  backdrop-filter: blur(16px) saturate(115%);
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    align-items: center;
+    padding: 1.5rem;
+  }
 `;
 
 export const ModalPanel = styled(Card).attrs({ variant: 'elevated' })`
+  position: relative;
+  overflow: hidden;
   width: min(680px, 100%);
+  max-height: min(86vh, 860px);
+  overflow-y: auto;
   padding: 1.4rem;
-  border-radius: 24px;
+  border-radius: 30px 30px 24px 24px;
   background: ${({ theme }) =>
     theme.isLight
-      ? 'linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,241,231,0.96))'
-      : 'linear-gradient(180deg, rgba(16, 19, 24, 0.98), rgba(8, 10, 13, 1))'};
+      ? 'linear-gradient(180deg, rgba(255,255,255,0.985), rgba(248,241,231,0.96))'
+      : 'linear-gradient(180deg, rgba(20, 24, 30, 0.98), rgba(9, 11, 15, 1))'};
   border: 1px solid ${({ theme }) => theme.colors.border.light};
+  box-shadow:
+    0 36px 80px rgba(0, 0, 0, 0.38),
+    0 1px 0 rgba(255, 255, 255, 0.05) inset;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0.8rem;
+    left: 50%;
+    width: 3rem;
+    height: 0.32rem;
+    border-radius: 999px;
+    transform: translateX(-50%);
+    background: ${({ theme }) => (theme.isLight ? 'rgba(31, 24, 17, 0.14)' : 'rgba(255, 255, 255, 0.14)')};
+    pointer-events: none;
+  }
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     padding: 1.8rem;
+    border-radius: 30px;
   }
 `;
 
@@ -258,8 +286,21 @@ export const ModalCopy = styled.p`
 `;
 
 export const ModalActionRow = styled.div`
-  display: flex;
+  display: grid;
   gap: 0.75rem;
-  flex-wrap: wrap;
   margin-top: 1rem;
+
+  > * {
+    width: 100%;
+  }
+
+  @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    display: flex;
+    flex-wrap: wrap;
+
+    > * {
+      width: auto;
+      flex: 0 0 auto;
+    }
+  }
 `;
