@@ -19,37 +19,37 @@ const getButtonStyles = (variant: ButtonVariant = 'primary') => {
         background: ${({ theme }) =>
           theme.isLight
             ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(244, 236, 226, 0.94) 100%)'
-            : 'linear-gradient(180deg, rgba(29, 34, 41, 0.96) 0%, rgba(12, 15, 20, 0.96) 100%)'};
+            : 'linear-gradient(180deg, rgba(28, 32, 38, 0.96) 0%, rgba(14, 17, 22, 0.98) 100%)'};
         color: ${({ theme }) => theme.colors.text.primary};
         border-color: ${({ theme }) => (theme.isLight ? theme.colors.border.medium : theme.colors.border.medium)};
-        box-shadow: ${({ theme }) => theme.shadows.md};
+        box-shadow: ${({ theme }) => (theme.isLight ? theme.shadows.sm : '0 16px 30px rgba(0, 0, 0, 0.24)')};
 
         &:hover:not(:disabled) {
           border-color: ${({ theme }) => theme.colors.border.strong};
-          box-shadow: ${({ theme }) => theme.shadows.lg};
+          box-shadow: ${({ theme }) => (theme.isLight ? theme.shadows.md : '0 20px 34px rgba(0, 0, 0, 0.3)')};
         }
       `;
     case 'secondary':
       return css`
-        background: ${({ theme }) => (theme.isLight ? 'rgba(255, 252, 247, 0.84)' : 'rgba(255, 255, 255, 0.045)')};
-        color: ${({ theme }) => theme.colors.text.secondary};
+        background: ${({ theme }) => (theme.isLight ? 'rgba(255, 252, 247, 0.84)' : 'rgba(255, 255, 255, 0.038)')};
+        color: ${({ theme }) => theme.colors.text.primary};
         border-color: ${({ theme }) => (theme.isLight ? theme.colors.border.light : theme.colors.border.light)};
 
         &:hover:not(:disabled) {
           color: ${({ theme }) => theme.colors.text.primary};
-          background: ${({ theme }) => (theme.isLight ? 'rgba(255, 247, 238, 0.96)' : 'rgba(255, 255, 255, 0.07)')};
+          background: ${({ theme }) => (theme.isLight ? 'rgba(255, 247, 238, 0.96)' : 'rgba(255, 255, 255, 0.055)')};
           border-color: ${({ theme }) => theme.colors.border.medium};
         }
       `;
     case 'outline':
       return css`
-        background: transparent;
+        background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.4)' : 'rgba(255, 255, 255, 0.015)')};
         color: ${({ theme }) => theme.colors.text.primary};
         border-color: ${({ theme }) => (theme.isLight ? theme.colors.border.medium : theme.colors.border.medium)};
 
         &:hover:not(:disabled) {
-          background: ${({ theme }) => (theme.isLight ? 'rgba(201, 106, 22, 0.06)' : 'rgba(255, 255, 255, 0.05)')};
-          border-color: ${({ theme }) => theme.colors.border.accent};
+          background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.72)' : 'rgba(255, 255, 255, 0.045)')};
+          border-color: ${({ theme }) => theme.colors.border.strong};
         }
       `;
     case 'text':
@@ -66,49 +66,52 @@ const getButtonStyles = (variant: ButtonVariant = 'primary') => {
       `;
     case 'ghost':
       return css`
-        background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.52)' : 'rgba(255, 255, 255, 0.03)')};
+        background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.52)' : 'rgba(255, 255, 255, 0.022)')};
         color: ${({ theme }) => theme.colors.text.primary};
         border-color: transparent;
         box-shadow: none;
 
         &:hover:not(:disabled) {
-          background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.78)' : 'rgba(255, 255, 255, 0.07)')};
+          background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.78)' : 'rgba(255, 255, 255, 0.05)')};
           border-color: ${({ theme }) => theme.colors.border.light};
         }
       `;
     case 'brand':
       return css`
-        background: linear-gradient(135deg, #f08a32 0%, #ffb267 52%, #f08a32 100%);
-        color: #1a1108;
-        border-color: rgba(255, 214, 169, 0.54);
+        background: ${({ theme }) =>
+          theme.isLight
+            ? 'linear-gradient(180deg, rgba(44, 33, 22, 0.96) 0%, rgba(25, 18, 12, 0.98) 100%)'
+            : 'linear-gradient(180deg, rgba(34, 38, 45, 0.98) 0%, rgba(16, 19, 24, 1) 100%)'};
+        color: ${({ theme }) => theme.colors.text.primary};
+        border-color: ${({ theme }) => (theme.isLight ? 'rgba(44, 33, 22, 0.22)' : 'rgba(255, 255, 255, 0.12)')};
         box-shadow: ${({ theme }) =>
           theme.isLight
-            ? '0 16px 34px rgba(201, 106, 22, 0.18)'
-            : '0 18px 36px rgba(245, 154, 74, 0.14), 0 18px 32px rgba(0, 0, 0, 0.34)'};
+            ? '0 14px 28px rgba(31, 24, 17, 0.12)'
+            : '0 18px 34px rgba(0, 0, 0, 0.28)'};
 
         &:hover:not(:disabled) {
-          box-shadow: ${({ theme }) => theme.shadows.glow};
-          border-color: rgba(255, 224, 188, 0.88);
+          box-shadow: ${({ theme }) => (theme.isLight ? theme.shadows.md : '0 22px 38px rgba(0, 0, 0, 0.34)')};
+          border-color: ${({ theme }) => (theme.isLight ? 'rgba(44, 33, 22, 0.34)' : theme.colors.border.strong)};
         }
       `;
     case 'danger':
       return css`
-        background: rgba(248, 113, 113, 0.1);
-        color: ${({ theme }) => theme.colors.error};
-        border-color: rgba(248, 113, 113, 0.3);
+        background: rgba(248, 113, 113, 0.08);
+        color: ${({ theme }) => theme.colors.text.primary};
+        border-color: rgba(248, 113, 113, 0.24);
 
         &:hover:not(:disabled) {
-          background: rgba(248, 113, 113, 0.16);
+          background: rgba(248, 113, 113, 0.12);
         }
       `;
     case 'success':
       return css`
-        background: rgba(52, 211, 153, 0.1);
-        color: ${({ theme }) => theme.colors.success};
-        border-color: rgba(52, 211, 153, 0.28);
+        background: rgba(52, 211, 153, 0.08);
+        color: ${({ theme }) => theme.colors.text.primary};
+        border-color: rgba(52, 211, 153, 0.22);
 
         &:hover:not(:disabled) {
-          background: rgba(52, 211, 153, 0.16);
+          background: rgba(52, 211, 153, 0.12);
         }
       `;
   }
@@ -166,8 +169,8 @@ const StyledButton = styled.button<ButtonProps>`
     position: absolute;
     inset: 1px;
     border-radius: inherit;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
-    opacity: ${({ theme }) => (theme.isLight ? 0.45 : 0.2)};
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0));
+    opacity: ${({ theme }) => (theme.isLight ? 0.32 : 0.12)};
     pointer-events: none;
     z-index: -1;
   }

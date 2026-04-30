@@ -85,15 +85,12 @@ const routeReveal = keyframes`
   }
 `;
 
-const signalPulse = keyframes`
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.72;
+const loaderSweep = keyframes`
+  0% {
+    transform: rotate(0deg);
   }
-  50% {
-    transform: scale(1.18);
-    opacity: 1;
+  100% {
+    transform: rotate(360deg);
   }
 `;
 
@@ -484,14 +481,24 @@ const RouteLoader = styled.div`
 `;
 
 const LoaderOrb = styled.div`
-  width: 2.9rem;
-  height: 2.9rem;
+  position: relative;
+  width: 2.6rem;
+  height: 2.6rem;
   border-radius: 50%;
-  background:
-    radial-gradient(circle at 30% 30%, rgba(255,255,255,0.82), rgba(255,255,255,0) 28%),
-    radial-gradient(circle, rgba(245, 154, 74, 0.9), rgba(245, 154, 74, 0.22) 54%, transparent 70%);
-  box-shadow: 0 0 0 0.55rem rgba(245, 154, 74, 0.09), 0 0 36px rgba(245, 154, 74, 0.16);
-  animation: ${signalPulse} 2.1s ease-in-out infinite;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.025);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 5px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.92);
+    border-right-color: rgba(255, 255, 255, 0.34);
+    animation: ${loaderSweep} 0.82s linear infinite;
+  }
 `;
 
 const LoaderCaption = styled.div`

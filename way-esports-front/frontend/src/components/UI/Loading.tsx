@@ -37,27 +37,14 @@ const pulse = keyframes`
   }
 `;
 
-const bounce = keyframes`
+const breathe = keyframes`
   0%, 100% {
-    transform: translateY(0);
+    opacity: 0.42;
+    transform: scale(0.96);
   }
   50% {
-    transform: translateY(-100%);
-  }
-`;
-
-const shimmer = keyframes`
-  0% {
-    transform: rotate(0deg) scale(0.98);
-    opacity: 0.72;
-  }
-  50% {
-    transform: rotate(180deg) scale(1.04);
     opacity: 1;
-  }
-  100% {
-    transform: rotate(360deg) scale(0.98);
-    opacity: 0.72;
+    transform: scale(1);
   }
 `;
 
@@ -97,18 +84,17 @@ const LoadingStage = styled.div<LoadingProps>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: calc(${({ size }) => getSize(size)} * 1.9);
-  height: calc(${({ size }) => getSize(size)} * 1.9);
+  width: calc(${({ size }) => getSize(size)} * 1.7);
+  height: calc(${({ size }) => getSize(size)} * 1.7);
 `;
 
 const LoadingHalo = styled.div<LoadingProps>`
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background:
-    radial-gradient(circle, ${({ color }) => color || 'rgba(245, 154, 74, 0.22)'} 0%, rgba(245, 154, 74, 0.06) 42%, transparent 72%);
-  filter: blur(10px);
-  animation: ${shimmer} 4.6s linear infinite;
+  background: radial-gradient(circle, rgba(255,255,255,0.08), transparent 70%);
+  filter: blur(12px);
+  animation: ${breathe} 2.4s ease-in-out infinite;
   pointer-events: none;
 `;
 
@@ -118,11 +104,11 @@ const Spinner = styled.div<LoadingProps>`
   width: ${({ size }) => getSize(size)};
   height: ${({ size }) => getSize(size)};
   border: 2px solid rgba(255, 255, 255, 0.08);
-  border-top-color: ${({ theme, color }) => color || theme.colors.accent};
+  border-top-color: ${({ theme, color }) => color || theme.colors.text.primary};
   border-right-color: rgba(255, 255, 255, 0.24);
   border-radius: 50%;
   animation: ${spin} 0.8s linear infinite;
-  box-shadow: 0 0 0 0.4rem rgba(245, 154, 74, 0.06);
+  box-shadow: 0 0 0 0.35rem rgba(255, 255, 255, 0.03);
 `;
 
 const DotsContainer = styled.div<LoadingProps>`
@@ -136,17 +122,17 @@ const DotsContainer = styled.div<LoadingProps>`
 const Dot = styled.div<LoadingProps>`
   width: ${({ size }) => getDotSize(size)};
   height: ${({ size }) => getDotSize(size)};
-  background: linear-gradient(180deg, ${({ theme, color }) => color || theme.colors.accent}, rgba(255, 255, 255, 0.95));
+  background: ${({ theme, color }) => color || theme.colors.text.primary};
   border-radius: 50%;
-  animation: ${bounce} 0.5s ease-in-out infinite;
-  box-shadow: 0 0 0 0.35rem rgba(245, 154, 74, 0.08);
+  animation: ${pulse} 0.9s ease-in-out infinite;
+  box-shadow: 0 0 0 0.3rem rgba(255, 255, 255, 0.04);
 
   &:nth-child(2) {
-    animation-delay: 0.1s;
+    animation-delay: 0.12s;
   }
 
   &:nth-child(3) {
-    animation-delay: 0.2s;
+    animation-delay: 0.24s;
   }
 `;
 
@@ -157,10 +143,10 @@ const PulseCircle = styled.div<LoadingProps>`
   height: ${({ size }) => getSize(size)};
   background:
     radial-gradient(circle at 35% 35%, rgba(255,255,255,0.94), rgba(255,255,255,0) 28%),
-    radial-gradient(circle, ${({ theme, color }) => color || theme.colors.accent}, rgba(245, 154, 74, 0.24));
+    radial-gradient(circle, ${({ theme, color }) => color || theme.colors.text.primary}, rgba(255, 255, 255, 0.12));
   border-radius: 50%;
   animation: ${pulse} 1.2s ease-in-out infinite;
-  box-shadow: 0 0 0 0.45rem rgba(245, 154, 74, 0.08);
+  box-shadow: 0 0 0 0.4rem rgba(255, 255, 255, 0.04);
 `;
 
 const Loading: React.FC<LoadingProps> = ({
