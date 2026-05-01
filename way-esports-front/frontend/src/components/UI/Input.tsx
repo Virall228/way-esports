@@ -50,28 +50,28 @@ const FieldShell = styled.div`
 
 const Label = styled.label`
   color: ${({ theme }) => theme.colors.text.secondary};
-  font-size: 0.78rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-size: 0.84rem;
+  letter-spacing: -0.01em;
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
 `;
 
 const StyledInput = styled.input<InputProps>`
   width: 100%;
   color: ${({ theme }) => theme.colors.text.primary};
   border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.medium : theme.colors.border.medium)};
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
+  border-radius: 18px;
   outline: none;
   transition:
     border-color ${({ theme }) => theme.transitions.fast},
     background ${({ theme }) => theme.transitions.medium},
     box-shadow ${({ theme }) => theme.transitions.medium},
     transform ${({ theme }) => theme.transitions.fast};
-  backdrop-filter: blur(12px);
-  box-shadow: ${({ theme }) => (theme.isLight ? '0 8px 18px rgba(109, 78, 44, 0.05)' : 'inset 0 1px 0 rgba(255, 255, 255, 0.03)')};
+  backdrop-filter: blur(16px) saturate(120%);
+  box-shadow: ${({ theme }) => (theme.isLight ? '0 10px 24px rgba(31, 41, 55, 0.05)' : 'inset 0 1px 0 rgba(255, 255, 255, 0.03)')};
   background: ${({ theme }) =>
     theme.isLight
-      ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(247, 240, 230, 0.86) 100%)'
-      : 'linear-gradient(180deg, rgba(12, 15, 19, 0.9) 0%, rgba(7, 9, 12, 0.96) 100%)'};
+      ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(246, 248, 251, 0.9) 100%)'
+      : 'linear-gradient(180deg, rgba(16, 19, 24, 0.9) 0%, rgba(8, 10, 13, 0.96) 100%)'};
 
   ${({ size }) => getInputSize(size)}
 
@@ -92,8 +92,8 @@ const StyledInput = styled.input<InputProps>`
     border-color: ${({ theme }) => theme.colors.border.strong};
     box-shadow: ${({ theme }) =>
       theme.isLight
-        ? '0 0 0 4px rgba(44, 33, 22, 0.08), 0 14px 26px rgba(109, 78, 44, 0.08)'
-        : '0 0 0 4px rgba(255, 255, 255, 0.07), 0 16px 28px rgba(0, 0, 0, 0.28)'};
+        ? '0 0 0 4px rgba(59, 130, 246, 0.1), 0 16px 28px rgba(31, 41, 55, 0.08)'
+        : '0 0 0 4px rgba(219, 229, 241, 0.08), 0 18px 30px rgba(0, 0, 0, 0.24)'};
   }
 
   &:disabled {

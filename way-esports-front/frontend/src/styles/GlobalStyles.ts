@@ -2,8 +2,6 @@ import { createGlobalStyle } from 'styled-components';
 
 export const GlobalStyles = createGlobalStyle`
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&display=swap');
-  @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700;800&display=swap');
-  @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&display=swap');
 
   * {
     margin: 0;
@@ -17,9 +15,9 @@ export const GlobalStyles = createGlobalStyle`
     --sal: env(safe-area-inset-left);
     --sar: env(safe-area-inset-right);
     --app-height: 100vh;
-    --bg-pattern-opacity: 0.18;
-    --bg-glow-opacity: 0.9;
-    --ambient-drift-duration: 24s;
+    --bg-pattern-opacity: 0.08;
+    --bg-glow-opacity: 0.82;
+    --ambient-drift-duration: 30s;
   }
 
   html {
@@ -31,18 +29,18 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   body[data-bg-preset='subtle'] {
-    --bg-pattern-opacity: 0.14;
-    --bg-glow-opacity: 0.82;
+    --bg-pattern-opacity: 0.04;
+    --bg-glow-opacity: 0.72;
   }
 
   body[data-bg-preset='default'] {
-    --bg-pattern-opacity: 0.18;
-    --bg-glow-opacity: 0.9;
+    --bg-pattern-opacity: 0.08;
+    --bg-glow-opacity: 0.82;
   }
 
   body[data-bg-preset='strong'] {
-    --bg-pattern-opacity: 0.32;
-    --bg-glow-opacity: 1;
+    --bg-pattern-opacity: 0.14;
+    --bg-glow-opacity: 0.92;
   }
 
   body {
@@ -59,7 +57,7 @@ export const GlobalStyles = createGlobalStyle`
     height: 100%;
     overscroll-behavior: none;
     line-height: 1.6;
-    letter-spacing: 0.003em;
+    letter-spacing: -0.01em;
   }
 
   @keyframes wayAmbientDrift {
@@ -105,11 +103,10 @@ export const GlobalStyles = createGlobalStyle`
       linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(247, 239, 229, 0.98) 100%)
     `
         : `
-      radial-gradient(circle at 14% 12%, rgba(245, 154, 74, 0.14) 0%, transparent 26%),
-      radial-gradient(circle at 86% 18%, rgba(255, 255, 255, 0.05) 0%, transparent 24%),
-      radial-gradient(circle at 50% 0%, rgba(120, 125, 134, 0.08) 0%, transparent 32%),
-      linear-gradient(180deg, rgba(3, 4, 6, 0.86) 0%, rgba(5, 7, 10, 0.95) 54%, rgba(4, 5, 7, 0.99) 100%),
-      url('/images/way-twitter-banner-bg.jpg') center/cover no-repeat
+      radial-gradient(circle at 12% 10%, rgba(255, 255, 255, 0.06) 0%, transparent 28%),
+      radial-gradient(circle at 84% 12%, rgba(255, 255, 255, 0.04) 0%, transparent 22%),
+      radial-gradient(circle at 50% -8%, rgba(148, 163, 184, 0.08) 0%, transparent 30%),
+      linear-gradient(180deg, rgba(4, 6, 10, 0.94) 0%, rgba(7, 9, 12, 0.98) 56%, rgba(4, 5, 7, 1) 100%)
     `};
     opacity: var(--bg-glow-opacity);
     pointer-events: none;
@@ -130,11 +127,10 @@ export const GlobalStyles = createGlobalStyle`
     `
         : `
       linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
-      linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
-      linear-gradient(120deg, transparent 0 48%, rgba(245, 154, 74, 0.05) 48.5%, transparent 49%)
+      linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px)
     `};
-    background-size: 56px 56px, 56px 56px, 420px 220px;
-    background-position: 0 0, 0 0, 50% 0;
+    background-size: 56px 56px, 56px 56px;
+    background-position: 0 0, 0 0;
     opacity: var(--bg-pattern-opacity);
     pointer-events: none;
     z-index: -1;
@@ -149,10 +145,10 @@ export const GlobalStyles = createGlobalStyle`
   h5,
   h6 {
     font-family: ${({ theme }) => theme.fonts.title};
-    font-weight: ${({ theme }) => theme.fontWeights.semibold};
-    letter-spacing: 0.006em;
-    line-height: 1.02;
-    margin-bottom: 0.65rem;
+    font-weight: ${({ theme }) => theme.fontWeights.bold};
+    letter-spacing: -0.03em;
+    line-height: 0.98;
+    margin-bottom: 0.55rem;
     text-wrap: balance;
   }
 
@@ -179,13 +175,13 @@ export const GlobalStyles = createGlobalStyle`
 
   p,
   li {
-    line-height: 1.68;
+    line-height: 1.62;
   }
 
   button {
     font-family: ${({ theme }) => theme.fonts.accent};
     font-weight: ${({ theme }) => theme.fontWeights.semibold};
-    letter-spacing: 0.015em;
+    letter-spacing: -0.01em;
   }
 
   input,
@@ -198,7 +194,7 @@ export const GlobalStyles = createGlobalStyle`
   label {
     font-family: ${({ theme }) => theme.fonts.accent};
     font-weight: ${({ theme }) => theme.fontWeights.medium};
-    letter-spacing: 0.04em;
+    letter-spacing: -0.01em;
   }
 
   a {
@@ -208,7 +204,7 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   a:hover {
-    color: ${({ theme }) => theme.colors.accent};
+    color: ${({ theme }) => (theme.isLight ? '#3b82f6' : '#dbe5f1')};
   }
 
   img,
@@ -228,12 +224,12 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   *:focus-visible {
-    outline: 2px solid ${({ theme }) => (theme.isLight ? 'rgba(44, 33, 22, 0.42)' : 'rgba(255, 255, 255, 0.3)')};
+    outline: 2px solid ${({ theme }) => (theme.isLight ? 'rgba(59, 130, 246, 0.34)' : 'rgba(219, 229, 241, 0.28)')};
     outline-offset: 2px;
   }
 
   ::selection {
-    background: ${({ theme }) => (theme.isLight ? 'rgba(44, 33, 22, 0.16)' : 'rgba(255, 255, 255, 0.14)')};
+    background: ${({ theme }) => (theme.isLight ? 'rgba(59, 130, 246, 0.16)' : 'rgba(219, 229, 241, 0.16)')};
     color: ${({ theme }) => theme.colors.text.primary};
   }
 

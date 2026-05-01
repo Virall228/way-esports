@@ -59,11 +59,11 @@ export const theme = {
     }
   },
   fonts: {
-    primary: "'Exo 2', sans-serif",
+    primary: "'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     secondary: "'JetBrains Mono', 'Courier New', monospace",
-    accent: "'Chakra Petch', sans-serif",
-    title: "'Chakra Petch', sans-serif",
-    body: "'Exo 2', sans-serif",
+    accent: "'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    title: "'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    body: "'SF Pro Text', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     mono: "'Fira Code', monospace",
     brand: "'Orbitron', sans-serif"
   },

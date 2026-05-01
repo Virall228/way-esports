@@ -100,8 +100,8 @@ const AppShell = styled.div`
   background:
     ${({ theme }) =>
       theme.isLight
-        ? 'radial-gradient(900px 600px at 10% -10%, rgba(255, 214, 170, 0.34), transparent 60%), radial-gradient(800px 500px at 90% -20%, rgba(255, 242, 224, 0.9), transparent 58%), radial-gradient(760px 520px at 85% 110%, rgba(201, 106, 22, 0.12), transparent 60%),'
-        : 'radial-gradient(900px 600px at 10% -10%, rgba(245, 154, 74, 0.12), transparent 58%), radial-gradient(860px 560px at 90% -20%, rgba(255, 255, 255, 0.04), transparent 60%), radial-gradient(620px 420px at 84% 110%, rgba(255, 255, 255, 0.03), transparent 62%),'}
+        ? 'radial-gradient(900px 600px at 10% -10%, rgba(255, 255, 255, 0.58), transparent 60%), radial-gradient(800px 500px at 90% -20%, rgba(243, 246, 250, 0.92), transparent 58%), radial-gradient(760px 520px at 85% 110%, rgba(148, 163, 184, 0.1), transparent 60%),'
+        : 'radial-gradient(900px 600px at 10% -10%, rgba(255, 255, 255, 0.06), transparent 58%), radial-gradient(860px 560px at 90% -20%, rgba(255, 255, 255, 0.04), transparent 60%), radial-gradient(620px 420px at 84% 110%, rgba(148, 163, 184, 0.05), transparent 62%),'}
     ${({ theme }) => theme.colors.bg.primary};
   color: ${({ theme }) => theme.colors.text.primary};
   font-family: ${({ theme }) => theme.fonts.primary};
@@ -126,9 +126,9 @@ const ShellGlow = styled.div<{ $position: 'left' | 'right' }>`
   border-radius: 999px;
   background: ${({ $position }) =>
     $position === 'left'
-      ? 'radial-gradient(circle, rgba(245, 154, 74, 0.18) 0%, rgba(245, 154, 74, 0.06) 38%, transparent 68%)'
-      : 'radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 36%, transparent 70%)'};
-  filter: blur(18px);
+      ? 'radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(148, 163, 184, 0.04) 40%, transparent 68%)'
+      : 'radial-gradient(circle, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.025) 36%, transparent 70%)'};
+  filter: blur(28px);
   pointer-events: none;
   z-index: -1;
   animation: ${shellGlow} 20s ease-in-out infinite;
@@ -148,10 +148,10 @@ const Sidebar = styled.aside`
   background: ${({ theme }) =>
     theme.isLight
       ? theme.colors.glass.panel
-      : 'linear-gradient(180deg, rgba(9, 12, 16, 0.92) 0%, rgba(4, 6, 8, 0.98) 100%)'};
+      : 'linear-gradient(180deg, rgba(12, 15, 19, 0.86) 0%, rgba(8, 10, 13, 0.94) 100%)'};
   border-right: 1px solid ${({ theme }) => theme.colors.border.light};
-  backdrop-filter: blur(18px);
-  box-shadow: ${({ theme }) => (theme.isLight ? 'none' : '22px 0 54px rgba(0, 0, 0, 0.22)')};
+  backdrop-filter: blur(24px) saturate(130%);
+  box-shadow: ${({ theme }) => (theme.isLight ? 'none' : '20px 0 44px rgba(0, 0, 0, 0.18)')};
   position: sticky;
   top: 0;
   height: var(--app-height, 100vh);
@@ -195,11 +195,14 @@ const NavItemLink = styled(Link) <{ $active?: boolean; $compact?: boolean }>`
   align-items: center;
   gap: 12px;
   padding: ${({ $compact }) => ($compact ? '0.7rem 0.85rem' : '0.9rem 1rem')};
-  border-radius: 16px;
+  border-radius: 18px;
   text-decoration: none;
   color: ${({ $active, theme }) => ($active ? theme.colors.text.primary : theme.colors.text.secondary)};
-  background: ${({ $active }) => ($active ? 'rgba(255, 255, 255, 0.07)' : 'transparent')};
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.border.accent : 'transparent')};
+  background: ${({ $active, theme }) =>
+    $active
+      ? (theme.isLight ? 'rgba(255, 255, 255, 0.92)' : 'rgba(255, 255, 255, 0.065)')
+      : 'transparent'};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.border.medium : 'transparent')};
   transition: all ${({ theme }) => theme.transitions.fast};
   backdrop-filter: blur(12px);
   position: relative;
@@ -208,11 +211,20 @@ const NavItemLink = styled(Link) <{ $active?: boolean; $compact?: boolean }>`
   &::before {
     content: '';
     position: absolute;
-    inset: 10px auto 10px 0;
-    width: 3px;
-    border-radius: 0 999px 999px 0;
-    background: ${({ $active, theme }) => ($active ? theme.colors.accent : 'transparent')};
-    box-shadow: ${({ $active }) => ($active ? '0 0 16px rgba(245, 154, 74, 0.42)' : 'none')};
+    inset: 8px auto 8px 8px;
+    width: calc(100% - 16px);
+    border-radius: 14px;
+    background: ${({ $active, theme }) =>
+      $active
+        ? (theme.isLight ? 'linear-gradient(180deg, rgba(255,255,255,0.9), rgba(246,248,251,0.82))' : 'linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))')
+        : 'transparent'};
+    box-shadow: ${({ $active }) => ($active ? '0 10px 22px rgba(0, 0, 0, 0.12)' : 'none')};
+    z-index: 0;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
   }
 
   @media (hover: hover) and (pointer: fine) {
@@ -221,7 +233,7 @@ const NavItemLink = styled(Link) <{ $active?: boolean; $compact?: boolean }>`
       color: ${({ theme }) => theme.colors.text.primary};
       border-color: ${({ theme }) => theme.colors.border.light};
       transform: translateY(-1px);
-      box-shadow: ${({ theme }) => (theme.isLight ? theme.shadows.small : '0 16px 30px rgba(0, 0, 0, 0.2)')};
+      box-shadow: ${({ theme }) => (theme.isLight ? theme.shadows.small : '0 14px 28px rgba(0, 0, 0, 0.16)')};
     }
   }
 
@@ -247,7 +259,7 @@ const NavItemLabel = styled.span`
   font-family: ${({ theme }) => theme.fonts.accent};
   font-size: 0.9rem;
   font-weight: ${({ theme }) => theme.fontWeights.semibold};
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
 `;
 
 const ContentColumn = styled.div`
@@ -274,9 +286,9 @@ const TopBar = styled.header`
   background: ${({ theme }) =>
     theme.isLight
       ? theme.colors.glass.bar
-      : 'linear-gradient(180deg, rgba(8, 10, 13, 0.92) 0%, rgba(8, 10, 13, 0.82) 100%)'};
+      : 'linear-gradient(180deg, rgba(10, 12, 16, 0.8) 0%, rgba(10, 12, 16, 0.66) 100%)'};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border.light};
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(24px) saturate(130%);
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     padding: 0.9rem 1.5rem;
@@ -298,7 +310,7 @@ const TopBarPageTitle = styled.h1`
   margin: 0;
   font-size: clamp(1rem, 2vw, 1.35rem);
   line-height: 1.1;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.03em;
 `;
 
 const BurgerButton = styled.button`
@@ -307,11 +319,11 @@ const BurgerButton = styled.button`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 16px;
+  border-radius: 18px;
   border: 1px solid ${({ theme }) => theme.colors.border.light};
-  background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.72)' : 'linear-gradient(180deg, rgba(24, 28, 34, 0.96), rgba(12, 15, 20, 0.98))')};
+  background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.76)' : 'linear-gradient(180deg, rgba(32, 37, 45, 0.9), rgba(16, 19, 24, 0.95))')};
   color: ${({ theme }) => theme.colors.text.primary};
-  box-shadow: ${({ theme }) => (theme.isLight ? 'none' : '0 14px 24px rgba(0, 0, 0, 0.18)')};
+  box-shadow: ${({ theme }) => (theme.isLight ? 'none' : '0 12px 22px rgba(0, 0, 0, 0.14)')};
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     display: none;
@@ -319,7 +331,7 @@ const BurgerButton = styled.button`
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.88)' : 'linear-gradient(180deg, rgba(31, 35, 41, 0.98), rgba(16, 19, 24, 1))')};
+      background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.9)' : 'linear-gradient(180deg, rgba(36, 41, 49, 0.96), rgba(18, 21, 27, 1))')};
       border-color: ${({ theme }) => theme.colors.border.strong};
     }
   }
@@ -343,17 +355,17 @@ const TopActionButton = styled.button`
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border-radius: 16px;
+  border-radius: 18px;
   border: 1px solid ${({ theme }) => theme.colors.border.light};
-  background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.76)' : 'linear-gradient(180deg, rgba(24, 28, 34, 0.96), rgba(12, 15, 20, 0.98))')};
+  background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.8)' : 'linear-gradient(180deg, rgba(32, 37, 45, 0.9), rgba(16, 19, 24, 0.95))')};
   color: ${({ theme }) => theme.colors.text.primary};
   font-size: 0.8rem;
-  letter-spacing: 0.03em;
-  box-shadow: ${({ theme }) => (theme.isLight ? 'none' : '0 14px 24px rgba(0, 0, 0, 0.18)')};
+  letter-spacing: -0.01em;
+  box-shadow: ${({ theme }) => (theme.isLight ? 'none' : '0 12px 22px rgba(0, 0, 0, 0.14)')};
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.9)' : 'linear-gradient(180deg, rgba(31, 35, 41, 0.98), rgba(16, 19, 24, 1))')};
+      background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.92)' : 'linear-gradient(180deg, rgba(36, 41, 49, 0.96), rgba(18, 21, 27, 1))')};
       border-color: ${({ theme }) => theme.colors.border.strong};
     }
   }
@@ -426,7 +438,7 @@ const BottomNav = styled.nav`
   padding: 10px calc(10px + var(--sar)) calc(10px + var(--sab, 0px)) calc(10px + var(--sal));
   background: ${({ theme }) => theme.colors.glass.bar};
   border-top: 1px solid ${({ theme }) => theme.colors.border.light};
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(24px) saturate(130%);
   overflow-x: auto;
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
@@ -438,11 +450,11 @@ const BottomNavItem = styled(Link) <{ $active?: boolean }>`
   flex: 0 0 auto;
   min-width: 68px;
   min-height: 48px;
-  border-radius: 16px;
+  border-radius: 18px;
   border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.border.strong : 'rgba(255,255,255,0.02)')};
   background: ${({ $active, theme }) =>
     $active
-      ? (theme.isLight ? 'rgba(255,255,255,0.86)' : 'linear-gradient(180deg, rgba(24, 28, 34, 0.96), rgba(12, 15, 20, 0.98))')
+      ? (theme.isLight ? 'rgba(255,255,255,0.9)' : 'linear-gradient(180deg, rgba(32, 37, 45, 0.9), rgba(16, 19, 24, 0.95))')
       : 'transparent'};
   color: ${({ $active, theme }) => ($active ? theme.colors.text.primary : theme.colors.text.secondary)};
   display: flex;
@@ -451,9 +463,9 @@ const BottomNavItem = styled(Link) <{ $active?: boolean }>`
   justify-content: center;
   gap: 4px;
   font-size: 10px;
-  letter-spacing: 0.04em;
+  letter-spacing: -0.01em;
   text-decoration: none;
-  box-shadow: ${({ $active, theme }) => ($active && !theme.isLight ? '0 14px 24px rgba(0, 0, 0, 0.22)' : 'none')};
+  box-shadow: ${({ $active, theme }) => ($active && !theme.isLight ? '0 12px 22px rgba(0, 0, 0, 0.16)' : 'none')};
 `;
 
 const BottomNavIcon = styled.span`

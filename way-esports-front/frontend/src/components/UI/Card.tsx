@@ -19,8 +19,8 @@ const getCardStyles = (variant: CardVariant = 'default') => {
       return css`
         background: ${({ theme }) =>
           theme.isLight
-            ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(247, 240, 230, 0.92) 100%)'
-            : 'linear-gradient(180deg, rgba(17, 20, 25, 0.88) 0%, rgba(9, 11, 15, 0.94) 100%)'};
+            ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(245, 247, 250, 0.92) 100%)'
+            : 'linear-gradient(180deg, rgba(20, 24, 30, 0.88) 0%, rgba(10, 12, 16, 0.95) 100%)'};
         border-color: ${({ theme }) => (theme.isLight ? theme.colors.border.light : theme.colors.border.light)};
         box-shadow: ${({ theme }) => theme.shadows.medium};
       `;
@@ -28,17 +28,17 @@ const getCardStyles = (variant: CardVariant = 'default') => {
       return css`
         background: ${({ theme }) =>
           theme.isLight
-            ? 'rgba(255, 255, 255, 0.78)'
-            : 'linear-gradient(180deg, rgba(12, 15, 19, 0.8) 0%, rgba(7, 9, 12, 0.9) 100%)'};
+            ? 'rgba(255, 255, 255, 0.8)'
+            : 'linear-gradient(180deg, rgba(16, 19, 24, 0.8) 0%, rgba(8, 10, 13, 0.9) 100%)'};
         border-color: ${({ theme }) => (theme.isLight ? theme.colors.border.medium : theme.colors.border.medium)};
-        box-shadow: ${({ theme }) => (theme.isLight ? 'none' : '0 18px 32px rgba(0, 0, 0, 0.14)')};
+        box-shadow: ${({ theme }) => (theme.isLight ? '0 10px 24px rgba(31, 41, 55, 0.05)' : '0 18px 32px rgba(0, 0, 0, 0.12)')};
       `;
     case 'elevated':
       return css`
         background: ${({ theme }) =>
           theme.isLight
-            ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 239, 229, 0.94) 100%)'
-            : 'linear-gradient(180deg, rgba(24, 28, 34, 0.94) 0%, rgba(10, 12, 15, 0.98) 62%, rgba(11, 13, 17, 1) 100%)'};
+            ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(246, 248, 251, 0.95) 100%)'
+            : 'linear-gradient(180deg, rgba(26, 31, 37, 0.94) 0%, rgba(12, 15, 19, 0.98) 62%, rgba(10, 12, 15, 1) 100%)'};
         border-color: ${({ theme }) => (theme.isLight ? theme.colors.border.medium : theme.colors.border.medium)};
         box-shadow: ${({ theme }) => theme.shadows.large};
       `;
@@ -49,14 +49,14 @@ const StyledCard = styled.div<CardProps>`
   position: relative;
   overflow: hidden;
   border: 1px solid transparent;
-  border-radius: ${({ theme }) => theme.borderRadius.large};
+  border-radius: 28px;
   padding: ${({ theme, noPadding }) => (noPadding ? '0' : theme.spacing.md)};
   transition:
     transform ${({ theme }) => theme.transitions.fast},
     border-color ${({ theme }) => theme.transitions.fast},
     box-shadow ${({ theme }) => theme.transitions.medium},
     background ${({ theme }) => theme.transitions.medium};
-  backdrop-filter: blur(14px);
+  backdrop-filter: blur(20px) saturate(120%);
   isolation: isolate;
 
   ${({ variant }) => getCardStyles(variant)}
@@ -67,8 +67,8 @@ const StyledCard = styled.div<CardProps>`
     inset: 0;
     background:
       radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), transparent 34%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 26%);
-    opacity: ${({ theme }) => (theme.isLight ? 0.3 : 1)};
+      linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 24%);
+    opacity: ${({ theme }) => (theme.isLight ? 0.24 : 0.9)};
     pointer-events: none;
   }
 
@@ -92,9 +92,9 @@ const StyledCard = styled.div<CardProps>`
       cursor: pointer;
 
       &:hover {
-        transform: translateY(-3px);
+        transform: translateY(-2px) scale(0.998);
         border-color: ${({ theme }) => theme.colors.border.strong};
-        box-shadow: ${({ theme }) => (theme.isLight ? theme.shadows.medium : '0 24px 44px rgba(0, 0, 0, 0.28)')};
+        box-shadow: ${({ theme }) => (theme.isLight ? theme.shadows.medium : '0 22px 40px rgba(0, 0, 0, 0.24)')};
       }
 
       &:active {
