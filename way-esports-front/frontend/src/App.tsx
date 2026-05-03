@@ -176,11 +176,12 @@ const SidebarBrand = styled.div`
 const Logo = styled.div`
   font-family: ${({ theme }) => theme.fonts.brand || theme.fonts.title};
   font-size: clamp(0.95rem, 3vw, 1.15rem);
-  font-weight: ${({ theme }) => theme.fontWeights.bold};
-  letter-spacing: clamp(1px, 0.4vw, 2.5px);
+  font-weight: ${({ theme }) => theme.fontWeights.regular};
+  letter-spacing: clamp(0.4px, 0.18vw, 1.3px);
+  line-height: 1;
   text-transform: uppercase;
   color: ${({ theme }) => theme.colors.text.primary};
-  text-shadow: 0 0 24px rgba(245, 154, 74, 0.12);
+  text-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
 `;
 
 const SidebarNav = styled.nav`
@@ -588,9 +589,11 @@ const MobileMenuHeader = styled.div`
 `;
 
 const MobileMenuTitle = styled.div`
-  font-family: ${({ theme }) => theme.fonts.accent};
-  font-weight: ${({ theme }) => theme.fontWeights.bold};
-  letter-spacing: -0.02em;
+  font-family: ${({ theme }) => theme.fonts.brand || theme.fonts.accent};
+  font-weight: ${({ theme }) => theme.fontWeights.regular};
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  line-height: 1;
 `;
 
 const CloseButton = styled.button`

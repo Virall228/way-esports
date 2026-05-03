@@ -148,16 +148,18 @@ const Logo = styled.div`
 const HeroTitle = styled.h1`
   font-family: ${({ theme }) => theme.fonts.brand || theme.fonts.title};
   font-size: clamp(2.4rem, 7vw, 4.8rem);
-  font-weight: 700;
+  font-weight: ${({ theme }) => theme.fontWeights.regular};
   color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.045em;
   text-shadow: ${({ theme }) => (theme.isLight ? '0 6px 18px rgba(132, 95, 58, 0.16)' : '0 10px 26px rgba(0, 0, 0, 0.32)')};
-  line-height: 0.94;
+  line-height: 0.9;
+  text-wrap: balance;
 
   @media (max-width: 768px) {
     font-size: 2rem;
-    letter-spacing: 0.01em;
+    letter-spacing: 0.03em;
+    line-height: 0.92;
   }
 `;
 
@@ -185,10 +187,13 @@ const HeroActions = styled.div`
 `;
 
 const CTAButton = styled(Button).attrs({ variant: 'brand', size: 'large' })`
+  font-family: ${({ theme }) => theme.fonts.brand || theme.fonts.accent};
   padding: 18px 40px;
   border-radius: 18px;
   font-size: 1rem;
-  letter-spacing: 0.03em;
+  font-weight: ${({ theme }) => theme.fontWeights.regular};
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 
   &:hover {
@@ -199,6 +204,7 @@ const CTAButton = styled(Button).attrs({ variant: 'brand', size: 'large' })`
     flex: 1 1 100%;
     font-size: 0.95rem;
     padding: 12px 14px;
+    letter-spacing: 0.02em;
     transition: none;
 
     &:hover {

@@ -88,8 +88,15 @@ const HeroTitle = styled.h1`
   font-family: ${({ theme }) => theme.fonts.brand || theme.fonts.title};
   margin: 0;
   font-size: clamp(2.2rem, 6vw, 4.5rem);
-  line-height: 0.96;
-  letter-spacing: 0.02em;
+  font-weight: ${({ theme }) => theme.fontWeights.regular};
+  line-height: 0.9;
+  letter-spacing: 0.045em;
+  text-wrap: balance;
+
+  @media (max-width: 768px) {
+    line-height: 0.92;
+    letter-spacing: 0.03em;
+  }
 `;
 
 const HeroSubtitle = styled.p`
@@ -116,6 +123,17 @@ const LinkButton = styled(Link)`
 
   @media (max-width: 768px) {
     width: 100%;
+  }
+`;
+
+const HeroCTAButton = styled(Button)`
+  font-family: ${({ theme }) => theme.fonts.brand || theme.fonts.accent};
+  font-weight: ${({ theme }) => theme.fontWeights.regular};
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+
+  @media (max-width: 768px) {
+    letter-spacing: 0.02em;
   }
 `;
 
@@ -354,9 +372,9 @@ const PublicLandingPage: React.FC = () => {
               Discover tournaments, teams, rankings, player profiles and match stories in one focused competitive space built to feel premium from the first click.
             </HeroSubtitle>
             <ButtonRow>
-              <LinkButton to="/tournaments"><Button variant="brand">Browse Tournaments</Button></LinkButton>
-              <LinkButton to="/teams"><Button variant="outline">Explore Teams</Button></LinkButton>
-              <LinkButton to="/auth"><Button variant="ghost">Open Platform</Button></LinkButton>
+              <LinkButton to="/tournaments"><HeroCTAButton variant="brand">Browse Tournaments</HeroCTAButton></LinkButton>
+              <LinkButton to="/teams"><HeroCTAButton variant="outline">Explore Teams</HeroCTAButton></LinkButton>
+              <LinkButton to="/auth"><HeroCTAButton variant="ghost">Open Platform</HeroCTAButton></LinkButton>
             </ButtonRow>
           </HeroBody>
 
@@ -470,9 +488,9 @@ const PublicLandingPage: React.FC = () => {
           Open rankings, matches and game hubs to keep exploring the platform from different angles without losing the same clean visual language.
         </SectionCopy>
         <ButtonRow>
-          <LinkButton to="/rankings"><Button variant="outline">Open Rankings</Button></LinkButton>
-          <LinkButton to="/matches"><Button variant="outline">Open Matches</Button></LinkButton>
-          <LinkButton to="/games/critical-ops"><Button variant="ghost">Game Hubs</Button></LinkButton>
+          <LinkButton to="/rankings"><HeroCTAButton variant="outline">Open Rankings</HeroCTAButton></LinkButton>
+          <LinkButton to="/matches"><HeroCTAButton variant="outline">Open Matches</HeroCTAButton></LinkButton>
+          <LinkButton to="/games/critical-ops"><HeroCTAButton variant="ghost">Game Hubs</HeroCTAButton></LinkButton>
         </ButtonRow>
       </Cta>
     </Page>
