@@ -146,17 +146,18 @@ const Logo = styled.div`
 `;
 
 const HeroTitle = styled.h1`
+  font-family: ${({ theme }) => theme.fonts.brand || theme.fonts.title};
   font-size: clamp(2.4rem, 7vw, 4.8rem);
   font-weight: 700;
   color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
-  letter-spacing: -0.04em;
+  letter-spacing: 0.02em;
   text-shadow: ${({ theme }) => (theme.isLight ? '0 6px 18px rgba(132, 95, 58, 0.16)' : '0 10px 26px rgba(0, 0, 0, 0.32)')};
   line-height: 0.94;
 
   @media (max-width: 768px) {
     font-size: 2rem;
-    letter-spacing: -0.03em;
+    letter-spacing: 0.01em;
   }
 `;
 

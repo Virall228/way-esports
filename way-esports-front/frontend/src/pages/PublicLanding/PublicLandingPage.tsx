@@ -85,9 +85,11 @@ const HeroLogo = styled.div`
 `;
 
 const HeroTitle = styled.h1`
+  font-family: ${({ theme }) => theme.fonts.brand || theme.fonts.title};
   margin: 0;
   font-size: clamp(2.2rem, 6vw, 4.5rem);
   line-height: 0.96;
+  letter-spacing: 0.02em;
 `;
 
 const HeroSubtitle = styled.p`

@@ -65,7 +65,7 @@ export const theme = {
     title: "'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     body: "'SF Pro Text', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     mono: "'Fira Code', monospace",
-    brand: "'Orbitron', sans-serif"
+    brand: "'Chafurin', 'Orbitron', sans-serif"
   },
   fontWeights: {
     light: 300,
