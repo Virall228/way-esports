@@ -23,12 +23,12 @@ const Hero = styled(Card).attrs({ variant: 'elevated' })`
   background: ${({ theme }) =>
     theme.isLight
       ? `
-    radial-gradient(circle at top left, rgba(255, 153, 51, 0.22), transparent 34%),
-    radial-gradient(circle at bottom right, rgba(255, 214, 153, 0.28), transparent 26%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(248, 240, 229, 0.94))
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.28), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(226, 232, 240, 0.24), transparent 26%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(246, 248, 251, 0.94))
   `
       : `
-    radial-gradient(circle at top left, rgba(245, 154, 74, 0.22), transparent 34%),
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.09), transparent 34%),
     radial-gradient(circle at bottom right, rgba(255, 255, 255, 0.06), transparent 24%),
     linear-gradient(145deg, rgba(17, 20, 24, 0.96), rgba(8, 10, 13, 0.98))
   `};
@@ -66,8 +66,8 @@ const HeroEyebrow = styled.span`
   color: ${({ theme }) => theme.colors.text.secondary};
   font-family: ${({ theme }) => theme.fonts.accent};
   font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  letter-spacing: -0.01em;
 `;
 
 const HeroLogo = styled.div`

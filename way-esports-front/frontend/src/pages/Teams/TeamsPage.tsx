@@ -32,12 +32,19 @@ import { getTeamPoints, getTierByPoints, getIntensityByPointsAndRank } from '../
 import { Seo } from '../../components/SEO';
 
 const HeaderKicker = styled.div`
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
   margin-bottom: 0.75rem;
+  padding: 0.38rem 0.78rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   color: ${({ theme }) => theme.colors.text.tertiary};
   font-family: ${({ theme }) => theme.fonts.accent};
-  font-size: 0.8rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.74rem;
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  letter-spacing: -0.01em;
 `;
 
 const CreateTeamButton = styled(Button).attrs({ variant: 'brand', size: 'small' })`

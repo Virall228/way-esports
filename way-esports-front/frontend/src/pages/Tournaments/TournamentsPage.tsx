@@ -43,12 +43,19 @@ const RulesButton = styled(Button).attrs({ variant: 'secondary', size: 'small' }
 `;
 
 const HeaderKicker = styled.div`
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
   margin-bottom: 0.75rem;
+  padding: 0.38rem 0.78rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   color: ${({ theme }) => theme.colors.text.tertiary};
   font-family: ${({ theme }) => theme.fonts.accent};
-  font-size: 0.8rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.74rem;
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  letter-spacing: -0.01em;
 `;
 
 const FilterTab = styled(Button).attrs<{ $active: boolean }>({
@@ -114,7 +121,7 @@ const TournamentCard = styled(Card).attrs({ clickable: true })<{ $status: string
   border: 1px solid ${({ theme, $status }) => {
     switch ($status) {
       case 'live': return theme.colors.success;
-      case 'upcoming': return theme.colors.border.accent;
+      case 'upcoming': return theme.colors.border.medium;
       case 'completed': return theme.colors.text.disabled;
       default: return theme.colors.border.light;
     }
@@ -133,7 +140,7 @@ const TournamentCard = styled(Card).attrs({ clickable: true })<{ $status: string
       $status === 'live'
         ? 'linear-gradient(180deg, rgba(52, 211, 153, 0.95), rgba(52, 211, 153, 0.1))'
         : $status === 'upcoming'
-          ? 'linear-gradient(180deg, rgba(245, 154, 74, 0.95), rgba(245, 154, 74, 0.1))'
+          ? 'linear-gradient(180deg, rgba(226, 232, 240, 0.72), rgba(226, 232, 240, 0.08))'
           : 'linear-gradient(180deg, rgba(255,255,255,0.34), rgba(255,255,255,0.04))'};
   }
 
@@ -156,8 +163,8 @@ const TournamentCover = styled.div<{ $image?: string }>`
       $image
         ? `linear-gradient(180deg, rgba(0,0,0,${theme.isLight ? '0.08' : '0.18'}), rgba(0,0,0,${theme.isLight ? '0.26' : '0.48'})), url(${$image}) center/cover`
         : theme.isLight
-          ? 'linear-gradient(135deg, rgba(255, 182, 116, 0.42), rgba(255,255,255,0.86))'
-          : 'linear-gradient(135deg, rgba(245, 154, 74, 0.24), rgba(255,255,255,0.03))'};
+          ? 'linear-gradient(135deg, rgba(255,255,255,0.92), rgba(226,232,240,0.78))'
+          : 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(148,163,184,0.04))'};
 
   &::after {
     content: '';
@@ -172,8 +179,7 @@ const TournamentKicker = styled.div`
   color: ${({ theme }) => theme.colors.text.tertiary};
   font-family: ${({ theme }) => theme.fonts.accent};
   font-size: 0.74rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: -0.01em;
 `;
 
 const TournamentTitle = styled.h3`

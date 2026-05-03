@@ -77,9 +77,9 @@ const TeamTag = styled.span`
   align-items: center;
   padding: 0.36rem 0.8rem;
   border-radius: 999px;
-  background: rgba(240, 138, 50, 0.16);
-  border: 1px solid rgba(240, 138, 50, 0.28);
-  color: #ffd5ae;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.85rem;
   margin-left: 0.9rem;
   word-break: break-word;
@@ -133,12 +133,12 @@ const HelpText = styled.div`
 `;
 
 const InlineLink = styled.a`
-  color: #ffcfaa;
+  color: ${({ theme }) => theme.colors.text.primary};
   font-size: 0.88rem;
   text-decoration: none;
 
   &:hover {
-    color: #ffe3ca;
+    color: ${({ theme }) => theme.colors.text.secondary};
   }
 `;
 
@@ -180,12 +180,12 @@ const ProTag = styled.span`
   min-height: 28px;
   padding: 0.2rem 0.65rem;
   border-radius: 999px;
-  background: rgba(240, 138, 50, 0.14);
-  border: 1px solid rgba(240, 138, 50, 0.24);
-  color: #ffcd9b;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: -0.01em;
 `;
 
 const DiscoveryGrid = styled.div`
@@ -207,7 +207,7 @@ const DiscoveryLink = styled(Link)`
 
   &:hover {
     transform: translateY(-2px);
-    border-color: rgba(240, 138, 50, 0.22);
+    border-color: rgba(255, 255, 255, 0.14);
     background: rgba(255, 255, 255, 0.05);
   }
 `;

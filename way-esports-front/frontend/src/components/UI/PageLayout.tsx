@@ -6,26 +6,26 @@ export const PageShell = styled.div`
   max-width: 100%;
   margin: 0;
   display: grid;
-  gap: 1.25rem;
+  gap: 1.1rem;
 `;
 
 export const PageHero = styled(Card).attrs({ variant: 'elevated' })`
   position: relative;
   overflow: hidden;
-  padding: clamp(1.35rem, 3vw, 2.7rem);
+  padding: clamp(1.3rem, 3vw, 2.45rem);
   border-radius: 28px;
   border: 1px solid ${({ theme }) => theme.colors.border.light};
   background:
     ${({ theme }) =>
       theme.isLight
         ? `
-      radial-gradient(circle at top right, rgba(255, 193, 138, 0.2), transparent 32%),
-      linear-gradient(145deg, rgba(255,255,255,0.98), rgba(247, 239, 229, 0.94))
+      radial-gradient(circle at top right, rgba(255, 255, 255, 0.34), transparent 32%),
+      linear-gradient(145deg, rgba(255,255,255,0.98), rgba(246, 248, 251, 0.95))
     `
         : `
-      radial-gradient(circle at top right, rgba(245, 154, 74, 0.14), transparent 32%),
-      radial-gradient(circle at bottom left, rgba(255,255,255,0.05), transparent 24%),
-      linear-gradient(160deg, rgba(18, 22, 27, 0.96), rgba(8, 10, 13, 0.98))
+      radial-gradient(circle at top right, rgba(255,255,255,0.08), transparent 32%),
+      radial-gradient(circle at bottom left, rgba(255,255,255,0.04), transparent 24%),
+      linear-gradient(160deg, rgba(18, 22, 27, 0.96), rgba(9, 11, 15, 0.98))
     `};
   box-shadow: ${({ theme }) => theme.shadows.large};
 `;
@@ -66,59 +66,61 @@ export const PageSubtitle = styled.p`
 
 export const PageToolbar = styled.div`
   display: flex;
-  gap: 0.8rem;
+  gap: 0.65rem;
   flex-wrap: wrap;
   align-items: center;
 `;
 
 export const PageFilterSection = styled.div`
   display: grid;
-  gap: 0.9rem;
+  gap: 0.8rem;
 `;
 
 export const FilterRail = styled(Card).attrs({ variant: 'outlined' })`
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.65rem;
   align-items: center;
-  padding: 0.95rem 1rem;
-  border-radius: 22px;
-  background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.03)')};
+  padding: 0.88rem 0.95rem;
+  border-radius: 24px;
+  background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.82)' : 'rgba(255,255,255,0.032)')};
   border: 1px solid ${({ theme }) => theme.colors.border.light};
+  box-shadow: ${({ theme }) => (theme.isLight ? '0 10px 22px rgba(31, 41, 55, 0.04)' : '0 14px 28px rgba(0, 0, 0, 0.12)')};
 `;
 
 export const FilterGroup = styled.div`
   display: flex;
-  gap: 0.65rem;
+  gap: 0.55rem;
   flex-wrap: wrap;
   align-items: center;
 `;
 
 export const FilterLabel = styled.span`
   color: ${({ theme }) => theme.colors.text.tertiary};
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-family: ${({ theme }) => theme.fonts.accent};
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: -0.01em;
 `;
 
 export const SelectField = styled.select`
-  min-height: 46px;
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
+  min-height: 44px;
+  border-radius: ${({ theme }) => theme.borderRadius.large};
   border: 1px solid ${({ theme }) => theme.colors.border.light};
   background: ${({ theme }) =>
     theme.isLight
-      ? 'linear-gradient(180deg, rgba(255,255,255,0.94), rgba(247,240,230,0.88))'
-      : 'linear-gradient(180deg, rgba(14, 17, 22, 0.96), rgba(8, 10, 13, 0.98))'};
+      ? 'linear-gradient(180deg, rgba(255,255,255,0.94), rgba(246,248,251,0.9))'
+      : 'linear-gradient(180deg, rgba(16, 19, 24, 0.96), rgba(8, 10, 13, 0.98))'};
   color: ${({ theme }) => theme.colors.text.primary};
   padding: 0 0.95rem;
   min-width: 170px;
-  transition: border-color ${({ theme }) => theme.transitions.fast}, box-shadow ${({ theme }) => theme.transitions.fast};
+  transition: border-color ${({ theme }) => theme.transitions.fast}, box-shadow ${({ theme }) => theme.transitions.fast}, transform ${({ theme }) => theme.transitions.fast};
+  box-shadow: ${({ theme }) => (theme.isLight ? '0 8px 18px rgba(31, 41, 55, 0.04)' : 'inset 0 1px 0 rgba(255, 255, 255, 0.03)')};
 
   &:focus {
     outline: none;
     border-color: ${({ theme }) => theme.colors.border.strong};
-    box-shadow: ${({ theme }) => (theme.isLight ? '0 0 0 4px rgba(44, 33, 22, 0.08)' : '0 0 0 4px rgba(255, 255, 255, 0.07)')};
+    box-shadow: ${({ theme }) => (theme.isLight ? '0 0 0 4px rgba(59, 130, 246, 0.08)' : '0 0 0 4px rgba(219, 229, 241, 0.07)')};
+    transform: translateY(-1px);
   }
 
   option {
@@ -130,8 +132,8 @@ export const SelectField = styled.select`
 export const NoticeBanner = styled.div<{ $tone?: 'info' | 'success' | 'error' | 'warning' }>`
   position: relative;
   overflow: hidden;
-  padding: 0.95rem 1rem;
-  border-radius: 18px;
+  padding: 0.95rem 1rem 0.95rem 1.05rem;
+  border-radius: 20px;
   border: 1px solid
     ${({ $tone = 'info' }) =>
       $tone === 'success'
@@ -139,7 +141,7 @@ export const NoticeBanner = styled.div<{ $tone?: 'info' | 'success' | 'error' | 
         : $tone === 'error'
           ? 'rgba(248, 113, 113, 0.26)'
           : $tone === 'warning'
-            ? 'rgba(245, 154, 74, 0.3)'
+            ? 'rgba(255, 199, 143, 0.2)'
             : 'rgba(96, 165, 250, 0.26)'};
   background:
     ${({ $tone = 'info' }) =>
@@ -148,7 +150,7 @@ export const NoticeBanner = styled.div<{ $tone?: 'info' | 'success' | 'error' | 
         : $tone === 'error'
           ? 'rgba(248, 113, 113, 0.1)'
           : $tone === 'warning'
-            ? 'rgba(245, 154, 74, 0.1)'
+            ? 'rgba(255, 255, 255, 0.045)'
             : 'rgba(96, 165, 250, 0.1)'};
   color:
     ${({ $tone = 'info' }) =>
@@ -157,9 +159,30 @@ export const NoticeBanner = styled.div<{ $tone?: 'info' | 'success' | 'error' | 
         : $tone === 'error'
           ? '#ffc1c1'
           : $tone === 'warning'
-            ? '#ffcd9b'
+            ? '#f4f6fa'
             : '#bfdbfe'};
-  box-shadow: 0 14px 24px rgba(0, 0, 0, 0.14);
+  box-shadow: 0 14px 24px rgba(0, 0, 0, 0.12);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0.82rem;
+    width: 0.42rem;
+    height: 0.42rem;
+    border-radius: 50%;
+    transform: translateY(-50%);
+    background:
+      ${({ $tone = 'info' }) =>
+        $tone === 'success'
+          ? 'rgba(52, 211, 153, 0.9)'
+          : $tone === 'error'
+            ? 'rgba(248, 113, 113, 0.9)'
+            : $tone === 'warning'
+              ? 'rgba(219, 229, 241, 0.72)'
+              : 'rgba(96, 165, 250, 0.9)'};
+    box-shadow: 0 0 0 0.28rem rgba(255, 255, 255, 0.03);
+  }
 
   &::after {
     content: '';
@@ -175,7 +198,7 @@ export const NoticeBanner = styled.div<{ $tone?: 'info' | 'success' | 'error' | 
           : $tone === 'error'
             ? 'radial-gradient(circle, rgba(248, 113, 113, 0.18), transparent 68%)'
             : $tone === 'warning'
-              ? 'radial-gradient(circle, rgba(245, 154, 74, 0.2), transparent 68%)'
+              ? 'radial-gradient(circle, rgba(255, 255, 255, 0.12), transparent 68%)'
               : 'radial-gradient(circle, rgba(96, 165, 250, 0.18), transparent 68%)'};
     pointer-events: none;
   }
@@ -185,30 +208,42 @@ export const PageEmptyState = styled(Card).attrs({ variant: 'outlined' })`
   position: relative;
   overflow: hidden;
   display: grid;
-  gap: 0.6rem;
+  gap: 0.5rem;
   justify-items: center;
   text-align: center;
-  padding: 3.15rem 1.4rem;
-  min-height: 220px;
+  padding: 3rem 1.35rem;
+  min-height: 210px;
   color: ${({ theme }) => theme.colors.text.secondary};
-  border-radius: 24px;
+  border-radius: 28px;
   background:
     ${({ theme }) =>
       theme.isLight
-        ? 'linear-gradient(180deg, rgba(255,255,255,0.86), rgba(247,240,230,0.8))'
-        : 'linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02))'};
+        ? 'linear-gradient(180deg, rgba(255,255,255,0.9), rgba(246,248,251,0.84))'
+        : 'linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.018))'};
   border: 1px solid ${({ theme }) => theme.colors.border.light};
   box-shadow: ${({ theme }) => theme.shadows.medium};
 
   &::before {
     content: '';
     position: absolute;
-    top: -2rem;
-    width: 7rem;
-    height: 7rem;
+    top: -2.2rem;
+    width: 6.5rem;
+    height: 6.5rem;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(245, 154, 74, 0.18), transparent 70%);
-    filter: blur(2px);
+    background: radial-gradient(circle, rgba(219, 229, 241, 0.14), transparent 70%);
+    filter: blur(4px);
+    pointer-events: none;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 1rem auto auto 50%;
+    width: 3rem;
+    height: 0.28rem;
+    border-radius: 999px;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.08);
     pointer-events: none;
   }
 

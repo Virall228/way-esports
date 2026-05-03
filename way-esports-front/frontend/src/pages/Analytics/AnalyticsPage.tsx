@@ -41,8 +41,7 @@ const HeroMetric = styled.div`
 const HeroMetricLabel = styled.div`
   color: ${({ theme }) => theme.colors.text.tertiary};
   font-size: 0.74rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: -0.01em;
   margin-bottom: 0.45rem;
 `;
 

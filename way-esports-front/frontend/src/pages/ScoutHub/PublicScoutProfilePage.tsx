@@ -14,7 +14,7 @@ const Hero = styled.section`
   border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background:
-    radial-gradient(circle at top left, rgba(255, 107, 0, 0.25), transparent 40%),
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 40%),
     linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
 `;
 
@@ -44,8 +44,7 @@ const Panel = styled.section`
 
 const Label = styled.div`
   font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: -0.01em;
   color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
@@ -76,8 +75,8 @@ const ChipRow = styled.div`
 const Chip = styled.span`
   padding: 0.45rem 0.7rem;
   border-radius: 999px;
-  background: rgba(255, 107, 0, 0.12);
-  border: 1px solid rgba(255, 107, 0, 0.22);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   font-size: 0.85rem;
 `;
 

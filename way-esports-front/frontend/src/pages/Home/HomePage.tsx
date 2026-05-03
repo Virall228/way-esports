@@ -28,14 +28,14 @@ const HeroSection = styled(Card).attrs({ variant: 'elevated' })`
   background: ${({ theme }) =>
     theme.isLight
       ? theme.colors.bg.secondary
-      : 'linear-gradient(145deg, rgba(7, 9, 12, 0.98) 0%, rgba(10, 12, 16, 0.96) 54%, rgba(12, 10, 8, 0.94) 100%)'};
+      : 'linear-gradient(145deg, rgba(7, 9, 12, 0.98) 0%, rgba(10, 12, 16, 0.96) 54%, rgba(12, 14, 18, 0.95) 100%)'};
   border: 1px solid ${({ theme }) => (theme.isLight ? theme.colors.border.medium : theme.colors.border.light)};
   border-radius: 28px;
   padding: clamp(28px, 5vw, 88px) clamp(22px, 4vw, 48px);
   margin-bottom: 32px;
   position: relative;
   overflow: hidden;
-  box-shadow: ${({ theme }) => (theme.isLight ? theme.shadows.large : '0 32px 72px rgba(0, 0, 0, 0.42), 0 0 40px rgba(245, 154, 74, 0.08)')};
+  box-shadow: ${({ theme }) => (theme.isLight ? theme.shadows.large : '0 32px 72px rgba(0, 0, 0, 0.42), 0 0 40px rgba(219, 229, 241, 0.04)')};
   
   &::before {
     content: '';
@@ -45,9 +45,9 @@ const HeroSection = styled(Card).attrs({ variant: 'elevated' })`
       theme.isLight
         ? "url('/images/main2.png') center/cover"
         : `
-      radial-gradient(circle at 18% 24%, rgba(245, 154, 74, 0.16), transparent 26%),
+      radial-gradient(circle at 18% 24%, rgba(255, 255, 255, 0.08), transparent 26%),
       radial-gradient(circle at 82% 22%, rgba(255, 255, 255, 0.07), transparent 22%),
-      radial-gradient(circle at 50% 100%, rgba(245, 154, 74, 0.08), transparent 34%),
+      radial-gradient(circle at 50% 100%, rgba(148, 163, 184, 0.07), transparent 34%),
       linear-gradient(180deg, rgba(0, 0, 0, 0.14), rgba(5, 6, 8, 0.42))
     `};
     opacity: ${({ theme }) => (theme.isLight ? 0.1 : 1)};
@@ -117,8 +117,8 @@ const HeroEyebrow = styled.span`
   color: ${({ theme }) => theme.colors.text.secondary};
   font-family: ${({ theme }) => theme.fonts.accent};
   font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  letter-spacing: -0.01em;
 `;
 
 const Logo = styled.div`
@@ -135,7 +135,7 @@ const Logo = styled.div`
   box-shadow: ${({ theme }) =>
     theme.isLight
       ? '0 12px 28px rgba(0, 0, 0, 0.18)'
-      : '0 16px 36px rgba(0, 0, 0, 0.46), 0 0 34px rgba(245, 154, 74, 0.12)'};
+      : '0 16px 36px rgba(0, 0, 0, 0.46), 0 0 34px rgba(219, 229, 241, 0.06)'};
   overflow: hidden;
 
   @media (max-width: 768px) {
@@ -150,13 +150,13 @@ const HeroTitle = styled.h1`
   font-weight: 700;
   color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
-  letter-spacing: 0.03em;
+  letter-spacing: -0.04em;
   text-shadow: ${({ theme }) => (theme.isLight ? '0 6px 18px rgba(132, 95, 58, 0.16)' : '0 10px 26px rgba(0, 0, 0, 0.32)')};
   line-height: 0.94;
 
   @media (max-width: 768px) {
     font-size: 2rem;
-    letter-spacing: 1px;
+    letter-spacing: -0.03em;
   }
 `;
 

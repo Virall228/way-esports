@@ -96,8 +96,8 @@ const NotificationItem = styled.div<{ $type: string; $isVisible: boolean }>`
         ? 'rgba(52, 211, 153, 0.26)'
         : $type === 'error'
           ? 'rgba(248, 113, 113, 0.28)'
-          : $type === 'warning'
-            ? 'rgba(245, 154, 74, 0.3)'
+        : $type === 'warning'
+            ? 'rgba(226, 232, 240, 0.18)'
             : 'rgba(96, 165, 250, 0.26)'};
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.32);
   backdrop-filter: blur(18px);
@@ -118,7 +118,7 @@ const NotificationItem = styled.div<{ $type: string; $isVisible: boolean }>`
         : $type === 'error'
           ? 'radial-gradient(circle, rgba(248, 113, 113, 0.24), transparent 68%)'
           : $type === 'warning'
-            ? 'radial-gradient(circle, rgba(245, 154, 74, 0.22), transparent 68%)'
+            ? 'radial-gradient(circle, rgba(226, 232, 240, 0.12), transparent 68%)'
             : 'radial-gradient(circle, rgba(96, 165, 250, 0.22), transparent 68%)'};
     pointer-events: none;
     animation: ${floatAura} 6s ease-in-out infinite;
@@ -155,8 +155,7 @@ const NotificationTime = styled.div`
   color: #8f98a5;
   font-size: 11px;
   margin-top: 10px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: -0.01em;
 `;
 
 const CloseButton = styled.button`
@@ -215,15 +214,14 @@ const ToneBadge = styled.span<{ $type: Notification['type'] }>`
   border-radius: 999px;
   font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: -0.01em;
   color: ${({ $type }) =>
     $type === 'success'
       ? '#a9f0d1'
       : $type === 'error'
         ? '#ffc3c3'
         : $type === 'warning'
-          ? '#ffd1a3'
+          ? '#e5ebf3'
           : '#c7dcff'};
   background: ${({ $type }) =>
     $type === 'success'
@@ -231,7 +229,7 @@ const ToneBadge = styled.span<{ $type: Notification['type'] }>`
       : $type === 'error'
         ? 'rgba(248, 113, 113, 0.12)'
         : $type === 'warning'
-          ? 'rgba(245, 154, 74, 0.12)'
+          ? 'rgba(226, 232, 240, 0.08)'
           : 'rgba(96, 165, 250, 0.12)'};
   border: 1px solid
     ${({ $type }) =>
@@ -240,7 +238,7 @@ const ToneBadge = styled.span<{ $type: Notification['type'] }>`
         : $type === 'error'
           ? 'rgba(248, 113, 113, 0.18)'
           : $type === 'warning'
-            ? 'rgba(245, 154, 74, 0.2)'
+            ? 'rgba(226, 232, 240, 0.14)'
             : 'rgba(96, 165, 250, 0.2)'};
 `;
 
@@ -294,16 +292,16 @@ const NotificationList = styled.div`
 `;
 
 const NotificationListItem = styled.div<{ $read: boolean }>`
-  background: ${({ $read }) => $read ? 'rgba(255, 255, 255, 0.04)' : 'rgba(245, 154, 74, 0.1)'};
+  background: ${({ $read }) => $read ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.06)'};
   border-radius: 16px;
   padding: 16px;
   margin-bottom: 12px;
-  border: 1px solid ${({ $read }) => $read ? 'rgba(255, 255, 255, 0.08)' : 'rgba(245, 154, 74, 0.2)'};
+  border: 1px solid ${({ $read }) => $read ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.12)'};
   cursor: pointer;
   transition: all 0.3s ease;
 
   &:hover {
-    background: ${({ $read }) => $read ? 'rgba(255, 255, 255, 0.06)' : 'rgba(245, 154, 74, 0.14)'};
+    background: ${({ $read }) => $read ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.08)'};
     transform: translateY(-1px);
   }
 `;
@@ -325,8 +323,8 @@ const EmptyPanelOrb = styled.div`
   border-radius: 50%;
   background:
     radial-gradient(circle at 32% 32%, rgba(255,255,255,0.82), rgba(255,255,255,0) 28%),
-    radial-gradient(circle, rgba(245, 154, 74, 0.82), rgba(245, 154, 74, 0.18) 58%, transparent 72%);
-  box-shadow: 0 0 0 0.65rem rgba(245, 154, 74, 0.08);
+    radial-gradient(circle, rgba(219, 229, 241, 0.72), rgba(219, 229, 241, 0.14) 58%, transparent 72%);
+  box-shadow: 0 0 0 0.65rem rgba(219, 229, 241, 0.05);
 `;
 
 const SettingsPanel = styled.div`

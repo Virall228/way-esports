@@ -12,6 +12,17 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: React.ReactNode;
 }
 
+const sheenDrift = css`
+  @keyframes buttonSheenDrift {
+    0% {
+      transform: translateX(-118%);
+    }
+    100% {
+      transform: translateX(118%);
+    }
+  }
+`;
+
 const getButtonStyles = (variant: ButtonVariant = 'primary') => {
   switch (variant) {
     case 'primary':
@@ -141,6 +152,7 @@ const getButtonSize = (size: ButtonSize = 'medium') => {
 };
 
 const StyledButton = styled.button<ButtonProps>`
+  ${sheenDrift}
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -159,7 +171,8 @@ const StyledButton = styled.button<ButtonProps>`
     background ${({ theme }) => theme.transitions.medium},
     border-color ${({ theme }) => theme.transitions.fast},
     box-shadow ${({ theme }) => theme.transitions.medium},
-    color ${({ theme }) => theme.transitions.fast};
+    color ${({ theme }) => theme.transitions.fast},
+    opacity ${({ theme }) => theme.transitions.fast};
   backdrop-filter: blur(18px) saturate(120%);
   overflow: hidden;
   isolation: isolate;
@@ -175,11 +188,29 @@ const StyledButton = styled.button<ButtonProps>`
     z-index: -1;
   }
 
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -36%;
+    width: 32%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+    transform: translateX(-118%);
+    pointer-events: none;
+    opacity: 0;
+  }
+
   ${({ variant }) => getButtonStyles(variant)}
   ${({ size }) => getButtonSize(size)}
 
   &:hover:not(:disabled) {
     transform: translateY(-1px);
+
+    &::after {
+      opacity: 1;
+      animation: buttonSheenDrift 900ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
   }
 
   &:active:not(:disabled) {

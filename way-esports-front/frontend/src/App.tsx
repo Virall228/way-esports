@@ -77,7 +77,7 @@ const shellGlow = keyframes`
 const routeReveal = keyframes`
   0% {
     opacity: 0;
-    transform: translate3d(0, 14px, 0) scale(0.992);
+    transform: translate3d(0, 10px, 0) scale(0.994);
   }
   100% {
     opacity: 1;
@@ -401,13 +401,13 @@ const ContentInner = styled.div`
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 1.35rem;
+  gap: 1.18rem;
 `;
 
 const RouteStage = styled.div`
   display: grid;
-  gap: 1rem;
-  animation: ${routeReveal} 360ms cubic-bezier(0.22, 1, 0.36, 1);
+  gap: 0.95rem;
+  animation: ${routeReveal} 420ms cubic-bezier(0.22, 1, 0.36, 1);
 `;
 
 const Footer = styled.footer`
@@ -416,10 +416,10 @@ const Footer = styled.footer`
       ? theme.colors.glass.bar
       : 'linear-gradient(180deg, rgba(8, 10, 13, 0.96) 0%, rgba(6, 8, 11, 0.98) 100%)'};
   border-top: 1px solid ${({ theme }) => theme.colors.border.light};
-  padding: 1.5rem 1rem;
+  padding: 1.35rem 1rem;
   text-align: center;
   color: ${({ theme }) => theme.colors.text.secondary};
-  font-size: 0.875rem;
+  font-size: 0.84rem;
   flex: 0 0 auto;
 
   @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
@@ -434,12 +434,13 @@ const BottomNav = styled.nav`
   bottom: 0;
   z-index: 150;
   display: flex;
-  gap: 8px;
-  padding: 10px calc(10px + var(--sar)) calc(10px + var(--sab, 0px)) calc(10px + var(--sal));
+  gap: 7px;
+  padding: 9px calc(10px + var(--sar)) calc(9px + var(--sab, 0px)) calc(10px + var(--sal));
   background: ${({ theme }) => theme.colors.glass.bar};
   border-top: 1px solid ${({ theme }) => theme.colors.border.light};
   backdrop-filter: blur(24px) saturate(130%);
   overflow-x: auto;
+  box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.12);
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     display: none;
@@ -448,8 +449,8 @@ const BottomNav = styled.nav`
 
 const BottomNavItem = styled(Link) <{ $active?: boolean }>`
   flex: 0 0 auto;
-  min-width: 68px;
-  min-height: 48px;
+  min-width: 66px;
+  min-height: 46px;
   border-radius: 18px;
   border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.border.strong : 'rgba(255,255,255,0.02)')};
   background: ${({ $active, theme }) =>
@@ -461,11 +462,11 @@ const BottomNavItem = styled(Link) <{ $active?: boolean }>`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
   font-size: 10px;
   letter-spacing: -0.01em;
   text-decoration: none;
-  box-shadow: ${({ $active, theme }) => ($active && !theme.isLight ? '0 12px 22px rgba(0, 0, 0, 0.16)' : 'none')};
+  box-shadow: ${({ $active, theme }) => ($active && !theme.isLight ? '0 10px 18px rgba(0, 0, 0, 0.14)' : 'none')};
 `;
 
 const BottomNavIcon = styled.span`
@@ -487,41 +488,51 @@ const RouteLoader = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.9rem;
-  border-radius: 24px;
+  gap: 0.72rem;
+  border-radius: 28px;
   border: 1px solid ${({ theme }) => theme.colors.border.light};
-  background: ${({ theme }) => theme.colors.glass.panel};
+  background: ${({ theme }) =>
+    theme.isLight
+      ? 'linear-gradient(180deg, rgba(255,255,255,0.94), rgba(246,248,251,0.9))'
+      : 'linear-gradient(180deg, rgba(16, 19, 24, 0.86), rgba(8, 10, 13, 0.94))'};
   color: ${({ theme }) => theme.colors.text.secondary};
   font-family: ${({ theme }) => theme.fonts.accent};
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  box-shadow: ${({ theme }) => (theme.isLight ? theme.shadows.small : '0 18px 36px rgba(0, 0, 0, 0.14)')};
 `;
 
 const LoaderOrb = styled.div`
   position: relative;
-  width: 2.6rem;
-  height: 2.6rem;
+  width: 2.45rem;
+  height: 2.45rem;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(255, 255, 255, 0.03);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
 
   &::before {
     content: '';
     position: absolute;
-    inset: 5px;
+    inset: 4px;
     border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.08);
+    border: 1.5px solid rgba(255, 255, 255, 0.08);
     border-top-color: rgba(255, 255, 255, 0.92);
     border-right-color: rgba(255, 255, 255, 0.34);
-    animation: ${loaderSweep} 0.82s linear infinite;
+    animation: ${loaderSweep} 0.92s linear infinite;
   }
+`;
+
+const LoaderTitle = styled.div`
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-size: 0.96rem;
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  letter-spacing: -0.02em;
 `;
 
 const LoaderCaption = styled.div`
   color: ${({ theme }) => theme.colors.text.tertiary};
-  font-size: 0.74rem;
-  letter-spacing: 0.1em;
+  font-size: 0.78rem;
+  letter-spacing: -0.01em;
 `;
 
 const renderLazyRoute = (element: React.ReactNode) => (
@@ -529,8 +540,8 @@ const renderLazyRoute = (element: React.ReactNode) => (
     fallback={
       <RouteLoader>
         <LoaderOrb />
-        <div>Loading page...</div>
-        <LoaderCaption>Preparing the next scene</LoaderCaption>
+        <LoaderTitle>Loading page</LoaderTitle>
+        <LoaderCaption>Preparing a cleaner workspace</LoaderCaption>
       </RouteLoader>
     }
   >
@@ -542,7 +553,7 @@ const MobileMenuOverlay = styled.div<{ $open: boolean }>`
   position: fixed;
   inset: 0;
   background: ${({ theme }) => theme.colors.glass.overlay};
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(12px) saturate(115%);
   z-index: 200;
   display: ${({ $open }) => ($open ? 'block' : 'none')};
 
@@ -560,13 +571,14 @@ const MobileMenuPanel = styled.div`
   background: ${({ theme }) =>
     theme.isLight
       ? theme.colors.glass.panel
-      : 'linear-gradient(180deg, rgba(8, 10, 13, 0.98) 0%, rgba(4, 5, 7, 1) 100%)'};
+      : 'linear-gradient(180deg, rgba(10, 12, 16, 0.94) 0%, rgba(6, 8, 11, 0.98) 100%)'};
   border-right: 1px solid ${({ theme }) => theme.colors.border.light};
   padding: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  box-shadow: 26px 0 64px rgba(0, 0, 0, 0.3);
+  gap: 0.7rem;
+  box-shadow: 22px 0 52px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(22px) saturate(125%);
 `;
 
 const MobileMenuHeader = styled.div`
@@ -578,7 +590,7 @@ const MobileMenuHeader = styled.div`
 const MobileMenuTitle = styled.div`
   font-family: ${({ theme }) => theme.fonts.accent};
   font-weight: ${({ theme }) => theme.fontWeights.bold};
-  letter-spacing: 0.05em;
+  letter-spacing: -0.02em;
 `;
 
 const CloseButton = styled.button`
@@ -587,14 +599,14 @@ const CloseButton = styled.button`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 16px;
+  border-radius: 18px;
   border: 1px solid ${({ theme }) => theme.colors.border.light};
-  background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.72)' : 'linear-gradient(180deg, rgba(24, 28, 34, 0.96), rgba(12, 15, 20, 0.98))')};
+  background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.76)' : 'linear-gradient(180deg, rgba(32, 37, 45, 0.9), rgba(16, 19, 24, 0.95))')};
   color: ${({ theme }) => theme.colors.text.primary};
 
   @media (hover: hover) and (pointer: fine) {
     &:hover {
-      background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.88)' : 'linear-gradient(180deg, rgba(31, 35, 41, 0.98), rgba(16, 19, 24, 1))')};
+      background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.9)' : 'linear-gradient(180deg, rgba(36, 41, 49, 0.96), rgba(18, 21, 27, 1))')};
       border-color: ${({ theme }) => theme.colors.border.strong};
     }
   }
@@ -610,13 +622,13 @@ const MobileMenuActionButton = styled.button`
   justify-content: center;
   gap: 8px;
   min-height: 44px;
-  border-radius: 16px;
+  border-radius: 18px;
   border: 1px solid ${({ theme }) => theme.colors.border.light};
-  background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.76)' : 'linear-gradient(180deg, rgba(24, 28, 34, 0.96), rgba(12, 15, 20, 0.98))')};
+  background: ${({ theme }) => (theme.isLight ? 'rgba(255,255,255,0.8)' : 'linear-gradient(180deg, rgba(32, 37, 45, 0.9), rgba(16, 19, 24, 0.95))')};
   color: ${({ theme }) => theme.colors.text.primary};
   font-family: ${({ theme }) => theme.fonts.accent};
   font-size: 0.88rem;
-  letter-spacing: 0.02em;
+  letter-spacing: -0.01em;
 `;
 
 const AppContent: React.FC = () => {

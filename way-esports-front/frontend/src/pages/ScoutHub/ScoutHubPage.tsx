@@ -14,7 +14,7 @@ const Hero = styled.section`
   padding: 1.5rem;
   border-radius: 24px;
   background:
-    radial-gradient(circle at top left, rgba(255, 107, 0, 0.2), transparent 40%),
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 40%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
   border: 1px solid rgba(255, 255, 255, 0.1);
 `;
@@ -46,8 +46,7 @@ const Panel = styled.section`
 
 const Label = styled.div`
   font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: -0.01em;
   color: ${({ theme }) => theme.colors.text.secondary};
 `;
 

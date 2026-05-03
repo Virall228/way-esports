@@ -30,10 +30,12 @@ const spin = keyframes`
 
 const pulse = keyframes`
   0%, 100% {
-    opacity: 1;
+    opacity: 0.58;
+    transform: scale(0.96);
   }
   50% {
-    opacity: 0.5;
+    opacity: 1;
+    transform: scale(1);
   }
 `;
 
@@ -71,7 +73,8 @@ const LoadingContainer = styled.div<{ fullScreen?: boolean }>`
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: linear-gradient(180deg, rgba(5, 7, 10, 0.62), rgba(5, 7, 10, 0.8));
+    backdrop-filter: blur(18px) saturate(125%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -82,6 +85,7 @@ const LoadingContainer = styled.div<{ fullScreen?: boolean }>`
 const LoadingStage = styled.div<LoadingProps>`
   position: relative;
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   width: calc(${({ size }) => getSize(size)} * 1.7);
@@ -92,9 +96,9 @@ const LoadingHalo = styled.div<LoadingProps>`
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,255,255,0.08), transparent 70%);
-  filter: blur(12px);
-  animation: ${breathe} 2.4s ease-in-out infinite;
+  background: radial-gradient(circle, rgba(219, 229, 241, 0.12), transparent 70%);
+  filter: blur(14px);
+  animation: ${breathe} 2.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
   pointer-events: none;
 `;
 
@@ -103,12 +107,14 @@ const Spinner = styled.div<LoadingProps>`
   z-index: 1;
   width: ${({ size }) => getSize(size)};
   height: ${({ size }) => getSize(size)};
-  border: 2px solid rgba(255, 255, 255, 0.08);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
   border-top-color: ${({ theme, color }) => color || theme.colors.text.primary};
-  border-right-color: rgba(255, 255, 255, 0.24);
+  border-right-color: rgba(219, 229, 241, 0.28);
   border-radius: 50%;
-  animation: ${spin} 0.8s linear infinite;
-  box-shadow: 0 0 0 0.35rem rgba(255, 255, 255, 0.03);
+  animation: ${spin} 0.92s linear infinite;
+  box-shadow:
+    0 0 0 0.4rem rgba(255, 255, 255, 0.02),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 `;
 
 const DotsContainer = styled.div<LoadingProps>`
@@ -124,8 +130,8 @@ const Dot = styled.div<LoadingProps>`
   height: ${({ size }) => getDotSize(size)};
   background: ${({ theme, color }) => color || theme.colors.text.primary};
   border-radius: 50%;
-  animation: ${pulse} 0.9s ease-in-out infinite;
-  box-shadow: 0 0 0 0.3rem rgba(255, 255, 255, 0.04);
+  animation: ${pulse} 1.05s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  box-shadow: 0 0 0 0.34rem rgba(255, 255, 255, 0.035);
 
   &:nth-child(2) {
     animation-delay: 0.12s;
@@ -145,8 +151,8 @@ const PulseCircle = styled.div<LoadingProps>`
     radial-gradient(circle at 35% 35%, rgba(255,255,255,0.94), rgba(255,255,255,0) 28%),
     radial-gradient(circle, ${({ theme, color }) => color || theme.colors.text.primary}, rgba(255, 255, 255, 0.12));
   border-radius: 50%;
-  animation: ${pulse} 1.2s ease-in-out infinite;
-  box-shadow: 0 0 0 0.4rem rgba(255, 255, 255, 0.04);
+  animation: ${pulse} 1.3s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  box-shadow: 0 0 0 0.45rem rgba(255, 255, 255, 0.04);
 `;
 
 const Loading: React.FC<LoadingProps> = ({
