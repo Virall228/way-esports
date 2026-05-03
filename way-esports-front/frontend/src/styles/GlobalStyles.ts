@@ -2,8 +2,8 @@ import { createGlobalStyle } from 'styled-components';
 
 export const GlobalStyles = createGlobalStyle`
   @font-face {
-    font-family: 'Chafurin';
-    src: url('/fonts/ChafurinRegular.ttf') format('truetype');
+    font-family: 'OpenLukyanov';
+    src: url('/fonts/OpenLukyanov.otf') format('opentype');
     font-weight: 400;
     font-style: normal;
     font-display: swap;

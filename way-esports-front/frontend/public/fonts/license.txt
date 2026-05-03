@@ -1,163 +1,91 @@
-﻿FontStruct Non-Commercial Software End User License Agreement 1.0
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+This license is copied below, and is also available with a FAQ at:
+http://scripts.sil.org/OFL
 
-This software end user license agreement (hereinafter “Agreement”) is made
-between you or, if you represent a legal entity, that legal entity (hereinafter
-“You”) and “SakanaOji”, the copyright holder and designer (hereinafter
-“Font Designer”) of the font software named “Chafurin” (hereinafter
-“Font Software”).
 
-1. BINDING AGREEMENT
-This Agreement is a binding agreement between You and the Font Designer and
-shall set forth the terms and conditions under which You can use the Font
-Software. For the purposes of this Agreement, Font Software shall mean the Font
-Software, and any parts or copies of it.
+-----------------------------------------------------------
+SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
+-----------------------------------------------------------
 
-2. GRANT OF NON-EXCLUSIVE AND LICENCE
-The Font Designer hereby grants You a non-exclusive, non-transferable licence to
-use the Font Software provided that You comply with all terms and conditions of
-this Agreement.
+PREAMBLE
+The goals of the Open Font License (OFL) are to stimulate worldwide
+development of collaborative font projects, to support the font creation
+efforts of academic and linguistic communities, and to provide a free and
+open framework in which fonts may be shared and improved in partnership
+with others.
 
-2.1 PERSONAL USE
-You may use the Fonts Software only for Your own Personal Purposes and for Your
-Work. For the purposes of this Agreement, “Personal Purposes” shall mean any
-private use of the Font Software by you. “Work” shall mean any work or
-result created by You or on Your behalf with the Font Software. For the
-avoidance of doubt, the use for Personal Purposes does not allow any use of the
-Font Software and/or any Work for commercial purposes (see Section 2.2) and/or
-as a web-font (see Section 2.6).
+The OFL allows the licensed fonts to be used, studied, modified and
+redistributed freely as long as they are not sold by themselves. The
+fonts, including any derivative works, can be bundled, embedded, 
+redistributed and/or sold with any software provided that any reserved
+names are not used by derivative works. The fonts and derivatives,
+however, cannot be released under any other type of license. The
+requirement for fonts to remain under this license does not apply
+to any document created using the fonts or their derivatives.
 
-2.2 NO COMMERCIAL USE
-Neither the Font Software, nor any of its individual components or any Work, may
-be used by You for any form of profit-making or otherwise commercial projects,
-without express prior written permission from the Font Designer.
+DEFINITIONS
+"Font Software" refers to the set of files released by the Copyright
+Holder(s) under this license and clearly marked as such. This may
+include source files, build scripts and documentation.
 
-2.3 NO SALE OR DISTRIBUTION
-You may not sell, rent, license, sublicense, distribute, redistribute, give-away
-or make available (in any other way) the Font Software alone or as part of any
-collection, product or service to any third party. 
+"Reserved Font Name" refers to any names specified as such after the
+copyright statement(s).
 
-2.4 NO MODIFICATION
-You may not modify, adapt, rename, translate, reverse engineer, decompile,
-disassemble, alter, or attempt to discover the source code of the Font Software.
+"Original Version" refers to the collection of Font Software components as
+distributed by the Copyright Holder(s).
 
-2.5 EMBEDDING
-You may embed the Font Software in documents, applications or devices either as
-a rasterized representation of the Font Software (e.g., a GIF or JPEG) or as a
-subset of the Font Software as long as the document, application or device is
-distributed in a secure format that permits only the viewing and printing but
-not the editing of the text.
+"Modified Version" refers to any derivative made by adding to, deleting,
+or substituting -- in part or in whole -- any of the components of the
+Original Version, by changing formats or by porting the Font Software to a
+new environment.
 
-2.6 NO USE AS A WEBFONT
-You may not make the Font Software accessible on a web server in order to enable
-a web browser to render the content of Websites using the respective Font
-Software.
+"Author" refers to any designer, engineer, programmer, technical
+writer or other person who contributed to the Font Software.
 
-2.7 BACKUP
-You may make backup copies of the Font Software for archival purposes only,
-provided that You retain exclusive custody and control over such copies. Any
-backup copy of the Font Software must contain the same copyright, trademark, and
-other proprietary information as the original.
+PERMISSION & CONDITIONS
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of the Font Software, to use, study, copy, merge, embed, modify,
+redistribute, and sell modified and unmodified copies of the Font
+Software, subject to the following conditions:
 
-2.8 PRINT SHOPS AND SERVICE BUREAUS
-You may provide a copy of the Font Software used in Your Work to a print shop,
-service bureau, etc. for printing or otherwise outputting Your Work. Afterwards,
-the print shop, service bureau, etc. must destroy and/or delete all copies of
-the Font Software.
+1) Neither the Font Software nor any of its individual components,
+in Original or Modified Versions, may be sold by itself.
 
-3. ATTRIBUTION
-If You make Your Work publicly accessible in any form, You must keep intact all
-copyright notices for the Font Software and display, reasonable to the medium or
-means You are utilizing for Your Work, an attribution notice (hereinafter “The
-Attribution Notice”) comprising of:
+2) Original or Modified Versions of the Font Software may be bundled,
+redistributed and/or sold with any software, provided that each copy
+contains the above copyright notice and this license. These can be
+included either as stand-alone text files, human-readable headers or
+in the appropriate machine-readable metadata fields within text or
+binary files as long as those fields can be easily viewed by the user.
 
-the name of the Font Designer or pseudonym, if applicable (“SakanaOji”);
-the title of the Font Software (“Chafurin”); and
-to the extent reasonably practicable, the URI
-(https://fontstruct.com/fontstructions/show/1597235) from where the Font was
-originally downloaded.
+3) No Modified Version of the Font Software may use the Reserved Font
+Name(s) unless explicit written permission is granted by the corresponding
+Copyright Holder. This restriction only applies to the primary font name as
+presented to the users.
 
-The Attribution Notice may be implemented in any reasonable manner. For the
-avoidance of doubt, You may only use the credit required by this Section for the
-purpose of attribution in the manner set out above and, by exercising Your
-rights under this License, You may not implicitly or explicitly assert or imply
-any connection with, sponsorship or endorsement by the Font Designer of You or
-Your Work.
+4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
+Software shall not be used to promote, endorse or advertise any
+Modified Version, except to acknowledge the contribution(s) of the
+Copyright Holder(s) and the Author(s) or with their explicit written
+permission.
 
-4. YOUR REPRESENTATIONS AND INDEMNIFICATIONS
-You represent, warrant, and covenant that You shall use the Font Software only
-in accordance with the terms of this Agreement and keep the Font Designer fully
-indemnified against all actions, claims, costs, proceedings and damages
-whatsoever incurred by any breach of any of the aforesaid representations,
-warranties of this Agreement.
+5) The Font Software, modified or unmodified, in part or in whole,
+must be distributed entirely under this license, and must not be
+distributed under any other license. The requirement for fonts to
+remain under this license does not apply to any document created
+using the Font Software.
 
-5. OWNERSHIP AND RIGHTS TO THE FONT SOFTWARE
-The Font Designer reserves all rights not expressly granted to You in this
-Agreement (hereinafter “Reserved Rights”). The Font Software is protected by
-copyright and other intellectual property laws and treaties. You acknowledge
-that the Font Designer shall be the sole owner of the Font Software, of the
-copyright and all Reserved Rights of whatever kind and nature in the Font
-Software.
+TERMINATION
+This license becomes null and void if any of the above conditions are
+not met.
 
-6. WARRANTY
-The Font Software is made available “as is” WITHOUT WARRANTY OF ANY KIND,
+DISCLAIMER
+THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF
-COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT.THE FONT DESIGNER DOES NOT AND
-CANNOT GUARANTEE THE PERFORMANCE OR RESULTS YOU MAY OBTAIN BY USING THE FONT
-SOFTWARE.
-THE FONT DESIGNER SHALL IN NO EVENT BE LIABLE TO YOU FOR ANY CONSEQUENTIAL,
-INCIDENTAL OR SPECIAL DAMAGES, INCLUDING ANY LOST PROFITS OR LOST SAVINGS, OR
-FOR ANY CLAIM BY ANY THIRD PARTY, ARISING OUT OF THE USE OR INABILITY TO USE THE
-FONT SOFTWARE.
-
-7. TERMINATION / CONDITION PRECEDENT
-You may use the Font Software only as set forth in this Agreement. Any use of
-the Font Software that is not expressly allowed in this Agreement will
-automatically terminate Your rights to use the Font Software under this
-Agreement.  If Your right to use the Font Software is terminated You shall
-immediately stop using the Font Software, call back or change any Work that is
-used in the public, and delete/destroy any copies of the Font Software. The
-termination of the Agreement shall not affect the right of the Font Designer to
-claim damages or other rights.
-
-8. WAIVER
-A waiver by either Party of any term or condition of this Agreement shall not be
-deemed or construed to be a waiver of such term or condition for the future or
-any subsequent breach thereof.  All remedies, rights, undertakings, obligations
-and agreements contained in this Agreement shall be cumulative and none of them
-shall be in limitation of any other remedy, right, undertaking, obligation or
-agreement of either Party.
-
-9. GOVERNING LAW, PLACE OF JURISDICTION
-This Agreement shall be construed and shall take effect in accordance with the
-laws of the Federal Republic of Germany excluding the United Nations Convention
-on Contracts for the International Sales of Goods (CISG).  To the extent
-permitted by law, the Courts of Berlin, Germany shall have exclusive
-jurisdiction to resolve any dispute which may arise.
-
-10. ENTIRE AGREEMENT
-This Agreement contains the entire agreement between the Parties. No variation
-of any of the terms or conditions of this Agreement may be made unless such
-variation is agreed in writing and signed by You and the Font Designer.
-
-11. SEVERABILITY
-If any provision of this Agreement is adjudged by a court to be invalid or
-unenforceable, such provision shall in no way affect any other provision of this
-Agreement, the application of such provision in any other circumstance or the
-validity or enforceability of this Agreement.  The Parties will negotiate in
-good faith about a provision that will replace the invalid or unenforceable
-provision.
-
-FontStruct Notice: FontStruct no Party to this Agreement
-
-Please note that FontStruct (www.fontstruct.com) is not a party to this
-Agreement between You and the Font Designer.
-
-FontStruct makes no warranty of any kind in connection with the Font Software,
-its use or the results that You may obtain by using the Font Software.
-
-FontStruct shall in no event be liable to You or any third party for any damages
-whatsoever arising out of or relating to this Agreement or the use of the Font
-Software, including but not limited to incidental, special damages, any lost
-profits or lost savings or any claim made by a third party.
-
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
+DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
+OTHER DEALINGS IN THE FONT SOFTWARE.
