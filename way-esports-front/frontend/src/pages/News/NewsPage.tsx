@@ -251,6 +251,23 @@ const NewsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const activeCategory = useMemo(() => parseCategorySlug(categoryParam), [categoryParam]);
 
+  const { data: uiSettings } = useQuery({
+    queryKey: ['ui-settings', 'public', 'news-socials'],
+    queryFn: async () => {
+      const result: any = await api.get('/api/ui-settings/public');
+      return (result?.data || result || {}) as {
+        socialLinks?: {
+          website?: string;
+          x?: string;
+          discord?: string;
+          twitch?: string;
+        };
+      };
+    },
+    staleTime: 60000,
+    refetchOnWindowFocus: false
+  });
+
   const { data: newsRaw = [], isLoading, error } = useQuery({
     queryKey: ['news', activeCategory || 'all'],
     queryFn: async () => {
@@ -294,6 +311,13 @@ const NewsPage: React.FC = () => {
   const seoDescription = activeCategory
     ? `${formatCategoryLabel(activeCategory)} news, tournament updates and platform coverage from WAY Esports.`
     : 'Latest WAY Esports news, tournament announcements, team updates and platform releases.';
+
+  const socialLinks = {
+    website: String(uiSettings?.socialLinks?.website || 'https://wayesports.space/'),
+    x: String(uiSettings?.socialLinks?.x || 'https://x.com/wayesports_org?s=21'),
+    discord: String(uiSettings?.socialLinks?.discord || 'https://discord.gg/wayesports'),
+    twitch: String(uiSettings?.socialLinks?.twitch || 'https://www.twitch.tv/WAY_Esports')
+  };
 
   const reactionMutation = useMutation({
     mutationFn: async ({ newsId, value }: { newsId: string; value: 'like' | 'dislike' }) => {
@@ -346,16 +370,16 @@ const NewsPage: React.FC = () => {
           </PageSubtitle>
         </PageHeroContent>
         <SocialLinksHeader>
-          <SocialLink href="https://wayesports.space/" target="_blank">
+          <SocialLink href={socialLinks.website} target="_blank" rel="noopener noreferrer">
             {'\u{1F310}'} Website
           </SocialLink>
-          <SocialLink href="https://t.me/wayesports" target="_blank">
-            {'\u2708'} Telegram
+          <SocialLink href={socialLinks.x} target="_blank" rel="noopener noreferrer">
+            X
           </SocialLink>
-          <SocialLink href="https://discord.gg/wayesports" target="_blank">
+          <SocialLink href={socialLinks.discord} target="_blank" rel="noopener noreferrer">
             {'\u{1F4AC}'} Discord
           </SocialLink>
-          <SocialLink href="https://www.twitch.tv/WAY_Esports" target="_blank">
+          <SocialLink href={socialLinks.twitch} target="_blank" rel="noopener noreferrer">
             {'\u{1F4FA}'} Twitch
           </SocialLink>
         </SocialLinksHeader>

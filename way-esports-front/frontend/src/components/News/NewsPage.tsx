@@ -202,7 +202,7 @@ const NewsPage: React.FC = () => {
 
             <SocialLinks>
                 <SocialLink href="https://wayesports.space/" target="_blank">Website</SocialLink>
-                <SocialLink href="https://t.me/wayesports" target="_blank">Telegram</SocialLink>
+                <SocialLink href="https://x.com/wayesports_org?s=21" target="_blank">X</SocialLink>
                 <SocialLink href="https://discord.gg/wayesports" target="_blank">Discord</SocialLink>
                 <SocialLink href="https://www.twitch.tv/WAY_Esports" target="_blank">Twitch</SocialLink>
             </SocialLinks>
