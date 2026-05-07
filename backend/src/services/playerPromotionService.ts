@@ -4,9 +4,10 @@ import Team from '../models/Team';
 import Tournament from '../models/Tournament';
 import User from '../models/User';
 import UserStats from '../models/UserStats';
+import { SUPPORTED_GAMES } from '../config/games';
 import { ensureUserStats } from './analyticsEngine';
 
-const FALLBACK_GAMES = ['Critical Ops', 'CS2', 'PUBG Mobile', 'Valorant Mobile', 'Standoff 2', 'Dota 2'];
+const FALLBACK_GAMES = [...SUPPORTED_GAMES];
 const TRAINING_LIBRARY = {
   aiming: {
     label: 'Aim & mechanics',

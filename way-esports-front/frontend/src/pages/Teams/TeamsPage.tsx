@@ -30,6 +30,7 @@ import { resolveTeamLogoUrl } from '../../utils/media';
 import FlameAuraAvatar from '../../components/UI/FlameAuraAvatar';
 import { getTeamPoints, getTierByPoints, getIntensityByPointsAndRank } from '../../utils/flameRank';
 import { Seo } from '../../components/SEO';
+import { normalizeGameKey, SUPPORTED_GAME_SLUG_OPTIONS } from '../../config/games';
 
 const HeaderKicker = styled.div`
   display: inline-flex;
@@ -462,9 +463,6 @@ const TeamsPage: React.FC = () => {
   const [actionInfo, setActionInfo] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const normalizeGame = (value: string) =>
-    (value || '').toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
-
   const { data: teamsRaw = [], isLoading: loading, error: queryError } = useQuery({
     queryKey: ['teams'],
     queryFn: async () => {
@@ -835,12 +833,9 @@ const TeamsPage: React.FC = () => {
                 onChange={(e) => setSelectedGame(e.target.value)}
               >
                 <option value="all">{t('allTeams')}</option>
-                <option value="valorant-mobile">Valorant Mobile</option>
-                <option value="critical-ops">Critical Ops</option>
-                <option value="pubg-mobile">PUBG Mobile</option>
-                <option value="cs2">CS2</option>
-                <option value="dota2">Dota 2</option>
-                <option value="standoff2">Standoff 2</option>
+                {SUPPORTED_GAME_SLUG_OPTIONS.map((game) => (
+                  <option key={game.value} value={game.value}>{game.label}</option>
+                ))}
               </FilterDropdown>
             </FilterGroup>
           )}
@@ -870,8 +865,8 @@ const TeamsPage: React.FC = () => {
               {teams
                 .filter((team) => {
                   if (selectedGame === 'all') return true;
-                  const safeGame = normalizeGame(team.game || '');
-                  return safeGame === normalizeGame(selectedGame);
+                  const safeGame = normalizeGameKey(team.game || '');
+                  return safeGame === normalizeGameKey(selectedGame);
                 })
                 .map(team => (
                   <TeamCard key={team.id}>

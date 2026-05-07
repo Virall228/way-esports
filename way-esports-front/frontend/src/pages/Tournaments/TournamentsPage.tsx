@@ -32,6 +32,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { resolveMediaUrl } from '../../utils/media';
 import { Seo } from '../../components/SEO';
+import { normalizeGameKey, SUPPORTED_GAME_OPTIONS } from '../../config/games';
 
 const RulesButton = styled(Button).attrs({ variant: 'secondary', size: 'small' })`
   padding: 0.75rem 1.15rem;
@@ -383,10 +384,9 @@ const TournamentsPage: React.FC = () => {
   }, [tournamentsRaw]);
 
   const filteredTournaments = useMemo(() => {
-    const normalizeGame = (value: string) => value.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
     return tournaments.filter(t => {
       const matchStatus = activeFilter === 'all' || t.status === activeFilter;
-      const matchGame = activeGame === 'all' || normalizeGame(t.game) === normalizeGame(activeGame);
+      const matchGame = activeGame === 'all' || normalizeGameKey(t.game) === normalizeGameKey(activeGame);
       const matchCadence = activeCadence === 'all' || (t.cadence || 'custom') === activeCadence;
       const matchTeamMode = activeTeamMode === 'all' || (t.teamMode || 'custom') === activeTeamMode;
       return matchStatus && matchGame && matchCadence && matchTeamMode;
@@ -394,14 +394,16 @@ const TournamentsPage: React.FC = () => {
   }, [tournaments, activeFilter, activeGame, activeCadence, activeTeamMode]);
 
   const getGameIcon = (game: string) => {
-    const normalized = (game || '').toLowerCase().replace(/\s+/g, '').replace(/-/g, '');
+    const normalized = normalizeGameKey(game);
     const map: Record<string, string> = {
       criticalops: '/images/main.png',
       pubgmobile: '/images/main.png',
       cs2: '/images/main.png',
       valorantmobile: '/images/main.png',
       dota2: '/images/main.png',
-      standoff2: '/images/main.png'
+      standoff2: '/images/main.png',
+      mobilelegendsbangbang: '/images/main.png',
+      mlbb: '/images/main.png'
     };
     return map[normalized] || '/images/main.png';
   };
@@ -538,16 +540,8 @@ const TournamentsPage: React.FC = () => {
         <FilterRail>
           <FilterGroup>
             <FilterLabel>Games</FilterLabel>
-          {[
-            { key: 'all', label: 'All Games' },
-            { key: 'Critical Ops', label: 'Critical Ops' },
-            { key: 'CS2', label: 'CS2' },
-            { key: 'PUBG Mobile', label: 'PUBG Mobile' },
-            { key: 'Valorant Mobile', label: 'Valorant Mobile' },
-            { key: 'Dota 2', label: 'Dota 2' },
-            { key: 'Standoff 2', label: 'Standoff 2' }
-          ].map((g) => (
-            <FilterTab key={g.key} $active={activeGame === g.key} onClick={() => setActiveGame(g.key)}>
+          {[{ value: 'all', label: 'All Games' }, ...SUPPORTED_GAME_OPTIONS].map((g) => (
+            <FilterTab key={g.value} $active={activeGame === g.value} onClick={() => setActiveGame(g.value)}>
               {g.label}
             </FilterTab>
           ))}

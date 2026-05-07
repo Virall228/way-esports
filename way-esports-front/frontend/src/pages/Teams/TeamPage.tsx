@@ -21,6 +21,7 @@ import {
 import { getTeamPoints, getTierByPoints, getIntensityByPointsAndRank } from '../../utils/flameRank';
 import { Seo } from '../../components/SEO';
 import { getGameHubPath } from '../../utils/discovery';
+import { SUPPORTED_GAME_OPTIONS } from '../../config/games';
 import {
   FilterGroup,
   FilterLabel,
@@ -788,12 +789,9 @@ const TeamPage: React.FC = () => {
                 <FilterLabel>Game</FilterLabel>
                 <SelectField value={historyGameFilter} onChange={(e) => setHistoryGameFilter(e.target.value)}>
                   <option value="all">All games</option>
-                  <option value="Critical Ops">Critical Ops</option>
-                  <option value="CS2">CS2</option>
-                  <option value="PUBG Mobile">PUBG Mobile</option>
-                  <option value="Standoff 2">Standoff 2</option>
-                  <option value="Dota 2">Dota 2</option>
-                  <option value="Valorant Mobile">Valorant Mobile</option>
+                  {SUPPORTED_GAME_OPTIONS.map((item) => (
+                    <option key={item.value} value={item.value}>{item.label}</option>
+                  ))}
                 </SelectField>
               </FilterGroup>
               <FilterGroup>

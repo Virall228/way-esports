@@ -12,6 +12,7 @@ import { authenticateJWT, isAdmin } from '../middleware/auth';
 import { evaluateUserAchievements } from '../services/achievements/engine';
 import { hasRoomCredentials, prepareMatchRoom } from '../services/matchRoomService';
 import botPushService from '../services/botPushService';
+import { getSupportedGameQuery } from '../config/games';
 
 const router = express.Router();
 
@@ -318,7 +319,8 @@ router.get('/', async (req, res) => {
     const { game, status, tournament } = req.query;
     const query: any = {};
 
-    if (game) query.game = game;
+    const gameQuery = getSupportedGameQuery(typeof game === 'string' ? game : '');
+    if (gameQuery) query.game = gameQuery;
     if (status) query.status = status;
     if (tournament) query.tournament = tournament;
 

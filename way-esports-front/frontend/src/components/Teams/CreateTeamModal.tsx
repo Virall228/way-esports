@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import styled, { css } from 'styled-components';
 import { api } from '../../services/api';
 import { resolveTeamLogoUrl } from '../../utils/media';
+import { SUPPORTED_GAME_OPTIONS } from '../../config/games';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -407,12 +408,9 @@ const CreateTeamModal: React.FC<CreateTeamModalProps> = ({ isOpen, onClose, onCr
               onChange={handleInputChange}
             >
               <option value="">Select a game</option>
-              <option value="cs2">Counter-Strike 2</option>
-              <option value="valorant">Valorant</option>
-              <option value="critical-ops">Critical Ops</option>
-              <option value="pubg-mobile">PUBG Mobile</option>
-              <option value="apex-legends">Apex Legends</option>
-              <option value="rainbow-six">Rainbow Six Siege</option>
+              {SUPPORTED_GAME_OPTIONS.map((item) => (
+                <option key={item.value} value={item.value}>{item.label}</option>
+              ))}
             </Select>
             {errors.game && <ErrorMessage>{errors.game}</ErrorMessage>}
           </FormGroup>

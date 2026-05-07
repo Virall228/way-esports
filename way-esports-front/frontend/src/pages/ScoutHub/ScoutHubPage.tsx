@@ -296,7 +296,7 @@ const ScoutHubPage: React.FC = () => {
             </Field>
             <Field>
               Target games
-              <Input value={form.targetGames} onChange={(event) => setForm((prev) => ({ ...prev, targetGames: event.target.value }))} placeholder="CS2, Critical Ops" />
+              <Input value={form.targetGames} onChange={(event) => setForm((prev) => ({ ...prev, targetGames: event.target.value }))} placeholder="CS2, Critical Ops, Mobile Legends: Bang Bang" />
             </Field>
             <Field>
               Target roles

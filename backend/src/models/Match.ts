@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { SUPPORTED_GAMES, type SupportedGame } from '../config/games';
 
 export interface IMatch extends Document<mongoose.Types.ObjectId> {
   tournament: mongoose.Types.ObjectId;
@@ -12,7 +13,7 @@ export interface IMatch extends Document<mongoose.Types.ObjectId> {
     team1: number;
     team2: number;
   };
-  game: 'Critical Ops' | 'CS2' | 'PUBG Mobile' | 'Dota 2' | 'Standoff 2' | 'Valorant Mobile';
+  game: SupportedGame;
   round: string;
   map?: string;
   stats?: {
@@ -92,7 +93,7 @@ const matchSchema = new Schema<IMatch>({
   },
   game: {
     type: String,
-    enum: ['Critical Ops', 'CS2', 'PUBG Mobile', 'Dota 2', 'Standoff 2', 'Valorant Mobile'],
+    enum: [...SUPPORTED_GAMES],
     required: true
   },
   round: {

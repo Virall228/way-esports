@@ -19,6 +19,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { api, ApiError } from '../../services/api';
 import { getFullUrl } from '../../config/api';
+import { SUPPORTED_GAME_OPTIONS } from '../../config/games';
 import { Link } from 'react-router-dom';
 import { useProfileQuery } from '../../hooks/useProfileQuery';
 import { historyService } from '../../services/historyService';
@@ -1006,12 +1007,9 @@ const ProfilePage: React.FC = () => {
                 onChange={(e) => setHistoryGameFilter(e.target.value)}
               >
                 <option value="all">All games</option>
-                <option value="Critical Ops">Critical Ops</option>
-                <option value="CS2">CS2</option>
-                <option value="PUBG Mobile">PUBG Mobile</option>
-                <option value="Standoff 2">Standoff 2</option>
-                <option value="Dota 2">Dota 2</option>
-                <option value="Valorant Mobile">Valorant Mobile</option>
+                {SUPPORTED_GAME_OPTIONS.map((item) => (
+                  <option key={item.value} value={item.value}>{item.label}</option>
+                ))}
               </HistorySelect>
               <HistorySelect
                 value={historySort}

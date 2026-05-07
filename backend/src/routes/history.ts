@@ -4,6 +4,7 @@ import Match from '../models/Match';
 import Team from '../models/Team';
 import User from '../models/User';
 import { authenticateJWT } from '../middleware/auth';
+import { getSupportedGameQuery } from '../config/games';
 
 const router = express.Router();
 
@@ -72,7 +73,8 @@ const buildTournamentMatchQuery = (teamIds: string[], options: { game?: string; 
     tournament: { $exists: true, $ne: null },
     $or: [{ team1: { $in: teamIds } }, { team2: { $in: teamIds } }]
   };
-  if (options.game) query.game = options.game;
+  const gameQuery = getSupportedGameQuery(options.game);
+  if (gameQuery) query.game = gameQuery;
   if (options.from || options.to) {
     query.startTime = {};
     if (options.from) query.startTime.$gte = options.from;

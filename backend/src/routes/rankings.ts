@@ -3,6 +3,7 @@ import Team from '../models/Team';
 import User from '../models/User';
 import Tournament from '../models/Tournament';
 import cacheService from '../services/cacheService';
+import { getSupportedGameQuery } from '../config/games';
 
 const router = express.Router();
 
@@ -41,7 +42,8 @@ router.get('/teams/rankings', async (req, res) => {
     
     // Add game filter if specified
     if (game && game !== 'all') {
-      query.game = game;
+      const gameQuery = getSupportedGameQuery(gameRaw);
+      if (gameQuery) query.game = gameQuery;
     }
 
     // Add time frame filter
@@ -100,7 +102,8 @@ router.get('/players/rankings', async (req, res) => {
     
     // Add game filter if specified
     if (game && game !== 'all') {
-      query['gameProfiles.game'] = game;
+      const gameQuery = getSupportedGameQuery(gameRaw);
+      if (gameQuery) query['gameProfiles.game'] = gameQuery;
     }
 
     const now = new Date();

@@ -27,6 +27,11 @@ export const config = {
   
   // Game settings
   games: {
+    'critical-ops': {
+      minPlayers: 2,
+      maxPlayers: 10,
+      registrationDeadline: 24 * 60 * 60 * 1000
+    },
     'valorant-mobile': {
       minPlayers: 2,
       maxPlayers: 10,
@@ -38,6 +43,21 @@ export const config = {
       registrationDeadline: 24 * 60 * 60 * 1000
     },
     'pubg-mobile': {
+      minPlayers: 2,
+      maxPlayers: 10,
+      registrationDeadline: 24 * 60 * 60 * 1000
+    },
+    'dota-2': {
+      minPlayers: 2,
+      maxPlayers: 10,
+      registrationDeadline: 24 * 60 * 60 * 1000
+    },
+    'standoff-2': {
+      minPlayers: 2,
+      maxPlayers: 10,
+      registrationDeadline: 24 * 60 * 60 * 1000
+    },
+    'mobile-legends-bang-bang': {
       minPlayers: 2,
       maxPlayers: 10,
       registrationDeadline: 24 * 60 * 60 * 1000

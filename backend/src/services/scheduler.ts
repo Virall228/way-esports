@@ -5,11 +5,11 @@ import { prepareMatchRoom } from './matchRoomService';
 import { refreshWeeklyTopProspects, scoutingUtils } from './scoutingEngine';
 import { updateHallOfFameSnapshot } from './hallOfFameService';
 import botPushService from './botPushService';
+import { normalizeSupportedGame } from '../config/games';
 
 const FIVE_MIN = 5 * 60 * 1000;
 const MATCH_INTERVAL_MIN = 30;
 const ROOM_VISIBILITY_WINDOW_MIN = 5;
-const SUPPORTED_MATCH_GAMES = new Set(['Critical Ops', 'CS2', 'PUBG Mobile', 'Dota 2', 'Standoff 2', 'Valorant Mobile']);
 
 interface ScheduledJob {
   id: string;
@@ -20,20 +20,6 @@ interface ScheduledJob {
 const scheduledJobs = new Map<string, ScheduledJob>();
 let lastScoutingWeekKey = '';
 let lastHallOfFameDayKey = '';
-
-const normalizeMatchGame = (game: string | undefined): 'Critical Ops' | 'CS2' | 'PUBG Mobile' | 'Dota 2' | 'Standoff 2' | 'Valorant Mobile' => {
-  if (game && SUPPORTED_MATCH_GAMES.has(game)) {
-    return game as 'Critical Ops' | 'CS2' | 'PUBG Mobile' | 'Dota 2' | 'Standoff 2' | 'Valorant Mobile';
-  }
-  const normalized = String(game || '').trim().toLowerCase().replace(/\s+/g, '');
-  if (normalized === 'criticalops') return 'Critical Ops';
-  if (normalized === 'cs2') return 'CS2';
-  if (normalized === 'pubgmobile') return 'PUBG Mobile';
-  if (normalized === 'dota2') return 'Dota 2';
-  if (normalized === 'standoff2') return 'Standoff 2';
-  if (normalized === 'valorantmobile' || normalized === 'valorant') return 'Valorant Mobile';
-  return 'CS2';
-};
 
 async function generateInitialBracketMatches(tournament: any) {
   if (!tournament || tournament.type !== 'team') return;
@@ -62,7 +48,7 @@ async function generateInitialBracketMatches(tournament: any) {
       team2,
       startTime,
       status: 'scheduled',
-      game: normalizeMatchGame(tournament.game),
+      game: normalizeSupportedGame(tournament.game),
       round: 'Round 1',
       score: { team1: 0, team2: 0 }
     });

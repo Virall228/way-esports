@@ -1,4 +1,5 @@
 import { NavigateFunction } from 'react-router-dom';
+import { findGameConfig, getGameSlug } from '../config/games';
 
 export interface NavigationOptions {
   openInNewTab?: boolean;
@@ -193,12 +194,9 @@ class NavigationService {
   // Game Navigation
   goToGameHub(game: string) {
     const safeGame = (game || '').toString();
-    const label = safeGame
-      ? safeGame === 'ValorantMobile'
-        ? 'Valorant Mobile'
-        : safeGame.replace(/([a-z])([A-Z])/g, '$1 $2')
-      : 'Game';
-    const slug = safeGame.toLowerCase().replace(/\s+/g, '');
+    const config = findGameConfig(safeGame);
+    const label = config?.label || (safeGame ? safeGame.replace(/([a-z])([A-Z])/g, '$1 $2') : 'Game');
+    const slug = getGameSlug(safeGame) || safeGame.toLowerCase().replace(/\s+/g, '');
 
     this.handleNavigation(`/games/${slug}`, {
       title: `${label} Hub`,

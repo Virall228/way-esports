@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { SUPPORTED_GAMES, type SupportedGame } from '../config/games';
 
 export interface IToken {
   token: string;
@@ -80,7 +81,7 @@ export interface IUser extends Document<mongoose.Types.ObjectId> {
     }[];
   };
   gameProfiles: {
-    game: 'Critical Ops' | 'CS2' | 'PUBG Mobile' | 'Valorant Mobile' | 'Standoff 2' | 'Dota 2';
+    game: SupportedGame;
     username: string;
     ingameId?: string;
     rank?: string;
@@ -305,7 +306,7 @@ const userSchema = new Schema<IUser>({
   gameProfiles: [{
     game: {
       type: String,
-      enum: ['Critical Ops', 'CS2', 'PUBG Mobile', 'Valorant Mobile', 'Standoff 2', 'Dota 2']
+      enum: [...SUPPORTED_GAMES]
     },
     username: String,
     ingameId: {

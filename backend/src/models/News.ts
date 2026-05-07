@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { SUPPORTED_GAMES, type SupportedGame } from '../config/games';
 
 export interface INews extends Document<mongoose.Types.ObjectId> {
   title: string;
@@ -8,7 +9,7 @@ export interface INews extends Document<mongoose.Types.ObjectId> {
   category: 'tournament' | 'team' | 'game' | 'announcement' | 'other';
   tags: string[];
   coverImage?: string;
-  game?: 'Critical Ops' | 'CS2' | 'PUBG Mobile';
+  game?: SupportedGame;
   relatedTournament?: mongoose.Types.ObjectId;
   relatedTeam?: mongoose.Types.ObjectId;
   views: number;
@@ -61,7 +62,7 @@ const newsSchema = new Schema<INews>({
   },
   game: {
     type: String,
-    enum: ['Critical Ops', 'CS2', 'PUBG Mobile']
+    enum: [...SUPPORTED_GAMES]
   },
   relatedTournament: {
     type: Schema.Types.ObjectId,

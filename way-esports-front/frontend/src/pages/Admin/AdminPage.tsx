@@ -7,6 +7,7 @@ import { getFullUrl } from '../../config/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { useApp } from '../../contexts/AppContext';
+import { SUPPORTED_GAME_OPTIONS, type SupportedGameLabel } from '../../config/games';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import SponsorshipApplicationsPanel from '../../components/Admin/SponsorshipApplicationsPanel';
@@ -965,7 +966,7 @@ const AdminPage: React.FC = () => {
   const [tournamentsSearchInput, setTournamentsSearchInput] = useState('');
   const [tournamentsSearch, setTournamentsSearch] = useState('');
   const [tournamentsStatusFilter, setTournamentsStatusFilter] = useState<'all' | 'upcoming' | 'live' | 'completed' | 'cancelled' | 'open'>('all');
-  const [tournamentsGameFilter, setTournamentsGameFilter] = useState<'all' | 'CS2' | 'Critical Ops' | 'PUBG Mobile' | 'Valorant Mobile' | 'Dota 2' | 'Standoff 2'>('all');
+  const [tournamentsGameFilter, setTournamentsGameFilter] = useState<'all' | SupportedGameLabel>('all');
   const [opsStreamData, setOpsStreamData] = useState<OpsStreamPayload | null>(null);
   const [opsStreamConnected, setOpsStreamConnected] = useState(false);
   const [tournamentStreamConnected, setTournamentStreamConnected] = useState(false);
@@ -6085,12 +6086,9 @@ const AdminPage: React.FC = () => {
           </Select>
           <Select value={tournamentsGameFilter} onChange={(e) => setTournamentsGameFilter(e.target.value as any)}>
             <option value="all">All games</option>
-            <option value="CS2">CS2</option>
-            <option value="Critical Ops">Critical Ops</option>
-            <option value="PUBG Mobile">PUBG Mobile</option>
-            <option value="Valorant Mobile">Valorant Mobile</option>
-            <option value="Dota 2">Dota 2</option>
-            <option value="Standoff 2">Standoff 2</option>
+            {SUPPORTED_GAME_OPTIONS.map((item) => (
+              <option key={item.value} value={item.value}>{item.label}</option>
+            ))}
           </Select>
         </div>
 
@@ -9034,12 +9032,9 @@ const AdminPage: React.FC = () => {
                 value={modalData.game || 'CS2'}
                 onChange={(e) => setField('game', e.target.value)}
               >
-                <option value="CS2">CS2</option>
-                <option value="Valorant Mobile">Valorant Mobile</option>
-                <option value="Dota 2">Dota 2</option>
-                <option value="Standoff 2">Standoff 2</option>
-                <option value="Critical Ops">Critical Ops</option>
-                <option value="PUBG Mobile">PUBG Mobile</option>
+                {SUPPORTED_GAME_OPTIONS.map((item) => (
+                  <option key={item.value} value={item.value}>{item.label}</option>
+                ))}
               </Select>
               <Input
                 placeholder="Prize Pool"
@@ -9249,12 +9244,9 @@ const AdminPage: React.FC = () => {
                 value={modalData.game || 'CS2'}
                 onChange={(e) => setField('game', e.target.value)}
               >
-                <option value="CS2">CS2</option>
-                <option value="Dota 2">Dota 2</option>
-                <option value="Standoff 2">Standoff 2</option>
-                <option value="Valorant Mobile">Valorant Mobile</option>
-                <option value="Critical Ops">Critical Ops</option>
-                <option value="PUBG Mobile">PUBG Mobile</option>
+                {SUPPORTED_GAME_OPTIONS.map((item) => (
+                  <option key={item.value} value={item.value}>{item.label}</option>
+                ))}
               </Select>
               <div style={{ marginTop: '10px' }}>
                 <label style={{ color: '#ccc', fontSize: '12px', display: 'block', marginBottom: '8px' }}>Team Logo</label>

@@ -4,6 +4,7 @@ import Team from '../models/Team';
 import Tournament from '../models/Tournament';
 import User from '../models/User';
 import { getPublicPromotionProfile, listPublicPromotionSitemapEntries } from '../services/playerPromotionService';
+import { GAME_HUBS } from '../config/games';
 
 const router = express.Router();
 const SITE_NAME = 'WAY Esports';
@@ -205,39 +206,6 @@ const parseCategorySlug = (value: string): string => (
     .replace(/\s+/g, ' ')
     .trim()
 );
-
-const GAME_HUBS = [
-  {
-    slug: 'critical-ops',
-    label: 'Critical Ops',
-    description: 'Critical Ops tournaments, teams, news and public discovery pages on WAY Esports.'
-  },
-  {
-    slug: 'cs2',
-    label: 'CS2',
-    description: 'CS2 tournament pages, teams, rankings-ready routes and esports news on WAY Esports.'
-  },
-  {
-    slug: 'pubg-mobile',
-    label: 'PUBG Mobile',
-    description: 'PUBG Mobile events, teams and long-tail content hubs for search and social traffic.'
-  },
-  {
-    slug: 'valorant-mobile',
-    label: 'Valorant Mobile',
-    description: 'Valorant Mobile tournaments, team profiles and performance discovery on WAY Esports.'
-  },
-  {
-    slug: 'standoff-2',
-    label: 'Standoff 2',
-    description: 'Standoff 2 tournament pages, teams and searchable public coverage on WAY Esports.'
-  },
-  {
-    slug: 'dota-2',
-    label: 'Dota 2',
-    description: 'Dota 2 event pages, teams, player discovery and related news on WAY Esports.'
-  }
-];
 
 router.get('/sitemap-index.xml', async (req, res) => {
   try {

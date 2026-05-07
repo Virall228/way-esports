@@ -4,6 +4,7 @@ import News, { INews } from '../models/News';
 import { authenticateJWT, isAdmin } from '../middleware/auth';
 import { parsePagination, buildPaginationMeta } from '../utils/pagination';
 import cacheService from '../services/cacheService';
+import { getSupportedGameQuery } from '../config/games';
 
 const router = express.Router();
 
@@ -53,7 +54,8 @@ router.get('/', async (req, res) => {
     const search = String(req.query.search || '').trim();
     const query: any = { status: 'published' };
     if (category) query.category = category;
-    if (game) query.game = game;
+    const gameQuery = getSupportedGameQuery(game);
+    if (gameQuery) query.game = gameQuery;
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },

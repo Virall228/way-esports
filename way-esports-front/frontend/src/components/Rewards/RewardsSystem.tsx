@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { profileService } from '../../services/profileService';
 import { api } from '../../services/api';
+import { SUPPORTED_GAME_SLUG_OPTIONS } from '../../config/games';
 
 const Container = styled.div`
   padding: 20px;
@@ -692,9 +693,9 @@ const RewardsSystem: React.FC = () => {
               <Label>Game (optional)</Label>
               <Select name="gameId" defaultValue={editingReward?.gameId || 'all'}>
                 <option value="all">All Games</option>
-                <option value="valorant">Valorant</option>
-                <option value="csgo">CS:GO</option>
-                <option value="criticalops">Critical Ops</option>
+                {SUPPORTED_GAME_SLUG_OPTIONS.map((item) => (
+                  <option key={item.value} value={item.value}>{item.label}</option>
+                ))}
               </Select>
             </FormGroup>
             

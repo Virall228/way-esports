@@ -11,6 +11,7 @@ import { checkTournamentAccess } from '../middleware/tournamentAccess';
 import { idempotency } from '../middleware/idempotency';
 import { buildPaginationMeta, parsePagination } from '../utils/pagination';
 import botPushService from '../services/botPushService';
+import { getSupportedGameQuery } from '../config/games';
 
 const router = express.Router();
 
@@ -133,7 +134,8 @@ router.get('/', async (req, res) => {
     });
     const query: any = {};
 
-    if (game) query.game = game;
+    const gameQuery = getSupportedGameQuery(typeof game === 'string' ? game : '');
+    if (gameQuery) query.game = gameQuery;
     if (status) query.status = status;
     if (typeof search === 'string' && search.trim()) {
       query.$or = [

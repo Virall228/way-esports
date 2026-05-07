@@ -12,6 +12,7 @@ import {
 } from '../../utils/rankings';
 import { resolveMediaUrl, resolveTeamLogoUrl } from '../../utils/media';
 import { getFullUrl } from '../../config/api';
+import { SUPPORTED_GAME_SLUG_OPTIONS } from '../../config/games';
 
 const Container = styled.div`
     width: 100%;
@@ -364,12 +365,9 @@ const RankingsPage: React.FC = () => {
             <FilterContainer>
                 <Select value={game} onChange={(e) => setGame(e.target.value)}>
                     <option value="all">All Games</option>
-                    <option value="critical-ops">Critical Ops</option>
-                    <option value="pubg-mobile">PUBG Mobile</option>
-                    <option value="cs2">CS2</option>
-                    <option value="valorant-mobile">Valorant Mobile</option>
-                    <option value="dota2">Dota 2</option>
-                    <option value="standoff2">Standoff 2</option>
+                    {SUPPORTED_GAME_SLUG_OPTIONS.map((item) => (
+                        <option key={item.value} value={item.value}>{item.label}</option>
+                    ))}
                 </Select>
 
                 <Select value={timeFrame} onChange={(e) => setTimeFrame(e.target.value)}>

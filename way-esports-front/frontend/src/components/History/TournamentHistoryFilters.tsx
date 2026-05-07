@@ -1,5 +1,6 @@
 import React from 'react';
 import type { HistorySort } from './types';
+import { SUPPORTED_GAME_OPTIONS } from '../../config/games';
 
 type Props = {
   game: string;
@@ -31,12 +32,9 @@ const TournamentHistoryFilters: React.FC<Props> = ({
     <>
       <select value={game} onChange={(e) => onGameChange(e.target.value)} style={controlStyle}>
         <option value="all">All games</option>
-        <option value="Critical Ops">Critical Ops</option>
-        <option value="CS2">CS2</option>
-        <option value="PUBG Mobile">PUBG Mobile</option>
-        <option value="Standoff 2">Standoff 2</option>
-        <option value="Dota 2">Dota 2</option>
-        <option value="Valorant Mobile">Valorant Mobile</option>
+        {SUPPORTED_GAME_OPTIONS.map((item) => (
+          <option key={item.value} value={item.value}>{item.label}</option>
+        ))}
       </select>
 
       {onStatusChange ? (

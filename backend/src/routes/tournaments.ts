@@ -15,6 +15,7 @@ import { body } from 'express-validator';
 import { validateRequest } from '../middleware/validate';
 import { idempotency } from '../middleware/idempotency';
 import { buildPaginationMeta, parsePagination } from '../utils/pagination';
+import { getSupportedGameQuery, normalizeSupportedGame } from '../config/games';
 
 // Временные заглушки для новых middleware
 const handleTournamentConcurrency = async (req: any, res: any, next: any) => next();
@@ -45,22 +46,7 @@ const validateReferralCompletion = async (req: any, res: any, next: any) => {
 };
 
 const router = express.Router();
-const SUPPORTED_MATCH_GAMES = new Set(['Critical Ops', 'CS2', 'PUBG Mobile', 'Dota 2', 'Standoff 2', 'Valorant Mobile']);
 const MATCH_INTERVAL_MIN = 30;
-
-const normalizeMatchGame = (game: string | undefined): 'Critical Ops' | 'CS2' | 'PUBG Mobile' | 'Dota 2' | 'Standoff 2' | 'Valorant Mobile' => {
-  if (game && SUPPORTED_MATCH_GAMES.has(game)) {
-    return game as 'Critical Ops' | 'CS2' | 'PUBG Mobile' | 'Dota 2' | 'Standoff 2' | 'Valorant Mobile';
-  }
-  const normalized = String(game || '').trim().toLowerCase().replace(/\s+/g, '');
-  if (normalized === 'criticalops') return 'Critical Ops';
-  if (normalized === 'cs2') return 'CS2';
-  if (normalized === 'pubgmobile') return 'PUBG Mobile';
-  if (normalized === 'dota2') return 'Dota 2';
-  if (normalized === 'standoff2') return 'Standoff 2';
-  if (normalized === 'valorantmobile' || normalized === 'valorant') return 'Valorant Mobile';
-  return 'CS2';
-};
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -136,7 +122,7 @@ const generateBracketMatches = async (tournament: any) => {
       team2,
       startTime,
       status: 'scheduled',
-      game: normalizeMatchGame(tournament.game),
+      game: normalizeSupportedGame(tournament.game),
       round: 'Round 1',
       score: { team1: 0, team2: 0 }
     });
@@ -608,12 +594,8 @@ router.get('/', async (req, res) => {
       : 'all';
 
     if (game) {
-      const normalizedGame = String(game).trim().toLowerCase();
-      if (normalizedGame === 'valorant mobile' || normalizedGame === 'valorantmobile' || normalizedGame === 'valorant') {
-        query.game = { $in: ['Valorant Mobile', 'Valorant'] };
-      } else {
-        query.game = game;
-      }
+      const gameQuery = getSupportedGameQuery(game);
+      if (gameQuery) query.game = gameQuery;
     }
     if (status) query.status = status;
     if (search) {
@@ -709,12 +691,8 @@ router.get('/admin/export.csv', authenticateJWT, isAdmin, async (req: any, res: 
 
     const query: any = {};
     if (game && game !== 'all') {
-      const normalizedGame = game.toLowerCase();
-      if (normalizedGame === 'valorant mobile' || normalizedGame === 'valorantmobile' || normalizedGame === 'valorant') {
-        query.game = { $in: ['Valorant Mobile', 'Valorant'] };
-      } else {
-        query.game = game;
-      }
+      const gameQuery = getSupportedGameQuery(game);
+      if (gameQuery) query.game = gameQuery;
     }
     if (status && status !== 'all') query.status = status;
     if (search) query.name = { $regex: search, $options: 'i' };
