@@ -274,9 +274,11 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+  const mongoConnected = mongoose.connection.readyState === 1;
+
   res.json({
-    status: 'ok',
-    mongo: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    status: mongoConnected ? 'ok' : 'degraded',
+    mongo: mongoConnected ? 'connected' : 'disconnected',
     timestamp: new Date().toISOString()
   });
 });

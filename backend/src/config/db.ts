@@ -33,8 +33,12 @@ export async function connectDB(uri?: string) {
     }
   }
 
-  console.error('MongoDB is still unavailable after retries. Continuing in degraded mode.');
-  return mongoose.connection;
+  if (process.env.ALLOW_DEGRADED_DB_START === 'true') {
+    console.error('MongoDB is still unavailable after retries. Continuing in degraded mode.');
+    return mongoose.connection;
+  }
+
+  throw lastError || new Error('MongoDB is still unavailable after retries');
 }
 
 export async function disconnectDB() {
