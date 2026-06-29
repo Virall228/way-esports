@@ -61,15 +61,6 @@ const stageReveal = keyframes`
   }
 `;
 
-const scorePulse = keyframes`
-  0% {
-    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.18);
-  }
-  100% {
-    box-shadow: 0 0 0 18px rgba(245, 158, 11, 0);
-  }
-`;
-
 const stageCss = css<{ $delay?: number }>`
   opacity: 0;
   animation: ${stageReveal} 560ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -272,7 +263,7 @@ const ScoreOrb = styled.div`
     position: absolute;
     inset: 0;
     border-radius: 50%;
-    animation: ${scorePulse} 2.4s ease-out infinite;
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.16);
   }
 `;
 
