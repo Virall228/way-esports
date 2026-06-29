@@ -74,7 +74,7 @@ const HeroLogo = styled.div`
   width: 92px;
   height: 92px;
   border-radius: 24px;
-  background: #050608 url('/images/way-main-logo-metal-v2.jpg?v=20260428') center/cover no-repeat;
+  background: #050608 url('/images/way-main-logo-cracked-2026.jpg?v=20260629') center/cover no-repeat;
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28);
 

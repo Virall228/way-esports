@@ -125,7 +125,7 @@ const Logo = styled.div`
   width: 118px;
   height: 118px;
   background:
-    #050608 url('/images/way-main-logo-metal-v2.jpg?v=20260428') center/cover no-repeat;
+    #050608 url('/images/way-main-logo-cracked-2026.jpg?v=20260629') center/cover no-repeat;
   border-radius: 28px;
   display: flex;
   align-items: center;
