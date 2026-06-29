@@ -5,6 +5,7 @@ import {
   Award,
   BarChart2,
   CreditCard,
+  Activity,
   Crosshair,
   FileText,
   Gift,
@@ -47,6 +48,7 @@ const BillingPage = React.lazy(() => import('./pages/Billing/BillingPage'));
 const PublicProfilePage = React.lazy(() => import('./pages/Profile/PublicProfilePage'));
 const TeamPage = React.lazy(() => import('./pages/Teams/TeamPage'));
 const GameHubPage = React.lazy(() => import('./pages/Games/GameHubPage'));
+const CareerHubPage = React.lazy(() => import('./pages/CareerHub'));
 const ScoutHubPage = React.lazy(() => import('./pages/ScoutHub/ScoutHubPage'));
 const PublicScoutProfilePage = React.lazy(() => import('./pages/ScoutHub/PublicScoutProfilePage'));
 const NewsDetail = React.lazy(() => import('./components/News/NewsDetail'));
@@ -689,6 +691,7 @@ const AppContent: React.FC = () => {
     ];
 
     if (isAuthenticated) {
+      items.splice(1, 0, { label: 'Career Hub', to: '/career-hub', icon: <Activity {...iconProps} /> });
       items.push(
         { label: t('wallet'), to: '/wallet', icon: <CreditCard {...iconProps} /> },
         { label: t('profile'), to: '/profile', icon: <User {...iconProps} /> },
@@ -817,6 +820,7 @@ const AppContent: React.FC = () => {
             <Routes>
               <Route path="/" element={renderLazyRoute(isAuthenticated ? <Home /> : <PublicLandingPage />)} />
               <Route path="/tournaments" element={renderLazyRoute(<Tournaments />)} />
+              <Route path="/career-hub" element={renderLazyRoute(<RequireAuth><CareerHubPage /></RequireAuth>)} />
               <Route path="/tournaments/:id" element={renderLazyRoute(<TournamentDetailsPage />)} />
               <Route path="/tournament/:id" element={renderLazyRoute(<TournamentDetailsPage />)} />
               <Route path="/games/:game" element={renderLazyRoute(<GameHubPage />)} />

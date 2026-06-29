@@ -791,6 +791,7 @@ const HomePage: React.FC = () => {
             • Entries: <strong>{Number((user as any)?.freeEntriesCount || 0) + Number((user as any)?.bonusEntries || 0)}</strong>
           </div>
           <QuickActions>
+            <ActionButton onClick={() => navigate('/career-hub')}>Career Hub</ActionButton>
             <ActionButton onClick={() => navigate('/tournaments')}>Join Tournament</ActionButton>
             <ActionButton onClick={() => navigate('/teams')}>Teams</ActionButton>
             <ActionButton onClick={() => navigate('/wallet')}>Wallet</ActionButton>
