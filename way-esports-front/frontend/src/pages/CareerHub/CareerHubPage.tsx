@@ -1,7 +1,7 @@
 import React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { css, keyframes } from 'styled-components';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import { Seo } from '../../components/SEO';
@@ -20,15 +20,111 @@ import {
 const Page = styled.div`
   display: grid;
   gap: 1.25rem;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(circle at 12% 10%, rgba(245, 158, 11, 0.1), transparent 28%),
+      radial-gradient(circle at 88% 18%, rgba(96, 165, 250, 0.08), transparent 26%),
+      radial-gradient(circle at 50% 100%, rgba(255, 255, 255, 0.04), transparent 34%);
+    pointer-events: none;
+    z-index: -1;
+  }
+`;
+
+const floatHalo = keyframes`
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.72;
+  }
+  50% {
+    transform: translate3d(1.5%, -2%, 0) scale(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.72;
+  }
+`;
+
+const stageReveal = keyframes`
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+`;
+
+const scorePulse = keyframes`
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.18);
+  }
+  100% {
+    box-shadow: 0 0 0 18px rgba(245, 158, 11, 0);
+  }
+`;
+
+const stageCss = css<{ $delay?: number }>`
+  opacity: 0;
+  animation: ${stageReveal} 560ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: ${({ $delay = 0 }) => `${$delay}ms`};
+`;
+
+const StageSection = styled.section<{ $delay?: number }>`
+  ${stageCss}
+  display: grid;
+  gap: 0.9rem;
 `;
 
 const Hero = styled(Card).attrs({ variant: 'elevated' })`
+  position: relative;
+  overflow: hidden;
   padding: clamp(1.4rem, 3.2vw, 2rem);
   border-radius: 28px;
   background:
     radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 34%),
-    radial-gradient(circle at bottom right, rgba(245, 158, 11, 0.1), transparent 26%),
+    radial-gradient(circle at 78% 22%, rgba(245, 158, 11, 0.16), transparent 24%),
+    radial-gradient(circle at 82% 82%, rgba(96, 165, 250, 0.12), transparent 18%),
     linear-gradient(145deg, rgba(18, 21, 27, 0.98), rgba(8, 10, 13, 1));
+
+  &::before {
+    content: '';
+    position: absolute;
+    width: 22rem;
+    height: 22rem;
+    right: -8rem;
+    top: -8rem;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(245, 158, 11, 0.22), transparent 62%);
+    filter: blur(18px);
+    animation: ${floatHalo} 14s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    width: 18rem;
+    height: 18rem;
+    left: -6rem;
+    bottom: -8rem;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(96, 165, 250, 0.12), transparent 64%);
+    filter: blur(16px);
+    animation: ${floatHalo} 16s ease-in-out infinite reverse;
+    pointer-events: none;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
 `;
 
 const HeroLayout = styled.div`
@@ -76,6 +172,25 @@ const HeroSubtitle = styled.p`
   max-width: 720px;
 `;
 
+const HeroStatsBar = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+`;
+
+const HeroPill = styled.div`
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 0.78rem;
+  letter-spacing: 0.01em;
+`;
+
 const HeroActions = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -97,6 +212,13 @@ const MetricCard = styled(Card).attrs({ variant: 'outlined' })`
   padding: 1rem;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.04);
+  transition: transform ${({ theme }) => theme.transitions.fast}, border-color ${({ theme }) => theme.transitions.fast}, box-shadow ${({ theme }) => theme.transitions.medium};
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: ${({ theme }) => theme.colors.border.accent};
+    box-shadow: ${({ theme }) => theme.shadows.glow};
+  }
 `;
 
 const MetricValue = styled.div`
@@ -114,10 +236,60 @@ const MetricLabel = styled.div`
 const Spotlight = styled(Card).attrs({ variant: 'outlined' })`
   padding: 1.1rem;
   border-radius: 22px;
-  background: rgba(255, 255, 255, 0.05);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)),
+    rgba(255, 255, 255, 0.05);
   display: grid;
   gap: 0.85rem;
   align-content: start;
+`;
+
+const ScoreOrb = styled.div`
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(100%, 190px);
+  aspect-ratio: 1;
+  margin-bottom: 0.2rem;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(245, 158, 11, 0.18), rgba(17, 20, 26, 0.98) 60%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 24px 48px rgba(0, 0, 0, 0.28);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 14px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    animation: ${scorePulse} 2.4s ease-out infinite;
+  }
+`;
+
+const ScoreValue = styled.div`
+  font-size: clamp(2.4rem, 5vw, 3.6rem);
+  font-weight: 800;
+  font-family: ${({ theme }) => theme.fonts.brand || theme.fonts.title};
+  line-height: 0.9;
+  letter-spacing: 0.04em;
+`;
+
+const ScoreLabel = styled.div`
+  margin-top: 0.3rem;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
 `;
 
 const SpotlightTone = styled.span<{ $tone: string }>`
@@ -155,11 +327,6 @@ const SpotlightCopy = styled.p`
   line-height: 1.65;
 `;
 
-const Section = styled.section`
-  display: grid;
-  gap: 0.9rem;
-`;
-
 const SectionHead = styled.div`
   display: flex;
   justify-content: space-between;
@@ -189,6 +356,13 @@ const ActionCard = styled(Card).attrs({ variant: 'outlined' })`
   border-radius: 20px;
   display: grid;
   gap: 0.85rem;
+  transition: transform ${({ theme }) => theme.transitions.fast}, border-color ${({ theme }) => theme.transitions.fast}, box-shadow ${({ theme }) => theme.transitions.medium};
+
+  &:hover {
+    transform: translateY(-3px);
+    border-color: ${({ theme }) => theme.colors.border.accent};
+    box-shadow: ${({ theme }) => theme.shadows.glow};
+  }
 `;
 
 const Tag = styled.span`
@@ -228,6 +402,26 @@ const MissionCard = styled(Card).attrs({ variant: 'outlined' })`
   border-radius: 22px;
   display: grid;
   gap: 0.8rem;
+  position: relative;
+  overflow: hidden;
+  transition: transform ${({ theme }) => theme.transitions.fast}, border-color ${({ theme }) => theme.transitions.fast}, box-shadow ${({ theme }) => theme.transitions.medium};
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: auto -10% -35% auto;
+    width: 9rem;
+    height: 9rem;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(245, 158, 11, 0.14), transparent 68%);
+    pointer-events: none;
+  }
+
+  &:hover {
+    transform: translateY(-3px);
+    border-color: ${({ theme }) => theme.colors.border.accent};
+    box-shadow: ${({ theme }) => theme.shadows.glow};
+  }
 `;
 
 const MissionTitleRow = styled.div`
@@ -263,14 +457,17 @@ const ProgressTrack = styled.div`
   height: 10px;
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
+    rgba(255, 255, 255, 0.08);
 `;
 
 const ProgressFill = styled.div<{ $value: number }>`
   width: ${({ $value }) => `${$value}%`};
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #f59e0b, #f97316);
+  background: linear-gradient(90deg, #f59e0b, #f97316 55%, #fb7185);
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.32);
 `;
 
 const MetaRow = styled.div`
@@ -296,6 +493,9 @@ const Panel = styled(Card).attrs({ variant: 'outlined' })`
   border-radius: 22px;
   display: grid;
   gap: 0.85rem;
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.06), transparent 22%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.025));
 `;
 
 const List = styled.div`
@@ -310,10 +510,17 @@ const ListRow = styled.div`
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform ${({ theme }) => theme.transitions.fast}, border-color ${({ theme }) => theme.transitions.fast}, background ${({ theme }) => theme.transitions.fast};
 
   @media (min-width: 680px) {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: ${({ theme }) => theme.colors.border.accent};
+    background: rgba(255, 255, 255, 0.045);
   }
 `;
 
@@ -345,6 +552,22 @@ const ReadinessLabel = styled.div`
   gap: 0.75rem;
   color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 0.82rem;
+`;
+
+const SectionBadge = styled.span`
+  display: inline-flex;
+  width: fit-content;
+  min-height: 28px;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.22);
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 `;
 
 const formatDate = (value?: string) => {
@@ -448,6 +671,12 @@ const CareerHubPage: React.FC = () => {
               One place to run your player progression: readiness, missions, next steps, squad state and the next tournament window.
             </HeroSubtitle>
 
+            <HeroStatsBar>
+              <HeroPill>{dashboard.overview.primaryRole}</HeroPill>
+              {dashboard.overview.bestGame ? <HeroPill>{dashboard.overview.bestGame}</HeroPill> : null}
+              <HeroPill>{dashboard.overview.completedMissions}/{dashboard.overview.totalMissions} missions cleared</HeroPill>
+            </HeroStatsBar>
+
             <ReadinessBand>
               <ReadinessLabel>
                 <span>{dashboard.overview.readinessLabel}</span>
@@ -497,6 +726,12 @@ const CareerHubPage: React.FC = () => {
           </HeroBody>
 
           <Spotlight>
+            <ScoreOrb>
+              <div>
+                <ScoreValue>{dashboard.overview.readinessScore}</ScoreValue>
+                <ScoreLabel>Readiness</ScoreLabel>
+              </div>
+            </ScoreOrb>
             <SpotlightTone $tone={dashboard.spotlight.tone}>{dashboard.spotlight.tone}</SpotlightTone>
             <SpotlightTitle>{dashboard.spotlight.title}</SpotlightTitle>
             <SpotlightCopy>{dashboard.spotlight.summary}</SpotlightCopy>
@@ -512,9 +747,10 @@ const CareerHubPage: React.FC = () => {
         </HeroLayout>
       </Hero>
 
-      <Section>
+      <StageSection $delay={80}>
         <SectionHead>
           <div>
+            <SectionBadge>Priority</SectionBadge>
             <SectionTitle>Next Best Actions</SectionTitle>
             <SectionCopy>High-impact steps ordered by the fastest lift for your current state.</SectionCopy>
           </div>
@@ -531,11 +767,12 @@ const CareerHubPage: React.FC = () => {
             </ActionCard>
           ))}
         </ActionGrid>
-      </Section>
+      </StageSection>
 
-      <Section id="missions">
+      <StageSection id="missions" $delay={140}>
         <SectionHead>
           <div>
+            <SectionBadge>Weekly Loop</SectionBadge>
             <SectionTitle>Weekly Missions</SectionTitle>
             <SectionCopy>Repeatable objectives that keep your profile, team and bracket momentum moving.</SectionCopy>
           </div>
@@ -583,12 +820,14 @@ const CareerHubPage: React.FC = () => {
             </MissionCard>
           ))}
         </MissionGrid>
-      </Section>
+      </StageSection>
 
+      <StageSection $delay={200}>
       <TwoColumn>
         <Panel>
           <SectionHead>
             <div>
+              <SectionBadge>Discovery</SectionBadge>
               <SectionTitle>Recommended Tournaments</SectionTitle>
               <SectionCopy>Best-fit brackets based on your current game focus and squad state.</SectionCopy>
             </div>
@@ -645,11 +884,14 @@ const CareerHubPage: React.FC = () => {
           </List>
         </Panel>
       </TwoColumn>
+      </StageSection>
 
+      <StageSection $delay={260}>
       <TwoColumn>
         <Panel>
           <SectionHead>
             <div>
+              <SectionBadge>Roster</SectionBadge>
               <SectionTitle>Squad Snapshot</SectionTitle>
               <SectionCopy>Connected teams, roster health and whether you are holding captain responsibility.</SectionCopy>
             </div>
@@ -722,6 +964,7 @@ const CareerHubPage: React.FC = () => {
           </List>
         </Panel>
       </TwoColumn>
+      </StageSection>
     </Page>
   );
 };
