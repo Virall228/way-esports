@@ -805,6 +805,23 @@ export const claimCareerMission = async (userId: string, missionId: string) => {
   return buildCareerHubDashboard(userId);
 };
 
+export const claimAllCareerMissions = async (userId: string) => {
+  let dashboard = await buildCareerHubDashboard(userId);
+  const claimableMissionIds = (dashboard?.weeklyMissions || [])
+    .filter((mission: any) => mission.completed && !mission.claimed)
+    .map((mission: any) => String(mission.id || ''))
+    .filter(Boolean);
+
+  for (const missionId of claimableMissionIds) {
+    dashboard = await claimCareerMission(userId, missionId);
+  }
+
+  return {
+    claimedMissionIds: claimableMissionIds,
+    dashboard
+  };
+};
+
 export const touchCareerHubView = async (userId: string) => {
   const { weekKey } = getWeekWindow();
   await CareerHubState.findOneAndUpdate(

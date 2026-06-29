@@ -563,6 +563,13 @@ const HomePage: React.FC = () => {
   });
   const [recentNewsCount, setRecentNewsCount] = useState(0);
   const [liveTournaments, setLiveTournaments] = useState<Array<{ id: string; name: string; teams: number; status: string }>>([]);
+  const [careerPulse, setCareerPulse] = useState<null | {
+    readinessScore: number;
+    readinessLabel: string;
+    claimableCount: number;
+    spotlightTitle: string;
+    spotlightRoute: string;
+  }>(null);
   const [upcomingMatches, setUpcomingMatches] = useState<Array<{
     id: string;
     tournamentName: string;
@@ -594,6 +601,28 @@ const HomePage: React.FC = () => {
         actionPath: '/profile',
         tone: 'warn',
         priority: 1
+      });
+    }
+
+    if (careerPulse?.claimableCount) {
+      list.push({
+        key: 'career-claim',
+        title: `Claim Career Hub rewards (${careerPulse.claimableCount})`,
+        description: 'Weekly mission rewards are ready to move into your wallet and entry stack.',
+        actionLabel: 'Claim',
+        actionPath: '/career-hub#missions',
+        tone: 'ok',
+        priority: 0
+      });
+    } else if (careerPulse) {
+      list.push({
+        key: 'career-ready',
+        title: `${careerPulse.readinessLabel} - ${careerPulse.readinessScore}/100`,
+        description: careerPulse.spotlightTitle || 'Your mission board has the next best action ready.',
+        actionLabel: 'Open Hub',
+        actionPath: careerPulse.spotlightRoute || '/career-hub',
+        tone: careerPulse.readinessScore >= 65 ? 'ok' : 'warn',
+        priority: 2
       });
     }
 
@@ -675,7 +704,7 @@ const HomePage: React.FC = () => {
     }
 
     return list.sort((a, b) => a.priority - b.priority).slice(0, 4);
-  }, [user?.isSubscribed, (user as any)?.bonusEntries, (user as any)?.freeEntriesCount, upcomingMatches, recentNewsCount]);
+  }, [careerPulse, user?.isSubscribed, (user as any)?.bonusEntries, (user as any)?.freeEntriesCount, upcomingMatches, recentNewsCount]);
 
   useEffect(() => {
     const run = async () => {
@@ -685,11 +714,12 @@ const HomePage: React.FC = () => {
           (window as any).Telegram.WebApp.expand();
         }
 
-        const [res, newsRes, tournamentsRes, myMatchesRes]: any[] = await Promise.all([
+        const [res, newsRes, tournamentsRes, myMatchesRes, careerHubRes]: any[] = await Promise.all([
           api.get('/api/stats'),
           api.get('/api/news?limit=3').catch(() => ({ data: [] })),
           api.get('/api/tournaments?limit=6').catch(() => ({ data: [] })),
-          api.get('/api/matches/my/upcoming').catch(() => ({ data: [] }))
+          api.get('/api/matches/my/upcoming').catch(() => ({ data: [] })),
+          user ? api.get('/api/career-hub/me').catch(() => null) : Promise.resolve(null)
         ]);
 
         if (res?.success && res.data) {
@@ -733,12 +763,25 @@ const HomePage: React.FC = () => {
             }))
             .filter((row: any) => row.id)
         );
+
+        const careerHubData = careerHubRes?.data || careerHubRes;
+        if (careerHubData?.overview) {
+          setCareerPulse({
+            readinessScore: Number(careerHubData.overview.readinessScore || 0),
+            readinessLabel: String(careerHubData.overview.readinessLabel || 'Career Hub'),
+            claimableCount: Number(careerHubData.meta?.claimableCount || 0),
+            spotlightTitle: String(careerHubData.spotlight?.title || ''),
+            spotlightRoute: String(careerHubData.spotlight?.ctaRoute || '/career-hub')
+          });
+        } else {
+          setCareerPulse(null);
+        }
       } catch (e) {
         console.error('Failed to fetch stats:', e);
       }
     };
     run();
-  }, []);
+  }, [user]);
 
   return (
     <PageRoot>
@@ -789,6 +832,9 @@ const HomePage: React.FC = () => {
           <div style={{ color: theme.colors.text.secondary, fontSize: '0.85rem', marginBottom: 10 }}>
             Sub: <strong style={{ color: user?.isSubscribed ? '#9ff0cf' : '#ffcd9b' }}>{user?.isSubscribed ? 'ACTIVE' : 'INACTIVE'}</strong>{' '}
             • Entries: <strong>{Number((user as any)?.freeEntriesCount || 0) + Number((user as any)?.bonusEntries || 0)}</strong>
+            {careerPulse ? (
+              <> • Career: <strong>{careerPulse.readinessLabel} {careerPulse.readinessScore}/100</strong></>
+            ) : null}
           </div>
           <QuickActions>
             <ActionButton onClick={() => navigate('/career-hub')}>Career Hub</ActionButton>

@@ -399,6 +399,22 @@ const CareerHubPage: React.FC = () => {
     }
   });
 
+  const claimAllMutation = useMutation({
+    mutationFn: () => careerHubService.claimAllMissions(),
+    onSuccess: async (payload) => {
+      queryClient.setQueryData(['career-hub'], payload.dashboard);
+      await fetchProfile();
+      const claimedCount = Array.isArray(payload?.claimedMissionIds) ? payload.claimedMissionIds.length : 0;
+      addNotification({
+        type: 'success',
+        title: 'Rewards claimed',
+        message: claimedCount > 0
+          ? `${claimedCount} mission reward${claimedCount > 1 ? 's were' : ' was'} added to your account.`
+          : 'No new rewards were available to claim.'
+      });
+    }
+  });
+
   const openRoute = (route: string) => {
     if (!route) return;
     navigate(route);
@@ -523,6 +539,16 @@ const CareerHubPage: React.FC = () => {
             <SectionTitle>Weekly Missions</SectionTitle>
             <SectionCopy>Repeatable objectives that keep your profile, team and bracket momentum moving.</SectionCopy>
           </div>
+          {dashboard.meta.claimableCount > 1 ? (
+            <Button
+              variant="brand"
+              onClick={() => claimAllMutation.mutate()}
+              isLoading={claimAllMutation.isPending}
+              disabled={claimMutation.isPending}
+            >
+              Claim all rewards
+            </Button>
+          ) : null}
         </SectionHead>
         <MissionGrid>
           {dashboard.weeklyMissions.map((mission: CareerHubMission) => (
@@ -547,7 +573,7 @@ const CareerHubPage: React.FC = () => {
                 </Button>
                 <Button
                   variant={mission.claimed ? 'success' : 'brand'}
-                  disabled={!mission.completed || mission.claimed || claimMutation.isPending}
+                  disabled={!mission.completed || mission.claimed || claimMutation.isPending || claimAllMutation.isPending}
                   isLoading={busyMissionId === mission.id}
                   onClick={() => claimMutation.mutate(mission.id)}
                 >

@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateJWT } from '../middleware/auth';
-import { buildCareerHubDashboard, claimCareerMission, touchCareerHubView } from '../services/careerHubService';
+import { buildCareerHubDashboard, claimAllCareerMissions, claimCareerMission, touchCareerHubView } from '../services/careerHubService';
 
 const router = express.Router();
 
@@ -60,6 +60,20 @@ router.post('/me/missions/:missionId/claim', authenticateJWT, async (req, res) =
     return res.json({ success: true, data });
   } catch (error: any) {
     return sendCareerHubError(res, error, 'Failed to claim mission reward');
+  }
+});
+
+router.post('/me/missions/claim-all', authenticateJWT, async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const data = await claimAllCareerMissions(userId);
+    return res.json({ success: true, data });
+  } catch (error: any) {
+    return sendCareerHubError(res, error, 'Failed to claim all mission rewards');
   }
 });
 

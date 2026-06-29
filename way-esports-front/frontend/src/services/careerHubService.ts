@@ -145,5 +145,10 @@ export const careerHubService = {
   claimMission: async (missionId: string): Promise<CareerHubDashboard> => {
     const response = await api.post(`/api/career-hub/me/missions/${missionId}/claim`, {});
     return unwrap<CareerHubDashboard>(response);
+  },
+
+  claimAllMissions: async (): Promise<{ claimedMissionIds: string[]; dashboard: CareerHubDashboard }> => {
+    const response = await api.post('/api/career-hub/me/missions/claim-all', {});
+    return unwrap<{ claimedMissionIds: string[]; dashboard: CareerHubDashboard }>(response);
   }
 };
