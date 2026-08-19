@@ -18,8 +18,8 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   @font-face {
-    font-family: 'Protest Strike';
-    src: url('/fonts/ProtestStrike-Regular.ttf') format('truetype');
+    font-family: 'Goblin One';
+    src: url('/fonts/GoblinOne-Regular.ttf') format('truetype');
     font-weight: 400;
     font-style: normal;
     font-display: swap;
