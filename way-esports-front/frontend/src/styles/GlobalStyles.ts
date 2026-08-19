@@ -9,6 +9,14 @@ export const GlobalStyles = createGlobalStyle`
     font-display: swap;
   }
 
+  @font-face {
+    font-family: 'Bebas Neue';
+    src: url('/fonts/BebasNeue-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&display=swap');
 
   * {
@@ -54,7 +62,7 @@ export const GlobalStyles = createGlobalStyle`
   body {
     background-color: ${({ theme }) => theme.colors.bg.primary};
     color: ${({ theme }) => theme.colors.text.primary};
-    font-family: ${({ theme }) => theme.fonts.primary};
+    font-family: ${({ theme }) => theme.fonts.body};
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     margin: 0;
@@ -178,7 +186,7 @@ export const GlobalStyles = createGlobalStyle`
   div,
   li,
   a {
-    font-family: ${({ theme }) => theme.fonts.primary};
+    font-family: ${({ theme }) => theme.fonts.body};
   }
 
   p,
@@ -195,7 +203,7 @@ export const GlobalStyles = createGlobalStyle`
   input,
   textarea,
   select {
-    font-family: ${({ theme }) => theme.fonts.primary};
+    font-family: ${({ theme }) => theme.fonts.body};
     font-weight: ${({ theme }) => theme.fontWeights.regular};
   }
 
