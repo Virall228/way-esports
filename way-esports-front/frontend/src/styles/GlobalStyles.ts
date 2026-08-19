@@ -10,8 +10,8 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   @font-face {
-    font-family: 'Bebas Neue';
-    src: url('/fonts/BebasNeue-Regular.ttf') format('truetype');
+    font-family: 'Archivo Black';
+    src: url('/fonts/ArchivoBlack-Regular.ttf') format('truetype');
     font-weight: 400;
     font-style: normal;
     font-display: swap;

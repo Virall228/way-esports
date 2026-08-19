@@ -59,11 +59,11 @@ export const theme = {
     }
   },
   fonts: {
-    primary: "'Bebas Neue', 'Segoe UI', sans-serif",
+    primary: "'Archivo Black', 'Segoe UI', sans-serif",
     secondary: "'JetBrains Mono', 'Courier New', monospace",
     accent: "'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     title: "'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    body: "'Bebas Neue', 'Segoe UI', sans-serif",
+    body: "'Archivo Black', 'Segoe UI', sans-serif",
     mono: "'Fira Code', monospace",
     brand: "'OpenLukyanov', 'Orbitron', sans-serif"
   },
@@ -114,7 +114,7 @@ export const theme = {
     default: '280ms cubic-bezier(0.22, 1, 0.36, 1)'
   },
   typography: {
-    fontFamily: "'Bebas Neue', 'Segoe UI', sans-serif",
+    fontFamily: "'Archivo Black', 'Segoe UI', sans-serif",
     fontSizes: {
       xs: '12px',
       sm: '14px',
