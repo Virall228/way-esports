@@ -61,11 +61,11 @@ export const theme = {
   fonts: {
     primary: "'Archivo Black', 'Segoe UI', sans-serif",
     secondary: "'JetBrains Mono', 'Courier New', monospace",
-    accent: "'Goblin One', 'Segoe UI', sans-serif",
-    title: "'Goblin One', 'Segoe UI', sans-serif",
+    accent: "'Viga', 'Segoe UI', sans-serif",
+    title: "'Viga', 'Segoe UI', sans-serif",
     body: "'Archivo Black', 'Segoe UI', sans-serif",
     mono: "'Fira Code', monospace",
-    brand: "'Goblin One', 'OpenLukyanov', 'Orbitron', sans-serif"
+    brand: "'Viga', 'OpenLukyanov', 'Orbitron', sans-serif"
   },
   fontWeights: {
     light: 300,
