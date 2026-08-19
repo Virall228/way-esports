@@ -19,7 +19,6 @@ import {
 
 import { GlobalStyles as GlobalStyle } from './styles/GlobalStyles';
 import { theme as darkTheme, lightTheme } from './styles/theme';
-import Plasma from './components/UI/Plasma';
 
 // Import components
 import TermsGuard from './components/Legal/TermsGuard';
@@ -118,30 +117,6 @@ const AppShell = styled.div`
   overflow-y: hidden;
   position: relative;
   isolation: isolate;
-`;
-
-const ShellAmbient = styled.div`
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -2;
-  overflow: hidden;
-`;
-
-const ShellAmbientPlasma = styled(Plasma)`
-  position: absolute;
-  inset: -10%;
-  opacity: 0.9;
-  filter: saturate(1.06);
-`;
-
-const ShellAmbientVeil = styled.div`
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 12% 10%, rgba(255, 255, 255, 0.04), transparent 24%),
-    radial-gradient(circle at 82% 16%, rgba(245, 154, 74, 0.08), transparent 22%),
-    linear-gradient(180deg, rgba(4, 5, 8, 0.1), rgba(4, 5, 8, 0.24));
 `;
 
 const ShellGlow = styled.div<{ $position: 'left' | 'right' }>`
@@ -800,16 +775,6 @@ const AppContent: React.FC = () => {
 
   return (
     <AppShell>
-      <ShellAmbient aria-hidden="true">
-        <ShellAmbientPlasma
-          color="#f59a4a"
-          speed={0.24}
-          scale={1.34}
-          opacity={0.12}
-          mouseInteractive={false}
-        />
-        <ShellAmbientVeil />
-      </ShellAmbient>
       <ShellGlow $position="left" />
       <ShellGlow $position="right" />
       <Sidebar>

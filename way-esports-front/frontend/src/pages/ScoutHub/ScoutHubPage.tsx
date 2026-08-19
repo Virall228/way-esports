@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '../../services/api';
 import { playerPromotionService, PlayerPromotionDashboard } from '../../services/playerPromotionService';
+import Plasma from '../../components/UI/Plasma';
 
 const Page = styled.div`
   display: flex;
@@ -11,12 +12,36 @@ const Page = styled.div`
 `;
 
 const Hero = styled.section`
+  position: relative;
+  overflow: hidden;
   padding: 1.5rem;
   border-radius: 24px;
   background:
     radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 40%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
   border: 1px solid rgba(255, 255, 255, 0.1);
+`;
+
+const HeroBackdrop = styled.div`
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+`;
+
+const HeroPlasma = styled(Plasma)`
+  position: absolute;
+  inset: -8%;
+  opacity: 0.92;
+`;
+
+const HeroBackdropVeil = styled.div`
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(255,255,255,0.08), transparent 26%),
+    radial-gradient(circle at 82% 20%, rgba(255,107,0,0.2), transparent 24%),
+    linear-gradient(118deg, rgba(7,10,16,0.8), rgba(7,10,16,0.34) 42%, rgba(7,10,16,0.76));
 `;
 
 const Title = styled.h1`
@@ -238,6 +263,16 @@ const ScoutHubPage: React.FC = () => {
   return (
     <Page>
       <Hero>
+        <HeroBackdrop>
+          <HeroPlasma
+            color="#ff6b00"
+            speed={0.42}
+            scale={1.16}
+            opacity={0.5}
+            mouseInteractive={false}
+          />
+          <HeroBackdropVeil />
+        </HeroBackdrop>
         <Title>Scout Hub</Title>
         <Subtitle>
           Subscriber-only player promotion for scouts, team owners and public discovery.

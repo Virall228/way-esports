@@ -1,10 +1,9 @@
 import React, { useMemo } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import styled, { useTheme } from 'styled-components';
+import styled from 'styled-components';
 import { useQuery } from '@tanstack/react-query';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
-import Plasma from '../../components/UI/Plasma';
 import { Seo } from '../../components/SEO';
 import { api } from '../../services/api';
 import { tournamentService } from '../../services/tournamentService';
@@ -17,8 +16,6 @@ const Page = styled.div`
 `;
 
 const Hero = styled(Card).attrs({ variant: 'elevated' })`
-  position: relative;
-  overflow: hidden;
   display: grid;
   gap: 1rem;
   padding: 1.8rem;
@@ -27,28 +24,6 @@ const Hero = styled(Card).attrs({ variant: 'elevated' })`
     radial-gradient(circle at top left, rgba(255, 107, 0, 0.24), transparent 34%),
     radial-gradient(circle at bottom right, rgba(255, 214, 10, 0.1), transparent 24%),
     linear-gradient(145deg, rgba(19, 21, 24, 0.94), rgba(9, 10, 12, 0.98));
-`;
-
-const HeroBackdrop = styled.div`
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-`;
-
-const HeroPlasma = styled(Plasma)`
-  position: absolute;
-  inset: -8%;
-  opacity: 0.92;
-`;
-
-const HeroBackdropVeil = styled.div`
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 18% 20%, rgba(255,255,255,0.08), transparent 26%),
-    radial-gradient(circle at 82% 22%, rgba(255,157,77,0.18), transparent 24%),
-    linear-gradient(118deg, rgba(7,9,12,0.78), rgba(7,9,12,0.3) 40%, rgba(7,9,12,0.72));
 `;
 
 const Breadcrumbs = styled.div`
@@ -220,7 +195,6 @@ const EmptyState = styled(Card).attrs({ variant: 'outlined' })`
 
 const GameHubPage: React.FC = () => {
   const { game } = useParams<{ game: string }>();
-  const theme = useTheme();
   const config = useMemo(() => getGameDiscoveryConfigBySlug(game), [game]);
 
   const { data: tournaments = [] } = useQuery({
@@ -279,16 +253,6 @@ const GameHubPage: React.FC = () => {
       />
 
       <Hero>
-        <HeroBackdrop>
-          <HeroPlasma
-            color={theme.isLight ? '#c96a16' : '#ff9d4d'}
-            speed={0.44}
-            scale={1.18}
-            opacity={theme.isLight ? 0.18 : 0.52}
-            mouseInteractive={false}
-          />
-          <HeroBackdropVeil />
-        </HeroBackdrop>
         <Breadcrumbs>
           <BreadcrumbLink to="/">WAY Esports</BreadcrumbLink>
           <span>/</span>
