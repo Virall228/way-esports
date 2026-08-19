@@ -26,6 +26,7 @@ import { historyService } from '../../services/historyService';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import FlameAuraAvatar from '../../components/UI/FlameAuraAvatar';
+import Plasma from '../../components/UI/Plasma';
 import { getTierByPoints, getIntensityByPointsAndRank, getPlayerPoints } from '../../utils/flameRank';
 import { SelectField } from '../../components/UI/PageLayout';
 
@@ -122,6 +123,27 @@ const ProfileHeader = styled(Card).attrs({ variant: 'elevated' })<{
         radial-gradient(120% 85% at 15% 10%, rgba(255, 107, 0, 0.08) 0%, rgba(255, 107, 0, 0) 55%);
     }
   }
+`;
+
+const ProfileHeaderBackdrop = styled.div`
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+`;
+
+const ProfileHeaderPlasma = styled(Plasma)`
+  position: absolute;
+  inset: -10%;
+`;
+
+const ProfileHeaderVeil = styled.div`
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255,255,255,0.08), transparent 24%),
+    radial-gradient(circle at 84% 18%, rgba(245,154,74,0.16), transparent 22%),
+    linear-gradient(118deg, rgba(4,5,8,0.7), rgba(4,5,8,0.3) 38%, rgba(4,5,8,0.72));
 `;
 
 const Avatar = styled.div<{ $hasImage?: boolean; $imageUrl?: string | null; $size?: number }>`
@@ -700,6 +722,13 @@ const ProfilePage: React.FC = () => {
   const detailedPagination = detailedHistoryPayload.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 };
   const profileTier = getTierByPoints(points);
   const profileIntensity = getIntensityByPointsAndRank(points);
+  const winStreak = Number((profile as any)?.winStreak || 0);
+  const streakGlowColor = winStreak > 5 ? 'rgba(51, 181, 255, 0.9)' : (winStreak > 3 ? 'rgba(176, 122, 255, 0.85)' : 'rgba(255, 255, 255, 0.1)');
+  const profilePlasmaColor = streakGlowColor.includes('51, 181, 255')
+    ? '#33b5ff'
+    : streakGlowColor.includes('176, 122, 255')
+      ? '#b07aff'
+      : '#f59a4a';
   const wallpaperMeta = (profile as any)?.profileWallpaper;
   const wallpaperBaseUrl = wallpaperMeta?.status === 'removed'
     ? null
@@ -710,8 +739,6 @@ const ProfilePage: React.FC = () => {
   const wallpaperUrl = wallpaperBaseUrl
     ? `${wallpaperBaseUrl}${wallpaperBaseUrl.includes('?') ? '&' : '?'}v=${wallpaperVersion || 1}`
     : null;
-  const winStreak = Number((profile as any)?.winStreak || 0);
-  const streakGlowColor = winStreak > 5 ? 'rgba(51, 181, 255, 0.9)' : (winStreak > 3 ? 'rgba(176, 122, 255, 0.85)' : 'rgba(255, 255, 255, 0.1)');
 
   const copyStatusCard = async () => {
     const targetId = String(profile?.id || user?.id || '').trim();
@@ -804,6 +831,16 @@ const ProfilePage: React.FC = () => {
   return (
     <Container>
       <ProfileHeader $wallpaperUrl={wallpaperUrl} $streakGlowColor={streakGlowColor}>
+        <ProfileHeaderBackdrop>
+          <ProfileHeaderPlasma
+            color={profilePlasmaColor}
+            speed={0.38}
+            scale={1.14}
+            opacity={0.36}
+            mouseInteractive={false}
+          />
+          <ProfileHeaderVeil />
+        </ProfileHeaderBackdrop>
         <Avatar
           $size={avatarSize}
           $hasImage={!!(profile?.profileLogo || profile?.photoUrl)}

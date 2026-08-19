@@ -1,10 +1,10 @@
 export type DiscoveryGameConfig = {
-  slug: string;
-  label: string;
-  query: string;
-  description: string;
-  keywords: string[];
-  aliases?: string[];
+  readonly slug: string;
+  readonly label: string;
+  readonly query: string;
+  readonly description: string;
+  readonly keywords: readonly string[];
+  readonly aliases?: readonly string[];
 };
 
 export const GAME_CATALOG = [

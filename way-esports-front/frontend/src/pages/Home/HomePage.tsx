@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import styled, { useTheme } from 'styled-components';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
+import Plasma from '../../components/UI/Plasma';
 import SurfacePanel from '../../components/UI/SurfacePanel';
 import SectionHeading from '../../components/UI/SectionHeading';
 import { api } from '../../services/api';
@@ -94,6 +95,37 @@ const HeroLayout = styled.div`
     grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
     align-items: end;
   }
+`;
+
+const HeroBackdrop = styled.div.attrs({ className: 'hero-backdrop' })`
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+`;
+
+const HeroPlasma = styled(Plasma)`
+  position: absolute;
+  inset: -8%;
+  opacity: 0.92;
+  filter: saturate(1.08);
+`;
+
+const HeroBackdropVeil = styled.div`
+  position: absolute;
+  inset: 0;
+  background: ${({ theme }) =>
+    theme.isLight
+      ? `
+    radial-gradient(circle at 20% 18%, rgba(255,255,255,0.72), transparent 30%),
+    radial-gradient(circle at 82% 22%, rgba(201, 106, 22, 0.18), transparent 24%),
+    linear-gradient(120deg, rgba(255,252,247,0.88), rgba(245,238,228,0.64))
+  `
+      : `
+    radial-gradient(circle at 18% 18%, rgba(255,255,255,0.08), transparent 24%),
+    radial-gradient(circle at 84% 20%, rgba(245,154,74,0.16), transparent 24%),
+    linear-gradient(118deg, rgba(7,9,12,0.88), rgba(7,9,12,0.38) 38%, rgba(7,9,12,0.78))
+  `};
 `;
 
 const HeroBody = styled.div`
@@ -787,6 +819,16 @@ const HomePage: React.FC = () => {
     <PageRoot>
       <Container>
       <HeroSection style={isMobile ? { minHeight: 'auto' } : undefined}>
+        <HeroBackdrop>
+          <HeroPlasma
+            color={theme.isLight ? '#c96a16' : '#f59a4a'}
+            speed={0.42}
+            scale={1.16}
+            opacity={theme.isLight ? 0.2 : 0.56}
+            mouseInteractive={!isMobile && !theme.isLight}
+          />
+          <HeroBackdropVeil />
+        </HeroBackdrop>
         <HeroLayout>
           <HeroBody>
             <HeroEyebrow>Competitive gaming platform</HeroEyebrow>

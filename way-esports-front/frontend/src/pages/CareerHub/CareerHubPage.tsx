@@ -1,9 +1,10 @@
 import React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import styled, { css, keyframes } from 'styled-components';
+import styled, { css, keyframes, useTheme } from 'styled-components';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
+import Plasma from '../../components/UI/Plasma';
 import { Seo } from '../../components/SEO';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -126,6 +127,30 @@ const HeroLayout = styled.div`
     grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
     align-items: stretch;
   }
+`;
+
+const HeroBackdrop = styled.div`
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+`;
+
+const HeroPlasma = styled(Plasma)`
+  position: absolute;
+  inset: -8%;
+  opacity: 0.9;
+  filter: saturate(1.08);
+`;
+
+const HeroBackdropVeil = styled.div`
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255,255,255,0.08), transparent 24%),
+    radial-gradient(circle at 78% 24%, rgba(245, 158, 11, 0.2), transparent 24%),
+    radial-gradient(circle at 82% 78%, rgba(96, 165, 250, 0.12), transparent 18%),
+    linear-gradient(118deg, rgba(7,9,12,0.82), rgba(7,9,12,0.32) 42%, rgba(7,9,12,0.78));
 `;
 
 const HeroBody = styled.div`
@@ -578,6 +603,7 @@ const formatPrize = (value: number) => `$${Number(value || 0).toLocaleString()}`
 const CareerHubPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const theme = useTheme();
   const { addNotification } = useNotifications();
   const { fetchProfile } = useAuth();
 
@@ -654,6 +680,16 @@ const CareerHubPage: React.FC = () => {
       />
 
       <Hero>
+        <HeroBackdrop>
+          <HeroPlasma
+            color={theme.isLight ? '#c96a16' : '#f59e0b'}
+            speed={0.46}
+            scale={1.14}
+            opacity={theme.isLight ? 0.18 : 0.54}
+            mouseInteractive={false}
+          />
+          <HeroBackdropVeil />
+        </HeroBackdrop>
         <HeroLayout>
           <HeroBody>
             <Eyebrow>Mission Control</Eyebrow>

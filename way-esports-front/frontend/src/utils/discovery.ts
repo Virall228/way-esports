@@ -1,6 +1,10 @@
 import { GAME_CATALOG, type DiscoveryGameConfig, findGameConfig } from '../config/games';
 
-const GAME_CONFIGS: DiscoveryGameConfig[] = [...GAME_CATALOG];
+const GAME_CONFIGS: DiscoveryGameConfig[] = GAME_CATALOG.map((item) => ({
+  ...item,
+  keywords: [...item.keywords],
+  aliases: item.aliases ? [...item.aliases] : undefined
+}));
 
 export const getDiscoveryGames = (): DiscoveryGameConfig[] => GAME_CONFIGS;
 

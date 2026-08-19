@@ -1,5 +1,7 @@
-import styled from 'styled-components';
+import React from 'react';
+import styled, { useTheme } from 'styled-components';
 import Card from './Card';
+import Plasma from './Plasma';
 
 export const PageShell = styled.div`
   width: 100%;
@@ -9,7 +11,7 @@ export const PageShell = styled.div`
   gap: 1.1rem;
 `;
 
-export const PageHero = styled(Card).attrs({ variant: 'elevated' })`
+const PageHeroFrame = styled(Card).attrs({ variant: 'elevated' })`
   position: relative;
   overflow: hidden;
   padding: clamp(1.3rem, 3vw, 2.45rem);
@@ -28,7 +30,82 @@ export const PageHero = styled(Card).attrs({ variant: 'elevated' })`
       linear-gradient(160deg, rgba(18, 22, 27, 0.96), rgba(9, 11, 15, 0.98))
     `};
   box-shadow: ${({ theme }) => theme.shadows.large};
+
+  > .page-hero-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
 `;
+
+const PageHeroPlasma = styled(Plasma)`
+  position: absolute;
+  inset: -8%;
+  filter: saturate(1.08);
+`;
+
+const PageHeroVeil = styled.div`
+  position: absolute;
+  inset: 0;
+  background: ${({ theme }) =>
+    theme.isLight
+      ? `
+    radial-gradient(circle at 15% 18%, rgba(255,255,255,0.78), transparent 28%),
+    radial-gradient(circle at 82% 22%, rgba(201, 106, 22, 0.16), transparent 22%),
+    linear-gradient(135deg, rgba(255,253,249,0.9), rgba(245,238,228,0.74))
+  `
+      : `
+    radial-gradient(circle at 16% 20%, rgba(255,255,255,0.08), transparent 26%),
+    radial-gradient(circle at 84% 20%, rgba(245,154,74,0.16), transparent 24%),
+    linear-gradient(135deg, rgba(6,8,11,0.8), rgba(6,8,11,0.38) 42%, rgba(6,8,11,0.76))
+  `};
+`;
+
+const PageHeroNoise = styled.div`
+  position: absolute;
+  inset: 0;
+  opacity: ${({ theme }) => (theme.isLight ? 0.16 : 0.2)};
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.9), transparent 94%);
+`;
+
+export interface PageHeroProps extends React.HTMLAttributes<HTMLDivElement> {
+  children: React.ReactNode;
+  enablePlasma?: boolean;
+}
+
+export const PageHero: React.FC<PageHeroProps> = ({
+  children,
+  className,
+  style,
+  enablePlasma = true,
+  ...rest
+}) => {
+  const theme = useTheme();
+
+  return (
+    <PageHeroFrame className={className} style={style} {...rest}>
+      {enablePlasma ? (
+        <div className="page-hero-backdrop" aria-hidden="true">
+          <PageHeroPlasma
+            color={theme.isLight ? '#c96a16' : '#f59a4a'}
+            speed={0.42}
+            scale={1.14}
+            opacity={theme.isLight ? 0.2 : 0.48}
+            mouseInteractive={false}
+          />
+          <PageHeroVeil />
+          <PageHeroNoise />
+        </div>
+      ) : null}
+      {children}
+    </PageHeroFrame>
+  );
+};
 
 export const PageHeroLayout = styled.div`
   display: flex;
