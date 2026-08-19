@@ -61,11 +61,11 @@ export const theme = {
   fonts: {
     primary: "'Archivo Black', 'Segoe UI', sans-serif",
     secondary: "'JetBrains Mono', 'Courier New', monospace",
-    accent: "'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    title: "'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    accent: "'Protest Strike', 'Segoe UI', sans-serif",
+    title: "'Protest Strike', 'Segoe UI', sans-serif",
     body: "'Archivo Black', 'Segoe UI', sans-serif",
     mono: "'Fira Code', monospace",
-    brand: "'OpenLukyanov', 'Orbitron', sans-serif"
+    brand: "'Protest Strike', 'OpenLukyanov', 'Orbitron', sans-serif"
   },
   fontWeights: {
     light: 300,

@@ -5,9 +5,9 @@
 
 /* Global Font Variables */
 :root {
-  --font-title: 'Orbitron', monospace;
+  --font-title: 'Protest Strike', sans-serif;
   --font-body: 'Archivo Black', sans-serif;
-  --font-accent: 'Chakra Petch', monospace;
+  --font-accent: 'Protest Strike', sans-serif;
   
   --font-weight-light: 300;
   --font-weight-regular: 400;
