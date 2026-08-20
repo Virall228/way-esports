@@ -48,6 +48,7 @@ export const PageHeroContent = styled.div`
 `;
 
 export const PageTitle = styled.h1`
+  font-family: ${({ theme }) => theme.fonts.body};
   margin: 0 0 0.75rem;
   color: ${({ theme }) => theme.colors.text.primary};
   font-size: clamp(1.85rem, 5vw, 3.45rem);

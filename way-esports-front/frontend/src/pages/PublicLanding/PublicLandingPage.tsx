@@ -1,9 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { useQuery } from '@tanstack/react-query';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
+import Plasma from '../../components/UI/Plasma';
 import { Seo } from '../../components/SEO';
 import { api } from '../../services/api';
 import { getDiscoveryGames } from '../../utils/discovery';
@@ -29,6 +30,10 @@ const Hero = styled(Card).attrs({ variant: 'elevated' })`
       : `
     linear-gradient(145deg, rgba(10, 12, 16, 0.96), rgba(5, 7, 10, 0.99))
   `};
+
+  > .hero-backdrop {
+    z-index: 0;
+  }
 `;
 
 const HeroLayout = styled.div`
@@ -51,6 +56,48 @@ const HeroBody = styled.div`
     justify-items: center;
     text-align: center;
   }
+`;
+
+const HeroBackdrop = styled.div.attrs({ className: 'hero-backdrop' })`
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+`;
+
+const HeroPlasma = styled(Plasma)`
+  position: absolute;
+  inset: -6%;
+  opacity: 0.95;
+  filter: saturate(1.08) blur(0.2px);
+`;
+
+const HeroBackdropVeil = styled.div`
+  position: absolute;
+  inset: 0;
+  background: ${({ theme }) =>
+    theme.isLight
+      ? `
+    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.76), transparent 32%),
+    radial-gradient(circle at 82% 82%, rgba(255, 197, 133, 0.24), transparent 30%),
+    linear-gradient(118deg, rgba(255, 251, 245, 0.9) 0%, rgba(255, 251, 245, 0.58) 40%, rgba(244, 236, 225, 0.76) 100%)
+  `
+      : `
+    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.08), transparent 28%),
+    radial-gradient(circle at 86% 18%, rgba(245, 154, 74, 0.18), transparent 26%),
+    radial-gradient(circle at 75% 72%, rgba(245, 154, 74, 0.1), transparent 24%),
+    linear-gradient(118deg, rgba(5, 7, 10, 0.88) 0%, rgba(5, 7, 10, 0.46) 38%, rgba(5, 7, 10, 0.82) 100%)
+  `};
+`;
+
+const HeroNoise = styled.div`
+  position: absolute;
+  inset: 0;
+  opacity: ${({ theme }) => (theme.isLight ? 0.18 : 0.22)};
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.9), transparent 92%);
 `;
 
 const HeroEyebrow = styled.span`
@@ -311,6 +358,7 @@ const gameCards = getDiscoveryGames().slice(0, 4).map((item) => ({
 }));
 
 const PublicLandingPage: React.FC = () => {
+  const theme = useTheme();
   const { data: stats } = useQuery({
     queryKey: ['landing', 'stats'],
     queryFn: async () => {
@@ -364,6 +412,18 @@ const PublicLandingPage: React.FC = () => {
       />
 
       <Hero>
+        <HeroBackdrop>
+          <HeroPlasma
+            color={theme.isLight ? '#c96a16' : '#f59a4a'}
+            speed={0.48}
+            direction="forward"
+            scale={1.18}
+            opacity={theme.isLight ? 0.26 : 0.68}
+            mouseInteractive={!theme.isLight}
+          />
+          <HeroBackdropVeil />
+          <HeroNoise />
+        </HeroBackdrop>
         <HeroLayout>
           <HeroBody>
             <HeroEyebrow>Public esports platform</HeroEyebrow>

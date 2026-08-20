@@ -259,7 +259,7 @@ const NavItemIcon = styled.span`
 `;
 
 const NavItemLabel = styled.span`
-  font-family: ${({ theme }) => theme.fonts.accent};
+  font-family: ${({ theme }) => theme.fonts.body};
   font-size: 0.9rem;
   font-weight: ${({ theme }) => theme.fontWeights.semibold};
   letter-spacing: -0.01em;
@@ -310,6 +310,7 @@ const TopBarTitle = styled.div`
 `;
 
 const TopBarPageTitle = styled.h1`
+  font-family: ${({ theme }) => theme.fonts.body};
   margin: 0;
   font-size: clamp(1rem, 2vw, 1.35rem);
   line-height: 1.1;
@@ -466,6 +467,7 @@ const BottomNavItem = styled(Link) <{ $active?: boolean }>`
   align-items: center;
   justify-content: center;
   gap: 3px;
+  font-family: ${({ theme }) => theme.fonts.body};
   font-size: 10px;
   letter-spacing: -0.01em;
   text-decoration: none;
