@@ -73,6 +73,14 @@ export const GlobalStyles = createGlobalStyle`
     font-display: swap;
   }
 
+  @font-face {
+    font-family: 'Sora';
+    src: url('/fonts/Sora-VariableFont_wght.ttf') format('truetype');
+    font-weight: 100 800;
+    font-style: normal;
+    font-display: swap;
+  }
+
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&display=swap');
 
   * {
