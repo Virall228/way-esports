@@ -41,6 +41,38 @@ export const GlobalStyles = createGlobalStyle`
     font-display: swap;
   }
 
+  @font-face {
+    font-family: 'PT Serif';
+    src: url('/fonts/PTSerif-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: 'PT Serif';
+    src: url('/fonts/PTSerif-Italic.ttf') format('truetype');
+    font-weight: 400;
+    font-style: italic;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: 'PT Serif';
+    src: url('/fonts/PTSerif-Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: 'PT Serif';
+    src: url('/fonts/PTSerif-BoldItalic.ttf') format('truetype');
+    font-weight: 700;
+    font-style: italic;
+    font-display: swap;
+  }
+
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&display=swap');
 
   * {

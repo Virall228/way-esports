@@ -5,9 +5,9 @@
 
 /* Global Font Variables */
 :root {
-  --font-title: 'Uncial Antiqua', sans-serif;
+  --font-title: 'PT Serif', serif;
   --font-body: 'Archivo Black', sans-serif;
-  --font-accent: 'Uncial Antiqua', sans-serif;
+  --font-accent: 'PT Serif', serif;
   
   --font-weight-light: 300;
   --font-weight-regular: 400;
