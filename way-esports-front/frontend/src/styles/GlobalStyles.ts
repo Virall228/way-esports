@@ -81,6 +81,14 @@ export const GlobalStyles = createGlobalStyle`
     font-display: swap;
   }
 
+  @font-face {
+    font-family: 'Unbounded';
+    src: url('/fonts/Unbounded-VariableFont_wght.ttf') format('truetype');
+    font-weight: 200 900;
+    font-style: normal;
+    font-display: swap;
+  }
+
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&display=swap');
 
   * {

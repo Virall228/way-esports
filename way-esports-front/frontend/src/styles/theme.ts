@@ -61,11 +61,11 @@ export const theme = {
   fonts: {
     primary: "'Archivo Black', 'Segoe UI', sans-serif",
     secondary: "'JetBrains Mono', 'Courier New', monospace",
-    accent: "'Sora', 'Segoe UI', sans-serif",
-    title: "'Sora', 'Segoe UI', sans-serif",
+    accent: "'Unbounded', 'Segoe UI', sans-serif",
+    title: "'Unbounded', 'Segoe UI', sans-serif",
     body: "'Archivo Black', 'Segoe UI', sans-serif",
     mono: "'Fira Code', monospace",
-    brand: "'Sora', 'OpenLukyanov', 'Orbitron', sans-serif"
+    brand: "'Unbounded', 'OpenLukyanov', 'Orbitron', sans-serif"
   },
   fontWeights: {
     light: 300,
