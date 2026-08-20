@@ -310,7 +310,7 @@ const TopBarTitle = styled.div`
 `;
 
 const TopBarPageTitle = styled.h1`
-  font-family: ${({ theme }) => theme.fonts.body};
+  font-family: ${({ theme }) => theme.fonts.title};
   margin: 0;
   font-size: clamp(1rem, 2vw, 1.35rem);
   line-height: 1.1;

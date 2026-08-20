@@ -61,11 +61,11 @@ export const theme = {
   fonts: {
     primary: "'Archivo Black', 'Segoe UI', sans-serif",
     secondary: "'JetBrains Mono', 'Courier New', monospace",
-    accent: "'Days One', 'Segoe UI', sans-serif",
-    title: "'Days One', 'Segoe UI', sans-serif",
+    accent: "'Tourney', 'Segoe UI', sans-serif",
+    title: "'Tourney', 'Segoe UI', sans-serif",
     body: "'Archivo Black', 'Segoe UI', sans-serif",
     mono: "'Fira Code', monospace",
-    brand: "'Days One', 'OpenLukyanov', 'Orbitron', sans-serif"
+    brand: "'Tourney', 'OpenLukyanov', 'Orbitron', sans-serif"
   },
   fontWeights: {
     light: 300,
