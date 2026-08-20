@@ -787,8 +787,8 @@ const AppContent: React.FC = () => {
             panelSize={76}
             panelPadding={12}
             baseItemSize={48}
-            magnification={76}
-            distance={150}
+            magnification={60}
+            distance={132}
             itemGap={10}
           />
         </SidebarNav>
@@ -901,8 +901,8 @@ const AppContent: React.FC = () => {
           panelSize={68}
           panelPadding={10}
           baseItemSize={44}
-          magnification={68}
-          distance={120}
+          magnification={52}
+          distance={104}
           itemGap={8}
         />
       </BottomNav>

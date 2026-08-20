@@ -362,9 +362,9 @@ const DockItem: React.FC<DockItemProps> = ({
 
   const size = useSpring(targetSize, spring);
   const offset = useTransform(size, (value) =>
-    hoverEnabled ? Math.max(0, (value - baseItemSize) * (orientation === 'horizontal' ? 0.18 : 0.08)) : 0
+    hoverEnabled ? Math.max(0, (value - baseItemSize) * (orientation === 'horizontal' ? 0.1 : 0.04)) : 0
   );
-  const scale = useTransform(size, [baseItemSize, magnification], [1, 1.08]);
+  const scale = useTransform(size, [baseItemSize, magnification], [1, 1.04]);
   const verticalLift = useTransform(offset, (value) => -value);
   const horizontalShift = useTransform(offset, (value) => value * 0.5);
 
