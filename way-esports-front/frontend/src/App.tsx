@@ -19,6 +19,7 @@ import {
 
 import { GlobalStyles as GlobalStyle } from './styles/GlobalStyles';
 import { theme as darkTheme, lightTheme } from './styles/theme';
+import MagnificationDock from './components/Navigation/MagnificationDock';
 
 // Import components
 import TermsGuard from './components/Legal/TermsGuard';
@@ -187,10 +188,12 @@ const Logo = styled.div`
 `;
 
 const SidebarNav = styled.nav`
+  flex: 1;
   display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-  margin-top: 1.1rem;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 1.35rem 0 0.6rem;
+  overflow: hidden;
 `;
 
 const NavItemLink = styled(Link) <{ $active?: boolean; $compact?: boolean }>`
@@ -438,52 +441,23 @@ const BottomNav = styled.nav`
   bottom: 0;
   z-index: 150;
   display: flex;
-  gap: 7px;
+  align-items: flex-end;
+  justify-content: center;
   padding: 9px calc(10px + var(--sar)) calc(9px + var(--sab, 0px)) calc(10px + var(--sal));
   background: ${({ theme }) => theme.colors.glass.bar};
   border-top: 1px solid ${({ theme }) => theme.colors.border.light};
   backdrop-filter: blur(24px) saturate(130%);
   overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: none;
   box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.12);
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     display: none;
-  }
-`;
-
-const BottomNavItem = styled(Link) <{ $active?: boolean }>`
-  flex: 0 0 auto;
-  min-width: 66px;
-  min-height: 46px;
-  border-radius: 18px;
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.border.strong : 'rgba(255,255,255,0.02)')};
-  background: ${({ $active, theme }) =>
-    $active
-      ? (theme.isLight ? 'rgba(255,255,255,0.9)' : 'linear-gradient(180deg, rgba(32, 37, 45, 0.9), rgba(16, 19, 24, 0.95))')
-      : 'transparent'};
-  color: ${({ $active, theme }) => ($active ? theme.colors.text.primary : theme.colors.text.secondary)};
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  font-family: ${({ theme }) => theme.fonts.body};
-  font-size: 10px;
-  letter-spacing: -0.01em;
-  text-decoration: none;
-  box-shadow: ${({ $active, theme }) => ($active && !theme.isLight ? '0 10px 18px rgba(0, 0, 0, 0.14)' : 'none')};
-`;
-
-const BottomNavIcon = styled.span`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-
-  svg {
-    width: 18px;
-    height: 18px;
   }
 `;
 
@@ -646,7 +620,7 @@ const AppContent: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const closeMobileMenu = () => setMobileMenuOpen(false);
+  const closeMobileMenu = React.useCallback(() => setMobileMenuOpen(false), []);
   const iconProps = React.useMemo(() => ({ size: 18, strokeWidth: 2 }), []);
   const hasAdminAccess = user?.role === 'admin' || user?.role === 'developer';
   const hasScoutHubAccess = React.useMemo(() => {
@@ -730,6 +704,26 @@ const AppContent: React.FC = () => {
     return navItems.find((item) => isActive(item.to))?.label || 'WAY Esports';
   }, [location.pathname, navItems]);
 
+  const visibleNavItems = React.useMemo(
+    () => navItems.filter((item) => !item.adminOnly || hasAdminAccess),
+    [hasAdminAccess, navItems]
+  );
+
+  const dockItems = React.useMemo(
+    () =>
+      visibleNavItems.map((item) => ({
+        key: item.to,
+        icon: item.icon,
+        label: item.label,
+        active: isActive(item.to),
+        onClick: () => {
+          closeMobileMenu();
+          navigate(item.to);
+        }
+      })),
+    [closeMobileMenu, location.pathname, navigate, visibleNavItems]
+  );
+
   React.useEffect(() => {
     // Initialize API notification handler
     api.setNotifyHandler((type, title, message) => {
@@ -784,12 +778,17 @@ const AppContent: React.FC = () => {
           <Logo>WAY ESPORTS</Logo>
         </SidebarBrand>
         <SidebarNav>
-          {navItems.map((item) => (
-            <NavItemLink key={item.to} to={item.to} $active={isActive(item.to)}>
-              <NavItemIcon>{item.icon}</NavItemIcon>
-              <NavItemLabel>{item.label}</NavItemLabel>
-            </NavItemLink>
-          ))}
+          <MagnificationDock
+            items={dockItems}
+            orientation="vertical"
+            ariaLabel="Desktop navigation"
+            panelSize={76}
+            panelPadding={12}
+            baseItemSize={48}
+            magnification={76}
+            distance={150}
+            itemGap={10}
+          />
         </SidebarNav>
       </Sidebar>
 
@@ -872,7 +871,7 @@ const AppContent: React.FC = () => {
             </CloseButton>
           </MobileMenuHeader>
 
-          {navItems.filter((item) => !item.adminOnly || hasAdminAccess).map((item) => (
+          {visibleNavItems.map((item) => (
             <NavItemLink
               key={item.to}
               to={item.to}
@@ -893,12 +892,17 @@ const AppContent: React.FC = () => {
       </MobileMenuOverlay>
 
       <BottomNav>
-        {navItems.filter((item) => !item.adminOnly || hasAdminAccess).map((item) => (
-          <BottomNavItem key={item.to} to={item.to} $active={isActive(item.to)}>
-            <BottomNavIcon>{item.icon}</BottomNavIcon>
-            {item.label}
-          </BottomNavItem>
-        ))}
+        <MagnificationDock
+          items={dockItems}
+          orientation="horizontal"
+          ariaLabel="Mobile navigation"
+          panelSize={68}
+          panelPadding={10}
+          baseItemSize={44}
+          magnification={68}
+          distance={120}
+          itemGap={8}
+        />
       </BottomNav>
     </AppShell>
   );
