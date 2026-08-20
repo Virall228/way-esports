@@ -5,9 +5,9 @@
 
 /* Global Font Variables */
 :root {
-  --font-title: 'Tourney', sans-serif;
+  --font-title: 'Uncial Antiqua', sans-serif;
   --font-body: 'Archivo Black', sans-serif;
-  --font-accent: 'Tourney', sans-serif;
+  --font-accent: 'Uncial Antiqua', sans-serif;
   
   --font-weight-light: 300;
   --font-weight-regular: 400;
