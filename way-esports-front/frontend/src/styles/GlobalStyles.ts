@@ -18,8 +18,8 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   @font-face {
-    font-family: 'Viga';
-    src: url('/fonts/Viga-Regular.ttf') format('truetype');
+    font-family: 'Days One';
+    src: url('/fonts/DaysOne-Regular.ttf') format('truetype');
     font-weight: 400;
     font-style: normal;
     font-display: swap;
