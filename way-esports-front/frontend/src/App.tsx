@@ -190,7 +190,7 @@ const Logo = styled.div`
 const SidebarNav = styled.nav`
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: flex-start;
   padding: 1.35rem 0 0.6rem;
   overflow: hidden;
@@ -781,6 +781,8 @@ const AppContent: React.FC = () => {
           <MagnificationDock
             items={dockItems}
             orientation="vertical"
+            showInlineLabels
+            stretch
             ariaLabel="Desktop navigation"
             panelSize={76}
             panelPadding={12}

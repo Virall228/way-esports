@@ -26,6 +26,8 @@ export type MagnificationDockProps = {
   items: DockNavItem[];
   className?: string;
   orientation?: Orientation;
+  showInlineLabels?: boolean;
+  stretch?: boolean;
   distance?: number;
   panelSize?: number;
   baseItemSize?: number;
@@ -41,20 +43,29 @@ type DockPanelProps = {
   $panelSize: number;
   $panelPadding: number;
   $itemGap: number;
+  $showInlineLabels: boolean;
+  $stretch: boolean;
 };
 
 type DockItemButtonProps = {
   $active?: boolean;
+  $orientation: Orientation;
+  $showInlineLabels: boolean;
 };
 
 type DockLabelProps = {
   $orientation: Orientation;
 };
 
+type DockViewportProps = {
+  $stretch: boolean;
+};
+
 type DockItemProps = {
   item: DockNavItem;
   axis: MotionValue<number>;
   orientation: Orientation;
+  showInlineLabels: boolean;
   distance: number;
   spring: SpringOptions;
   baseItemSize: number;
@@ -62,18 +73,19 @@ type DockItemProps = {
   hoverEnabled: boolean;
 };
 
-const DockViewport = styled.div`
+const DockViewport = styled.div<DockViewportProps>`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: max-content;
-  max-width: none;
+  width: ${({ $stretch }) => ($stretch ? '100%' : 'max-content')};
+  max-width: ${({ $stretch }) => ($stretch ? '100%' : 'none')};
   overflow: visible;
 `;
 
 const DockPanel = styled(motion.div)<DockPanelProps>`
   display: inline-flex;
-  align-items: center;
+  align-items: ${({ $showInlineLabels, $orientation }) =>
+    $showInlineLabels && $orientation === 'vertical' ? 'stretch' : 'center'};
   justify-content: center;
   gap: ${({ $itemGap }) => `${$itemGap}px`};
   padding: ${({ $panelPadding }) => `${$panelPadding}px`};
@@ -90,8 +102,10 @@ const DockPanel = styled(motion.div)<DockPanelProps>`
   backdrop-filter: blur(24px) saturate(135%);
   overflow: visible;
   touch-action: pan-x pan-y;
+  width: ${({ $stretch }) => ($stretch ? '100%' : 'auto')};
+  max-width: 100%;
 
-  ${({ $orientation, $panelSize }) =>
+  ${({ $orientation, $panelSize, $showInlineLabels }) =>
     $orientation === 'horizontal'
       ? css`
           min-height: ${$panelSize}px;
@@ -100,19 +114,107 @@ const DockPanel = styled(motion.div)<DockPanelProps>`
       : css`
           min-width: ${$panelSize}px;
           flex-direction: column;
+          ${$showInlineLabels ? 'width: 100%;' : ''}
         `}
 `;
 
-const DockItemButton = styled(motion.button)<DockItemButtonProps>`
+const DockItemButton = styled.button<DockItemButtonProps>`
   position: relative;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: ${({ $showInlineLabels, $orientation }) =>
+    $showInlineLabels && $orientation === 'vertical' ? 'flex-start' : 'center'};
+  gap: ${({ $showInlineLabels, $orientation }) =>
+    $showInlineLabels && $orientation === 'vertical' ? '14px' : '0'};
   border: 0;
-  border-radius: 999px;
-  padding: 0;
+  border-radius: ${({ $showInlineLabels, $orientation }) =>
+    $showInlineLabels && $orientation === 'vertical' ? '20px' : '999px'};
+  padding: ${({ $showInlineLabels, $orientation }) =>
+    $showInlineLabels && $orientation === 'vertical' ? '0.72rem 0.82rem' : '0'};
   cursor: pointer;
   color: ${({ theme, $active }) => ($active ? theme.colors.text.primary : theme.colors.text.secondary)};
+  background: ${({ theme, $active, $showInlineLabels, $orientation }) =>
+    $showInlineLabels && $orientation === 'vertical'
+      ? $active
+        ? theme.isLight
+          ? 'linear-gradient(180deg, rgba(255,255,255,0.92), rgba(246,241,233,0.86))'
+          : 'linear-gradient(180deg, rgba(33, 38, 47, 0.86), rgba(18, 22, 29, 0.92))'
+        : 'transparent'
+      : 'transparent'};
+  box-shadow: ${({ theme, $active, $showInlineLabels, $orientation }) =>
+    $showInlineLabels && $orientation === 'vertical'
+      ? $active
+        ? theme.isLight
+          ? '0 14px 28px rgba(118, 85, 46, 0.12)'
+          : '0 16px 30px rgba(0, 0, 0, 0.18)'
+        : 'none'
+      : 'none'};
+  outline: none;
+  width: ${({ $showInlineLabels, $orientation }) =>
+    $showInlineLabels && $orientation === 'vertical' ? '100%' : 'auto'};
+  min-width: 0;
+  transition:
+    background ${({ theme }) => theme.transitions.fast},
+    color ${({ theme }) => theme.transitions.fast},
+    box-shadow ${({ theme }) => theme.transitions.fast},
+    transform ${({ theme }) => theme.transitions.fast};
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: ${({ $showInlineLabels, $orientation }) =>
+      $showInlineLabels && $orientation === 'vertical' ? '0' : '1px'};
+    border-radius: inherit;
+    border: 1px solid
+      ${({ theme, $active, $showInlineLabels, $orientation }) =>
+        $showInlineLabels && $orientation === 'vertical'
+          ? $active
+            ? theme.isLight
+              ? 'rgba(201, 106, 22, 0.22)'
+              : 'rgba(245, 154, 74, 0.2)'
+            : 'transparent'
+          : 'transparent'};
+    pointer-events: none;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: ${({ theme, $active, $showInlineLabels, $orientation }) =>
+        $showInlineLabels && $orientation === 'vertical'
+          ? $active
+            ? theme.isLight
+              ? 'linear-gradient(180deg, rgba(255,255,255,0.96), rgba(246,241,233,0.9))'
+              : 'linear-gradient(180deg, rgba(37, 42, 51, 0.92), rgba(20, 24, 31, 0.96))'
+            : theme.isLight
+              ? 'rgba(255,255,255,0.54)'
+              : 'rgba(255,255,255,0.04)'
+          : 'transparent'};
+      transform: ${({ $showInlineLabels, $orientation }) =>
+        $showInlineLabels && $orientation === 'vertical' ? 'translateX(2px)' : 'none'};
+    }
+  }
+
+  &:focus-visible {
+    box-shadow:
+      0 0 0 3px ${({ theme }) => theme.colors.ring},
+      ${({ theme, $active, $showInlineLabels, $orientation }) =>
+        $showInlineLabels && $orientation === 'vertical'
+          ? $active
+            ? theme.isLight
+              ? '0 14px 28px rgba(118, 85, 46, 0.12)'
+              : '0 16px 30px rgba(0, 0, 0, 0.18)'
+            : 'none'
+          : 'none'};
+  }
+`;
+
+const DockOrb = styled(motion.div)<DockItemButtonProps>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: ${({ theme, $active }) =>
+    $active ? (theme.isLight ? theme.colors.accent : theme.colors.highlight) : theme.colors.text.secondary};
   background: ${({ theme, $active }) =>
     $active
       ? theme.isLight
@@ -129,7 +231,9 @@ const DockItemButton = styled(motion.button)<DockItemButtonProps>`
       : theme.isLight
         ? '0 10px 24px rgba(118, 85, 46, 0.08), inset 0 1px 0 rgba(255,255,255,0.68)'
         : '0 10px 20px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255,255,255,0.04)'};
-  outline: none;
+  border-radius: 999px;
+  transition: color ${({ theme }) => theme.transitions.fast};
+  position: relative;
 
   &::before {
     content: '';
@@ -148,28 +252,6 @@ const DockItemButton = styled(motion.button)<DockItemButtonProps>`
     pointer-events: none;
   }
 
-  &:focus-visible {
-    box-shadow:
-      0 0 0 3px ${({ theme }) => theme.colors.ring},
-      ${({ theme, $active }) =>
-        $active
-          ? theme.isLight
-            ? '0 14px 28px rgba(118, 85, 46, 0.14)'
-            : '0 16px 28px rgba(0, 0, 0, 0.26)'
-          : theme.isLight
-            ? '0 10px 24px rgba(118, 85, 46, 0.08)'
-            : '0 10px 20px rgba(0, 0, 0, 0.22)'};
-  }
-`;
-
-const DockIcon = styled.div<{ $active?: boolean }>`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: ${({ theme, $active }) =>
-    $active ? (theme.isLight ? theme.colors.accent : theme.colors.highlight) : theme.colors.text.secondary};
-  transition: color ${({ theme }) => theme.transitions.fast};
-
   svg {
     width: 20px;
     height: 20px;
@@ -181,6 +263,17 @@ const DockIconMotion = styled(motion.div)<{ $active?: boolean }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
+`;
+
+const InlineLabel = styled.span<{ $active?: boolean }>`
+  min-width: 0;
+  color: ${({ theme, $active }) => ($active ? theme.colors.text.primary : theme.colors.text.secondary)};
+  font-family: ${({ theme }) => theme.fonts.body};
+  font-size: 0.94rem;
+  font-weight: ${({ theme }) => theme.fontWeights.semibold};
+  letter-spacing: -0.01em;
+  line-height: 1.05;
+  transition: color ${({ theme }) => theme.transitions.fast};
 `;
 
 const DockLabel = styled(motion.div)<DockLabelProps>`
@@ -237,13 +330,14 @@ const DockItem: React.FC<DockItemProps> = ({
   item,
   axis,
   orientation,
+  showInlineLabels,
   distance,
   spring,
   baseItemSize,
   magnification,
   hoverEnabled
 }) => {
-  const ref = React.useRef<HTMLButtonElement>(null);
+  const ref = React.useRef<HTMLDivElement>(null);
   const [showLabel, setShowLabel] = React.useState(false);
 
   const pointerDistance = useTransform(axis, (pointer) => {
@@ -276,7 +370,6 @@ const DockItem: React.FC<DockItemProps> = ({
 
   return (
     <DockItemButton
-      ref={ref}
       type="button"
       onClick={item.onClick}
       onMouseEnter={() => hoverEnabled && setShowLabel(true)}
@@ -284,28 +377,32 @@ const DockItem: React.FC<DockItemProps> = ({
       onFocus={() => setShowLabel(true)}
       onBlur={() => setShowLabel(false)}
       $active={item.active}
+      $orientation={orientation}
+      $showInlineLabels={showInlineLabels}
       aria-label={item.ariaLabel ?? String(item.label)}
       className={item.className}
-      style={{
-        width: size,
-        height: size,
-        y: orientation === 'horizontal' ? verticalLift : 0,
-        x: orientation === 'vertical' ? horizontalShift : 0
-      }}
-      whileTap={{ scale: 0.94 }}
     >
-      <DockIcon
+      <DockOrb
+        ref={ref}
         $active={item.active}
+        $orientation={orientation}
+        $showInlineLabels={showInlineLabels}
         as={DockIconMotion}
         style={{
+          width: size,
+          height: size,
+          y: orientation === 'horizontal' ? verticalLift : 0,
+          x: orientation === 'vertical' ? horizontalShift : 0,
           scale
         }}
       >
         {item.icon}
-      </DockIcon>
+      </DockOrb>
+
+      {showInlineLabels && orientation === 'vertical' && <InlineLabel $active={item.active}>{item.label}</InlineLabel>}
 
       <AnimatePresence>
-        {showLabel && (
+        {showLabel && !(showInlineLabels && orientation === 'vertical') && (
           <DockLabel
             $orientation={orientation}
             initial={{ opacity: 0, y: orientation === 'horizontal' ? 6 : 0, x: orientation === 'vertical' ? -6 : 0 }}
@@ -326,6 +423,8 @@ export const MagnificationDock: React.FC<MagnificationDockProps> = ({
   items,
   className,
   orientation = 'horizontal',
+  showInlineLabels = false,
+  stretch = false,
   distance = 180,
   panelSize = 68,
   baseItemSize = 50,
@@ -351,12 +450,14 @@ export const MagnificationDock: React.FC<MagnificationDockProps> = ({
   }, [axis]);
 
   return (
-    <DockViewport className={className}>
+    <DockViewport className={className} $stretch={stretch}>
       <DockPanel
         $orientation={orientation}
         $panelSize={panelSize}
         $panelPadding={panelPadding}
         $itemGap={itemGap}
+        $showInlineLabels={showInlineLabels}
+        $stretch={stretch}
         onPointerMove={handlePointerMove}
         onPointerLeave={resetAxis}
         onBlur={resetAxis}
@@ -369,6 +470,7 @@ export const MagnificationDock: React.FC<MagnificationDockProps> = ({
             item={item}
             axis={axis}
             orientation={orientation}
+            showInlineLabels={showInlineLabels}
             distance={distance}
             spring={spring}
             baseItemSize={baseItemSize}
