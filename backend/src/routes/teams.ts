@@ -768,6 +768,13 @@ router.post('/:id/join-requests/:userId/reject', authenticateJWT, async (req: an
 // Get team by ID
 router.get('/:id', async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({
+        success: false,
+        error: 'Team not found'
+      });
+    }
+
     const team: any = await Team.findById(req.params.id)
       .populate('captain', 'username firstName lastName profileLogo telegramId')
       .populate('members', 'username firstName lastName profileLogo telegramId')
@@ -801,7 +808,7 @@ router.get('/:id', async (req, res) => {
         profileLogo: team.captain.profileLogo || '',
         telegramId: team.captain.telegramId || ''
       } : null,
-      members: (team.members || []).map((member: any) => ({
+      members: (Array.isArray(team.members) ? team.members : []).filter(Boolean).map((member: any) => ({
         id: member._id?.toString() || member.toString(),
         username: member.username || '',
         firstName: member.firstName || '',

@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api, type ApiRequestOptions } from './api';
 
 export type TournamentHistoryItem = {
   tournamentId: string;
@@ -113,8 +113,8 @@ const buildHistoryQuery = (params?: HistoryQueryParams) => {
   return query ? `?${query}` : '';
 };
 
-const fetchHistory = async (path: string, params?: HistoryQueryParams) => {
-  const response: any = await api.get(`${path}${buildHistoryQuery(params)}`);
+const fetchHistory = async (path: string, params?: HistoryQueryParams, options?: boolean | ApiRequestOptions) => {
+  const response: any = await api.get(`${path}${buildHistoryQuery(params)}`, options);
   return response?.data || response || {};
 };
 
@@ -123,9 +123,10 @@ export const historyService = {
     userId: string,
     page = 1,
     limit = 20,
-    params?: { game?: string; status?: string; from?: string; to?: string; sort?: 'recent' | 'oldest' }
+    params?: { game?: string; status?: string; from?: string; to?: string; sort?: 'recent' | 'oldest' },
+    options?: boolean | ApiRequestOptions
   ) {
-    const payload = await fetchHistory(`/api/history/player/${userId}`, { ...params, page, limit });
+    const payload = await fetchHistory(`/api/history/player/${userId}`, { ...params, page, limit }, options);
     return normalize(payload);
   },
 
@@ -133,17 +134,19 @@ export const historyService = {
     teamId: string,
     page = 1,
     limit = 20,
-    params?: { game?: string; status?: string; from?: string; to?: string; sort?: 'recent' | 'oldest' }
+    params?: { game?: string; status?: string; from?: string; to?: string; sort?: 'recent' | 'oldest' },
+    options?: boolean | ApiRequestOptions
   ) {
-    const payload = await fetchHistory(`/api/history/team/${teamId}`, { ...params, page, limit });
+    const payload = await fetchHistory(`/api/history/team/${teamId}`, { ...params, page, limit }, options);
     return normalize(payload);
   },
 
   async getPlayerMatches(
     userId: string,
-    params?: { page?: number; limit?: number; game?: string; from?: string; to?: string; sort?: 'recent' | 'oldest' }
+    params?: { page?: number; limit?: number; game?: string; from?: string; to?: string; sort?: 'recent' | 'oldest' },
+    options?: boolean | ApiRequestOptions
   ): Promise<DetailedMatchHistoryResponse> {
-    const data = await fetchHistory(`/api/history/player/${userId}/matches`, params);
+    const data = await fetchHistory(`/api/history/player/${userId}/matches`, params, options);
     return {
       items: Array.isArray(data?.items) ? data.items : [],
       pagination: toPagination(data)
@@ -152,9 +155,10 @@ export const historyService = {
 
   async getTeamMatches(
     teamId: string,
-    params?: { page?: number; limit?: number; game?: string; from?: string; to?: string; sort?: 'recent' | 'oldest' }
+    params?: { page?: number; limit?: number; game?: string; from?: string; to?: string; sort?: 'recent' | 'oldest' },
+    options?: boolean | ApiRequestOptions
   ): Promise<DetailedMatchHistoryResponse> {
-    const data = await fetchHistory(`/api/history/team/${teamId}/matches`, params);
+    const data = await fetchHistory(`/api/history/team/${teamId}/matches`, params, options);
     return {
       items: Array.isArray(data?.items) ? data.items : [],
       pagination: toPagination(data)

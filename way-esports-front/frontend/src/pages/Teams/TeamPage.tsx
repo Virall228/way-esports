@@ -394,9 +394,9 @@ const TeamPage: React.FC = () => {
   const [isExportingHistory, setIsExportingHistory] = useState(false);
   const { data: team, isLoading, error, refetch } = useQuery({
     queryKey: ['team', id],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!id) return null;
-      const res: any = await teamsService.getById(id);
+      const res: any = await teamsService.getById(id, { signal });
       if (res?.success === false) {
         throw new Error(res?.error || 'Team not found');
       }
@@ -425,9 +425,9 @@ const TeamPage: React.FC = () => {
 
   const { data: joinRequests = [], isLoading: isJoinRequestsLoading } = useQuery({
     queryKey: ['team', id, 'join-requests'],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!id) return [];
-      const response: any = await teamsService.getJoinRequests(id);
+      const response: any = await teamsService.getJoinRequests(id, { signal });
       return response?.data || response || [];
     },
     enabled: Boolean(id && canManageLogo),
@@ -437,13 +437,13 @@ const TeamPage: React.FC = () => {
 
   const { data: teamHistory, isLoading: isTeamHistoryLoading } = useQuery({
     queryKey: ['history', 'team', id, 'base', historyBasePage, historyBaseStatusFilter, historyBaseSort, historyBaseGameFilter],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!id) return null;
       return historyService.getTeamHistory(id, historyBasePage, 6, {
         status: historyBaseStatusFilter === 'all' ? '' : historyBaseStatusFilter,
         sort: historyBaseSort,
         game: historyBaseGameFilter === 'all' ? '' : historyBaseGameFilter
-      });
+      }, { signal });
     },
     enabled: Boolean(id),
     staleTime: 30000,
@@ -461,7 +461,7 @@ const TeamPage: React.FC = () => {
 
   const { data: teamDetailedHistory, isLoading: isTeamDetailedHistoryLoading, refetch: refetchTeamDetailedHistory } = useQuery({
     queryKey: ['history', 'team', id, 'matches', historyGameFilter, historyFromFilter, historyToFilter, historySort, historyPage],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!id) return null;
       return historyService.getTeamMatches(id, {
         page: historyPage,
@@ -470,7 +470,7 @@ const TeamPage: React.FC = () => {
         from: historyFromFilter || '',
         to: historyToFilter || '',
         sort: historySort
-      });
+      }, { signal });
     },
     enabled: Boolean(id && hasActiveSubscription && canManageLogo),
     staleTime: 20000,
@@ -539,20 +539,24 @@ const TeamPage: React.FC = () => {
     logoInputRef.current?.click();
   };
 
-  const loadInviteLink = async () => {
+  const loadInviteLink = async (signal?: AbortSignal) => {
     if (!id) return;
     try {
-      const res: any = await api.get(`/api/intelligence/telegram/deep-link/team/${id}`);
+      const res: any = await api.get(`/api/intelligence/telegram/deep-link/team/${id}`, { signal });
       const payload = res?.data || res;
       setInviteLink(String(payload?.deepLink || ''));
     } catch {
-      setInviteLink('');
+      if (!signal?.aborted) {
+        setInviteLink('');
+      }
     }
   };
 
   useEffect(() => {
     if (!id) return;
-    loadInviteLink().catch(() => {});
+    const controller = new AbortController();
+    loadInviteLink(controller.signal).catch(() => {});
+    return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -698,7 +702,7 @@ const TeamPage: React.FC = () => {
               )}
 
               <ShareRow>
-                <Button variant="outline" size="small" onClick={loadInviteLink}>
+                <Button variant="outline" size="small" onClick={() => { void loadInviteLink(); }}>
                   Generate Telegram Invite
                 </Button>
                 {!!inviteLink && (

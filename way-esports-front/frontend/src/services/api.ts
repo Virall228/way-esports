@@ -1,6 +1,10 @@
 import { API_CONFIG, getFullUrl } from '../config/api';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+export type ApiRequestOptions = {
+  includeTelegramData?: boolean;
+  signal?: AbortSignal;
+};
 
 export class ApiError extends Error {
   status: number;
@@ -41,7 +45,21 @@ const notifyNetworkError = (title: string, message: string) => {
   notifyHandler('error', title, message);
 };
 
-const requestJson = async <T = any>(endpoint: string, method: HttpMethod, data?: any, includeTelegramData = false): Promise<T> => {
+const normalizeRequestOptions = (options?: boolean | ApiRequestOptions): ApiRequestOptions => {
+  if (typeof options === 'boolean') {
+    return { includeTelegramData: options };
+  }
+
+  return options || {};
+};
+
+const requestJson = async <T = any>(
+  endpoint: string,
+  method: HttpMethod,
+  data?: any,
+  options?: boolean | ApiRequestOptions
+): Promise<T> => {
+  const { includeTelegramData = false, signal: externalSignal } = normalizeRequestOptions(options);
   const token = getToken();
   const headers: Record<string, string> = { ...API_CONFIG.DEFAULT_HEADERS };
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -62,8 +80,29 @@ const requestJson = async <T = any>(endpoint: string, method: HttpMethod, data?:
   }
 
   const controller = new AbortController();
+  let didTimeout = false;
+  const abortRequest = () => {
+    if (!controller.signal.aborted) {
+      controller.abort();
+    }
+  };
+  const handleExternalAbort = () => {
+    abortRequest();
+  };
+
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      abortRequest();
+    } else {
+      externalSignal.addEventListener('abort', handleExternalAbort, { once: true });
+    }
+  }
+
   const timeoutMs = Math.max(1000, Number(API_CONFIG.TIMEOUT || 10000));
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const timeoutId = setTimeout(() => {
+    didTimeout = true;
+    abortRequest();
+  }, timeoutMs);
 
   try {
     const response = await fetch(buildUrl(endpoint), {
@@ -118,6 +157,10 @@ const requestJson = async <T = any>(endpoint: string, method: HttpMethod, data?:
     return payload as T;
   } catch (error: any) {
     if (error?.name === 'AbortError') {
+      if (externalSignal?.aborted && !didTimeout) {
+        throw error;
+      }
+
       const timeoutError = new ApiError(504, `Request timeout (${timeoutMs} ms)`);
       notifyNetworkError('Network Error', timeoutError.message);
       throw timeoutError;
@@ -129,18 +172,19 @@ const requestJson = async <T = any>(endpoint: string, method: HttpMethod, data?:
     throw error;
   } finally {
     clearTimeout(timeoutId);
+    externalSignal?.removeEventListener('abort', handleExternalAbort);
   }
 };
 
 export const api = {
-  get: async (endpoint: string, includeTelegramData = false) => requestJson(endpoint, 'GET', undefined, includeTelegramData),
-  post: async (endpoint: string, data: any, includeTelegramData = false) => requestJson(endpoint, 'POST', data, includeTelegramData),
-  put: async (endpoint: string, data: any, includeTelegramData = false) => requestJson(endpoint, 'PUT', data, includeTelegramData),
-  patch: async (endpoint: string, data: any, includeTelegramData = false) => requestJson(endpoint, 'PATCH', data, includeTelegramData),
-  delete: async (endpoint: string, includeTelegramData = false) => requestJson(endpoint, 'DELETE', undefined, includeTelegramData),
-  request: async (endpoint: string, data?: any, method?: string, includeTelegramData = false) => {
+  get: async (endpoint: string, options?: boolean | ApiRequestOptions) => requestJson(endpoint, 'GET', undefined, options),
+  post: async (endpoint: string, data: any, options?: boolean | ApiRequestOptions) => requestJson(endpoint, 'POST', data, options),
+  put: async (endpoint: string, data: any, options?: boolean | ApiRequestOptions) => requestJson(endpoint, 'PUT', data, options),
+  patch: async (endpoint: string, data: any, options?: boolean | ApiRequestOptions) => requestJson(endpoint, 'PATCH', data, options),
+  delete: async (endpoint: string, options?: boolean | ApiRequestOptions) => requestJson(endpoint, 'DELETE', undefined, options),
+  request: async (endpoint: string, data?: any, method?: string, options?: boolean | ApiRequestOptions) => {
     const httpMethod = (method || (data ? 'POST' : 'GET')).toUpperCase() as HttpMethod;
-    return requestJson(endpoint, httpMethod, data, includeTelegramData);
+    return requestJson(endpoint, httpMethod, data, options);
   },
 
   uploadImage: async (file: File): Promise<{ success: boolean, url: string }> => {

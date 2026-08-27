@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api, type ApiRequestOptions } from './api';
 
 export interface CreateTeamPayload {
   name: string;
@@ -30,14 +30,14 @@ export interface TeamJoinRequest {
 }
 
 export const teamsService = {
-  list: async () => api.get('/api/teams'),
-  getById: async (id: string) => api.get(`/api/teams/${id}`),
+  list: async (options?: boolean | ApiRequestOptions) => api.get('/api/teams', options),
+  getById: async (id: string, options?: boolean | ApiRequestOptions) => api.get(`/api/teams/${id}`, options),
   create: async (payload: CreateTeamPayload) => api.post('/api/teams/create', payload),
   join: async (payload: JoinTeamPayload) => api.post('/api/teams/join', payload),
   update: async (id: string, payload: Partial<CreateTeamPayload>) => api.put(`/api/teams/${id}`, payload),
   updateLogo: async (id: string, logoUrl: string) => api.post(`/api/teams/${id}/logo`, { logoUrl }),
   remove: async (id: string) => api.delete(`/api/teams/${id}`),
-  getJoinRequests: async (teamId: string) => api.get(`/api/teams/${teamId}/join-requests`),
+  getJoinRequests: async (teamId: string, options?: boolean | ApiRequestOptions) => api.get(`/api/teams/${teamId}/join-requests`, options),
   approveJoinRequest: async (teamId: string, userId: string) => api.post(`/api/teams/${teamId}/join-requests/${userId}/approve`, {}),
   rejectJoinRequest: async (teamId: string, userId: string) => api.post(`/api/teams/${teamId}/join-requests/${userId}/reject`, {})
 };
