@@ -83,7 +83,7 @@ const DockViewport = styled.div<DockViewportProps>`
   ${({ $orientation }) =>
     $orientation === 'vertical'
       ? css`
-          align-items: stretch;
+          align-items: flex-start;
           justify-content: flex-start;
         `
       : css`
@@ -96,7 +96,7 @@ const DockPanel = styled(motion.div)<DockPanelProps>`
   display: inline-flex;
   align-items: ${({ $showInlineLabels, $orientation }) =>
     $showInlineLabels && $orientation === 'vertical' ? 'stretch' : 'center'};
-  justify-content: center;
+  justify-content: ${({ $orientation }) => ($orientation === 'vertical' ? 'flex-start' : 'center')};
   gap: ${({ $itemGap }) => `${$itemGap}px`};
   padding: ${({ $panelPadding }) => `${$panelPadding}px`};
   border-radius: 32px;
@@ -124,6 +124,7 @@ const DockPanel = styled(motion.div)<DockPanelProps>`
       : css`
           min-width: ${$panelSize}px;
           flex-direction: column;
+          align-self: flex-start;
           ${$showInlineLabels ? 'width: 100%;' : ''}
         `}
 `;
