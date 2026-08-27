@@ -263,18 +263,31 @@ const ContentCard = styled(Card).attrs({ variant: 'outlined' })`
   }
 `;
 
-const Cover = styled.div<{ $image?: string }>`
+const CoverFrame = styled.div`
   height: 148px;
+  position: relative;
+  overflow: hidden;
   border-radius: 14px;
-  background:
-    ${({ $image, theme }) =>
-      $image
-        ? `linear-gradient(180deg, rgba(0,0,0,${theme.isLight ? '0.02' : '0.08'}), rgba(0,0,0,${theme.isLight ? '0.28' : '0.46'})), url(${$image}) center/cover`
-        : theme.isLight
-          ? 'linear-gradient(135deg, rgba(255, 174, 92, 0.3), rgba(255,255,255,0.72))'
-          : 'linear-gradient(135deg, rgba(255,107,0,0.26), rgba(255,255,255,0.02))'};
   border: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+`;
+
+const CoverFallback = styled.div`
+  position: absolute;
+  inset: 0;
+  background: ${({ theme }) =>
+    theme.isLight
+      ? 'linear-gradient(135deg, rgba(255, 174, 92, 0.18), rgba(255,255,255,0.78))'
+      : 'linear-gradient(135deg, rgba(255,107,0,0.18), rgba(255,255,255,0.03))'};
+`;
+
+const CoverImage = styled.img`
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 `;
 
 const CardTitle = styled.h3`
@@ -337,6 +350,23 @@ const TeamLogo = styled.img`
   background: ${({ theme }) => (theme.isLight ? 'rgba(245, 234, 220, 0.9)' : 'rgba(255, 255, 255, 0.08)')};
 `;
 
+const TeamLogoFallback = styled.div`
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: ${({ theme }) =>
+    theme.isLight
+      ? 'linear-gradient(135deg, rgba(255, 197, 133, 0.42), rgba(255,255,255,0.92))'
+      : 'linear-gradient(135deg, rgba(255,107,0,0.24), rgba(255,255,255,0.05))'};
+  border: 1px solid ${({ theme }) => theme.colors.glass.panelBorder};
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-size: 0.9rem;
+  font-weight: 800;
+`;
+
 const Cta = styled(Card).attrs({ variant: 'elevated' })`
   padding: 1.5rem;
   border-radius: 22px;
@@ -357,6 +387,51 @@ const gameCards = getDiscoveryGames().slice(0, 4).map((item) => ({
   title: `${item.label} Hub`,
   description: item.description
 }));
+
+const LandingCover: React.FC<{ src?: string; alt: string }> = ({ src, alt }) => {
+  const [hasError, setHasError] = React.useState(false);
+
+  React.useEffect(() => {
+    setHasError(false);
+  }, [src]);
+
+  return (
+    <CoverFrame aria-label={alt}>
+      <CoverFallback />
+      {src && !hasError ? (
+        <CoverImage
+          src={src}
+          alt={alt}
+          loading="lazy"
+          onError={() => setHasError(true)}
+        />
+      ) : null}
+    </CoverFrame>
+  );
+};
+
+const LandingTeamLogo: React.FC<{ src?: string; name?: string }> = ({ src, name }) => {
+  const [hasError, setHasError] = React.useState(false);
+
+  React.useEffect(() => {
+    setHasError(false);
+  }, [src]);
+
+  const fallbackText = (name || '?').trim().slice(0, 1).toUpperCase() || '?';
+
+  if (!src || hasError) {
+    return <TeamLogoFallback aria-hidden="true">{fallbackText}</TeamLogoFallback>;
+  }
+
+  return (
+    <TeamLogo
+      src={src}
+      alt={name || 'Team'}
+      loading="lazy"
+      onError={() => setHasError(true)}
+    />
+  );
+};
 
 const PublicLandingPage: React.FC = () => {
   const theme = useTheme();
@@ -503,7 +578,10 @@ const PublicLandingPage: React.FC = () => {
         <Grid>
           {(tournaments as any[]).slice(0, 4).map((item: any) => (
             <ContentCard key={item.id || item._id}>
-              <Cover $image={resolveMediaUrl(item.coverImage || item.image || '')} />
+              <LandingCover
+                src={resolveMediaUrl(item.coverImage || item.image || '')}
+                alt={item.title || item.name || 'Tournament'}
+              />
               <CardTitle>{item.title || item.name}</CardTitle>
               <CardMeta>
                 {item.game || 'Esports'} | {item.status || 'upcoming'} | ${Number(item.prizePool || 0).toLocaleString()}
@@ -525,7 +603,10 @@ const PublicLandingPage: React.FC = () => {
         <Grid>
           {(news as any[]).slice(0, 4).map((item: any) => (
             <ContentCard key={item._id || item.id}>
-              <Cover $image={resolveMediaUrl(item.coverImage || '')} />
+              <LandingCover
+                src={resolveMediaUrl(item.coverImage || item.image || '')}
+                alt={item.title || 'News article'}
+              />
               <CardTitle>{item.title}</CardTitle>
               <CardMeta>{String(item.summary || item.content || '').slice(0, 150)}</CardMeta>
               <InlineLink to={`/news/${item._id || item.id}`}>Read article</InlineLink>
@@ -546,7 +627,7 @@ const PublicLandingPage: React.FC = () => {
           {(teams as any[]).slice(0, 4).map((item: any) => (
             <ContentCard key={item.id || item._id}>
               <TeamRow>
-                <TeamLogo src={resolveTeamLogoUrl(item.logo || '') || '/images/main.png'} alt={item.name} />
+                <LandingTeamLogo src={resolveTeamLogoUrl(item.logo || '')} name={item.name} />
                 <div>
                   <CardTitle>{item.name}{item.tag ? ` (${item.tag})` : ''}</CardTitle>
                   <CardMeta>{item.game || 'Esports'} | {Math.round(Number(item.stats?.winRate || 0))}% win rate</CardMeta>
