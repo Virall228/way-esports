@@ -158,8 +158,7 @@ const Sidebar = styled.aside`
   position: sticky;
   top: 0;
   height: var(--app-height, 100vh);
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: hidden;
   padding-bottom: calc(1.5rem + var(--sab, 0px));
 
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {

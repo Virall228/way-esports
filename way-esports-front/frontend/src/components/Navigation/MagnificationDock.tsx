@@ -59,6 +59,7 @@ type DockLabelProps = {
 
 type DockViewportProps = {
   $stretch: boolean;
+  $orientation: Orientation;
 };
 
 type DockItemProps = {
@@ -75,11 +76,20 @@ type DockItemProps = {
 
 const DockViewport = styled.div<DockViewportProps>`
   display: flex;
-  align-items: center;
-  justify-content: center;
   width: ${({ $stretch }) => ($stretch ? '100%' : 'max-content')};
   max-width: ${({ $stretch }) => ($stretch ? '100%' : 'none')};
   overflow: visible;
+
+  ${({ $orientation }) =>
+    $orientation === 'vertical'
+      ? css`
+          align-items: stretch;
+          justify-content: flex-start;
+        `
+      : css`
+          align-items: center;
+          justify-content: center;
+        `}
 `;
 
 const DockPanel = styled(motion.div)<DockPanelProps>`
@@ -450,7 +460,7 @@ export const MagnificationDock: React.FC<MagnificationDockProps> = ({
   }, [axis]);
 
   return (
-    <DockViewport className={className} $stretch={stretch}>
+    <DockViewport className={className} $stretch={stretch} $orientation={orientation}>
       <DockPanel
         $orientation={orientation}
         $panelSize={panelSize}
