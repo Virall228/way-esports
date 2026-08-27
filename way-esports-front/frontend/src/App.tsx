@@ -187,7 +187,7 @@ const Logo = styled.div`
   text-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
 `;
 
-const SidebarNav = styled.nav`
+const SidebarNav = styled.nav<{ $dragging?: boolean }>`
   flex: 1;
   display: flex;
   align-items: stretch;
@@ -198,10 +198,13 @@ const SidebarNav = styled.nav`
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  scrollbar-gutter: stable;
+  scrollbar-width: none;
+  cursor: ${({ $dragging }) => ($dragging ? 'grabbing' : 'grab')};
+  user-select: none;
+  touch-action: pan-y;
 
   &::-webkit-scrollbar {
-    width: 8px;
+    display: none;
   }
 `;
 
@@ -623,11 +626,21 @@ const MobileMenuActionButton = styled.button`
 
 const AppContent: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const [isSidebarNavDragging, setIsSidebarNavDragging] = React.useState(false);
   const { addNotification } = useNotifications();
   const { user, isAuthenticated, logout } = useAuth();
   const { t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
+  const sidebarNavRef = React.useRef<HTMLElement | null>(null);
+  const suppressSidebarNavClickRef = React.useRef(false);
+  const sidebarNavDragRef = React.useRef({
+    active: false,
+    pointerId: -1,
+    startY: 0,
+    startScrollTop: 0,
+    hasDragged: false
+  });
 
   const closeMobileMenu = React.useCallback(() => setMobileMenuOpen(false), []);
   const iconProps = React.useMemo(() => ({ size: 18, strokeWidth: 2 }), []);
@@ -733,6 +746,87 @@ const AppContent: React.FC = () => {
     [closeMobileMenu, location.pathname, navigate, visibleNavItems]
   );
 
+  const finishSidebarNavDrag = React.useCallback((pointerId?: number) => {
+    const container = sidebarNavRef.current;
+    const drag = sidebarNavDragRef.current;
+
+    if (container && drag.active && pointerId === drag.pointerId) {
+      try {
+        container.releasePointerCapture?.(pointerId);
+      } catch {
+        // ignore capture cleanup issues
+      }
+    }
+
+    if (drag.hasDragged) {
+      suppressSidebarNavClickRef.current = true;
+      window.setTimeout(() => {
+        suppressSidebarNavClickRef.current = false;
+      }, 0);
+    }
+
+    sidebarNavDragRef.current = {
+      active: false,
+      pointerId: -1,
+      startY: 0,
+      startScrollTop: 0,
+      hasDragged: false
+    };
+    setIsSidebarNavDragging(false);
+  }, []);
+
+  const handleSidebarNavPointerDown = React.useCallback((event: React.PointerEvent<HTMLElement>) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+    const container = sidebarNavRef.current;
+    if (!container || container.scrollHeight <= container.clientHeight) return;
+
+    suppressSidebarNavClickRef.current = false;
+    sidebarNavDragRef.current = {
+      active: true,
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      startScrollTop: container.scrollTop,
+      hasDragged: false
+    };
+    setIsSidebarNavDragging(true);
+    container.setPointerCapture?.(event.pointerId);
+  }, []);
+
+  const handleSidebarNavPointerMove = React.useCallback((event: React.PointerEvent<HTMLElement>) => {
+    const container = sidebarNavRef.current;
+    const drag = sidebarNavDragRef.current;
+
+    if (!container || !drag.active || drag.pointerId !== event.pointerId) return;
+
+    const deltaY = event.clientY - drag.startY;
+
+    if (!drag.hasDragged && Math.abs(deltaY) > 6) {
+      drag.hasDragged = true;
+    }
+
+    if (!drag.hasDragged) return;
+
+    container.scrollTop = drag.startScrollTop - deltaY;
+    event.preventDefault();
+  }, []);
+
+  const handleSidebarNavPointerUp = React.useCallback((event: React.PointerEvent<HTMLElement>) => {
+    finishSidebarNavDrag(event.pointerId);
+  }, [finishSidebarNavDrag]);
+
+  const handleSidebarNavPointerCancel = React.useCallback((event: React.PointerEvent<HTMLElement>) => {
+    finishSidebarNavDrag(event.pointerId);
+  }, [finishSidebarNavDrag]);
+
+  const handleSidebarNavClickCapture = React.useCallback((event: React.MouseEvent<HTMLElement>) => {
+    if (!suppressSidebarNavClickRef.current) return;
+
+    suppressSidebarNavClickRef.current = false;
+    event.preventDefault();
+    event.stopPropagation();
+  }, []);
+
   React.useEffect(() => {
     // Initialize API notification handler
     api.setNotifyHandler((type, title, message) => {
@@ -786,7 +880,17 @@ const AppContent: React.FC = () => {
         <SidebarBrand>
           <Logo>WAY ESPORTS</Logo>
         </SidebarBrand>
-        <SidebarNav>
+        <SidebarNav
+          ref={sidebarNavRef}
+          $dragging={isSidebarNavDragging}
+          onPointerDown={handleSidebarNavPointerDown}
+          onPointerMove={handleSidebarNavPointerMove}
+          onPointerUp={handleSidebarNavPointerUp}
+          onPointerCancel={handleSidebarNavPointerCancel}
+          onLostPointerCapture={handleSidebarNavPointerCancel}
+          onClickCapture={handleSidebarNavClickCapture}
+          onDragStart={(event) => event.preventDefault()}
+        >
           <MagnificationDock
             items={dockItems}
             orientation="vertical"
