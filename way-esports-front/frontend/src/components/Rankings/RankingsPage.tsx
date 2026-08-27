@@ -193,7 +193,7 @@ const Select = styled.select`
 `;
 
 const RankingsPage: React.FC = () => {
-    const { user, isAuthenticated } = useAuth();
+    const { user } = useAuth();
     const [activeTab, setActiveTab] = useState<'teams' | 'players'>('teams');
     const [timeFrame, setTimeFrame] = useState('week');
     const [game, setGame] = useState('all');
@@ -348,23 +348,7 @@ const RankingsPage: React.FC = () => {
 
     return (
         <Container>
-            {!isAuthenticated ? (
-                <div style={{ marginBottom: '20px' }}>
-                    <GuidanceCallout
-                        tone="info"
-                        eyebrow="Guest tip"
-                        title="Create an account to turn rankings into progress."
-                        description="You can view the ladder without login, but registration is what lets you appear on it and act on what you see."
-                        tips={[
-                            'A registered player can build a profile, join teams and enter tournaments.',
-                            'Team activity and match results are what move positions over time.',
-                            'Without an account, rankings stay a public read-only board.'
-                        ]}
-                        primaryAction={{ label: 'Register / Login', to: '/auth' }}
-                        secondaryAction={{ label: 'Open Teams', to: '/teams', variant: 'ghost' }}
-                    />
-                </div>
-            ) : showNewUserOnboarding ? (
+            {showNewUserOnboarding ? (
                 <div style={{ marginBottom: '20px' }}>
                     <GuidanceCallout
                         tone="success"

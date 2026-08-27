@@ -223,21 +223,7 @@ const MatchesPage: React.FC = () => {
         </PageHeroLayout>
       </PageHero>
 
-      {!isAuthenticated ? (
-        <GuidanceCallout
-          tone="info"
-          eyebrow="Guest tip"
-          title="Create an account to unlock full match tools."
-          description="You can browse public matches without logging in, but account features open the real operational flow."
-          tips={[
-            'Registered players can open personal match access and room credentials when they are available.',
-            'Your account also unlocks team participation, tournament entry and progress tracking.',
-            'If you only browse as a guest, some match actions will stay view-only.'
-          ]}
-          primaryAction={{ label: 'Register / Login', to: '/auth' }}
-          secondaryAction={{ label: 'Open Tournaments', to: '/tournaments', variant: 'ghost' }}
-        />
-      ) : showNewUserOnboarding ? (
+      {showNewUserOnboarding ? (
         <GuidanceCallout
           tone="success"
           eyebrow="New account"

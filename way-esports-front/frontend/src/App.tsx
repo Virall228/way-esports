@@ -193,7 +193,16 @@ const SidebarNav = styled.nav`
   align-items: stretch;
   justify-content: flex-start;
   padding: 1.35rem 0 0.6rem;
-  overflow: hidden;
+  min-height: 0;
+  overflow-x: visible;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
 `;
 
 const NavItemLink = styled(Link) <{ $active?: boolean; $compact?: boolean }>`

@@ -529,21 +529,7 @@ const TournamentsPage: React.FC = () => {
         </PageHeroLayout>
       </PageHero>
 
-      {!user ? (
-        <GuidanceCallout
-          tone="info"
-          eyebrow="Guest tip"
-          title="Registration is required for full tournament access."
-          description="You can browse brackets and prize pools as a guest, but actual participation starts after account access."
-          tips={[
-            'Create an account to register for tournaments and keep your entries linked to your profile.',
-            'Team tournaments usually require creating or joining a team before entry.',
-            'Without login, this section stays focused on discovery instead of participation.'
-          ]}
-          primaryAction={{ label: 'Register / Login', to: '/auth' }}
-          secondaryAction={{ label: 'Open Teams', to: '/teams', variant: 'ghost' }}
-        />
-      ) : showNewUserOnboarding ? (
+      {showNewUserOnboarding ? (
         <GuidanceCallout
           tone="success"
           eyebrow="New account"

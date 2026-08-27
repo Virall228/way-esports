@@ -823,21 +823,7 @@ const TeamsPage: React.FC = () => {
         </PageHeroLayout>
       </PageHero>
 
-      {!user ? (
-        <GuidanceCallout
-          tone="info"
-          eyebrow="Guest tip"
-          title="Register to use the full team flow."
-          description="Guests can browse public rosters, but team actions open only after account access."
-          tips={[
-            'Registration unlocks creating a team, joining a roster and managing approvals.',
-            'Your account also connects tournaments, match history and support around the same team.',
-            'Without login, this page works mainly as a public directory.'
-          ]}
-          primaryAction={{ label: 'Register / Login', to: '/auth' }}
-          secondaryAction={{ label: 'Open Tournaments', to: '/tournaments', variant: 'ghost' }}
-        />
-      ) : showNewUserOnboarding ? (
+      {showNewUserOnboarding ? (
         <GuidanceCallout
           tone="success"
           eyebrow="New account"
