@@ -9,6 +9,7 @@ import { teamsService } from '../../services/teamsService';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import Input from '../../components/UI/Input';
+import GuidanceCallout from '../../components/UI/GuidanceCallout';
 import {
   FilterGroup,
   FilterLabel,
@@ -33,6 +34,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { resolveMediaUrl } from '../../utils/media';
 import { Seo } from '../../components/SEO';
 import { normalizeGameKey, SUPPORTED_GAME_OPTIONS } from '../../config/games';
+import { useOneTimeNewUserOnboarding } from '../../utils/onboarding';
 
 const RulesButton = styled(Button).attrs({ variant: 'secondary', size: 'small' })`
   padding: 0.75rem 1.15rem;
@@ -321,6 +323,7 @@ interface Tournament {
 const TournamentsPage: React.FC = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const showNewUserOnboarding = useOneTimeNewUserOnboarding(user);
   const [activeFilter, setActiveFilter] = useState('all');
   const [activeGame, setActiveGame] = useState('all');
   const [activeCadence, setActiveCadence] = useState<'all' | 'daily' | 'weekly'>('all');
@@ -525,6 +528,36 @@ const TournamentsPage: React.FC = () => {
           </RulesButton>
         </PageHeroLayout>
       </PageHero>
+
+      {!user ? (
+        <GuidanceCallout
+          tone="info"
+          eyebrow="Guest tip"
+          title="Registration is required for full tournament access."
+          description="You can browse brackets and prize pools as a guest, but actual participation starts after account access."
+          tips={[
+            'Create an account to register for tournaments and keep your entries linked to your profile.',
+            'Team tournaments usually require creating or joining a team before entry.',
+            'Without login, this section stays focused on discovery instead of participation.'
+          ]}
+          primaryAction={{ label: 'Register / Login', to: '/auth' }}
+          secondaryAction={{ label: 'Open Teams', to: '/teams', variant: 'ghost' }}
+        />
+      ) : showNewUserOnboarding ? (
+        <GuidanceCallout
+          tone="success"
+          eyebrow="New account"
+          title="Before your first tournament entry, set up the basics."
+          description="A cleaner first run usually starts with identity, team status and in-game details."
+          tips={[
+            'For team events, create or join the right team before requesting entry.',
+            'Keep your in-game nickname and ID ready because registration asks for both.',
+            'If a tournament is not open yet, save it mentally and check back when status changes to upcoming.'
+          ]}
+          primaryAction={{ label: 'Open Teams', to: '/teams' }}
+          secondaryAction={{ label: 'Open Profile', to: '/profile', variant: 'ghost' }}
+        />
+      ) : null}
 
       <PageFilterSection>
         <FilterRail>

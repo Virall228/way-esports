@@ -4,6 +4,7 @@ type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 export type ApiRequestOptions = {
   includeTelegramData?: boolean;
   signal?: AbortSignal;
+  notifyOnError?: boolean;
 };
 
 export class ApiError extends Error {
@@ -59,7 +60,11 @@ const requestJson = async <T = any>(
   data?: any,
   options?: boolean | ApiRequestOptions
 ): Promise<T> => {
-  const { includeTelegramData = false, signal: externalSignal } = normalizeRequestOptions(options);
+  const {
+    includeTelegramData = false,
+    signal: externalSignal,
+    notifyOnError = true
+  } = normalizeRequestOptions(options);
   const token = getToken();
   const headers: Record<string, string> = { ...API_CONFIG.DEFAULT_HEADERS };
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -135,7 +140,7 @@ const requestJson = async <T = any>(
         }
       }
 
-      if (notifyHandler && response.status !== 401) {
+      if (notifyOnError && notifyHandler && response.status !== 401) {
         if (response.status >= 500) {
           const now = Date.now();
           if (now - lastServerUnavailableNotifyAt >= SERVER_UNAVAILABLE_NOTIFY_COOLDOWN_MS) {
@@ -162,13 +167,17 @@ const requestJson = async <T = any>(
       }
 
       const timeoutError = new ApiError(504, `Request timeout (${timeoutMs} ms)`);
-      notifyNetworkError('Network Error', timeoutError.message);
+      if (notifyOnError) {
+        notifyNetworkError('Network Error', timeoutError.message);
+      }
       throw timeoutError;
     }
 
     if (error instanceof ApiError) throw error;
 
-    notifyNetworkError('Network Error', error.message || 'Check your internet connection');
+    if (notifyOnError) {
+      notifyNetworkError('Network Error', error.message || 'Check your internet connection');
+    }
     throw error;
   } finally {
     clearTimeout(timeoutId);

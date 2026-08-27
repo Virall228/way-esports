@@ -17,4 +17,8 @@ export const profileService = {
   addAchievement: async (achievementName: string): Promise<void> => {
     return api.post('/api/profile/achievements', { name: achievementName });
   },
+
+  markNewUserOnboardingSeen: async (): Promise<void> => {
+    return api.post('/api/profile/onboarding/new-user/seen', {}, { notifyOnError: false });
+  },
 };

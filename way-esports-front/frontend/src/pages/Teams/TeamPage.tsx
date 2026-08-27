@@ -36,6 +36,7 @@ import {
   PageTitle,
   SelectField
 } from '../../components/UI/PageLayout';
+import GuidanceCallout from '../../components/UI/GuidanceCallout';
 
 const Container = styled(PageShell)`
   color: #fff;
@@ -396,7 +397,7 @@ const TeamPage: React.FC = () => {
     queryKey: ['team', id],
     queryFn: async ({ signal }) => {
       if (!id) return null;
-      const res: any = await teamsService.getById(id, { signal });
+      const res: any = await teamsService.getById(id, { signal, notifyOnError: false });
       if (res?.success === false) {
         throw new Error(res?.error || 'Team not found');
       }
@@ -427,7 +428,7 @@ const TeamPage: React.FC = () => {
     queryKey: ['team', id, 'join-requests'],
     queryFn: async ({ signal }) => {
       if (!id) return [];
-      const response: any = await teamsService.getJoinRequests(id, { signal });
+      const response: any = await teamsService.getJoinRequests(id, { signal, notifyOnError: false });
       return response?.data || response || [];
     },
     enabled: Boolean(id && canManageLogo),
@@ -443,7 +444,7 @@ const TeamPage: React.FC = () => {
         status: historyBaseStatusFilter === 'all' ? '' : historyBaseStatusFilter,
         sort: historyBaseSort,
         game: historyBaseGameFilter === 'all' ? '' : historyBaseGameFilter
-      }, { signal });
+      }, { signal, notifyOnError: false });
     },
     enabled: Boolean(id),
     staleTime: 30000,
@@ -470,7 +471,7 @@ const TeamPage: React.FC = () => {
         from: historyFromFilter || '',
         to: historyToFilter || '',
         sort: historySort
-      }, { signal });
+      }, { signal, notifyOnError: false });
     },
     enabled: Boolean(id && hasActiveSubscription && canManageLogo),
     staleTime: 20000,
@@ -542,7 +543,7 @@ const TeamPage: React.FC = () => {
   const loadInviteLink = async (signal?: AbortSignal) => {
     if (!id) return;
     try {
-      const res: any = await api.get(`/api/intelligence/telegram/deep-link/team/${id}`, { signal });
+      const res: any = await api.get(`/api/intelligence/telegram/deep-link/team/${id}`, { signal, notifyOnError: false });
       const payload = res?.data || res;
       setInviteLink(String(payload?.deepLink || ''));
     } catch {
@@ -599,9 +600,26 @@ const TeamPage: React.FC = () => {
 
   if (error || !team) {
     const message = (error as Error | undefined)?.message || 'Team not found';
+    const missingTeam = /team not found/i.test(message);
     return (
       <Container>
-        <NoticeBanner $tone="error">{message}</NoticeBanner>
+        {missingTeam ? (
+          <GuidanceCallout
+            tone="warning"
+            eyebrow="Profile unavailable"
+            title="This team page is no longer available."
+            description="The roster may have been removed, renamed, or the link may be outdated."
+            tips={[
+              'Open the team directory to continue browsing active rosters.',
+              'Use Rankings to find current teams with fresh match data.',
+              'If you followed an old share link, ask the team owner for a new one.'
+            ]}
+            primaryAction={{ label: 'Open Teams', to: '/teams' }}
+            secondaryAction={{ label: 'Open Rankings', to: '/rankings', variant: 'ghost' }}
+          />
+        ) : (
+          <NoticeBanner $tone="warning">{message}</NoticeBanner>
+        )}
       </Container>
     );
   }

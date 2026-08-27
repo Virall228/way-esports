@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import Plasma from '../../components/UI/Plasma';
+import GuidanceCallout from '../../components/UI/GuidanceCallout';
 import { Seo } from '../../components/SEO';
 import { api } from '../../services/api';
 import { getDiscoveryGames } from '../../utils/discovery';
@@ -459,6 +460,20 @@ const PublicLandingPage: React.FC = () => {
           </HeroMetrics>
         </HeroLayout>
       </Hero>
+
+      <GuidanceCallout
+        tone="info"
+        eyebrow="Registration unlocks more"
+        title="Browse freely, then create an account for the full platform."
+        description="Public pages are open for discovery, but the competitive workflow starts after registration."
+        tips={[
+          'Registered users can join tournaments, create teams and access personal match flow.',
+          'Your account also unlocks profile progress, team support and platform rewards.',
+          'If you stay in guest mode, most advanced actions remain view-only.'
+        ]}
+        primaryAction={{ label: 'Register / Login', to: '/auth' }}
+        secondaryAction={{ label: 'Open Rankings', to: '/rankings', variant: 'ghost' }}
+      />
 
       <Section>
         <SectionHead>

@@ -6,10 +6,12 @@ import Button from '../../components/UI/Button';
 import Plasma from '../../components/UI/Plasma';
 import SurfacePanel from '../../components/UI/SurfacePanel';
 import SectionHeading from '../../components/UI/SectionHeading';
+import GuidanceCallout from '../../components/UI/GuidanceCallout';
 import { api } from '../../services/api';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { designTokens } from '../../styles/designTokens';
+import { useOneTimeNewUserOnboarding } from '../../utils/onboarding';
 
 const Container = styled.div`
   box-sizing: border-box;
@@ -575,6 +577,7 @@ const HomePage: React.FC = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
   const theme = useTheme();
+  const showNewUserOnboarding = useOneTimeNewUserOnboarding(user);
   const hasScoutHubAccess = useMemo(() => {
     if (!user) return false;
     if (user.role === 'admin' || user.role === 'developer') return true;
@@ -867,6 +870,22 @@ const HomePage: React.FC = () => {
           </HeroMetrics>
         </HeroLayout>
       </HeroSection>
+
+      {showNewUserOnboarding ? (
+        <GuidanceCallout
+          tone="success"
+          eyebrow="First steps"
+          title="Your account is ready. Here is the shortest useful path."
+          description="New profiles get more value when they connect teams, tournaments and match activity early."
+          tips={[
+            'Open Profile to finish your identity and game data.',
+            'Go to Teams if you already have a roster, or Tournaments if you want to find your first event.',
+            'Matches will become your live control board once you are scheduled into competition.'
+          ]}
+          primaryAction={{ label: 'Open Profile', to: '/profile' }}
+          secondaryAction={{ label: 'Open Teams', to: '/teams', variant: 'ghost' }}
+        />
+      ) : null}
 
       <TopInfoGrid>
         <InfoCard>

@@ -34,6 +34,9 @@ export interface User {
     removedAt?: string | Date;
     moderationNote?: string;
   };
+  onboarding?: {
+    newUserTipsSeenAt?: string | Date;
+  };
   winStreak?: number;
   createdAt: Date;
 }

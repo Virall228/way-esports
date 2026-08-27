@@ -139,6 +139,44 @@ router.get('/', authenticateJWT, async (req, res) => {
     });
   }
 });
+
+router.post('/onboarding/new-user/seen', authenticateJWT, async (req: any, res) => {
+  try {
+    const userFilter = getUserFilter(req);
+    if (!userFilter) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const user: any = await User.findOne(userFilter).select('onboarding');
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    if (!user.onboarding?.newUserTipsSeenAt) {
+      user.onboarding = {
+        ...(user.onboarding || {}),
+        newUserTipsSeenAt: new Date()
+      };
+      await user.save();
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        onboarding: {
+          newUserTipsSeenAt: user.onboarding?.newUserTipsSeenAt || null
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error marking onboarding as seen:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to update onboarding state'
+    });
+  }
+});
+
 const updateProfileValidators = [
   body('username')
     .optional()

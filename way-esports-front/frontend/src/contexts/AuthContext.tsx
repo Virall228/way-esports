@@ -77,6 +77,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             moderationNote: source.profileWallpaper?.moderationNote
           }
         : undefined,
+      onboarding: source?.onboarding
+        ? {
+            newUserTipsSeenAt: source.onboarding?.newUserTipsSeenAt
+          }
+        : undefined,
       winStreak: Number(source?.winStreak || 0),
       createdAt: source?.createdAt ? new Date(source.createdAt) : new Date()
     };

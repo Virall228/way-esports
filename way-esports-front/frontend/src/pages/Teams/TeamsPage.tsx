@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import CreateTeamModal from '../../components/Teams/CreateTeamModal';
@@ -7,6 +8,7 @@ import { teamsService } from '../../services/teamsService';
 import { tournamentService } from '../../services/tournamentService';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
+import GuidanceCallout from '../../components/UI/GuidanceCallout';
 import {
   FilterGroup,
   FilterLabel,
@@ -31,6 +33,7 @@ import FlameAuraAvatar from '../../components/UI/FlameAuraAvatar';
 import { getTeamPoints, getTierByPoints, getIntensityByPointsAndRank } from '../../utils/flameRank';
 import { Seo } from '../../components/SEO';
 import { normalizeGameKey, SUPPORTED_GAME_SLUG_OPTIONS } from '../../config/games';
+import { useOneTimeNewUserOnboarding } from '../../utils/onboarding';
 
 const HeaderKicker = styled.div`
   display: inline-flex;
@@ -449,6 +452,8 @@ type EditTeamFormState = {
 const TeamsPage: React.FC = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const showNewUserOnboarding = useOneTimeNewUserOnboarding(user);
   const editLogoInputRef = useRef<HTMLInputElement | null>(null);
   const [activeFilter, setActiveFilter] = useState('teams');
   const [selectedGame, setSelectedGame] = useState('all');
@@ -466,7 +471,7 @@ const TeamsPage: React.FC = () => {
   const { data: teamsRaw = [], isLoading: loading, error: queryError } = useQuery({
     queryKey: ['teams'],
     queryFn: async () => {
-      const res: any = await teamsService.list();
+      const res: any = await teamsService.list({ notifyOnError: false });
       return (res && (res.data || res.teams)) || [];
     },
     staleTime: 30000,
@@ -622,6 +627,11 @@ const TeamsPage: React.FC = () => {
 
   const handleJoinTeam = async (team: Team) => {
     try {
+      if (!user) {
+        setActionInfo('Create an account to join teams, manage roster access and enter tournaments.');
+        navigate('/auth');
+        return;
+      }
       if (!team.tournamentId) {
         setActionError('This team is not linked to a tournament');
         return;
@@ -671,7 +681,7 @@ const TeamsPage: React.FC = () => {
   const handleEditTeam = (teamId: string) => {
     const team = teams.find((item) => item.id === teamId);
     if (!team) {
-      setActionError('Team not found');
+      setActionInfo('This team is no longer available in the directory. Refresh the list and try again.');
       return;
     }
     setEditTeamForm({
@@ -799,12 +809,49 @@ const TeamsPage: React.FC = () => {
             </PageSubtitle>
           </PageHeroContent>
           {activeFilter === 'teams' && (
-            <CreateTeamButton onClick={() => setIsCreateModalOpen(true)}>
+            <CreateTeamButton onClick={() => {
+              if (!user) {
+                setActionInfo('Register first to create and manage your own team.');
+                navigate('/auth');
+                return;
+              }
+              setIsCreateModalOpen(true);
+            }}>
               {t('createTeam')}
             </CreateTeamButton>
           )}
         </PageHeroLayout>
       </PageHero>
+
+      {!user ? (
+        <GuidanceCallout
+          tone="info"
+          eyebrow="Guest tip"
+          title="Register to use the full team flow."
+          description="Guests can browse public rosters, but team actions open only after account access."
+          tips={[
+            'Registration unlocks creating a team, joining a roster and managing approvals.',
+            'Your account also connects tournaments, match history and support around the same team.',
+            'Without login, this page works mainly as a public directory.'
+          ]}
+          primaryAction={{ label: 'Register / Login', to: '/auth' }}
+          secondaryAction={{ label: 'Open Tournaments', to: '/tournaments', variant: 'ghost' }}
+        />
+      ) : showNewUserOnboarding ? (
+        <GuidanceCallout
+          tone="success"
+          eyebrow="New account"
+          title="Start simple: browse first, then build your roster."
+          description="Teams work best when you use them as the center of your tournament flow."
+          tips={[
+            'Open team details to see roster history, support and invite tools.',
+            'Use the Rankings tab to compare active teams before joining or creating your own.',
+            'Some join buttons only work for teams already connected to a tournament.'
+          ]}
+          primaryAction={{ label: 'Open Tournaments', to: '/tournaments' }}
+          secondaryAction={{ label: 'Open Rankings', to: '/rankings', variant: 'ghost' }}
+        />
+      ) : null}
 
       <FilterRail>
         <FilterSection>
@@ -845,7 +892,7 @@ const TeamsPage: React.FC = () => {
       {activeFilter === 'teams' && (
         <>
           {error && (
-            <NoticeBanner $tone="error">
+            <NoticeBanner $tone="warning">
               {error}
             </NoticeBanner>
           )}

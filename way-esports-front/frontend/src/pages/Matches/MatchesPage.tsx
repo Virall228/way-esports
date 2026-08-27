@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
+import GuidanceCallout from '../../components/UI/GuidanceCallout';
 import {
   FilterGroup,
   FilterLabel,
@@ -22,6 +23,7 @@ import {
 } from '../../components/UI/PageLayout';
 import { Seo } from '../../components/SEO';
 import { normalizeGameKey, SUPPORTED_GAME_SLUG_OPTIONS } from '../../config/games';
+import { useOneTimeNewUserOnboarding } from '../../utils/onboarding';
 
 type MatchItem = {
   id?: string;
@@ -137,17 +139,18 @@ const StatusBadge = styled.span<{ $status: string }>`
 `;
 
 const MatchesPage: React.FC = () => {
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { addNotification } = useNotifications();
   const [statusFilter, setStatusFilter] = useState<'all' | 'upcoming' | 'live' | 'completed' | 'cancelled'>('all');
   const [gameFilter, setGameFilter] = useState('all');
   const [roomByMatch, setRoomByMatch] = useState<Record<string, RoomData>>({});
   const [loadingRoomId, setLoadingRoomId] = useState<string | null>(null);
+  const showNewUserOnboarding = useOneTimeNewUserOnboarding(user);
 
   const { data: matchesRaw = [], isLoading, error } = useQuery({
     queryKey: ['matches'],
     queryFn: async () => {
-      const res: any = await api.get('/api/matches', true);
+      const res: any = await api.get('/api/matches', { includeTelegramData: true, notifyOnError: false });
       return res?.data || res || [];
     },
     staleTime: 15000,
@@ -220,6 +223,36 @@ const MatchesPage: React.FC = () => {
         </PageHeroLayout>
       </PageHero>
 
+      {!isAuthenticated ? (
+        <GuidanceCallout
+          tone="info"
+          eyebrow="Guest tip"
+          title="Create an account to unlock full match tools."
+          description="You can browse public matches without logging in, but account features open the real operational flow."
+          tips={[
+            'Registered players can open personal match access and room credentials when they are available.',
+            'Your account also unlocks team participation, tournament entry and progress tracking.',
+            'If you only browse as a guest, some match actions will stay view-only.'
+          ]}
+          primaryAction={{ label: 'Register / Login', to: '/auth' }}
+          secondaryAction={{ label: 'Open Tournaments', to: '/tournaments', variant: 'ghost' }}
+        />
+      ) : showNewUserOnboarding ? (
+        <GuidanceCallout
+          tone="success"
+          eyebrow="New account"
+          title="Use Matches as your live control board."
+          description="This page becomes most useful once you are already in a tournament or team flow."
+          tips={[
+            'Use the status filter to separate live lobbies from completed results.',
+            'Room credentials appear only when organizers make them visible.',
+            'If the page is quiet, start from Tournaments or Teams and your matches will appear here later.'
+          ]}
+          primaryAction={{ label: 'Open Teams', to: '/teams' }}
+          secondaryAction={{ label: 'Open Tournaments', to: '/tournaments', variant: 'ghost' }}
+        />
+      ) : null}
+
       <FilterRail>
         <Filters>
           <FilterGroup>
@@ -248,7 +281,7 @@ const MatchesPage: React.FC = () => {
       </FilterRail>
 
       {error && (
-        <NoticeBanner $tone="error">{(error as Error)?.message || 'Failed to load matches'}</NoticeBanner>
+        <NoticeBanner $tone="warning">{(error as Error)?.message || 'Matches are temporarily unavailable. Please refresh in a moment.'}</NoticeBanner>
       )}
 
       {isLoading && !error && (

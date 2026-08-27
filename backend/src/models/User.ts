@@ -56,6 +56,9 @@ export interface IUser extends Document<mongoose.Types.ObjectId> {
     referralSource?: string;
     subscriptionValue?: number;
   };
+  onboarding?: {
+    newUserTipsSeenAt?: Date;
+  };
   achievements: string[];
   tokens: IToken[];
   wallet: {
@@ -235,6 +238,11 @@ const userSchema = new Schema<IUser>({
     losses: { type: Number, default: 0 },
     tournamentsPlayed: { type: Number, default: 0 },
     tournamentsWon: { type: Number, default: 0 }
+  },
+  onboarding: {
+    newUserTipsSeenAt: {
+      type: Date
+    }
   },
   achievements: [String],
   tokens: [{

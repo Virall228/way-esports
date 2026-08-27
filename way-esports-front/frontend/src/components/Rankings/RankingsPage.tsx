@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { api } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 import FlameAuraAvatar from '../UI/FlameAuraAvatar';
+import GuidanceCallout from '../UI/GuidanceCallout';
+import { NoticeBanner, PageEmptyState } from '../UI/PageLayout';
 import { getTierByRank, getIntensityByPointsAndRank, getTeamPoints } from '../../utils/flameRank';
 import {
     TeamRanking,
@@ -13,6 +16,7 @@ import {
 import { resolveMediaUrl, resolveTeamLogoUrl } from '../../utils/media';
 import { getFullUrl } from '../../config/api';
 import { SUPPORTED_GAME_SLUG_OPTIONS } from '../../config/games';
+import { useOneTimeNewUserOnboarding } from '../../utils/onboarding';
 
 const Container = styled.div`
     width: 100%;
@@ -189,6 +193,7 @@ const Select = styled.select`
 `;
 
 const RankingsPage: React.FC = () => {
+    const { user, isAuthenticated } = useAuth();
     const [activeTab, setActiveTab] = useState<'teams' | 'players'>('teams');
     const [timeFrame, setTimeFrame] = useState('week');
     const [game, setGame] = useState('all');
@@ -197,6 +202,8 @@ const RankingsPage: React.FC = () => {
     const [currentPeriod] = useState(getCurrentRankingPeriod());
     const [liveConnected, setLiveConnected] = useState(false);
     const [lastLiveUpdateAt, setLastLiveUpdateAt] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const showNewUserOnboarding = useOneTimeNewUserOnboarding(user);
 
     useEffect(() => {
         fetchRankings();
@@ -320,8 +327,12 @@ const RankingsPage: React.FC = () => {
 
     const fetchRankings = async () => {
         try {
+            setError(null);
             const endpoint = activeTab === 'teams' ? 'teams/rankings' : 'players/rankings';
-            const raw: any = await api.get(`/api/${endpoint}?timeFrame=${timeFrame}&game=${game}`, true);
+            const raw: any = await api.get(`/api/${endpoint}?timeFrame=${timeFrame}&game=${game}`, {
+                includeTelegramData: true,
+                notifyOnError: false
+            });
             const list = Array.isArray(raw) ? raw : (raw?.data || []);
 
             if (activeTab === 'teams') {
@@ -329,13 +340,48 @@ const RankingsPage: React.FC = () => {
             } else {
                 setPlayerRankings(list.map(normalizePlayerRanking));
             }
-        } catch (error) {
-            console.error('Error fetching rankings:', error);
+        } catch (requestError: any) {
+            console.error('Error fetching rankings:', requestError);
+            setError(requestError?.message || 'Rankings are temporarily unavailable.');
         }
     };
 
     return (
         <Container>
+            {!isAuthenticated ? (
+                <div style={{ marginBottom: '20px' }}>
+                    <GuidanceCallout
+                        tone="info"
+                        eyebrow="Guest tip"
+                        title="Create an account to turn rankings into progress."
+                        description="You can view the ladder without login, but registration is what lets you appear on it and act on what you see."
+                        tips={[
+                            'A registered player can build a profile, join teams and enter tournaments.',
+                            'Team activity and match results are what move positions over time.',
+                            'Without an account, rankings stay a public read-only board.'
+                        ]}
+                        primaryAction={{ label: 'Register / Login', to: '/auth' }}
+                        secondaryAction={{ label: 'Open Teams', to: '/teams', variant: 'ghost' }}
+                    />
+                </div>
+            ) : showNewUserOnboarding ? (
+                <div style={{ marginBottom: '20px' }}>
+                    <GuidanceCallout
+                        tone="success"
+                        eyebrow="New account"
+                        title="Your fastest path into rankings is simple."
+                        description="The ladder updates from actual participation, not just profile setup."
+                        tips={[
+                            'Join or create a team first if you want to climb team standings.',
+                            'Open tournaments regularly and complete matches to generate ranking data.',
+                            'Use the weekly filter when you want to see short-term momentum.'
+                        ]}
+                        primaryAction={{ label: 'Open Tournaments', to: '/tournaments' }}
+                        secondaryAction={{ label: 'Open Teams', to: '/teams', variant: 'ghost' }}
+                    />
+                </div>
+            ) : null}
+
             <Header>
                 <Title>Rankings</Title>
                 <UpdateInfo>
@@ -377,8 +423,12 @@ const RankingsPage: React.FC = () => {
                 </Select>
             </FilterContainer>
 
+            {error ? (
+                <NoticeBanner $tone="warning">{error}</NoticeBanner>
+            ) : null}
+
             {activeTab === 'teams' ? (
-                teamRankings.map(team => (
+                teamRankings.length ? teamRankings.map(team => (
                     <RankingCard key={team.id} rank={team.rank}>
                         <RankInfo>
                             <Rank rank={team.rank}>#{team.rank}</Rank>
@@ -420,9 +470,11 @@ const RankingsPage: React.FC = () => {
                             </WeeklyStats>
                         </Info>
                     </RankingCard>
-                ))
+                )) : !error ? (
+                    <PageEmptyState>No team ranking data yet for the selected filters.</PageEmptyState>
+                ) : null
             ) : (
-                playerRankings.map(player => (
+                playerRankings.length ? playerRankings.map(player => (
                     <RankingCard key={player.id} rank={player.rank}>
                         <RankInfo>
                             <Rank rank={player.rank}>#{player.rank}</Rank>
@@ -458,7 +510,9 @@ const RankingsPage: React.FC = () => {
                             </WeeklyStats>
                         </Info>
                     </RankingCard>
-                ))
+                )) : !error ? (
+                    <PageEmptyState>No player ranking data yet for the selected filters.</PageEmptyState>
+                ) : null
             )}
         </Container>
     );
