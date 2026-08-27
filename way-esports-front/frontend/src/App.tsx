@@ -746,18 +746,9 @@ const AppContent: React.FC = () => {
   );
 
   const finishSidebarNavDrag = React.useCallback((pointerId?: number) => {
-    const container = sidebarNavRef.current;
     const drag = sidebarNavDragRef.current;
 
-    if (container && drag.active && pointerId === drag.pointerId) {
-      try {
-        container.releasePointerCapture?.(pointerId);
-      } catch {
-        // ignore capture cleanup issues
-      }
-    }
-
-    if (drag.hasDragged) {
+    if (drag.active && (pointerId === undefined || pointerId === drag.pointerId) && drag.hasDragged) {
       suppressSidebarNavClickRef.current = true;
       window.setTimeout(() => {
         suppressSidebarNavClickRef.current = false;
@@ -789,34 +780,7 @@ const AppContent: React.FC = () => {
       hasDragged: false
     };
     setIsSidebarNavDragging(true);
-    container.setPointerCapture?.(event.pointerId);
   }, []);
-
-  const handleSidebarNavPointerMove = React.useCallback((event: React.PointerEvent<HTMLElement>) => {
-    const container = sidebarNavRef.current;
-    const drag = sidebarNavDragRef.current;
-
-    if (!container || !drag.active || drag.pointerId !== event.pointerId) return;
-
-    const deltaY = event.clientY - drag.startY;
-
-    if (!drag.hasDragged && Math.abs(deltaY) > 6) {
-      drag.hasDragged = true;
-    }
-
-    if (!drag.hasDragged) return;
-
-    container.scrollTop = drag.startScrollTop - deltaY;
-    event.preventDefault();
-  }, []);
-
-  const handleSidebarNavPointerUp = React.useCallback((event: React.PointerEvent<HTMLElement>) => {
-    finishSidebarNavDrag(event.pointerId);
-  }, [finishSidebarNavDrag]);
-
-  const handleSidebarNavPointerCancel = React.useCallback((event: React.PointerEvent<HTMLElement>) => {
-    finishSidebarNavDrag(event.pointerId);
-  }, [finishSidebarNavDrag]);
 
   const handleSidebarNavClickCapture = React.useCallback((event: React.MouseEvent<HTMLElement>) => {
     if (!suppressSidebarNavClickRef.current) return;
@@ -825,6 +789,46 @@ const AppContent: React.FC = () => {
     event.preventDefault();
     event.stopPropagation();
   }, []);
+
+  React.useEffect(() => {
+    if (!isSidebarNavDragging) return;
+
+    const handleWindowPointerMove = (event: PointerEvent) => {
+      const container = sidebarNavRef.current;
+      const drag = sidebarNavDragRef.current;
+
+      if (!container || !drag.active || drag.pointerId !== event.pointerId) return;
+
+      const deltaY = event.clientY - drag.startY;
+
+      if (!drag.hasDragged && Math.abs(deltaY) > 6) {
+        drag.hasDragged = true;
+      }
+
+      if (!drag.hasDragged) return;
+
+      container.scrollTop = drag.startScrollTop - deltaY;
+      event.preventDefault();
+    };
+
+    const handleWindowPointerUp = (event: PointerEvent) => {
+      finishSidebarNavDrag(event.pointerId);
+    };
+
+    const handleWindowPointerCancel = (event: PointerEvent) => {
+      finishSidebarNavDrag(event.pointerId);
+    };
+
+    window.addEventListener('pointermove', handleWindowPointerMove);
+    window.addEventListener('pointerup', handleWindowPointerUp);
+    window.addEventListener('pointercancel', handleWindowPointerCancel);
+
+    return () => {
+      window.removeEventListener('pointermove', handleWindowPointerMove);
+      window.removeEventListener('pointerup', handleWindowPointerUp);
+      window.removeEventListener('pointercancel', handleWindowPointerCancel);
+    };
+  }, [finishSidebarNavDrag, isSidebarNavDragging]);
 
   React.useEffect(() => {
     // Initialize API notification handler
@@ -883,10 +887,6 @@ const AppContent: React.FC = () => {
           ref={sidebarNavRef}
           $dragging={isSidebarNavDragging}
           onPointerDown={handleSidebarNavPointerDown}
-          onPointerMove={handleSidebarNavPointerMove}
-          onPointerUp={handleSidebarNavPointerUp}
-          onPointerCancel={handleSidebarNavPointerCancel}
-          onLostPointerCapture={handleSidebarNavPointerCancel}
           onClickCapture={handleSidebarNavClickCapture}
           onDragStart={(event) => event.preventDefault()}
         >
