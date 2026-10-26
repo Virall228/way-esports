@@ -200,7 +200,7 @@ export const GlobalStyles = createGlobalStyle`
     pointer-events: none;
     z-index: -2;
     transform-origin: center top;
-    animation: wayAmbientDrift var(--ambient-drift-duration) ease-in-out infinite;
+    /* Keep the full-screen gradient static behind translucent panels. */
   }
 
   body::after {
@@ -223,7 +223,6 @@ export const GlobalStyles = createGlobalStyle`
     pointer-events: none;
     z-index: -1;
     mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.92), rgba(0, 0, 0, 0.58));
-    animation: wayGridShift 28s ease-in-out infinite;
   }
 
   h1,

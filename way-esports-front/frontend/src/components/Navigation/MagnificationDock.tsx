@@ -110,6 +110,10 @@ const DockPanel = styled(motion.div)<DockPanelProps>`
       ? '0 18px 44px rgba(118, 85, 46, 0.14)'
       : '0 24px 46px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.04)'};
   backdrop-filter: blur(24px) saturate(135%);
+
+  @media (max-width: 768px), (pointer: coarse) {
+    backdrop-filter: none;
+  }
   overflow: visible;
   touch-action: pan-x pan-y;
   width: ${({ $stretch }) => ($stretch ? '100%' : 'auto')};
@@ -326,7 +330,7 @@ const useHoverCapability = () => {
   React.useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
 
-    const media = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const media = window.matchMedia('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)');
     const sync = () => setHoverEnabled(media.matches);
     sync();
 
@@ -348,7 +352,7 @@ const DockItem: React.FC<DockItemProps> = ({
   magnification,
   hoverEnabled
 }) => {
-  const ref = React.useRef<HTMLDivElement>(null);
+  const ref = React.useRef<HTMLButtonElement>(null);
   const [showLabel, setShowLabel] = React.useState(false);
 
   const pointerDistance = useTransform(axis, (pointer) => {
@@ -375,12 +379,14 @@ const DockItem: React.FC<DockItemProps> = ({
   const offset = useTransform(size, (value) =>
     hoverEnabled ? Math.max(0, (value - baseItemSize) * (orientation === 'horizontal' ? 0.1 : 0.04)) : 0
   );
-  const scale = useTransform(size, [baseItemSize, magnification], [1, 1.04]);
+  // Transform the icon within a fixed slot instead of relaying out the entire dock.
+  const scale = useTransform(size, [baseItemSize, magnification], [1, 1.18]);
   const verticalLift = useTransform(offset, (value) => -value);
   const horizontalShift = useTransform(offset, (value) => value * 0.5);
 
   return (
     <DockItemButton
+      ref={ref}
       type="button"
       onClick={item.onClick}
       onMouseEnter={() => hoverEnabled && setShowLabel(true)}
@@ -394,14 +400,13 @@ const DockItem: React.FC<DockItemProps> = ({
       className={item.className}
     >
       <DockOrb
-        ref={ref}
         $active={item.active}
         $orientation={orientation}
         $showInlineLabels={showInlineLabels}
         as={DockIconMotion}
         style={{
-          width: size,
-          height: size,
+          width: baseItemSize,
+          height: baseItemSize,
           y: orientation === 'horizontal' ? verticalLift : 0,
           x: orientation === 'vertical' ? horizontalShift : 0,
           scale

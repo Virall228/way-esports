@@ -110,7 +110,6 @@ const HeroPlasma = styled(Plasma)`
   position: absolute;
   inset: -8%;
   opacity: 0.92;
-  filter: saturate(1.08);
 `;
 
 const HeroBackdropVeil = styled.div`

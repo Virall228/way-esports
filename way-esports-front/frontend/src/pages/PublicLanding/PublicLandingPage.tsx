@@ -69,7 +69,6 @@ const HeroPlasma = styled(Plasma)`
   position: absolute;
   inset: -6%;
   opacity: 0.95;
-  filter: saturate(1.08) blur(0.2px);
 `;
 
 const HeroBackdropVeil = styled.div`
@@ -110,7 +109,6 @@ const HeroEyebrow = styled.span`
   background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.74)' : 'rgba(255, 255, 255, 0.06)')};
   border: 1px solid ${({ theme }) => (theme.isLight ? 'rgba(201, 106, 22, 0.14)' : 'rgba(255, 255, 255, 0.08)')};
   color: ${({ theme }) => theme.isLight ? theme.colors.accent : theme.colors.text.secondary};
-  backdrop-filter: blur(18px);
   font-family: ${({ theme }) => theme.fonts.accent};
   font-size: 0.72rem;
   font-weight: ${({ theme }) => theme.fontWeights.medium};
@@ -196,7 +194,6 @@ const StatCard = styled(Card).attrs({ variant: 'outlined' })`
   border-radius: 18px;
   background: ${({ theme }) => (theme.isLight ? 'rgba(255, 255, 255, 0.78)' : 'rgba(12, 15, 20, 0.46)')};
   border: 1px solid ${({ theme }) => theme.colors.border.light};
-  backdrop-filter: blur(18px);
 `;
 
 const StatValue = styled.div`
@@ -403,6 +400,7 @@ const LandingCover: React.FC<{ src?: string; alt: string }> = ({ src, alt }) => 
           src={src}
           alt={alt}
           loading="lazy"
+          decoding="async"
           onError={() => setHasError(true)}
         />
       ) : null}
@@ -428,6 +426,7 @@ const LandingTeamLogo: React.FC<{ src?: string; name?: string }> = ({ src, name 
       src={src}
       alt={name || 'Team'}
       loading="lazy"
+      decoding="async"
       onError={() => setHasError(true)}
     />
   );

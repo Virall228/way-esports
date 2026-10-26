@@ -56,7 +56,7 @@ const StyledCard = styled.div<CardProps>`
     border-color ${({ theme }) => theme.transitions.fast},
     box-shadow ${({ theme }) => theme.transitions.medium},
     background ${({ theme }) => theme.transitions.medium};
-  backdrop-filter: blur(20px) saturate(120%);
+  // Cards already have their own background; avoid a blur surface per card.
   isolation: isolate;
 
   ${({ variant }) => getCardStyles(variant)}

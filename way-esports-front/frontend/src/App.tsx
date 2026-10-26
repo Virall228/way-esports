@@ -62,21 +62,6 @@ type NavItem = {
   adminOnly?: boolean;
 };
 
-const shellGlow = keyframes`
-  0% {
-    transform: translate3d(0, 0, 0) scale(1);
-    opacity: 0.58;
-  }
-  50% {
-    transform: translate3d(1.5%, -2%, 0) scale(1.08);
-    opacity: 0.8;
-  }
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-    opacity: 0.58;
-  }
-`;
-
 const routeReveal = keyframes`
   0% {
     opacity: 0;
@@ -134,7 +119,6 @@ const ShellGlow = styled.div<{ $position: 'left' | 'right' }>`
   filter: blur(28px);
   pointer-events: none;
   z-index: -1;
-  animation: ${shellGlow} 20s ease-in-out infinite;
 
   @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
     opacity: 0.58;
@@ -307,6 +291,11 @@ const TopBar = styled.header`
   border-bottom: 1px solid ${({ theme }) => theme.colors.border.light};
   backdrop-filter: blur(24px) saturate(130%);
 
+  @media (max-width: 768px), (pointer: coarse) {
+    backdrop-filter: none;
+    background: ${({ theme }) => theme.colors.bg.primary};
+  }
+
   @media (min-width: ${({ theme }) => theme.breakpoints.tablet}) {
     padding: 0.9rem 1.5rem;
   }
@@ -458,6 +447,11 @@ const BottomNav = styled.nav`
   background: ${({ theme }) => theme.colors.glass.bar};
   border-top: 1px solid ${({ theme }) => theme.colors.border.light};
   backdrop-filter: blur(24px) saturate(130%);
+
+  @media (max-width: 768px), (pointer: coarse) {
+    backdrop-filter: none;
+    background: ${({ theme }) => theme.colors.bg.primary};
+  }
   overflow-x: auto;
   overflow-y: visible;
   scrollbar-width: none;
@@ -838,20 +832,27 @@ const AppContent: React.FC = () => {
   }, [addNotification]);
 
   React.useEffect(() => {
+    let frame = 0;
+    let previousHeight = 0;
     const setAppHeight = () => {
+      frame = 0;
       const height = window.visualViewport?.height ?? window.innerHeight;
+      if (height === previousHeight) return;
+      previousHeight = height;
       document.documentElement.style.setProperty('--app-height', `${height}px`);
+    };
+    const scheduleHeight = () => {
+      if (!frame) frame = window.requestAnimationFrame(setAppHeight);
     };
 
     setAppHeight();
-    window.addEventListener('resize', setAppHeight);
-    window.visualViewport?.addEventListener('resize', setAppHeight);
-    window.visualViewport?.addEventListener('scroll', setAppHeight);
+    window.addEventListener('resize', scheduleHeight);
+    window.visualViewport?.addEventListener('resize', scheduleHeight);
 
     return () => {
-      window.removeEventListener('resize', setAppHeight);
-      window.visualViewport?.removeEventListener('resize', setAppHeight);
-      window.visualViewport?.removeEventListener('scroll', setAppHeight);
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('resize', scheduleHeight);
+      window.visualViewport?.removeEventListener('resize', scheduleHeight);
     };
   }, []);
 
