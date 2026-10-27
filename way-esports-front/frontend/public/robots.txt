@@ -1,15 +1,23 @@
+﻿# Public search and AI retrieval use the same crawl policy.
+# OAI-SearchBot, ChatGPT-User, PerplexityBot, Claude-SearchBot and Claude-User
+# inherit this group. Separate training permissions are not required for search.
 User-agent: *
 Allow: /
 Disallow: /admin
-Disallow: /admin/ocr
+Disallow: /control
+Disallow: /auth
 Disallow: /wallet
 Disallow: /settings
 Disallow: /analytics
 Disallow: /billing
+Disallow: /career-hub
 Disallow: /scout-hub
 Disallow: /profile$
 Allow: /profile/
-Disallow: /api/admin
+Disallow: /api/
+Allow: /api/seo/sitemaps/
+Allow: /api/seo/sitemap-index.xml
+Allow: /api/player-promotion/public/sitemap.xml
+Allow: /api/uploads/
 
 Sitemap: https://wayesports.space/sitemap.xml
-Host: wayesports.space

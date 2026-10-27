@@ -379,7 +379,7 @@ const Cta = styled(Card).attrs({ variant: 'elevated' })`
   `};
 `;
 
-const gameCards = getDiscoveryGames().slice(0, 4).map((item) => ({
+const gameCards = getDiscoveryGames().map((item) => ({
   slug: item.slug,
   title: `${item.label} Hub`,
   description: item.description
@@ -505,7 +505,7 @@ const PublicLandingPage: React.FC = () => {
             <HeroLogo aria-hidden="true" />
             <HeroTitle>WAY ESPORTS</HeroTitle>
             <HeroSubtitle>
-              Discover tournaments, teams, rankings, player profiles and match stories in one focused competitive space built to feel premium from the first click.
+              Discover esports tournaments, teams, player profiles, rankings, matches and news across mobile and PC games. Browse public pages before registering, then create an account to join the competition.
             </HeroSubtitle>
             <ButtonRow>
               <LinkButton to="/tournaments"><HeroCTAButton variant="brand">Browse Tournaments</HeroCTAButton></LinkButton>
@@ -534,6 +534,12 @@ const PublicLandingPage: React.FC = () => {
           </HeroMetrics>
         </HeroLayout>
       </Hero>
+
+      <nav aria-label="About the platform">
+        <a href="/about/" style={{ color: 'inherit' }}>About WAY Esports</a>
+        {' · '}<a href="/ru/about/" lang="ru" style={{ color: 'inherit' }}>О платформе</a>
+        {' · '}<a href="/feed.xml" style={{ color: 'inherit' }}>News RSS</a>
+      </nav>
 
       <GuidanceCallout
         tone="info"

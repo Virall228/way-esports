@@ -1,4 +1,5 @@
 import express from 'express';
+import { getPublicSiteUrl } from '../utils/seo';
 import { authenticateJWT } from '../middleware/auth';
 import {
   assertPlayerPromotionAccess,
@@ -30,17 +31,7 @@ const escapeXml = (value: string): string => (
     .replace(/'/g, '&apos;')
 );
 
-const getBaseUrl = (req: any): string => {
-  const configured =
-    String(process.env.PUBLIC_WEB_URL || process.env.APP_URL || process.env.CORS_ORIGIN || '').trim();
-  if (configured) {
-    return configured.replace(/\/+$/, '');
-  }
-
-  const protocol = String(req.protocol || 'https');
-  const host = String(req.get?.('host') || req.headers?.host || '').trim();
-  return `${protocol}://${host}`.replace(/\/+$/, '');
-};
+const getBaseUrl = (_req: express.Request): string => getPublicSiteUrl();
 
 router.get('/me', authenticateJWT, async (req, res) => {
   try {

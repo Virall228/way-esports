@@ -7,7 +7,7 @@
     <meta name="description" content="WAY Esports is a competitive esports platform for tournaments, teams, rankings, player profiles, match tracking and public scouting discovery." />
     <meta name="author" content="WAY Esports" />
     <meta name="application-name" content="WAY Esports" />
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
     <meta property="og:url" content="https://wayesports.space/" />
     <meta property="og:site_name" content="WAY Esports" />
     <meta property="og:title" content="WAY Esports" />
@@ -32,25 +32,23 @@
     <link rel="shortcut icon" href="/images/way-main-logo-metal-v2.jpg?v=20260428" type="image/jpeg" />
     <link rel="apple-touch-icon" href="/images/way-main-logo-metal-v2.jpg?v=20260428" />
     <link rel="manifest" href="/manifest.webmanifest?v=20260428" />
-    <title>WAY Esports</title>
-    <script type="application/ld+json">
+    <title>WAY Esports | Esports Tournaments, Teams and Player Profiles</title>
+    <link rel="alternate" type="application/rss+xml" title="WAY Esports News" href="https://wayesports.space/feed.xml" />
+    <meta property="og:image:width" content="1248" />
+    <meta property="og:image:height" content="832" />
+    <script type="application/ld+json" data-seo-id="primary">
       {
         "@context": "https://schema.org",
         "@graph": [
           {
-            "@type": "Organization",
+            "@type": "Organization", "@id": "https://wayesports.space/#organization",
             "name": "WAY Esports",
             "url": "https://wayesports.space",
             "logo": "https://wayesports.space/images/way-main-logo-metal-v2.jpg",
-            "image": "https://wayesports.space/images/way-twitter-banner-bg.jpg",
-            "sameAs": [
-              "https://t.me/wayesports",
-              "https://discord.gg/wayesports",
-              "https://www.twitch.tv/WAY_Esports"
-            ]
+            "image": "https://wayesports.space/images/way-twitter-banner-bg.jpg"
           },
           {
-            "@type": "WebSite",
+            "@type": "WebSite", "@id": "https://wayesports.space/#website",
             "name": "WAY Esports",
             "url": "https://wayesports.space",
             "inLanguage": ["en", "ru"]
@@ -61,7 +59,16 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main style="max-width:900px;margin:auto;padding:32px;color:#f5f7fa;background:#080b10;font-family:system-ui,sans-serif">
+        <h1>WAY Esports — tournaments, teams and player discovery</h1>
+        <p>WAY Esports is a platform for discovering esports tournaments, teams, player profiles, rankings, matches and news across mobile and PC games.</p>
+        <p>Browse public pages before registering. Create an account to join tournaments, create a team and use personal platform features. Check each event for its schedule, rules and registration availability.</p>
+        <nav aria-label="Explore WAY Esports"><a href="/about/">About WAY Esports</a> · <a href="/ru/about/" lang="ru">О платформе</a> · <a href="/tournaments">Tournaments</a> · <a href="/teams">Teams</a> · <a href="/news">News</a> · <a href="/rankings">Rankings</a></nav>
+        <p>Game hubs: <a href="/games/critical-ops">Critical Ops</a>, <a href="/games/cs2">CS2</a>, <a href="/games/pubg-mobile">PUBG Mobile</a>, <a href="/games/valorant-mobile">Valorant Mobile</a>, <a href="/games/dota-2">Dota 2</a>, <a href="/games/standoff-2">Standoff 2</a>, <a href="/games/mobile-legends-bang-bang">Mobile Legends: Bang Bang</a>.</p>
+        <noscript><p>JavaScript is needed for account and tournament registration features. Public information is available on the linked pages.</p></noscript>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

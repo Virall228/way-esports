@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/build-public-pages.mjs",
     "preview": "vite preview",
     "build:zip": "npm run build && zip -r way-esports-frontend.zip dist",
     "type-check": "tsc --noEmit"

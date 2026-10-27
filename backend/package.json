@@ -8,6 +8,7 @@
     "start": "node dist/src/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "test": "jest",
+    "test:seo": "jest --config jest.seo.config.cjs --runInBand",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:unit": "jest tests/models",

@@ -5,6 +5,7 @@ import Tournament from '../models/Tournament';
 import User from '../models/User';
 import { getPublicPromotionProfile, listPublicPromotionSitemapEntries } from '../services/playerPromotionService';
 import { GAME_HUBS } from '../config/games';
+import { getPublicSiteUrl, safePublicUrl, serializeJsonLd, sitemapDate } from '../utils/seo';
 
 const router = express.Router();
 const SITE_NAME = 'WAY Esports';
@@ -20,16 +21,7 @@ const escapeXml = (value: string): string => (
     .replace(/'/g, '&apos;')
 );
 
-const getBaseUrl = (req: express.Request): string => {
-  const configured = String(process.env.PUBLIC_WEB_URL || process.env.APP_URL || process.env.CORS_ORIGIN || 'https://wayesports.space').trim();
-  if (configured) {
-    return configured.replace(/\/+$/, '');
-  }
-
-  const protocol = String(req.protocol || 'https');
-  const host = String(req.get('host') || req.headers.host || '').trim();
-  return `${protocol}://${host}`.replace(/\/+$/, '');
-};
+const getBaseUrl = (_req: express.Request): string => getPublicSiteUrl();
 
 const buildUrlset = (urls: Array<{ loc: string; lastmod?: string; changefreq?: string; priority?: string }>) => {
   const body = urls
@@ -77,13 +69,16 @@ const renderSeoHtml = (params: {
   jsonLd?: Record<string, unknown> | Array<Record<string, unknown>> | null;
   bodyTitle: string;
   bodyDescription: string;
+  paragraphs?: string[];
   links?: Array<{ href: string; label: string }>;
 }) => {
-  const robots = params.robots || 'index, follow';
+  const robots = params.robots || 'index, follow, max-image-preview:large';
   const type = params.type || 'website';
   const image = absolutize(params.image || DEFAULT_IMAGE, params.canonicalUrl);
+  const imageType = /\.png(?:[?#]|$)/i.test(image) ? 'image/png' : /\.webp(?:[?#]|$)/i.test(image) ? 'image/webp' : 'image/jpeg';
+  const imageAlt = params.image ? params.bodyTitle : DEFAULT_IMAGE_ALT;
   const bodyLinks = (params.links || [])
-    .slice(0, 12)
+    .slice(0, 60)
     .map((item) => `<li><a href="${escapeHtml(item.href)}">${escapeHtml(item.label)}</a></li>`)
     .join('');
   const siteUrl = (() => {
@@ -98,21 +93,20 @@ const renderSeoHtml = (params: {
     {
       '@context': 'https://schema.org',
       '@type': 'Organization',
+      '@id': `${siteUrl}/#organization`,
       name: SITE_NAME,
+      alternateName: 'WAY Esports',
       url: siteUrl,
       logo: absolutize('/images/way-main-logo-metal-v2.jpg', params.canonicalUrl),
-      image,
-      sameAs: [
-        'https://t.me/wayesports',
-        'https://discord.gg/wayesports',
-        'https://www.twitch.tv/WAY_Esports'
-      ]
+      image
     },
     {
       '@context': 'https://schema.org',
       '@type': 'WebSite',
+      '@id': `${siteUrl}/#website`,
       name: SITE_NAME,
       url: siteUrl,
+      publisher: { '@id': `${siteUrl}/#organization` },
       inLanguage: ['en', 'ru']
     }
   ];
@@ -133,6 +127,7 @@ const renderSeoHtml = (params: {
     <meta name="author" content="${SITE_NAME}" />
     <meta name="application-name" content="${SITE_NAME}" />
     <meta name="theme-color" content="#050607" />
+    <link rel="alternate" type="application/rss+xml" title="WAY Esports News" href="${siteUrl}/feed.xml" />
     <link rel="canonical" href="${escapeHtml(params.canonicalUrl)}" />
     <meta property="og:site_name" content="${SITE_NAME}" />
     <meta property="og:locale" content="en_US" />
@@ -142,14 +137,14 @@ const renderSeoHtml = (params: {
     <meta property="og:url" content="${escapeHtml(params.canonicalUrl)}" />
     <meta property="og:image" content="${escapeHtml(image)}" />
     <meta property="og:image:secure_url" content="${escapeHtml(image)}" />
-    <meta property="og:image:type" content="${escapeHtml(image.endsWith('.png') ? 'image/png' : 'image/jpeg')}" />
-    <meta property="og:image:alt" content="${DEFAULT_IMAGE_ALT}" />
+    <meta property="og:image:type" content="${imageType}" />
+    <meta property="og:image:alt" content="${escapeHtml(imageAlt)}" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${escapeHtml(params.title)}" />
     <meta name="twitter:description" content="${escapeHtml(params.description)}" />
     <meta name="twitter:image" content="${escapeHtml(image)}" />
-    <meta name="twitter:image:alt" content="${DEFAULT_IMAGE_ALT}" />
-    <script type="application/ld+json">${escapeHtml(JSON.stringify(jsonLdPayload))}</script>
+    <meta name="twitter:image:alt" content="${escapeHtml(imageAlt)}" />
+    <script type="application/ld+json">${serializeJsonLd(jsonLdPayload)}</script>
     <style>
       body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 40px 20px; background: #0b0b0b; color: #f3f3f3; }
       main { max-width: 860px; margin: 0 auto; }
@@ -161,8 +156,10 @@ const renderSeoHtml = (params: {
   </head>
   <body>
     <main>
+      <nav aria-label="Main navigation"><a href="${siteUrl}/">Home</a> · <a href="${siteUrl}/about/">About WAY Esports</a> · <a href="${siteUrl}/tournaments">Tournaments</a> · <a href="${siteUrl}/teams">Teams</a> · <a href="${siteUrl}/news">News</a></nav>
       <h1>${escapeHtml(params.bodyTitle)}</h1>
       <p>${escapeHtml(params.bodyDescription)}</p>
+      ${(params.paragraphs || []).map((text) => `<p>${escapeHtml(text)}</p>`).join('')}
       ${bodyLinks ? `<ul>${bodyLinks}</ul>` : ''}
     </main>
   </body>
@@ -170,14 +167,7 @@ const renderSeoHtml = (params: {
 };
 
 const absolutize = (value: string, canonicalUrl: string) => {
-  if (!value) return '';
-  if (/^https?:\/\//i.test(value)) return value;
-  try {
-    const url = new URL(canonicalUrl);
-    return new URL(value, `${url.protocol}//${url.host}`).toString();
-  } catch {
-    return value;
-  }
+  return value ? safePublicUrl(value, canonicalUrl) : '';
 };
 
 const firstPathSegment = (path: string) => String(path.split('/').filter(Boolean)[0] || '');
@@ -207,19 +197,30 @@ const parseCategorySlug = (value: string): string => (
     .trim()
 );
 
+router.get('/feed.xml', async (req, res) => {
+  try {
+    const baseUrl = getBaseUrl(req);
+    const items = await News.find({ status: 'published' }).sort({ publishDate: -1 }).limit(30)
+      .select('_id title summary publishDate createdAt').lean();
+    const entries = items.map((item: any) => {
+      const url = `${baseUrl}/news/${item._id}`;
+      const published = sitemapDate(item.publishDate || item.createdAt);
+      return `<item><title>${escapeXml(item.title)}</title><link>${escapeXml(url)}</link><guid isPermaLink="true">${escapeXml(url)}</guid><description>${escapeXml(stripHtml(item.summary || ''))}</description>${published ? `<pubDate>${new Date(published).toUTCString()}</pubDate>` : ''}</item>`;
+    }).join('');
+    return res.type('application/rss+xml').set('Cache-Control', 'public, max-age=300').send(
+      `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>WAY Esports News</title><link>${baseUrl}/news</link><description>News and tournament updates published on WAY Esports.</description><atom:link href="${baseUrl}/feed.xml" rel="self" type="application/rss+xml"/>${entries}</channel></rss>`
+    );
+  } catch {
+    return res.status(503).set('Cache-Control', 'no-store').send('News feed temporarily unavailable');
+  }
+});
+
 router.get('/sitemap-index.xml', async (req, res) => {
   try {
     const baseUrl = getBaseUrl(req);
-    const now = new Date().toISOString();
     const xml = buildSitemapIndex([
-      { loc: `${baseUrl}/api/seo/sitemaps/core.xml`, lastmod: now },
-      { loc: `${baseUrl}/api/seo/sitemaps/games.xml`, lastmod: now },
-      { loc: `${baseUrl}/api/seo/sitemaps/news.xml`, lastmod: now },
-      { loc: `${baseUrl}/api/seo/sitemaps/news-categories.xml`, lastmod: now },
-      { loc: `${baseUrl}/api/seo/sitemaps/tournaments.xml`, lastmod: now },
-      { loc: `${baseUrl}/api/seo/sitemaps/teams.xml`, lastmod: now },
-      { loc: `${baseUrl}/api/seo/sitemaps/profiles.xml`, lastmod: now },
-      { loc: `${baseUrl}/api/player-promotion/public/sitemap.xml`, lastmod: now }
+      ...['core', 'games', 'news', 'news-categories', 'tournaments', 'teams', 'profiles'].map((name) => ({ loc: `${baseUrl}/sitemaps/${name}.xml` })),
+      { loc: `${baseUrl}/sitemap-player-promotion.xml` }
     ]);
 
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
@@ -233,6 +234,8 @@ router.get('/sitemaps/core.xml', async (req, res) => {
   const baseUrl = getBaseUrl(req);
   const xml = buildUrlset([
     { loc: `${baseUrl}/`, changefreq: 'daily', priority: '1.0' },
+    { loc: `${baseUrl}/about/`, changefreq: 'monthly', priority: '0.8' },
+    { loc: `${baseUrl}/ru/about/`, changefreq: 'monthly', priority: '0.8' },
     { loc: `${baseUrl}/tournaments`, changefreq: 'hourly', priority: '0.9' },
     { loc: `${baseUrl}/teams`, changefreq: 'daily', priority: '0.9' },
     { loc: `${baseUrl}/rankings`, changefreq: 'hourly', priority: '0.8' },
@@ -269,7 +272,7 @@ router.get('/sitemaps/news.xml', async (req, res) => {
     const xml = buildUrlset(
       items.map((item: any) => ({
         loc: `${baseUrl}/news/${String(item?._id || '')}`,
-        lastmod: new Date(item?.updatedAt || item?.publishDate || Date.now()).toISOString(),
+        lastmod: sitemapDate(item?.updatedAt || item?.publishDate),
         changefreq: 'weekly',
         priority: '0.7'
       }))
@@ -319,7 +322,7 @@ router.get('/sitemaps/tournaments.xml', async (req, res) => {
     const xml = buildUrlset(
       items.map((item: any) => ({
         loc: `${baseUrl}/tournaments/${String(item?._id || '')}`,
-        lastmod: new Date(item?.updatedAt || item?.startDate || Date.now()).toISOString(),
+        lastmod: sitemapDate(item?.updatedAt),
         changefreq: 'daily',
         priority: '0.8'
       }))
@@ -343,7 +346,7 @@ router.get('/sitemaps/teams.xml', async (req, res) => {
     const xml = buildUrlset(
       items.map((item: any) => ({
         loc: `${baseUrl}/teams/${String(item?._id || '')}`,
-        lastmod: new Date(item?.updatedAt || Date.now()).toISOString(),
+        lastmod: sitemapDate(item?.updatedAt),
         changefreq: 'daily',
         priority: '0.7'
       }))
@@ -367,7 +370,7 @@ router.get('/sitemaps/profiles.xml', async (req, res) => {
     const xml = buildUrlset(
       items.map((item: any) => ({
         loc: `${baseUrl}/profile/${encodeURIComponent(String(item?.username || ''))}`,
-        lastmod: new Date(item?.updatedAt || Date.now()).toISOString(),
+        lastmod: sitemapDate(item?.updatedAt),
         changefreq: 'weekly',
         priority: '0.6'
       }))
@@ -412,11 +415,19 @@ router.get('/seo-index', async (req, res) => {
 router.get('/render', async (req, res) => {
   try {
     const baseUrl = getBaseUrl(req);
-    const requestedPath = `/${String(req.query.path || '/').replace(/^\/+/, '')}`.replace(/\/{2,}/g, '/');
-    const pathWithoutQuery = requestedPath.split('?')[0] || '/';
-    const canonicalUrl = `${baseUrl}${pathWithoutQuery === '/' ? '' : pathWithoutQuery}`;
+    const requestedPath = `/${String(req.get('X-Original-URI') || req.query.path || '/').replace(/^\/+/, '')}`.replace(/\/{2,}/g, '/');
+    const pathWithoutQuery = (requestedPath.split(/[?#]/)[0] || '/').replace(/\/+$/, '') || '/';
+    const canonicalUrl = `${baseUrl}${pathWithoutQuery}`;
     const segment = firstPathSegment(pathWithoutQuery);
     const parts = pathWithoutQuery.split('/').filter(Boolean);
+    res.setHeader('Cache-Control', 'public, max-age=60');
+
+    const isCategory = segment === 'news' && parts[1] === 'category';
+    if (parts.length > (isCategory ? 3 : 2) ||
+        (['news', 'teams', 'tournaments'].includes(segment) && parts[1] && !isCategory && !/^[a-f\d]{24}$/i.test(parts[1]))) {
+      return res.status(404).set('X-Robots-Tag', 'noindex').send('Page not found');
+    }
+    if (isCategory && !parts[2]) return res.status(404).set('X-Robots-Tag', 'noindex').send('Page not found');
 
     if (pathWithoutQuery === '/') {
       const [news, tournaments, teams] = await Promise.all([
@@ -431,19 +442,17 @@ router.get('/render', async (req, res) => {
         canonicalUrl,
         type: 'website',
         bodyTitle: 'WAY Esports',
-        bodyDescription: 'Competitive esports platform with tournaments, teams, public profiles, rankings, matches and scouting.',
+        bodyDescription: 'WAY Esports is a platform for discovering esports tournaments, teams, player profiles, rankings, matches and news across mobile and PC games.',
+        paragraphs: [
+          'Browse public tournaments, teams and news before registering. An account is needed to join tournaments, create a team and use personal platform features.',
+          `Game hubs include ${GAME_HUBS.map((game) => game.label).join(', ')}. Check each tournament page for its schedule, format, rules and registration availability.`
+        ],
         links: [
-          ...GAME_HUBS.slice(0, 4).map((item) => ({ href: `${baseUrl}/games/${item.slug}`, label: `${item.label} hub` })),
+          ...GAME_HUBS.map((item) => ({ href: `${baseUrl}/games/${item.slug}`, label: `${item.label} hub` })),
           ...news.map((item: any) => ({ href: `${baseUrl}/news/${item._id}`, label: item.title })),
           ...tournaments.map((item: any) => ({ href: `${baseUrl}/tournaments/${item._id}`, label: item.name })),
           ...teams.map((item: any) => ({ href: `${baseUrl}/teams/${item._id}`, label: item.name }))
-        ],
-        jsonLd: {
-          '@context': 'https://schema.org',
-          '@type': 'WebSite',
-          name: 'WAY Esports',
-          url: baseUrl
-        }
+        ]
       });
 
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -522,6 +531,8 @@ router.get('/render', async (req, res) => {
         .select('_id title')
         .lean();
 
+      if (!items.length) return res.status(404).set('X-Robots-Tag', 'noindex').send('Category not found');
+
       const html = renderSeoHtml({
         title: `${label} Esports News | WAY Esports`,
         description: `${label} news, tournament updates and platform coverage from WAY Esports.`,
@@ -554,15 +565,20 @@ router.get('/render', async (req, res) => {
           type: 'article',
           bodyTitle: item.title || 'WAY Esports News',
           bodyDescription: description,
+          paragraphs: [stripHtml(item.content || ''), `By ${item.author?.username || SITE_NAME}`, `Published: ${sitemapDate(item.publishDate || item.createdAt) || 'Date not specified'}`],
           jsonLd: {
             '@context': 'https://schema.org',
             '@type': 'NewsArticle',
             headline: item.title || 'WAY Esports News',
             description,
-            image: item.coverImage || undefined,
+            mainEntityOfPage: canonicalUrl,
+            image: absolutize(item.coverImage || DEFAULT_IMAGE, canonicalUrl),
             datePublished: item.publishDate || item.createdAt || undefined,
             dateModified: item.updatedAt || item.publishDate || item.createdAt || undefined,
-            author: item.author?.username || 'WAY Esports'
+            author: item.author?.username
+              ? { '@type': 'Person', name: item.author.username, url: `${baseUrl}/profile/${encodeURIComponent(item.author.username)}` }
+              : { '@type': 'Organization', '@id': `${baseUrl}/#organization`, name: SITE_NAME },
+            publisher: { '@id': `${baseUrl}/#organization` }
           }
         });
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -597,13 +613,19 @@ router.get('/render', async (req, res) => {
           type: 'article',
           bodyTitle: item.name || 'Tournament',
           bodyDescription: description,
+          paragraphs: [stripHtml(item.description || ''), `Game: ${item.game}. Format: ${item.format}. Status: ${item.status}.`, stripHtml(item.rules || '')],
           jsonLd: {
             '@context': 'https://schema.org',
             '@type': 'Event',
             name: item.name || 'Tournament',
             description,
             startDate: item.startDate || undefined,
-            endDate: item.endDate || undefined
+            endDate: item.endDate || undefined,
+            url: canonicalUrl,
+            image: absolutize(item.coverImage || item.image || DEFAULT_IMAGE, canonicalUrl),
+            eventAttendanceMode: 'https://schema.org/OnlineEventAttendanceMode',
+            location: { '@type': 'VirtualLocation', url: canonicalUrl },
+            organizer: { '@id': `${baseUrl}/#organization` }
           }
         });
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -652,7 +674,9 @@ router.get('/render', async (req, res) => {
     }
 
     if ((segment === 'profile' && parts[1]) || (segment === 'user' && parts[1])) {
-      const identifier = parts[1];
+      let identifier: string;
+      try { identifier = decodeURIComponent(parts[1]); }
+      catch { return res.status(400).set('X-Robots-Tag', 'noindex').send('Invalid profile URL'); }
       const query = /^[0-9a-fA-F]{24}$/.test(identifier) ? { _id: identifier } : { username: identifier };
       const item: any = await User.findOne({ ...query, isBanned: { $ne: true } })
         .select('username firstName lastName bio profileLogo photoUrl updatedAt')
@@ -734,8 +758,9 @@ router.get('/render', async (req, res) => {
       bodyDescription: 'Public esports platform with tournaments, teams and player discovery.'
     });
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    return res.send(html);
+    return res.status(404).set('X-Robots-Tag', 'noindex').send(html);
   } catch (error: any) {
+    res.setHeader('Cache-Control', 'no-store');
     return res.status(500).json({ success: false, error: error.message || 'Failed to render SEO snapshot' });
   }
 });

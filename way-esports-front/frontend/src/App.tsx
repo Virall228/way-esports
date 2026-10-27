@@ -972,6 +972,7 @@ const AppContent: React.FC = () => {
         </MainContent>
 
         <Footer>
+          <p><a href="/about/" style={{ color: 'inherit' }}>About WAY Esports</a>{' · '}<a href="/ru/about/" lang="ru" style={{ color: 'inherit' }}>О платформе</a>{' · '}<a href="/feed.xml" style={{ color: 'inherit' }}>News RSS</a></p>
           <p>{'\u00A9'} 2024 WAY ESPORTS. All rights reserved.</p>
           <p>Powered by Professional Gaming Technology</p>
         </Footer>

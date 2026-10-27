@@ -386,9 +386,13 @@ const NewsDetail: React.FC = () => {
                         image: newsItem.coverImage || newsItem.imageUrl || undefined,
                         datePublished: newsItem.publishDate || newsItem.createdAt || undefined,
                         dateModified: newsItem.updatedAt || newsItem.publishDate || newsItem.createdAt || undefined,
-                        author: newsItem.author?.username || 'WAY Esports',
+                        mainEntityOfPage: `https://wayesports.space/news/${id}`,
+                        author: newsItem.author?.username
+                            ? { '@type': 'Person', name: newsItem.author.username, url: `https://wayesports.space/profile/${encodeURIComponent(newsItem.author.username)}` }
+                            : { '@type': 'Organization', name: 'WAY Esports', url: 'https://wayesports.space' },
                         publisher: {
                             '@type': 'Organization',
+                            '@id': 'https://wayesports.space/#organization',
                             name: 'WAY Esports'
                         }
                     }}

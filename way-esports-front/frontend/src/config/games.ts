@@ -20,7 +20,7 @@ export const GAME_CATALOG = [
     slug: 'cs2',
     label: 'CS2',
     query: 'CS2',
-    description: 'CS2 tournament pages, teams, rankings-ready routes and esports news on WAY Esports.',
+    description: 'Explore Counter-Strike 2 tournaments, team profiles and esports news on WAY Esports.',
     keywords: ['CS2', 'Counter-Strike 2', 'CS2 tournaments', 'CS2 teams'],
     aliases: ['counter-strike-2', 'counter strike 2']
   },
@@ -28,7 +28,7 @@ export const GAME_CATALOG = [
     slug: 'pubg-mobile',
     label: 'PUBG Mobile',
     query: 'PUBG Mobile',
-    description: 'PUBG Mobile events, teams and long-tail content hubs for search and social traffic.',
+    description: 'Find PUBG Mobile tournaments, team profiles and related competitive news on WAY Esports.',
     keywords: ['PUBG Mobile', 'PUBG Mobile tournaments', 'PUBG Mobile teams', 'battle royale esports'],
     aliases: ['pubgmobile']
   },

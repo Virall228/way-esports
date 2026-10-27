@@ -57,9 +57,10 @@ const removeTag = (selector: string) => {
 
 const absolutizeUrl = (pathOrUrl?: string): string => {
   if (!pathOrUrl) return '';
-  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
-  if (typeof window === 'undefined') return pathOrUrl;
-  return new URL(pathOrUrl, window.location.origin).toString();
+  try {
+    const url = new URL(pathOrUrl, SITE_URL);
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+  } catch { return ''; }
 };
 
 const Seo: React.FC<SeoProps> = ({
@@ -75,9 +76,9 @@ const Seo: React.FC<SeoProps> = ({
   React.useEffect(() => {
     if (typeof document === 'undefined') return;
 
-    const canonicalUrl = absolutizeUrl(canonicalPath || window.location.pathname + window.location.search);
+    const canonicalUrl = new URL(new URL(canonicalPath || window.location.pathname, SITE_URL).pathname, SITE_URL).href;
     const imageUrl = absolutizeUrl(image || DEFAULT_SEO_IMAGE);
-    const robotsContent = noindex ? 'noindex, nofollow' : 'index, follow';
+    const robotsContent = noindex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large';
 
     document.title = title;
 
@@ -139,12 +140,19 @@ const Seo: React.FC<SeoProps> = ({
     });
     upsertMetaTag('meta[property="og:image:type"]', {
       property: 'og:image:type',
-      content: imageUrl.endsWith('.png') ? 'image/png' : 'image/jpeg'
+      content: /\.png(?:[?#]|$)/i.test(imageUrl) ? 'image/png' : /\.webp(?:[?#]|$)/i.test(imageUrl) ? 'image/webp' : 'image/jpeg'
     });
     upsertMetaTag('meta[property="og:image:alt"]', {
       property: 'og:image:alt',
-      content: DEFAULT_IMAGE_ALT
+      content: image ? title : DEFAULT_IMAGE_ALT
     });
+    if (!image || image === DEFAULT_SEO_IMAGE) {
+      upsertMetaTag('meta[property="og:image:width"]', { property: 'og:image:width', content: '1248' });
+      upsertMetaTag('meta[property="og:image:height"]', { property: 'og:image:height', content: '832' });
+    } else {
+      removeTag('meta[property="og:image:width"]');
+      removeTag('meta[property="og:image:height"]');
+    }
     upsertMetaTag('meta[name="twitter:card"]', {
       name: 'twitter:card',
       content: 'summary_large_image'
@@ -163,7 +171,7 @@ const Seo: React.FC<SeoProps> = ({
     });
     upsertMetaTag('meta[name="twitter:image:alt"]', {
       name: 'twitter:image:alt',
-      content: DEFAULT_IMAGE_ALT
+      content: image ? title : DEFAULT_IMAGE_ALT
     });
 
     if (keywords?.length) {
@@ -179,56 +187,22 @@ const Seo: React.FC<SeoProps> = ({
       rel: 'canonical',
       href: canonicalUrl
     });
+    upsertLinkTag('link[type="application/rss+xml"]', {
+      rel: 'alternate', type: 'application/rss+xml', title: 'WAY Esports News', href: `${SITE_URL}/feed.xml`
+    });
 
-    if (jsonLd) {
-      const siteGraph = [
-        {
-          '@context': 'https://schema.org',
-          '@type': 'Organization',
-          name: SITE_NAME,
-          url: SITE_URL,
-          logo: absolutizeUrl('/images/way-main-logo-metal-v2.jpg'),
-          image: imageUrl,
-          sameAs: [
-            'https://t.me/wayesports',
-            'https://www.twitch.tv/WAY_Esports',
-            'https://discord.gg/wayesports'
-          ]
-        },
-        {
-          '@context': 'https://schema.org',
-          '@type': 'WebSite',
-          name: SITE_NAME,
-          url: SITE_URL,
-          inLanguage: ['en', 'ru']
-        }
-      ];
-      const payload = Array.isArray(jsonLd) ? [...siteGraph, ...jsonLd] : [...siteGraph, jsonLd];
-      upsertScriptTag('primary', JSON.stringify(payload));
-    } else {
-      upsertScriptTag('primary', JSON.stringify([
-        {
-          '@context': 'https://schema.org',
-          '@type': 'Organization',
-          name: SITE_NAME,
-          url: SITE_URL,
-          logo: absolutizeUrl('/images/way-main-logo-metal-v2.jpg'),
-          image: imageUrl,
-          sameAs: [
-            'https://t.me/wayesports',
-            'https://www.twitch.tv/WAY_Esports',
-            'https://discord.gg/wayesports'
-          ]
-        },
-        {
-          '@context': 'https://schema.org',
-          '@type': 'WebSite',
-          name: SITE_NAME,
-          url: SITE_URL,
-          inLanguage: ['en', 'ru']
-        }
-      ]));
-    }
+    const siteGraph = [
+      {
+        '@context': 'https://schema.org', '@type': 'Organization', '@id': SITE_URL + '/#organization',
+        name: SITE_NAME, url: SITE_URL, logo: absolutizeUrl('/images/way-main-logo-metal-v2.jpg')
+      },
+      {
+        '@context': 'https://schema.org', '@type': 'WebSite', '@id': SITE_URL + '/#website',
+        name: SITE_NAME, url: SITE_URL, inLanguage: ['en', 'ru'], publisher: { '@id': SITE_URL + '/#organization' }
+      }
+    ];
+    const pageGraph = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
+    upsertScriptTag('primary', JSON.stringify([...siteGraph, ...pageGraph]));
   }, [canonicalPath, description, image, jsonLd, keywords, noindex, title, type]);
 
   return null;
