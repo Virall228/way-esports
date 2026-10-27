@@ -107,7 +107,7 @@ const renderSeoHtml = (params: {
       name: SITE_NAME,
       url: siteUrl,
       publisher: { '@id': `${siteUrl}/#organization` },
-      inLanguage: ['en', 'ru']
+      inLanguage: 'en'
     }
   ];
   const jsonLdPayload = params.jsonLd
@@ -235,7 +235,6 @@ router.get('/sitemaps/core.xml', async (req, res) => {
   const xml = buildUrlset([
     { loc: `${baseUrl}/`, changefreq: 'daily', priority: '1.0' },
     { loc: `${baseUrl}/about/`, changefreq: 'monthly', priority: '0.8' },
-    { loc: `${baseUrl}/ru/about/`, changefreq: 'monthly', priority: '0.8' },
     { loc: `${baseUrl}/tournaments`, changefreq: 'hourly', priority: '0.9' },
     { loc: `${baseUrl}/teams`, changefreq: 'daily', priority: '0.9' },
     { loc: `${baseUrl}/rankings`, changefreq: 'hourly', priority: '0.8' },

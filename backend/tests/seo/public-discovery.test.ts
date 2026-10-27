@@ -86,14 +86,14 @@ test('public team and player lookups retain visibility filters', async () => {
   await render('/profile/%broken').expect(400);
 });
 
-test('sitemap index advertises public endpoints and real translation pages', async () => {
+test('sitemap index advertises public endpoints and the current About page', async () => {
   const index = await request(app).get('/api/seo/sitemap-index.xml').expect(200).expect('Content-Type', /xml/);
   expect(index.text).toContain(`${origin}/sitemaps/news.xml`);
   expect(index.text).toContain(`${origin}/sitemap-player-promotion.xml`);
   expect(index.text).not.toContain('<lastmod>');
   const core = await request(app).get('/api/seo/sitemaps/core.xml').expect(200);
   expect(core.text).toContain(`${origin}/about/`);
-  expect(core.text).toContain(`${origin}/ru/about/`);
+  expect(core.text).not.toContain(`${origin}/ru/about/`);
 });
 
 test('news sitemap uses publication filter and never invents modification dates', async () => {

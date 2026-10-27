@@ -198,7 +198,7 @@ const Seo: React.FC<SeoProps> = ({
       },
       {
         '@context': 'https://schema.org', '@type': 'WebSite', '@id': SITE_URL + '/#website',
-        name: SITE_NAME, url: SITE_URL, inLanguage: ['en', 'ru'], publisher: { '@id': SITE_URL + '/#organization' }
+        name: SITE_NAME, url: SITE_URL, inLanguage: 'en', publisher: { '@id': SITE_URL + '/#organization' }
       }
     ];
     const pageGraph = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];

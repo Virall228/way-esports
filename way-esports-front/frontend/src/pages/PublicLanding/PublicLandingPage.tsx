@@ -537,7 +537,6 @@ const PublicLandingPage: React.FC = () => {
 
       <nav aria-label="About the platform">
         <a href="/about/" style={{ color: 'inherit' }}>About WAY Esports</a>
-        {' · '}<a href="/ru/about/" lang="ru" style={{ color: 'inherit' }}>О платформе</a>
         {' · '}<a href="/feed.xml" style={{ color: 'inherit' }}>News RSS</a>
       </nav>
 
